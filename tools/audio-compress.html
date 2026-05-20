@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>音频压缩 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .waveform-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-height: 160px;
+    position: relative;
+    overflow: hidden;
+  }
+  .waveform-box canvas { display: block; width: 100%; height: 120px; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .compare-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .compare-stats .item {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .compare-stats .label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .compare-stats .value { font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 600; color: var(--text); }
+  .player audio { width: 100%; margin-top: 6px; filter: invert(0.85) hue-rotate(180deg); }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔊 音频压缩</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入音频</p>
+      <p class="hint">MP3 / OGG / WAV / M4A / FLAC<br/>浏览器原生解码</p>
+      <input type="file" id="fileInput" accept="audio/*" style="display:none" />
+    </div>
+
+    <h2>处理</h2>
+    <div class="field">
+      <label>采样率</label>
+      <select id="sampleRate">
+        <option value="0">保持原始</option>
+        <option value="48000">48000 Hz (高质量)</option>
+        <option value="44100">44100 Hz (CD)</option>
+        <option value="32000">32000 Hz</option>
+        <option value="22050" selected>22050 Hz (语音/playable 推荐)</option>
+        <option value="16000">16000 Hz (语音)</option>
+        <option value="11025">11025 Hz (极小)</option>
+        <option value="8000">8000 Hz (电话)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>声道</label>
+      <select id="channels">
+        <option value="0">保持原始</option>
+        <option value="1" selected>单声道 (体积减半)</option>
+        <option value="2">立体声</option>
+      </select>
+    </div>
+
+    <h2>时间裁剪</h2>
+    <div class="field">
+      <label>起始 (秒) <span id="startVal" class="mono">0</span></label>
+      <input type="range" id="startTime" min="0" max="100" step="0.1" value="0" />
+    </div>
+    <div class="field">
+      <label>结束 (秒) <span id="endVal" class="mono">0</span></label>
+      <input type="range" id="endTime" min="0" max="100" step="0.1" value="0" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>淡入 (秒)</label>
+        <input type="number" id="fadeIn" value="0" min="0" step="0.1" />
+      </div>
+      <div class="field">
+        <label>淡出 (秒)</label>
+        <input type="number" id="fadeOut" value="0" min="0" step="0.1" />
+      </div>
+    </div>
+
+    <h2>输出</h2>
+    <div class="field">
+      <label>格式</label>
+      <select id="outFormat">
+        <option value="wav-16">WAV (16-bit PCM, 无损)</option>
+        <option value="wav-8">WAV (8-bit, 体积减半)</option>
+        <option value="webm-opus">WebM / Opus (有损, 体积最小)</option>
+      </select>
+    </div>
+    <div class="field"><label>文件名</label><input type="text" id="filename" value="audio" /></div>
+
+    <button id="processBtn" disabled>开始处理</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="compare-stats">
+      <div class="item">
+        <div class="label">原文件</div>
+        <div class="value" id="origStat">—</div>
+      </div>
+      <div class="item">
+        <div class="label">输出</div>
+        <div class="value" id="outStat">—</div>
+      </div>
+      <div class="item">
+        <div class="label">瘦身</div>
+        <div class="value" id="savingsStat">—</div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:0">波形预览</h2>
+    <div class="waveform-box">
+      <canvas id="waveform" width="800" height="120"></canvas>
+    </div>
+
+    <div class="player">
+      <h2>原音频</h2>
+      <audio id="origPlayer" controls></audio>
+      <h2>输出音频</h2>
+      <audio id="outPlayer" controls></audio>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('audio-compress');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let audioCtx = null;
+  let srcBuffer = null;
+  let srcFile = null;
+  let outBlob = null;
+  let outExt = 'wav';
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('audio-compress', { outputType: 'audio/wav' });
+
+  $('startTime').addEventListener('input', e => $('startVal').textContent = (+e.target.value).toFixed(2));
+  $('endTime').addEventListener('input', e => $('endVal').textContent = (+e.target.value).toFixed(2));
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!f.type.startsWith('audio/')) { log.err('请拖入音频文件'); return; }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      srcFile = f;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = await f.arrayBuffer();
+      srcBuffer = await audioCtx.decodeAudioData(buf.slice(0));
+      const d = srcBuffer.duration;
+      $('startTime').max = d; $('endTime').max = d;
+      $('endTime').value = d.toFixed(2);
+      $('endVal').textContent = d.toFixed(2);
+      $('origStat').textContent = fmtBytes(f.size);
+      $('stats').innerHTML = `<strong>${d.toFixed(2)}s</strong> · <strong>${srcBuffer.numberOfChannels}</strong> 声道 · <strong>${srcBuffer.sampleRate}</strong> Hz · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('origPlayer').src = URL.createObjectURL(f);
+      drawWaveform(srcBuffer);
+      $('processBtn').disabled = false;
+      log.ok(`解码完成: ${d.toFixed(2)}s × ${srcBuffer.numberOfChannels}ch @ ${srcBuffer.sampleRate}Hz`);
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function drawWaveform(audioBuf) {
+    const cv = $('waveform');
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(0, 0, w, h);
+    const data = audioBuf.getChannelData(0);
+    const step = Math.ceil(data.length / w);
+    ctx.strokeStyle = 'rgba(49, 245, 156, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      let min = 1.0, max = -1.0;
+      for (let i = 0; i < step; i++) {
+        const v = data[x * step + i] || 0;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      ctx.moveTo(x + 0.5, h / 2 - max * h / 2);
+      ctx.lineTo(x + 0.5, h / 2 - min * h / 2);
+    }
+    ctx.stroke();
+    // center line
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+    ctx.stroke();
+  }
+
+  $('processBtn').addEventListener('click', async () => {
+    if (!srcBuffer) return;
+    $('processBtn').disabled = true;
+    log.dim('处理中...');
+    try {
+      const targetRate = parseInt($('sampleRate').value, 10) || srcBuffer.sampleRate;
+      const targetCh = parseInt($('channels').value, 10) || srcBuffer.numberOfChannels;
+      const start = parseFloat($('startTime').value);
+      const end = parseFloat($('endTime').value);
+      const fadeIn = parseFloat($('fadeIn').value);
+      const fadeOut = parseFloat($('fadeOut').value);
+      if (end <= start) throw new Error('结束时间必须大于起始时间');
+
+      // 1. trim + resample using OfflineAudioContext
+      const offline = new OfflineAudioContext(
+        targetCh,
+        Math.ceil((end - start) * targetRate),
+        targetRate
+      );
+      // build trimmed source buffer
+      const trimmedSamples = Math.floor((end - start) * srcBuffer.sampleRate);
+      const trimmedBuf = audioCtx.createBuffer(srcBuffer.numberOfChannels, trimmedSamples, srcBuffer.sampleRate);
+      for (let ch = 0; ch < srcBuffer.numberOfChannels; ch++) {
+        const src = srcBuffer.getChannelData(ch);
+        const dst = trimmedBuf.getChannelData(ch);
+        const off = Math.floor(start * srcBuffer.sampleRate);
+        for (let i = 0; i < trimmedSamples; i++) dst[i] = src[off + i] || 0;
+      }
+      const node = offline.createBufferSource();
+      node.buffer = trimmedBuf;
+      // gain for fade
+      const gain = offline.createGain();
+      if (fadeIn > 0) {
+        gain.gain.setValueAtTime(0, 0);
+        gain.gain.linearRampToValueAtTime(1, fadeIn);
+      } else {
+        gain.gain.setValueAtTime(1, 0);
+      }
+      const dur = end - start;
+      if (fadeOut > 0) {
+        gain.gain.setValueAtTime(1, Math.max(0, dur - fadeOut));
+        gain.gain.linearRampToValueAtTime(0, dur);
+      }
+      node.connect(gain);
+      // channel mixing handled by destination's channel count
+      gain.connect(offline.destination);
+      node.start(0);
+      const rendered = await offline.startRendering();
+
+      // 2. encode
+      const fmt = $('outFormat').value;
+      let blob;
+      if (fmt.startsWith('wav')) {
+        const bitDepth = fmt === 'wav-8' ? 8 : 16;
+        blob = encodeWav(rendered, bitDepth);
+        outExt = 'wav';
+      } else {
+        blob = await encodeWebmOpus(rendered);
+        outExt = 'webm';
+      }
+      outBlob = blob;
+      $('outStat').textContent = fmtBytes(blob.size);
+      const orig = srcFile.size, opt = blob.size;
+      const pct = (orig - opt) / orig * 100;
+      $('savingsStat').textContent = (pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1) + '%';
+      $('outPlayer').src = URL.createObjectURL(blob);
+      $('downloadBtn').disabled = false;
+      log.ok(`处理完成 ${fmtBytes(blob.size)} (${(pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1)}%)`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('processBtn').disabled = false;
+      progress.hide();
+    }
+  });
+
+  // ===== WAV PCM encoder =====
+  function encodeWav(audioBuf, bitDepth) {
+    const ch = audioBuf.numberOfChannels;
+    const sr = audioBuf.sampleRate;
+    const len = audioBuf.length;
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = ch * bytesPerSample;
+    const byteRate = sr * blockAlign;
+    const dataLen = len * blockAlign;
+
+    const buf = new ArrayBuffer(44 + dataLen);
+    const dv = new DataView(buf);
+    let p = 0;
+    function w8(v) { dv.setUint8(p++, v); }
+    function w16(v) { dv.setUint16(p, v, true); p += 2; }
+    function w32(v) { dv.setUint32(p, v, true); p += 4; }
+    function wStr(s) { for (let i = 0; i < s.length; i++) w8(s.charCodeAt(i)); }
+
+    wStr('RIFF'); w32(36 + dataLen); wStr('WAVE');
+    wStr('fmt '); w32(16); w16(1); // PCM
+    w16(ch); w32(sr); w32(byteRate); w16(blockAlign); w16(bitDepth);
+    wStr('data'); w32(dataLen);
+
+    const channels = [];
+    for (let c = 0; c < ch; c++) channels.push(audioBuf.getChannelData(c));
+    if (bitDepth === 16) {
+      for (let i = 0; i < len; i++) {
+        for (let c = 0; c < ch; c++) {
+          let v = channels[c][i];
+          v = Math.max(-1, Math.min(1, v));
+          v = v < 0 ? v * 0x8000 : v * 0x7FFF;
+          dv.setInt16(p, v, true); p += 2;
+        }
+      }
+    } else {
+      // 8-bit unsigned
+      for (let i = 0; i < len; i++) {
+        for (let c = 0; c < ch; c++) {
+          let v = channels[c][i];
+          v = Math.max(-1, Math.min(1, v));
+          dv.setUint8(p++, Math.round((v + 1) * 127.5));
+        }
+      }
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+
+  // ===== WebM/Opus via MediaRecorder =====
+  async function encodeWebmOpus(audioBuf) {
+    if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      throw new Error('当前浏览器不支持 audio/webm;codecs=opus');
+    }
+    // play audioBuf into a destination and record
+    const ctx = new AudioContext({ sampleRate: audioBuf.sampleRate });
+    const node = ctx.createBufferSource();
+    node.buffer = audioBuf;
+    const dest = ctx.createMediaStreamDestination();
+    node.connect(dest);
+    const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus' });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(r => { recorder.onstop = r; });
+    recorder.start();
+    node.start(0);
+    await new Promise(r => setTimeout(r, (audioBuf.duration * 1000) + 100));
+    recorder.stop();
+    await done;
+    ctx.close();
+    return new Blob(chunks, { type: 'audio/webm' });
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const name = ($('filename').value || 'audio').replace(/[^\w-]/g, '_');
+    download(outBlob, name + '.' + outExt);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    srcBuffer = null; srcFile = null; outBlob = null;
+    ['origStat','outStat','savingsStat'].forEach(id => $(id).textContent = '—');
+    $('stats').textContent = '未加载';
+    $('origPlayer').src = ''; $('outPlayer').src = '';
+    $('waveform').getContext('2d').clearRect(0, 0, 800, 120);
+    $('processBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

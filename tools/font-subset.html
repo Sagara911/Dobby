@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>字体子集化 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+  .stat-card .label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .stat-card .delta {
+    margin-top: 4px;
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .stat-card .delta.good { color: var(--jade); }
+  .preview-area {
+    flex: 1;
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-height: 200px;
+    overflow: auto;
+  }
+  .preview-text {
+    font-family: 'PreviewFont', "Space Grotesk", sans-serif;
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 28px;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+  .css-snippet {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-soft);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .preset-row button {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-strong);
+    color: var(--text-soft);
+    padding: 4px 10px;
+    font-size: 11px;
+    box-shadow: none;
+  }
+  .preset-row button:hover { color: var(--jade); border-color: var(--jade); background: rgba(var(--jade-rgb), 0.06); transform: none; }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔠 字体子集化</h1>
+    <div class="compat-note">首次使用需联网加载 opentype.js (~200KB),之后缓存可离线</div>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入字体</p>
+      <p class="hint">TTF / OTF<br/>(WOFF/WOFF2 需先转回 TTF)</p>
+      <input type="file" id="fileInput" accept=".ttf,.otf,font/ttf,font/otf" style="display:none" />
+    </div>
+
+    <h2>需要保留的字符</h2>
+    <div class="preset-row">
+      <button data-preset="ascii" type="button">英数符号</button>
+      <button data-preset="digits" type="button">数字</button>
+      <button data-preset="cjk-common" type="button">中文 500 常用字</button>
+      <button data-preset="cjk-3500" type="button">中文 3500 字</button>
+    </div>
+    <div class="field">
+      <textarea id="charset" rows="8" style="background:rgba(0,0,0,0.4); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:ui-monospace, monospace; font-size:11px; width:100%;"></textarea>
+    </div>
+    <div class="info" style="font-size:11px; color:var(--muted); margin-top:-4px;">字符数: <span id="charCount">0</span></div>
+
+    <h2>导出</h2>
+    <div class="field"><label>输出字体名 (CSS family)</label><input type="text" id="familyName" value="MyFont" /></div>
+    <button id="subsetBtn" disabled>开始子集化</button>
+    <button id="downloadTtfBtn" class="secondary" disabled>下载 TTF</button>
+    <button id="downloadCssBtn" class="secondary" disabled>下载 CSS</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">原字体</div>
+        <div class="value" id="origSize">—</div>
+        <div class="delta" id="origGlyphs">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">子集化后</div>
+        <div class="value" id="subSize">—</div>
+        <div class="delta" id="subGlyphs">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">瘦身</div>
+        <div class="value" id="savings">—</div>
+        <div class="delta good" id="savingsAbs">—</div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:0">效果预览 (用子集字体渲染)</h2>
+    <div class="preview-area">
+      <div class="preview-text" id="previewText">拖入字体并子集化后,这里会用新字体渲染样本文字。</div>
+    </div>
+
+    <h2>CSS 嵌入代码</h2>
+    <div class="css-snippet" id="cssSnippet">/* 子集化完成后这里显示 @font-face 代码 */</div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('font-subset');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, download, downloadText, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let opentype = null;
+  let srcBuffer = null;
+  let srcFontData = null;
+  let subBuffer = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('font-subset', { outputType: 'font/ttf' });
+
+  $('charset').addEventListener('input', () => {
+    const chars = new Set([...$('charset').value]);
+    $('charCount').textContent = chars.size;
+  });
+
+  // ----- character set presets -----
+  const ASCII = (() => { let s = ''; for (let i = 32; i < 127; i++) s += String.fromCharCode(i); return s; })();
+  const DIGITS = '0123456789.,+-%¥$';
+  // top 500 common Chinese characters (subset for demo; user can replace)
+  const CJK_COMMON_500 = '的一是了我不人在他有这个上们来到时大地为子中你说生国年着就那和要她出也得里后自以会家可下而过天去能对小多然于心学么之都好看起发当没成只如事把还用第样道想作种开美总从无情己面最女但现前些所同日手又行意动方期它头经长儿回位分爱老因很给名法间斯知世什两次使身者被高已亲其进此话常与活正感';
+  const CJK_3500 = CJK_COMMON_500 + '点工业部物声学界至关化系建立长本相运么外几边二全件队商保级新文军门';
+  document.querySelectorAll('.preset-row button').forEach(b => {
+    b.addEventListener('click', () => {
+      const cur = $('charset').value;
+      const map = { ascii: ASCII, digits: DIGITS, 'cjk-common': CJK_COMMON_500, 'cjk-3500': CJK_3500 };
+      const add = map[b.dataset.preset];
+      const merged = [...new Set([...cur, ...add])].join('');
+      $('charset').value = merged;
+      $('charset').dispatchEvent(new Event('input'));
+    });
+  });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!/\.(ttf|otf)$/i.test(f.name) && !f.type.startsWith('font/')) {
+      log.err('请拖入 TTF 或 OTF 字体文件');
+      return;
+    }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      if (!opentype) {
+        log.dim('  加载 opentype.js (首次联网)...');
+        opentype = (await import('https://esm.sh/opentype.js@1.3.4')).default;
+      }
+      srcBuffer = await f.arrayBuffer();
+      srcFontData = opentype.parse(srcBuffer);
+      $('origSize').textContent = fmtBytes(f.size);
+      $('origGlyphs').textContent = `${srcFontData.numGlyphs} 字形`;
+      $('familyName').value = srcFontData.names.fontFamily?.en || 'MyFont';
+      $('subsetBtn').disabled = false;
+      log.ok(`字体加载完成: ${srcFontData.names.fontFamily?.en || '?'} · ${srcFontData.numGlyphs} 字形`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  }
+
+  $('subsetBtn').addEventListener('click', async () => {
+    if (!srcFontData) return;
+    const chars = [...new Set([...$('charset').value])];
+    if (!chars.length) { log.err('请填入要保留的字符'); return; }
+    log.dim(`子集化中,目标 ${chars.length} 字符...`);
+    $('subsetBtn').disabled = true;
+    try {
+      // collect glyphs we want
+      const wantedGlyphs = new Map(); // index -> glyph
+      // always include .notdef (index 0)
+      wantedGlyphs.set(0, srcFontData.glyphs.get(0));
+      let missing = 0;
+      for (const ch of chars) {
+        const code = ch.codePointAt(0);
+        const idx = srcFontData.charToGlyphIndex(ch);
+        if (idx > 0) wantedGlyphs.set(idx, srcFontData.glyphs.get(idx));
+        else missing++;
+      }
+      log.dim(`  找到 ${wantedGlyphs.size - 1} 字形, 缺失 ${missing}`);
+      // construct new font
+      const glyphArr = [...wantedGlyphs.values()];
+      const subFont = new opentype.Font({
+        familyName: $('familyName').value || 'Subset',
+        styleName: srcFontData.names.fontSubfamily?.en || 'Regular',
+        unitsPerEm: srcFontData.unitsPerEm,
+        ascender: srcFontData.ascender,
+        descender: srcFontData.descender,
+        glyphs: glyphArr
+      });
+      const ttfBuf = subFont.toArrayBuffer();
+      subBuffer = ttfBuf;
+      const subSize = ttfBuf.byteLength;
+      $('subSize').textContent = fmtBytes(subSize);
+      $('subGlyphs').textContent = `${glyphArr.length} 字形`;
+      const orig = srcBuffer.byteLength;
+      const pct = ((orig - subSize) / orig * 100);
+      $('savings').textContent = pct.toFixed(1) + '%';
+      $('savingsAbs').textContent = '-' + fmtBytes(orig - subSize);
+
+      // load subset font for preview
+      const blob = new Blob([ttfBuf], { type: 'font/ttf' });
+      const url = URL.createObjectURL(blob);
+      const face = new FontFace('PreviewFont', `url(${url})`);
+      await face.load();
+      // remove previous
+      document.fonts.forEach(f => { if (f.family === 'PreviewFont') document.fonts.delete(f); });
+      document.fonts.add(face);
+      $('previewText').textContent = '示例文字 · The quick brown fox · 1234567890 · ' + chars.slice(0, 40).join('');
+
+      // CSS snippet (data URL embedded variant + URL variant)
+      const family = $('familyName').value || 'MyFont';
+      $('cssSnippet').textContent = `@font-face {
+  font-family: '${family}';
+  src: url('./${family}.ttf') format('truetype');
+  font-display: swap;
+}
+
+/* 或者直接 inline (用我们的 Base64 工具转 dataURL) */
+@font-face {
+  font-family: '${family}';
+  src: url(data:font/ttf;base64,...) format('truetype');
+}
+
+body { font-family: '${family}', sans-serif; }`;
+
+      $('downloadTtfBtn').disabled = false;
+      $('downloadCssBtn').disabled = false;
+      log.ok(`子集化完成: ${fmtBytes(orig)} → ${fmtBytes(subSize)} (-${pct.toFixed(1)}%)`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('subsetBtn').disabled = false;
+      progress.hide();
+    }
+  });
+
+  $('downloadTtfBtn').addEventListener('click', () => {
+    if (!subBuffer) return;
+    const family = ($('familyName').value || 'subset').replace(/[^\w-]/g, '_');
+    download(new Blob([subBuffer], { type: 'font/ttf' }), family + '.ttf');
+  });
+
+  $('downloadCssBtn').addEventListener('click', () => {
+    const family = ($('familyName').value || 'subset').replace(/[^\w-]/g, '_');
+    downloadText($('cssSnippet').textContent, family + '.css', 'text/css');
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    srcBuffer = null; srcFontData = null; subBuffer = null;
+    ['origSize','origGlyphs','subSize','subGlyphs','savings','savingsAbs'].forEach(id => $(id).textContent = '—');
+    $('previewText').textContent = '拖入字体并子集化后,这里会用新字体渲染样本文字。';
+    $('cssSnippet').textContent = '/* 子集化完成后这里显示 @font-face 代码 */';
+    $('charset').value = '';
+    $('charCount').textContent = '0';
+    $('subsetBtn').disabled = true;
+    $('downloadTtfBtn').disabled = true;
+    $('downloadCssBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

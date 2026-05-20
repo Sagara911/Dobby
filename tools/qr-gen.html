@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>QR 码生成 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .qr-preview {
+    flex: 1;
+    background: var(--checker), #0a0a0c;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-preview canvas, .qr-preview img {
+    background: white;
+    padding: 16px;
+    border-radius: 6px;
+    image-rendering: pixelated;
+  }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .preset-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .preset-row button {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-strong);
+    color: var(--text-soft);
+    padding: 6px 8px;
+    font-size: 11px;
+    box-shadow: none;
+  }
+  .preset-row button:hover { background: rgba(255, 255, 255, 0.08); color: var(--jade); border-color: var(--jade); transform: none; }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📱 QR 码</h1>
+
+    <div class="compat-note">首次使用需联网加载 QR 库 (~50KB),之后浏览器缓存可离线用</div>
+
+    <h2>内容</h2>
+    <div class="field">
+      <label>文本 / URL</label>
+      <textarea id="content" rows="4" style="background:rgba(0,0,0,0.4); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:ui-monospace, monospace; font-size:11px; width:100%;">https://playable-toolkit.local</textarea>
+    </div>
+    <div class="preset-row">
+      <button data-preset="url" type="button">URL</button>
+      <button data-preset="wifi" type="button">WiFi</button>
+      <button data-preset="vcard" type="button">名片</button>
+      <button data-preset="sms" type="button">短信</button>
+    </div>
+
+    <h2>样式</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>前景色</label>
+        <input type="text" id="fgColor" value="#000000" />
+      </div>
+      <div class="field">
+        <label>背景色</label>
+        <input type="text" id="bgColor" value="#ffffff" />
+      </div>
+    </div>
+    <div class="field">
+      <label>纠错等级</label>
+      <select id="ecc">
+        <option value="L">L · 7% (信息容量最大)</option>
+        <option value="M" selected>M · 15% (推荐)</option>
+        <option value="Q">Q · 25%</option>
+        <option value="H">H · 30% (适合中心嵌 logo)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>尺寸 <span id="sizeVal" class="mono">512</span> px</label>
+      <input type="range" id="size" min="128" max="2048" step="64" value="512" />
+    </div>
+    <div class="field">
+      <label>边距 <span id="marginVal" class="mono">4</span> 模块</label>
+      <input type="range" id="margin" min="0" max="10" value="4" />
+    </div>
+
+    <h2>中心 Logo (可选)</h2>
+    <div class="drop-zone" id="logoDrop" style="padding:14px;">
+      <p style="margin:0; font-size:12px;">📂 拖入 logo</p>
+      <p class="hint" style="margin:2px 0 0;">建议 ECC=H,Logo 占比 ≤25%</p>
+      <input type="file" id="logoInput" accept="image/*" style="display:none" />
+    </div>
+    <div class="field">
+      <label>Logo 占比 <span id="logoSizeVal" class="mono">20</span>%</label>
+      <input type="range" id="logoSize" min="10" max="35" value="20" />
+    </div>
+    <button id="clearLogoBtn" class="secondary">清除 logo</button>
+
+    <h2>导出</h2>
+    <div class="field"><label>文件名</label><input type="text" id="filename" value="qrcode" /></div>
+    <button id="genBtn">生成 QR 码</button>
+    <button id="downloadPngBtn" class="secondary" disabled>下载 PNG</button>
+    <button id="downloadSvgBtn" class="secondary" disabled>下载 SVG</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未生成</div>
+    <div class="qr-preview" id="preview">
+      <div class="preview-empty">点击"生成 QR 码"</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('qr-gen');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let qrLib = null;
+  let lastCanvas = null;
+  let lastSvgText = null;
+  let logoBitmap = null;
+
+  $('size').addEventListener('input', e => $('sizeVal').textContent = e.target.value);
+  $('margin').addEventListener('input', e => $('marginVal').textContent = e.target.value);
+  $('logoSize').addEventListener('input', e => $('logoSizeVal').textContent = e.target.value);
+
+  // ----- presets -----
+  const PRESETS = {
+    url: 'https://example.com',
+    wifi: 'WIFI:T:WPA;S:MyNetwork;P:password123;;',
+    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN:张三\nTEL:13800138000\nEMAIL:zhangsan@example.com\nEND:VCARD',
+    sms: 'SMSTO:13800138000:你好'
+  };
+  document.querySelectorAll('.preset-row button').forEach(b => {
+    b.addEventListener('click', () => { $('content').value = PRESETS[b.dataset.preset]; });
+  });
+
+  // ----- logo drop -----
+  const handoff = Toolkit.setupHandoff('qr-gen', { outputType: 'image/png' });
+  attachDropZone($('logoDrop'), $('logoInput'), async (files) => {
+    if (!files.length) return;
+    try {
+      logoBitmap = await createImageBitmap(files[0]);
+      log.ok(`Logo 已加载 ${logoBitmap.width}×${logoBitmap.height}`);
+    } catch (e) { log.err('logo 加载失败: ' + e.message); }
+  });
+  $('clearLogoBtn').addEventListener('click', () => { logoBitmap = null; log.dim('Logo 已清除'); });
+
+  // ----- generate -----
+  $('genBtn').addEventListener('click', async () => {
+    const text = $('content').value;
+    if (!text) { log.err('请输入要编码的内容'); return; }
+    $('genBtn').disabled = true;
+    log.dim('生成 QR 码...');
+    try {
+      if (!qrLib) {
+        log.dim('  加载 QR 库 (首次联网)...');
+        qrLib = await import('https://esm.sh/qrcode@1.5.3');
+      }
+      const size = parseInt($('size').value, 10);
+      const margin = parseInt($('margin').value, 10);
+      const ecc = $('ecc').value;
+      const color = { dark: $('fgColor').value, light: $('bgColor').value };
+      // canvas
+      const cv = newCanvas(size, size);
+      await qrLib.toCanvas(cv, text, { errorCorrectionLevel: ecc, margin, color, width: size });
+      // optional logo overlay
+      if (logoBitmap) {
+        const pct = parseInt($('logoSize').value, 10) / 100;
+        const ls = Math.round(size * pct);
+        const lx = Math.round((size - ls) / 2);
+        const ly = Math.round((size - ls) / 2);
+        const ctx = cv.getContext('2d');
+        // white round-ish backdrop
+        ctx.fillStyle = $('bgColor').value;
+        const pad = Math.round(ls * 0.08);
+        ctx.fillRect(lx - pad, ly - pad, ls + pad*2, ls + pad*2);
+        ctx.drawImage(logoBitmap, lx, ly, ls, ls);
+      }
+      lastCanvas = cv;
+      // SVG version
+      lastSvgText = await qrLib.toString(text, { type: 'svg', errorCorrectionLevel: ecc, margin, color, width: size });
+      $('preview').innerHTML = '';
+      $('preview').appendChild(cv);
+      $('downloadPngBtn').disabled = false;
+      $('downloadSvgBtn').disabled = false;
+      $('stats').innerHTML = `<strong>${size}×${size}</strong> · ECC <strong>${ecc}</strong> · ${text.length} 字符`;
+      log.ok('生成完成');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('genBtn').disabled = false;
+    }
+  });
+
+  $('downloadPngBtn').addEventListener('click', async () => {
+    if (!lastCanvas) return;
+    const blob = await canvasToBlob(lastCanvas, 'image/png');
+    const name = ($('filename').value || 'qrcode').replace(/[^\w-]/g, '_');
+    download(blob, name + '.png');
+  });
+
+  $('downloadSvgBtn').addEventListener('click', () => {
+    if (!lastSvgText) return;
+    const name = ($('filename').value || 'qrcode').replace(/[^\w-]/g, '_');
+    download(new Blob([lastSvgText], { type: 'image/svg+xml' }), name + '.svg');
+  });
+})();
+</script>
+</body>
+</html>

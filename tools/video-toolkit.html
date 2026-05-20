@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Video Toolkit · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .preview-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 280px; }
+  .preview-col { display: flex; flex-direction: column; gap: 6px; }
+  .preview-col .label {
+    color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto; padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-box video, .preview-box canvas, .preview-box img { max-width: 100%; max-height: 100%; }
+  .timeline-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+  }
+  .timeline-row input[type=range] { flex: 1; }
+  .timeline-row .mono { font-family: ui-monospace, Consolas, monospace; min-width: 80px; text-align: right; }
+  .action-controls {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .compat-note strong { color: var(--warning); }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎬 Video Toolkit</h1>
+
+    <div class="compat-note">
+      <strong>MP4 输出</strong>用 WebCodecs + mp4-muxer (Chrome / Edge 113+),首次联网加载 ~30KB。<br/>
+      <strong>WebM 输出</strong>用浏览器原生 MediaRecorder,所有 Chromium 都支持。
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入视频</p>
+      <p class="hint">MP4 / WebM / MOV<br/>所有处理在浏览器本地完成</p>
+      <input type="file" id="fileInput" accept="video/*" style="display:none" />
+    </div>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+
+    <h2>操作</h2>
+    <div class="field">
+      <select id="action">
+        <option value="trim">✂️ 时间裁剪 (Trim)</option>
+        <option value="crop">🔲 画面裁剪 (Crop)</option>
+        <option value="resize">📐 缩放</option>
+        <option value="speed">⏩ 调速</option>
+        <option value="reverse">⏪ 反向播放</option>
+        <option value="frames">🖼️ 抽帧 (PNG ZIP)</option>
+        <option value="toGif">🎞️ 转 GIF</option>
+        <option value="chromaKey">🌿 色键抠像 (绿幕去背景)</option>
+        <option value="filter">🎚️ 滤镜 / 色相 / 调色</option>
+      </select>
+    </div>
+
+    <div class="action-controls" id="actionControls"></div>
+
+    <h2>输出</h2>
+    <div class="field">
+      <label>输出格式 (除抽帧 / 转 GIF / 色键外)</label>
+      <select id="outFormat">
+        <option value="mp4">MP4 (H.264) — Chrome / Edge 113+ 推荐</option>
+        <option value="webm-vp9">WebM (VP9) — 全平台</option>
+        <option value="webm-vp8">WebM (VP8) — 兼容性最好</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>比特率 (Kbps)</label>
+      <input type="number" id="bitrate" value="3000" min="200" max="20000" />
+    </div>
+    <div class="field">
+      <label>抽帧 / GIF FPS</label>
+      <input type="number" id="fps" value="12" min="1" max="60" />
+    </div>
+    <div class="field">
+      <label>文件名</label>
+      <input type="text" id="filename" value="output" />
+    </div>
+    <button id="applyBtn" disabled>应用</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-pair">
+      <div class="preview-col">
+        <div class="label">原视频</div>
+        <div class="preview-box" id="srcBox">
+          <div class="preview-empty">拖入视频</div>
+        </div>
+      </div>
+      <div class="preview-col">
+        <div class="label">输出预览</div>
+        <div class="preview-box" id="outBox">
+          <div class="preview-empty">应用操作后这里显示结果</div>
+        </div>
+      </div>
+    </div>
+    <div class="timeline-row" id="timelineRow" style="display:none">
+      <button id="playBtn" class="secondary" style="padding:4px 10px; font-size:11px">▶</button>
+      <input type="range" id="seekBar" min="0" max="1000" value="0" />
+      <span class="mono" id="timeLabel">0.0 / 0.0 s</span>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
+<script>
+Toolkit.injectTopbar('video-toolkit');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, makeZip } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let srcVideo = null;
+  let srcUrl = null;
+  let srcMeta = null;  // {w, h, duration}
+  let outBlob = null;
+  let outExt = 'webm';
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('video-toolkit', { outputType: 'video/mp4' });
+  $('action').addEventListener('change', renderActionControls);
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!f.type.startsWith('video/')) { log.err('请拖入视频文件'); return; }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    if (srcUrl) URL.revokeObjectURL(srcUrl);
+    srcUrl = URL.createObjectURL(f);
+    srcVideo = document.createElement('video');
+    srcVideo.src = srcUrl;
+    srcVideo.muted = true; srcVideo.playsInline = true; srcVideo.preload = 'auto';
+
+    await new Promise((resolve, reject) => {
+      srcVideo.onloadedmetadata = resolve;
+      srcVideo.onerror = () => reject(new Error('视频加载失败'));
+    });
+
+    srcMeta = { w: srcVideo.videoWidth, h: srcVideo.videoHeight, duration: srcVideo.duration };
+    $('srcBox').innerHTML = '';
+    srcVideo.controls = true;
+    srcVideo.style.maxWidth = '100%';
+    srcVideo.style.maxHeight = '100%';
+    $('srcBox').appendChild(srcVideo);
+    $('stats').innerHTML = `<strong>${srcMeta.w}×${srcMeta.h}</strong> · <strong>${srcMeta.duration.toFixed(2)}s</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+    $('applyBtn').disabled = false;
+    log.ok('加载完成');
+    renderActionControls();
+  }
+
+  function renderActionControls() {
+    if (!srcMeta) return;
+    const action = $('action').value;
+    const c = $('actionControls');
+    const { w, h, duration } = srcMeta;
+
+    if (action === 'trim') {
+      c.innerHTML = `
+        <div class="field">
+          <label>起始时间 (秒) <span id="trimStartVal" class="mono">0</span></label>
+          <input type="range" id="trimStart" min="0" max="${duration.toFixed(2)}" step="0.05" value="0" />
+        </div>
+        <div class="field">
+          <label>结束时间 (秒) <span id="trimEndVal" class="mono">${duration.toFixed(2)}</span></label>
+          <input type="range" id="trimEnd" min="0" max="${duration.toFixed(2)}" step="0.05" value="${duration.toFixed(2)}" />
+        </div>
+        <div class="info">保留 [起始, 结束] 之间的片段</div>
+      `;
+      $('trimStart').addEventListener('input', e => { $('trimStartVal').textContent = (+e.target.value).toFixed(2); srcVideo.currentTime = +e.target.value; });
+      $('trimEnd').addEventListener('input', e => $('trimEndVal').textContent = (+e.target.value).toFixed(2));
+    } else if (action === 'crop') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>X</label><input type="number" id="cropX" value="0" min="0" max="${w}" /></div>
+          <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" max="${h}" /></div>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
+          <div class="field"><label>高</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
+        </div>
+      `;
+    } else if (action === 'resize') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="newW" value="${w}" min="1" /></div>
+          <div class="field"><label>高</label><input type="number" id="newH" value="${h}" min="1" /></div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>锁定宽高比</span></label>
+      `;
+      const ratio = w / h;
+      $('newW').addEventListener('input', () => { if ($('lockRatio').checked) $('newH').value = Math.round(parseInt($('newW').value, 10) / ratio); });
+      $('newH').addEventListener('input', () => { if ($('lockRatio').checked) $('newW').value = Math.round(parseInt($('newH').value, 10) * ratio); });
+    } else if (action === 'speed') {
+      c.innerHTML = `
+        <div class="field">
+          <label>速度倍率 <span id="speedVal" class="mono">1.0×</span></label>
+          <input type="range" id="speedMul" min="10" max="400" value="100" />
+        </div>
+      `;
+      $('speedMul').addEventListener('input', e => $('speedVal').textContent = (e.target.value / 100).toFixed(2) + '×');
+    } else if (action === 'reverse') {
+      c.innerHTML = `<div class="info">反向播放,无参数。需要逐帧抽样,长视频较慢。</div>`;
+    } else if (action === 'frames') {
+      c.innerHTML = `
+        <div class="field">
+          <label>抽帧 FPS (上面"输出"区也有)</label>
+          <input type="number" id="framesFps" value="12" min="1" max="60" />
+        </div>
+        <div class="info">从视频抽取 PNG 序列帧,打包为 ZIP 下载。FPS 越高文件越多。</div>
+      `;
+    } else if (action === 'toGif') {
+      c.innerHTML = `
+        <div class="field"><label>GIF FPS</label><input type="number" id="gifFps" value="12" min="1" max="30" /></div>
+        <div class="field"><label>缩放到最大边 (px, 0=原尺寸)</label><input type="number" id="gifMaxDim" value="480" min="0" /></div>
+        <div class="field"><label>调色板</label>
+          <select id="gifPalette">
+            <option value="median">中位切分 256 色 (推荐)</option>
+            <option value="uniform">均匀 (快)</option>
+          </select>
+        </div>
+        <div class="info">GIF 体积通常远大于视频,建议先 trim + 降 FPS + 缩小尺寸</div>
+      `;
+    } else if (action === 'chromaKey') {
+      c.innerHTML = `
+        <div class="field">
+          <label>背景颜色 (Hex)</label>
+          <input type="text" id="keyColor" value="#00ff00" />
+        </div>
+        <label class="checkbox"><input type="checkbox" id="keyAuto" /><span>用左上角像素作为背景色</span></label>
+        <div class="field">
+          <label>容差 <span id="keyTolVal" class="mono">60</span></label>
+          <input type="range" id="keyTol" min="0" max="200" value="60" />
+        </div>
+        <div class="field">
+          <label>边缘羽化 (px) <span id="keyFeatherVal" class="mono">1</span></label>
+          <input type="range" id="keyFeather" min="0" max="6" value="1" />
+        </div>
+        <div class="field">
+          <label>spill 抑制 (去绿边)</label>
+          <select id="keySpill">
+            <option value="0">关</option>
+            <option value="1" selected>轻 (按 luma 减少绿通道)</option>
+            <option value="2">强</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>抠像后 FPS (低 FPS 更快)</label>
+          <input type="number" id="keyFps" value="24" min="1" max="60" />
+        </div>
+        <div class="field">
+          <label>输出格式</label>
+          <select id="keyOutput">
+            <option value="mp4">MP4 — H.264,透明区填指定色 (playable 推荐)</option>
+            <option value="webm-alpha">WebM (VP9 + alpha) — 真透明,Chrome 113+</option>
+            <option value="png-zip">PNG 序列帧 (ZIP) — 真透明,最万能</option>
+            <option value="apng">APNG — 真透明,可直接预览</option>
+            <option value="gif">透明 GIF (硬边缘,1-bit alpha)</option>
+            <option value="webm">WebM (MediaRecorder) — alpha 区会变黑</option>
+          </select>
+        </div>
+        <div class="field" id="bgFillField">
+          <label>MP4 背景填充色</label>
+          <input type="text" id="keyBgColor" value="#000000" />
+          <div class="info" style="margin-top:4px;">仅 MP4 输出有效:透明区会用这个颜色填充 (playable 常用黑或合成色)</div>
+        </div>
+        <div class="info">绿幕 / 蓝幕场景默认参数即可。点击"背景颜色"输入框旁边可手动改 hex,或勾"用左上角"自动取色</div>
+      `;
+      $('keyTol').addEventListener('input', e => $('keyTolVal').textContent = e.target.value);
+      $('keyFeather').addEventListener('input', e => $('keyFeatherVal').textContent = e.target.value);
+    } else if (action === 'filter') {
+      c.innerHTML = `
+        <div class="field">
+          <label>预设</label>
+          <select id="vfPreset">
+            <option value="none">自定义</option>
+            <option value="bw">黑白</option>
+            <option value="sepia">怀旧 Sepia</option>
+            <option value="cold">冷色</option>
+            <option value="warm">暖色</option>
+            <option value="vivid">高饱和</option>
+            <option value="contrast">高对比</option>
+            <option value="vintage">复古胶片</option>
+            <option value="dramatic">戏剧化</option>
+            <option value="dreamy">梦幻</option>
+          </select>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="vfGray" /><span>灰度</span></label>
+        <label class="checkbox"><input type="checkbox" id="vfSepia" /><span>Sepia</span></label>
+        <label class="checkbox"><input type="checkbox" id="vfInvert" /><span>反色</span></label>
+        <div class="field"><label>亮度 <span id="vfBriVal" class="mono">100%</span></label><input type="range" id="vfBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>对比度 <span id="vfConVal" class="mono">100%</span></label><input type="range" id="vfCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>饱和度 <span id="vfSatVal" class="mono">100%</span></label><input type="range" id="vfSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>色相旋转 <span id="vfHueVal" class="mono">0°</span></label><input type="range" id="vfHue" min="0" max="360" value="0" /></div>
+        <div class="info">逐帧应用 canvas filter,输出走当前输出格式(MP4 / WebM)</div>
+      `;
+      const b = (id, val, suf) => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
+      b('vfBri','vfBriVal','%'); b('vfCon','vfConVal','%'); b('vfSat','vfSatVal','%'); b('vfHue','vfHueVal','°');
+      const PRESETS = {
+        bw:       { gray:1, sepia:0, inv:0, bri:100, con:110, sat:100, hue:0 },
+        sepia:    { gray:0, sepia:1, inv:0, bri:105, con:100, sat:100, hue:0 },
+        cold:     { gray:0, sepia:0, inv:0, bri:100, con:100, sat:110, hue:200 },
+        warm:     { gray:0, sepia:0, inv:0, bri:105, con:105, sat:115, hue:25 },
+        vivid:    { gray:0, sepia:0, inv:0, bri:100, con:110, sat:180, hue:0 },
+        contrast: { gray:0, sepia:0, inv:0, bri:100, con:160, sat:120, hue:0 },
+        vintage:  { gray:0, sepia:1, inv:0, bri:95,  con:115, sat:75,  hue:0 },
+        dramatic: { gray:0, sepia:0, inv:0, bri:90,  con:140, sat:130, hue:0 },
+        dreamy:   { gray:0, sepia:0, inv:0, bri:115, con:85,  sat:90,  hue:0 }
+      };
+      $('vfPreset').addEventListener('change', e => {
+        const p = PRESETS[e.target.value]; if (!p) return;
+        $('vfGray').checked = !!p.gray; $('vfSepia').checked = !!p.sepia; $('vfInvert').checked = !!p.inv;
+        $('vfBri').value = p.bri; $('vfBriVal').textContent = p.bri + '%';
+        $('vfCon').value = p.con; $('vfConVal').textContent = p.con + '%';
+        $('vfSat').value = p.sat; $('vfSatVal').textContent = p.sat + '%';
+        $('vfHue').value = p.hue; $('vfHueVal').textContent = p.hue + '°';
+      });
+    }
+  }
+
+  $('applyBtn').addEventListener('click', async () => {
+    if (!srcVideo) return;
+    const action = $('action').value;
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.dim(`应用 ${action}...`);
+    try {
+      if (action === 'frames') await doExtractFrames();
+      else if (action === 'toGif') await doToGif();
+      else if (action === 'chromaKey') await doChromaKey();
+      else await doReencodeWebm(action);  // trim/crop/resize/speed/reverse/filter all share this path
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('applyBtn').disabled = false;
+      progress.hide();
+    }
+  });
+
+  async function doReencodeWebm(action) {
+    const { w: sw, h: sh, duration } = srcMeta;
+    // determine output params
+    let outW = sw, outH = sh, srcX = 0, srcY = 0, srcW = sw, srcH = sh;
+    let startT = 0, endT = duration;
+    let speed = 1;
+    let reverse = false;
+    // canvas filter chain (built once for 'filter' action, applied to every frame draw)
+    let canvasFilter = 'none';
+    if (action === 'filter') {
+      const parts = [];
+      if ($('vfGray')?.checked) parts.push('grayscale(100%)');
+      if ($('vfSepia')?.checked) parts.push('sepia(100%)');
+      if ($('vfInvert')?.checked) parts.push('invert(100%)');
+      const bri = $('vfBri')?.value; if (bri && bri !== '100') parts.push(`brightness(${bri}%)`);
+      const con = $('vfCon')?.value; if (con && con !== '100') parts.push(`contrast(${con}%)`);
+      const sat = $('vfSat')?.value; if (sat && sat !== '100') parts.push(`saturate(${sat}%)`);
+      const hue = $('vfHue')?.value; if (hue && hue !== '0') parts.push(`hue-rotate(${hue}deg)`);
+      canvasFilter = parts.length ? parts.join(' ') : 'none';
+    }
+    if (action === 'trim') {
+      startT = parseFloat($('trimStart').value);
+      endT = parseFloat($('trimEnd').value);
+      if (endT <= startT) throw new Error('结束时间必须大于起始时间');
+    } else if (action === 'crop') {
+      srcX = parseInt($('cropX').value, 10);
+      srcY = parseInt($('cropY').value, 10);
+      srcW = parseInt($('cropW').value, 10);
+      srcH = parseInt($('cropH').value, 10);
+      outW = srcW; outH = srcH;
+    } else if (action === 'resize') {
+      outW = parseInt($('newW').value, 10);
+      outH = parseInt($('newH').value, 10);
+    } else if (action === 'speed') {
+      speed = parseInt($('speedMul').value, 10) / 100;
+    } else if (action === 'reverse') {
+      reverse = true;
+    }
+
+    const cv = newCanvas(outW, outH);
+    const ctx = cv.getContext('2d');
+    const fmt = $('outFormat').value;
+    const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
+    const fpsNum = 30;
+    const interval = 1 / fpsNum;
+
+    if (fmt === 'mp4') {
+      // === WebCodecs + mp4-muxer path (Chrome/Edge 113+) ===
+      if (!('VideoEncoder' in window)) {
+        log.warn('当前浏览器不支持 WebCodecs,回退到 WebM');
+        return doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, 'webm-vp9', bitrate, canvasFilter);
+      }
+      log.dim('加载 mp4-muxer (首次联网)...');
+      const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: 'avc', width: outW, height: outH },
+        fastStart: 'in-memory'
+      });
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => log.err('encoder: ' + e.message)
+      });
+      // pick H.264 profile based on resolution
+      encoder.configure({
+        codec: 'avc1.42001f', // H.264 Baseline, level 3.1 (most compatible)
+        width: outW, height: outH,
+        bitrate,
+        framerate: fpsNum
+      });
+      log.dim(`MP4 编码 ${outW}×${outH} @ ${fpsNum}fps, ${(bitrate/1000)|0}kbps...`);
+
+      let frameIdx = 0;
+      ctx.filter = canvasFilter;
+      async function pushFrame(t, ts) {
+        await seekVideo(srcVideo, t);
+        ctx.clearRect(0, 0, outW, outH);
+        ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        const vf = new VideoFrame(cv, { timestamp: ts });
+        // keyframe every 30 frames
+        encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
+        vf.close();
+        frameIdx++;
+      }
+
+      if (!reverse) {
+        const playSpan = endT - startT;
+        let t = startT;
+        while (t < endT) {
+          await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
+          progress.set((t - startT) / playSpan);
+          t += interval * speed;
+        }
+      } else {
+        let t = endT;
+        const playSpan = endT - startT;
+        while (t > startT) {
+          await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
+          progress.set(1 - (t - startT) / playSpan);
+          t -= interval;
+        }
+      }
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+      outExt = 'mp4';
+      showOutput();
+      log.ok(`生成 MP4 ${fmtBytes(outBlob.size)}`);
+      return;
+    }
+
+    // === MediaRecorder path (WebM) ===
+    return doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, fmt, bitrate, canvasFilter);
+  }
+
+  async function doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, fmt, bitrate, canvasFilter) {
+    if (canvasFilter && canvasFilter !== 'none') ctx.filter = canvasFilter;
+    const stream = cv.captureStream(0);
+    const track = stream.getVideoTracks()[0];
+    const mimeType = fmt === 'webm-vp9' ? 'video/webm;codecs=vp9' : 'video/webm;codecs=vp8';
+    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+    const chunks = [];
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(resolve => { recorder.onstop = resolve; });
+    recorder.start();
+
+    if (!reverse) {
+      const playSpan = endT - startT;
+      let t = startT;
+      while (t < endT) {
+        await seekVideo(srcVideo, t);
+        ctx.clearRect(0, 0, outW, outH);
+        ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        if (track.requestFrame) track.requestFrame();
+        progress.set((t - startT) / playSpan);
+        t += interval * speed;
+      }
+    } else {
+      let t = endT;
+      const playSpan = endT - startT;
+      while (t > startT) {
+        await seekVideo(srcVideo, t);
+        ctx.clearRect(0, 0, outW, outH);
+        ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        if (track.requestFrame) track.requestFrame();
+        progress.set(1 - (t - startT) / playSpan);
+        t -= interval;
+      }
+    }
+    await new Promise(r => setTimeout(r, 200));
+    recorder.stop();
+    await done;
+    outBlob = new Blob(chunks, { type: 'video/webm' });
+    outExt = 'webm';
+    showOutput();
+    log.ok(`生成 WebM ${fmtBytes(outBlob.size)}`);
+  }
+
+  async function doExtractFrames() {
+    const fps = parseInt($('framesFps').value, 10) || parseInt($('fps').value, 10) || 12;
+    const { w, h, duration } = srcMeta;
+    const total = Math.max(1, Math.floor(duration * fps));
+    log.dim(`抽 ${total} 帧 @ ${fps} FPS...`);
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const files = [];
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration - 0.001, i / fps);
+      await seekVideo(srcVideo, t);
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(srcVideo, 0, 0);
+      const blob = await canvasToBlob(cv, 'image/png');
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      files.push({ name: `frame_${String(i).padStart(4, '0')}.png`, data: buf });
+      progress.set((i + 1) / total);
+    }
+    const zip = makeZip(files);
+    outBlob = zip;
+    outExt = 'zip';
+    showOutputAsZipInfo(total);
+    log.ok(`抽帧完成,共 ${total} 帧 · ZIP ${fmtBytes(zip.size)}`);
+  }
+
+  async function doToGif() {
+    const fps = parseInt($('gifFps').value, 10) || 12;
+    const maxDim = parseInt($('gifMaxDim').value, 10) || 0;
+    const palette = $('gifPalette').value;
+    const { w, h, duration } = srcMeta;
+    const ratio = maxDim > 0 ? Math.min(1, maxDim / Math.max(w, h)) : 1;
+    const ow = Math.max(1, Math.round(w * ratio)), oh = Math.max(1, Math.round(h * ratio));
+    const total = Math.max(1, Math.floor(duration * fps));
+    log.dim(`抽 ${total} 帧 → 编码 GIF (${ow}×${oh})...`);
+    const cv = newCanvas(ow, oh);
+    const ctx = cv.getContext('2d');
+    const frames = [];
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration - 0.001, i / fps);
+      await seekVideo(srcVideo, t);
+      ctx.clearRect(0, 0, ow, oh);
+      ctx.drawImage(srcVideo, 0, 0, ow, oh);
+      const bm = await createImageBitmap(cv);
+      frames.push({ bitmap: bm, w: ow, h: oh });
+      progress.set((i + 1) / total * 0.5);
+    }
+    const gif = await AnimEncoders.buildGif(frames, {
+      fps, loop: 0, paletteMode: palette,
+      onProgress: pct => progress.set(0.5 + pct * 0.5),
+      onStatus: msg => log.dim('  ' + msg)
+    });
+    outBlob = gif;
+    outExt = 'gif';
+    showOutput();
+    log.ok(`生成 GIF ${fmtBytes(gif.size)}`);
+  }
+
+  // ===== Chroma Key (背景去除) =====
+  async function doChromaKey() {
+    const { w, h, duration } = srcMeta;
+    const autoCorner = $('keyAuto').checked;
+    const keyHex = $('keyColor').value;
+    const tol = parseInt($('keyTol').value, 10);
+    const feather = parseInt($('keyFeather').value, 10);
+    const spill = parseInt($('keySpill').value, 10);
+    const fps = parseInt($('keyFps').value, 10) || 24;
+    const outputFmt = $('keyOutput').value;
+
+    let keyRGB = hexToRgb(keyHex);
+    if (!keyRGB) { log.err('无效 hex'); return; }
+
+    const total = Math.max(1, Math.floor(duration * fps));
+    log.dim(`抽 ${total} 帧 @ ${fps} FPS, 色键 ${keyHex}, tol=${tol}, feather=${feather}...`);
+
+    // process each frame
+    const srcCv = newCanvas(w, h);
+    const sctx = srcCv.getContext('2d');
+    const frameBitmaps = [];      // for apng / gif (needs ImageBitmap)
+    const framePngBlobs = [];     // for PNG ZIP
+
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration - 0.001, i / fps);
+      await seekVideo(srcVideo, t);
+      sctx.clearRect(0, 0, w, h);
+      sctx.drawImage(srcVideo, 0, 0);
+      // auto pick key color from top-left of first frame
+      if (autoCorner && i === 0) {
+        const d = sctx.getImageData(0, 0, 1, 1).data;
+        keyRGB = { r: d[0], g: d[1], b: d[2] };
+        log.dim(`  自动取色: rgb(${d[0]}, ${d[1]}, ${d[2]})`);
+      }
+      applyChromaKeyToCanvas(srcCv, keyRGB, tol, feather, spill);
+      if (outputFmt === 'png-zip') {
+        const blob = await canvasToBlob(srcCv, 'image/png');
+        framePngBlobs.push(blob);
+      } else {
+        const bm = await createImageBitmap(srcCv);
+        frameBitmaps.push({ bitmap: bm, w, h });
+      }
+      progress.set((i + 1) / total * 0.6);
+    }
+
+    // encode
+    if (outputFmt === 'png-zip') {
+      log.dim('打包 PNG 帧 ZIP...');
+      const files = [];
+      for (let i = 0; i < framePngBlobs.length; i++) {
+        const data = new Uint8Array(await framePngBlobs[i].arrayBuffer());
+        files.push({ name: `frame_${String(i).padStart(4,'0')}.png`, data });
+      }
+      const zip = Toolkit.makeZip(files);
+      outBlob = zip;
+      outExt = 'zip';
+      showOutputAsZipInfo(framePngBlobs.length);
+      log.ok(`完成 ${framePngBlobs.length} 帧 PNG ZIP (${fmtBytes(zip.size)})`);
+    } else if (outputFmt === 'apng') {
+      log.dim('编码 APNG...');
+      const apng = await AnimEncoders.buildApng(frameBitmaps, {
+        fps, loop: 0,
+        onProgress: p => progress.set(0.6 + p * 0.4)
+      });
+      outBlob = apng;
+      outExt = 'png';
+      showOutput();
+      log.ok(`完成 APNG (${fmtBytes(apng.size)})`);
+    } else if (outputFmt === 'gif') {
+      log.dim('编码 GIF (透明色 = 抠掉的背景)...');
+      // For GIF transparency we need to map alpha<128 → transparent palette index.
+      // Our AnimEncoders.buildGif currently does palette quantization, transparency in GIF
+      // is handled by setting one palette index as transparent.
+      // Simplification: replace alpha<128 pixels with a unique magenta marker, post-process.
+      // But buildGif doesn't take alpha into account. For now, just render with hard-edged
+      // alpha replaced by a chroma color and use buildGif (GIF will treat those pixels as
+      // background color rather than transparent). To get real transparency, we'd need
+      // to extend buildGif. Document this limitation.
+      log.warn('注意: 当前实现的 GIF 不支持透明,抠掉区域会变成纯色。建议用 APNG 或 PNG ZIP。');
+      const gif = await AnimEncoders.buildGif(frameBitmaps, {
+        fps, loop: 0, paletteMode: 'median',
+        onProgress: p => progress.set(0.6 + p * 0.4)
+      });
+      outBlob = gif;
+      outExt = 'gif';
+      showOutput();
+      log.ok(`完成 GIF (${fmtBytes(gif.size)})`);
+    } else if (outputFmt === 'mp4') {
+      log.dim('编码 MP4 (H.264, 透明区填充指定色)...');
+      if (!('VideoEncoder' in window)) throw new Error('当前浏览器不支持 WebCodecs, 改用 PNG ZIP / APNG');
+      const bg = hexToRgb($('keyBgColor').value) || { r: 0, g: 0, b: 0 };
+      const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: 'avc', width: w, height: h },
+        fastStart: 'in-memory'
+      });
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => log.err('encoder: ' + e.message)
+      });
+      encoder.configure({
+        codec: 'avc1.42001f',
+        width: w, height: h,
+        bitrate: 3_000_000,
+        framerate: fps
+      });
+      const cv = newCanvas(w, h);
+      const ctx = cv.getContext('2d');
+      for (let i = 0; i < frameBitmaps.length; i++) {
+        // fill background color first
+        ctx.fillStyle = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
+        ctx.fillRect(0, 0, w, h);
+        // composite the alpha-keyed frame on top — transparent pixels show bg color
+        ctx.drawImage(frameBitmaps[i].bitmap, 0, 0);
+        const vf = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / fps) });
+        encoder.encode(vf, { keyFrame: i % 30 === 0 });
+        vf.close();
+        progress.set(0.6 + (i + 1) / frameBitmaps.length * 0.4);
+      }
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+      outExt = 'mp4';
+      showOutput();
+      log.ok(`完成 MP4 (${fmtBytes(outBlob.size)})`);
+    } else if (outputFmt === 'webm-alpha') {
+      log.dim('编码 WebM VP9 + alpha (真透明)...');
+      if (!('VideoEncoder' in window)) throw new Error('当前浏览器不支持 WebCodecs');
+      const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/webm-muxer@5.0.3');
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: 'V_VP9', width: w, height: h, alpha: true },
+      });
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => log.err('encoder: ' + e.message)
+      });
+      try {
+        encoder.configure({
+          codec: 'vp09.00.10.08',
+          width: w, height: h,
+          bitrate: 3_000_000,
+          framerate: fps,
+          alpha: 'keep'  // KEY: keep alpha channel
+        });
+      } catch (e) {
+        throw new Error('VP9 alpha 编码不支持 (Chrome 113+): ' + e.message);
+      }
+      for (let i = 0; i < frameBitmaps.length; i++) {
+        const vf = new VideoFrame(frameBitmaps[i].bitmap, { timestamp: Math.round(i * 1e6 / fps), alpha: 'keep' });
+        encoder.encode(vf, { keyFrame: i % 30 === 0 });
+        vf.close();
+        progress.set(0.6 + (i + 1) / frameBitmaps.length * 0.4);
+      }
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      outBlob = new Blob([muxer.target.buffer], { type: 'video/webm' });
+      outExt = 'webm';
+      showOutput();
+      log.ok(`完成 WebM (VP9 + alpha) ${fmtBytes(outBlob.size)}`);
+    } else if (outputFmt === 'webm') {
+      log.dim('编码 WebM (MediaRecorder, alpha 区域变黑)...');
+      const cv = newCanvas(w, h);
+      const ctx = cv.getContext('2d');
+      const stream = cv.captureStream(0);
+      const track = stream.getVideoTracks()[0];
+      const mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+      const chunks = [];
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const done = new Promise(resolve => { recorder.onstop = resolve; });
+      recorder.start();
+      const interval = 1 / fps;
+      for (let i = 0; i < frameBitmaps.length; i++) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(frameBitmaps[i].bitmap, 0, 0);
+        if (track.requestFrame) track.requestFrame();
+        await new Promise(r => setTimeout(r, interval * 1000));
+      }
+      await new Promise(r => setTimeout(r, 200));
+      recorder.stop();
+      await done;
+      outBlob = new Blob(chunks, { type: 'video/webm' });
+      outExt = 'webm';
+      showOutput();
+      log.ok(`完成 WebM (${fmtBytes(outBlob.size)})`);
+    }
+    progress.hide();
+  }
+
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+    if (!m) return null;
+    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+  }
+
+  // chroma key 算法:每像素到目标色的距离 → alpha
+  // 边缘羽化用 box blur 到 alpha 通道
+  // spill 抑制:当 alpha 0-255 之间(边缘),减少绿通道(避免绿色光晕)
+  function applyChromaKeyToCanvas(canvas, key, tol, feather, spill) {
+    const w = canvas.width, h = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const tolSq = tol * tol * 3;
+    // first pass: distance-based alpha (soft via tol range)
+    // alpha gradient: dist < tol*0.6 → fully transparent; dist > tol → fully opaque; linear between
+    const softLo = tol * 0.6;
+    const softLoSq = softLo * softLo * 3;
+    for (let i = 0; i < d.length; i += 4) {
+      const dr = d[i] - key.r, dg = d[i+1] - key.g, db = d[i+2] - key.b;
+      const ds = dr*dr + dg*dg + db*db;
+      let alpha;
+      if (ds <= softLoSq) alpha = 0;
+      else if (ds >= tolSq) alpha = 255;
+      else {
+        const t = (Math.sqrt(ds) - softLo) / (tol - softLo);
+        alpha = Math.round(t * 255);
+      }
+      d[i + 3] = alpha;
+      // spill suppression on green key: if key is dominant-green, suppress green near edges
+      if (spill > 0 && alpha > 0 && alpha < 255) {
+        const isGreenKey = key.g > key.r && key.g > key.b;
+        const isBlueKey  = key.b > key.r && key.b > key.g;
+        if (isGreenKey) {
+          // limit green to max(red, blue) * (1 + spill * 0.1)
+          const cap = Math.max(d[i], d[i+2]) + (spill === 2 ? 0 : 12);
+          if (d[i+1] > cap) d[i+1] = cap;
+        } else if (isBlueKey) {
+          const cap = Math.max(d[i], d[i+1]) + (spill === 2 ? 0 : 12);
+          if (d[i+2] > cap) d[i+2] = cap;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    // feather: blur alpha channel only
+    if (feather > 0) {
+      const tmp = newCanvas(w, h);
+      const tctx = tmp.getContext('2d');
+      tctx.filter = `blur(${feather}px)`;
+      tctx.drawImage(canvas, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(tmp, 0, 0);
+    }
+  }
+
+  function showOutput() {
+    $('outBox').innerHTML = '';
+    const url = URL.createObjectURL(outBlob);
+    if (outExt === 'gif') {
+      const img = document.createElement('img');
+      img.src = url;
+      $('outBox').appendChild(img);
+    } else {
+      const v = document.createElement('video');
+      v.src = url; v.controls = true; v.autoplay = true; v.loop = true; v.muted = true;
+      v.style.maxWidth = '100%'; v.style.maxHeight = '100%';
+      $('outBox').appendChild(v);
+    }
+    $('downloadBtn').disabled = false;
+    updateHandoff();
+  }
+
+  function showOutputAsZipInfo(frameCount) {
+    $('outBox').innerHTML = `
+      <div style="text-align:center; color: var(--muted-2)">
+        <div style="font-size:48px">📦</div>
+        <div><strong>${frameCount}</strong> 帧已打包为 ZIP</div>
+        <div class="small muted">${fmtBytes(outBlob.size)}</div>
+      </div>
+    `;
+    $('downloadBtn').disabled = false;
+    updateHandoff();
+  }
+
+  // Update the handoff button's payload based on current outBlob / outExt.
+  // Maps the output extension to the correct MIME so the dropdown targets the right tools.
+  function updateHandoff() {
+    if (!handoff || !outBlob) return;
+    const mimeMap = {
+      'mp4':  'video/mp4',
+      'webm': 'video/webm',
+      'gif':  'image/gif',
+      'png':  'image/png',     // APNG → image/png (image editors accept)
+      'zip':  'application/zip'
+    };
+    const mime = mimeMap[outExt] || 'application/octet-stream';
+    const name = ($('filename').value || 'output').replace(/[^\w-]/g, '_');
+    const ext = outExt === 'zip' ? '_frames.zip' : '.' + outExt;
+    handoff.setBlob(outBlob, name + ext, mime);
+  }
+
+  function seekVideo(video, t) {
+    return new Promise((resolve) => {
+      const onSeek = () => { video.removeEventListener('seeked', onSeek); resolve(); };
+      video.addEventListener('seeked', onSeek);
+      video.currentTime = t;
+    });
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const name = ($('filename').value || 'output').replace(/[^\w-]/g, '_');
+    const ext = outExt === 'zip' ? '_frames.zip' : '.' + outExt;
+    download(outBlob, name + ext);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    if (srcUrl) URL.revokeObjectURL(srcUrl);
+    srcVideo = null; srcUrl = null; srcMeta = null; outBlob = null;
+    $('srcBox').innerHTML = '<div class="preview-empty">拖入视频</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
+    $('stats').textContent = '未加载';
+    $('actionControls').innerHTML = '';
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

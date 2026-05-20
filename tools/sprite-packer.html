@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Sprite Packer · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎬 Sprite Packer</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入文件或点击选择</p>
+      <p class="hint">
+        序列帧 (多选 PNG / JPG)<br/>
+        视频 (MP4 / WebM / MOV)<br/>
+        GIF 动图
+      </p>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
+    </div>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+
+    <div id="videoSettings" style="display:none">
+      <h2>视频抽帧</h2>
+      <div class="field">
+        <label>FPS (帧/秒)</label>
+        <input type="number" id="videoFps" value="12" min="1" max="60" />
+      </div>
+    </div>
+
+    <h2>布局</h2>
+    <div class="field">
+      <label>列数 (0 = 自动接近正方)</label>
+      <input type="number" id="cols" value="0" min="0" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>帧间距 (px)</label>
+        <input type="number" id="padding" value="2" min="0" />
+      </div>
+      <div class="field">
+        <label>外边距 (px)</label>
+        <input type="number" id="margin" value="0" min="0" />
+      </div>
+    </div>
+
+    <h2>处理</h2>
+    <label class="checkbox">
+      <input type="checkbox" id="trim" checked />
+      <span>自动裁剪透明边</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="uniformSize" checked />
+      <span>统一帧尺寸 (取最大包围盒)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="powerOfTwo" />
+      <span>2 的幂次尺寸 (WebGL 友好)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="dropEmpty" />
+      <span>剔除全透明帧</span>
+    </label>
+
+    <h2>导出</h2>
+    <div class="field">
+      <label>文件名前缀</label>
+      <input type="text" id="filename" value="spritesheet" />
+    </div>
+    <div class="field">
+      <label>JSON 格式</label>
+      <select id="jsonFormat">
+        <option value="hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
+        <option value="array">TexturePacker JSON Array</option>
+        <option value="simple">简洁数组 (自定义引擎)</option>
+      </select>
+    </div>
+
+    <button id="exportBtn" disabled>导出 PNG + JSON</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-area" id="previewArea">
+      <div class="preview-empty">拖入文件后这里会显示合成后的精灵图预览</div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">原始帧</h2>
+      <div class="frame-grid" id="frameGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('sprite-packer');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, downloadJson, newCanvas, canvasToBlob } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let rawFrames = [];
+  let packed = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('sprite-packer', { outputType: 'image/png' });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    rawFrames = [];
+    packed = null;
+    $('frameGrid').innerHTML = '';
+    $('previewArea').innerHTML = '<div class="preview-empty">处理中...</div>';
+    log.clear();
+    $('exportBtn').disabled = true;
+
+    files = naturalSort(files);
+    const first = files[0];
+    const isVideo = first.type.startsWith('video/');
+    const isGif = first.type === 'image/gif' || /\.gif$/i.test(first.name);
+
+    try {
+      if (files.length === 1 && isVideo) {
+        $('videoSettings').style.display = 'block';
+        await loadVideo(first);
+      } else if (files.length === 1 && isGif) {
+        $('videoSettings').style.display = 'none';
+        await loadGif(first);
+      } else {
+        $('videoSettings').style.display = 'none';
+        await loadImages(files);
+      }
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      progress.hide();
+    }
+
+    if (rawFrames.length) {
+      log.ok(`加载完成 ${rawFrames.length} 帧`);
+      renderFrameGrid();
+      await repack();
+    } else {
+      $('previewArea').innerHTML = '<div class="preview-empty">没有可用的帧</div>';
+    }
+  }
+
+  async function loadImages(files) {
+    const imgs = files.filter(f => f.type.startsWith('image/') && !/\.gif$/i.test(f.name));
+    log.dim(`加载 ${imgs.length} 张图片...`);
+    for (let i = 0; i < imgs.length; i++) {
+      const f = imgs[i];
+      try {
+        const bitmap = await createImageBitmap(f);
+        rawFrames.push({ name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height });
+      } catch (e) {
+        log.err(`${f.name}: ${e.message}`);
+      }
+      progress.set((i + 1) / imgs.length);
+    }
+  }
+
+  async function loadVideo(file) {
+    const fps = parseInt($('videoFps').value, 10) || 12;
+    log.dim(`加载视频 ${file.name}, FPS=${fps}...`);
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url; video.muted = true; video.playsInline = true; video.preload = 'auto';
+
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('视频加载失败'));
+    });
+
+    const duration = video.duration;
+    const interval = 1 / fps;
+    const total = Math.max(1, Math.floor(duration * fps));
+    log.dim(`  时长 ${duration.toFixed(2)}s · 尺寸 ${video.videoWidth}×${video.videoHeight} · 共 ${total} 帧`);
+
+    const cv = newCanvas(video.videoWidth, video.videoHeight);
+    const ctx = cv.getContext('2d');
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration - 0.001, i * interval);
+      await seekVideo(video, t);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(video, 0, 0);
+      const bitmap = await createImageBitmap(cv);
+      rawFrames.push({ name: `frame_${String(i).padStart(4, '0')}`, bitmap, w: bitmap.width, h: bitmap.height });
+      progress.set((i + 1) / total);
+    }
+    URL.revokeObjectURL(url);
+  }
+
+  function seekVideo(video, t) {
+    return new Promise((resolve) => {
+      const onSeek = () => { video.removeEventListener('seeked', onSeek); resolve(); };
+      video.addEventListener('seeked', onSeek);
+      video.currentTime = t;
+    });
+  }
+
+  async function loadGif(file) {
+    log.dim(`加载 GIF ${file.name}...`);
+    if (!('ImageDecoder' in window)) throw new Error('当前浏览器不支持 ImageDecoder API,请用 Chrome 94+ / Edge 94+');
+    const buf = await file.arrayBuffer();
+    const decoder = new ImageDecoder({ data: buf, type: 'image/gif' });
+    await decoder.completed;
+    const total = decoder.tracks.selectedTrack.frameCount;
+    log.dim(`  共 ${total} 帧`);
+    for (let i = 0; i < total; i++) {
+      const result = await decoder.decode({ frameIndex: i });
+      const vf = result.image;
+      const bitmap = await createImageBitmap(vf);
+      rawFrames.push({ name: `frame_${String(i).padStart(4, '0')}`, bitmap, w: bitmap.width, h: bitmap.height });
+      vf.close();
+      progress.set((i + 1) / total);
+    }
+  }
+
+  function renderFrameGrid() {
+    const grid = $('frameGrid');
+    grid.innerHTML = '';
+    rawFrames.forEach((f, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'frame-tile';
+      const cv = newCanvas(f.w, f.h);
+      cv.getContext('2d').drawImage(f.bitmap, 0, 0);
+      tile.appendChild(cv);
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = i;
+      tile.appendChild(idx);
+      grid.appendChild(tile);
+    });
+  }
+
+  async function repack() {
+    if (!rawFrames.length) return;
+    const trim = $('trim').checked;
+    const uniformSize = $('uniformSize').checked;
+    const padding = parseInt($('padding').value, 10) || 0;
+    const margin = parseInt($('margin').value, 10) || 0;
+    let cols = parseInt($('cols').value, 10) || 0;
+    const powerOfTwo = $('powerOfTwo').checked;
+
+    const dropEmpty = $('dropEmpty').checked;
+    const processed = [];
+    let droppedEmpty = 0;
+    for (const f of rawFrames) {
+      const cv = newCanvas(f.w, f.h);
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(f.bitmap, 0, 0);
+      let bounds = { x: 0, y: 0, w: f.w, h: f.h };
+      const trueBounds = computeBounds(ctx, f.w, f.h);
+      if (!trueBounds) {
+        // fully transparent
+        if (dropEmpty) { droppedEmpty++; continue; }
+        bounds = { x: 0, y: 0, w: 1, h: 1 };
+      } else if (trim) {
+        bounds = trueBounds;
+      }
+      processed.push({ name: f.name, canvas: cv, sourceW: f.w, sourceH: f.h, bounds });
+    }
+    if (droppedEmpty > 0) log.dim(`剔除 ${droppedEmpty} 个全透明帧`);
+
+    let frameW = 0, frameH = 0;
+    if (uniformSize) {
+      frameW = Math.max(...processed.map(p => p.bounds.w));
+      frameH = Math.max(...processed.map(p => p.bounds.h));
+    }
+
+    const n = processed.length;
+    if (cols <= 0) {
+      const avgW = uniformSize ? frameW : avg(processed.map(p => p.bounds.w));
+      const avgH = uniformSize ? frameH : avg(processed.map(p => p.bounds.h));
+      cols = Math.max(1, Math.round(Math.sqrt(n * avgH / avgW)));
+    }
+    const rows = Math.ceil(n / cols);
+
+    let colWidths, rowHeights;
+    if (uniformSize) {
+      colWidths = new Array(cols).fill(frameW);
+      rowHeights = new Array(rows).fill(frameH);
+    } else {
+      colWidths = new Array(cols).fill(0);
+      rowHeights = new Array(rows).fill(0);
+      processed.forEach((p, i) => {
+        const c = i % cols, r = Math.floor(i / cols);
+        if (p.bounds.w > colWidths[c]) colWidths[c] = p.bounds.w;
+        if (p.bounds.h > rowHeights[r]) rowHeights[r] = p.bounds.h;
+      });
+    }
+
+    const sheetW = margin * 2 + colWidths.reduce((s, w) => s + w, 0) + padding * (cols - 1);
+    const sheetH = margin * 2 + rowHeights.reduce((s, h) => s + h, 0) + padding * (rows - 1);
+    const finalW = powerOfTwo ? nextPow2(sheetW) : sheetW;
+    const finalH = powerOfTwo ? nextPow2(sheetH) : sheetH;
+
+    const out = newCanvas(finalW, finalH);
+    const octx = out.getContext('2d');
+    const xOff = [margin]; for (let i = 1; i < cols; i++) xOff.push(xOff[i-1] + colWidths[i-1] + padding);
+    const yOff = [margin]; for (let i = 1; i < rows; i++) yOff.push(yOff[i-1] + rowHeights[i-1] + padding);
+
+    const meta = [];
+    processed.forEach((p, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      const cellW = colWidths[c], cellH = rowHeights[r];
+      const dx = xOff[c] + (uniformSize ? Math.floor((cellW - p.bounds.w) / 2) : 0);
+      const dy = yOff[r] + (uniformSize ? Math.floor((cellH - p.bounds.h) / 2) : 0);
+      octx.drawImage(p.canvas, p.bounds.x, p.bounds.y, p.bounds.w, p.bounds.h, dx, dy, p.bounds.w, p.bounds.h);
+      meta.push({
+        name: p.name, x: dx, y: dy, w: p.bounds.w, h: p.bounds.h,
+        sourceW: p.sourceW, sourceH: p.sourceH,
+        offsetX: p.bounds.x, offsetY: p.bounds.y
+      });
+    });
+
+    packed = { canvas: out, frames: meta, cols, rows };
+    const area = $('previewArea');
+    area.innerHTML = '';
+    area.appendChild(out);
+    $('stats').innerHTML = `<strong>${n}</strong> 帧 · 网格 <strong>${cols}×${rows}</strong> · 输出 <strong>${finalW}×${finalH}</strong>` +
+      (uniformSize ? ` · 单帧 <strong>${frameW}×${frameH}</strong>` : '');
+    $('exportBtn').disabled = false;
+    log.ok(`打包完成 ${finalW}×${finalH}, ${cols}×${rows} 网格`);
+  }
+
+  function computeBounds(ctx, w, h) {
+    const data = ctx.getImageData(0, 0, w, h).data;
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    for (let y = 0; y < h; y++) {
+      const row = y * w * 4;
+      for (let x = 0; x < w; x++) {
+        if (data[row + x * 4 + 3] > 0) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return null;
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+  const avg = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length;
+  const nextPow2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
+
+  $('exportBtn').addEventListener('click', async () => {
+    if (!packed) return;
+    const name = ($('filename').value || 'spritesheet').replace(/[^\w-]/g, '_');
+    const fmt = $('jsonFormat').value;
+    const blob = await canvasToBlob(packed.canvas, 'image/png');
+    download(blob, `${name}.png`);
+    downloadJson(buildJson(name, fmt), `${name}.json`);
+    handoff?.setBlob(blob, `${name}.png`);
+    log.ok(`已导出 ${name}.png + ${name}.json`);
+  });
+
+  function buildJson(name, fmt) {
+    const { canvas, frames, cols, rows } = packed;
+    const trimmed = (f) => f.w !== f.sourceW || f.h !== f.sourceH || f.offsetX !== 0 || f.offsetY !== 0;
+    if (fmt === 'hash') {
+      const out = { frames: {}, meta: { app: 'sprite-packer', version: '1.0', image: `${name}.png`, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
+      frames.forEach(f => {
+        out.frames[f.name + '.png'] = {
+          frame: { x: f.x, y: f.y, w: f.w, h: f.h },
+          rotated: false, trimmed: trimmed(f),
+          spriteSourceSize: { x: f.offsetX, y: f.offsetY, w: f.w, h: f.h },
+          sourceSize: { w: f.sourceW, h: f.sourceH }
+        };
+      });
+      return out;
+    }
+    if (fmt === 'array') {
+      return {
+        frames: frames.map(f => ({
+          filename: f.name + '.png',
+          frame: { x: f.x, y: f.y, w: f.w, h: f.h },
+          rotated: false, trimmed: trimmed(f),
+          spriteSourceSize: { x: f.offsetX, y: f.offsetY, w: f.w, h: f.h },
+          sourceSize: { w: f.sourceW, h: f.sourceH }
+        })),
+        meta: { app: 'sprite-packer', image: `${name}.png`, size: { w: canvas.width, h: canvas.height }, scale: '1' }
+      };
+    }
+    return {
+      image: `${name}.png`, width: canvas.width, height: canvas.height,
+      cols, rows, frameCount: frames.length,
+      frames: frames.map(f => ({
+        name: f.name, x: f.x, y: f.y, w: f.w, h: f.h,
+        sourceW: f.sourceW, sourceH: f.sourceH,
+        offsetX: f.offsetX, offsetY: f.offsetY
+      }))
+    };
+  }
+
+  $('clearBtn').addEventListener('click', () => {
+    rawFrames = []; packed = null;
+    $('frameGrid').innerHTML = '';
+    $('previewArea').innerHTML = '<div class="preview-empty">拖入文件后这里会显示合成后的精灵图预览</div>';
+    $('stats').textContent = '未加载';
+    $('exportBtn').disabled = true;
+    $('videoSettings').style.display = 'none';
+    log.clear();
+    $('fileInput').value = '';
+  });
+
+  ['cols','padding','margin','trim','powerOfTwo','uniformSize','dropEmpty'].forEach(id => {
+    $(id).addEventListener('change', () => { if (rawFrames.length) repack(); });
+  });
+  $('videoFps').addEventListener('change', () => log.dim('ℹ FPS 修改后请重新拖入视频文件'));
+})();
+</script>
+</body>
+</html>

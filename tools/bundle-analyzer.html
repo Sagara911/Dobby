@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>包体分析器 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .totals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .totals .card {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+  .totals .label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .totals .value { font-family: "Space Grotesk", sans-serif; font-size: 22px; font-weight: 600; color: var(--text); }
+  .totals .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .category-bars {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 12px;
+  }
+  .cat-row .name { width: 90px; color: var(--text-soft); }
+  .cat-row .bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .cat-row .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--jade), #67ffbc);
+  }
+  .cat-row .size { color: var(--text); font-family: ui-monospace, Consolas, monospace; min-width: 70px; text-align: right; }
+  .cat-row .pct { color: var(--muted); font-family: ui-monospace, Consolas, monospace; min-width: 50px; text-align: right; font-size: 11px; }
+
+  .file-table {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .file-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .file-table th, .file-table td {
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .file-table th {
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+  }
+  .file-table tr:hover { background: rgba(255,255,255,0.03); }
+  .file-table .mono { font-family: ui-monospace, Consolas, monospace; }
+  .file-table .big { color: var(--warning); font-weight: 600; }
+  .file-table .huge { color: var(--danger); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📊 包体分析</h1>
+    <div class="compat-note">需要 Chrome 86+ / Edge 86+ (File System Access API)</div>
+
+    <button id="pickDirBtn">📁 选择项目文件夹</button>
+    <div class="row" style="margin-top:8px; font-size:11px; color:var(--muted)" id="dirInfo"></div>
+
+    <h2>排序</h2>
+    <div class="field">
+      <select id="sortBy">
+        <option value="size">体积 (大到小)</option>
+        <option value="name">文件名</option>
+        <option value="type">类型</option>
+      </select>
+    </div>
+
+    <h2>过滤</h2>
+    <div class="field">
+      <label>显示类别</label>
+      <select id="filterCat">
+        <option value="all">全部</option>
+        <option value="image">图片</option>
+        <option value="font">字体</option>
+        <option value="script">脚本</option>
+        <option value="style">样式</option>
+        <option value="audio">音频</option>
+        <option value="video">视频</option>
+        <option value="markup">HTML</option>
+        <option value="data">数据</option>
+        <option value="other">其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>最小体积 (KB)</label>
+      <input type="number" id="minSize" value="0" min="0" />
+    </div>
+
+    <button id="exportCsvBtn" class="secondary" disabled>导出 CSV</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未扫描</div>
+
+    <div class="totals">
+      <div class="card">
+        <div class="label">总文件数</div>
+        <div class="value" id="totalCount">—</div>
+        <div class="sub" id="totalSubdirs">—</div>
+      </div>
+      <div class="card">
+        <div class="label">总体积</div>
+        <div class="value" id="totalSize">—</div>
+        <div class="sub" id="totalAvg">—</div>
+      </div>
+      <div class="card">
+        <div class="label">最大单文件</div>
+        <div class="value" id="biggestSize">—</div>
+        <div class="sub" id="biggestName">—</div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:0">按类别分布</h2>
+    <div class="category-bars" id="catBars">
+      <div class="preview-empty">选择文件夹后扫描结果显示在这里</div>
+    </div>
+
+    <h2>所有文件 (点击表头排序)</h2>
+    <div class="file-table">
+      <table>
+        <thead>
+          <tr>
+            <th>路径</th>
+            <th>类型</th>
+            <th style="text-align:right">体积</th>
+            <th style="text-align:right">占比</th>
+          </tr>
+        </thead>
+        <tbody id="fileBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">尚未扫描</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('bundle-analyzer');
+
+(() => {
+  const { $, makeLogger, download, downloadText, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let files = [];      // [{path, size, type, ext, category}]
+  let totalSize = 0;
+  let rootName = '';
+  let subdirCount = 0;
+
+  $('sortBy').addEventListener('change', render);
+  $('filterCat').addEventListener('change', render);
+  $('minSize').addEventListener('input', render);
+
+  $('pickDirBtn').addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) {
+      log.err('当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      files = []; totalSize = 0; subdirCount = 0;
+      rootName = handle.name;
+      log.clear();
+      log.dim(`扫描 ${rootName} ...`);
+      await walkDir(handle, '');
+      log.ok(`扫描完成,共 ${files.length} 个文件,${fmtBytes(totalSize)}`);
+      $('dirInfo').textContent = `📂 ${rootName}`;
+      renderTotals();
+      renderCategoryBars();
+      render();
+      $('exportCsvBtn').disabled = false;
+    } catch (e) {
+      if (e.name !== 'AbortError') log.err(e.message);
+    }
+  });
+
+  async function walkDir(handle, prefix) {
+    for await (const [name, entry] of handle.entries()) {
+      const path = prefix ? `${prefix}/${name}` : name;
+      if (entry.kind === 'file') {
+        const f = await entry.getFile();
+        const ext = (name.match(/\.[^./]+$/) || [''])[0].toLowerCase();
+        const category = categorize(ext, f.type);
+        files.push({ path, size: f.size, type: f.type || 'application/octet-stream', ext, category });
+        totalSize += f.size;
+      } else if (entry.kind === 'directory') {
+        subdirCount++;
+        await walkDir(entry, path);
+      }
+    }
+  }
+
+  function categorize(ext, mime) {
+    if (/\.(png|jpe?g|gif|webp|avif|svg|ico|bmp)$/i.test(ext)) return 'image';
+    if (/\.(ttf|otf|woff2?|eot)$/i.test(ext)) return 'font';
+    if (/\.(js|mjs|cjs|ts|jsx|tsx)$/i.test(ext)) return 'script';
+    if (/\.(css|scss|sass|less)$/i.test(ext)) return 'style';
+    if (/\.(mp3|ogg|wav|m4a|flac|aac)$/i.test(ext)) return 'audio';
+    if (/\.(mp4|webm|mov|avi|mkv)$/i.test(ext)) return 'video';
+    if (/\.(html?|xml)$/i.test(ext)) return 'markup';
+    if (/\.(json|csv|tsv|yaml|yml|toml)$/i.test(ext)) return 'data';
+    return 'other';
+  }
+
+  const CAT_LABEL = {
+    image: '图片', font: '字体', script: '脚本', style: '样式',
+    audio: '音频', video: '视频', markup: 'HTML', data: '数据', other: '其他'
+  };
+
+  function renderTotals() {
+    $('totalCount').textContent = files.length;
+    $('totalSubdirs').textContent = `${subdirCount} 个子目录`;
+    $('totalSize').textContent = fmtBytes(totalSize);
+    $('totalAvg').textContent = files.length ? `平均 ${fmtBytes(totalSize / files.length)} / 文件` : '—';
+    const biggest = files.reduce((a, b) => a && a.size > b.size ? a : b, null);
+    if (biggest) {
+      $('biggestSize').textContent = fmtBytes(biggest.size);
+      $('biggestName').textContent = biggest.path;
+    }
+    $('stats').innerHTML = `<strong>${rootName}</strong> · <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+  }
+
+  function renderCategoryBars() {
+    const byCat = {};
+    for (const f of files) {
+      if (!byCat[f.category]) byCat[f.category] = { count: 0, size: 0 };
+      byCat[f.category].count++;
+      byCat[f.category].size += f.size;
+    }
+    const entries = Object.entries(byCat).sort((a, b) => b[1].size - a[1].size);
+    const max = Math.max(...entries.map(e => e[1].size));
+    const el = $('catBars');
+    el.innerHTML = entries.map(([cat, v]) => `
+      <div class="cat-row">
+        <span class="name">${CAT_LABEL[cat]}</span>
+        <span class="bar"><span class="bar-fill" style="width:${(v.size/max*100).toFixed(1)}%"></span></span>
+        <span class="size">${fmtBytes(v.size)}</span>
+        <span class="pct">${(v.size/totalSize*100).toFixed(1)}%</span>
+      </div>
+    `).join('');
+  }
+
+  function render() {
+    const sortBy = $('sortBy').value;
+    const filterCat = $('filterCat').value;
+    const minKb = parseFloat($('minSize').value) || 0;
+    let list = files.slice();
+    if (filterCat !== 'all') list = list.filter(f => f.category === filterCat);
+    if (minKb > 0) list = list.filter(f => f.size >= minKb * 1024);
+    if (sortBy === 'size') list.sort((a, b) => b.size - a.size);
+    else if (sortBy === 'name') list.sort((a, b) => a.path.localeCompare(b.path));
+    else if (sortBy === 'type') list.sort((a, b) => a.category.localeCompare(b.category) || b.size - a.size);
+
+    const tbody = $('fileBody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">没有匹配的文件</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(f => {
+      const pct = (f.size / totalSize * 100);
+      const sizeCls = f.size > 500*1024 ? 'huge' : f.size > 100*1024 ? 'big' : '';
+      return `<tr>
+        <td class="mono">${escapeHtml(f.path)}</td>
+        <td>${CAT_LABEL[f.category]}<span class="muted small mono"> ${f.ext || ''}</span></td>
+        <td class="mono ${sizeCls}" style="text-align:right">${fmtBytes(f.size)}</td>
+        <td class="mono muted" style="text-align:right">${pct.toFixed(2)}%</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+  $('exportCsvBtn').addEventListener('click', () => {
+    const head = 'Path,Type,Category,Size,Percent\n';
+    const rows = files
+      .sort((a, b) => b.size - a.size)
+      .map(f => `"${f.path}","${f.ext}","${CAT_LABEL[f.category]}",${f.size},${(f.size/totalSize*100).toFixed(2)}`)
+      .join('\n');
+    downloadText(head + rows, (rootName || 'bundle') + '-analysis.csv', 'text/csv');
+    log.ok('CSV 已下载');
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    files = []; totalSize = 0; subdirCount = 0; rootName = '';
+    ['totalCount','totalSubdirs','totalSize','totalAvg','biggestSize','biggestName'].forEach(id => $(id).textContent = '—');
+    $('dirInfo').textContent = '';
+    $('stats').textContent = '未扫描';
+    $('catBars').innerHTML = '<div class="preview-empty">选择文件夹后扫描结果显示在这里</div>';
+    $('fileBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">尚未扫描</td></tr>';
+    $('exportCsvBtn').disabled = true;
+    log.clear();
+  });
+})();
+</script>
+</body>
+</html>

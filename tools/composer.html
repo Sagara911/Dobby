@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Composer · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .preview-area {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 16px;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-area canvas { max-width: 100%; image-rendering: auto; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .image-list {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .image-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--muted-2);
+  }
+  .image-row .thumb {
+    width: 28px; height: 28px;
+    background: var(--checker), #1a1a1a;
+    background-size: 6px 6px;
+    background-position: 0 0, 0 3px, 3px -3px, -3px 0;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .image-row .thumb canvas { width: 100%; height: 100%; object-fit: contain; }
+  .image-row .name {
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .image-row .arrows { display: flex; gap: 2px; }
+  .image-row button {
+    padding: 2px 6px; font-size: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .image-row button:hover { background: var(--panel-2); color: var(--text); }
+  .empty-row { padding: 8px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🧩 Composer</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入多张图片</p>
+      <p class="hint">PNG / JPG / WebP<br/>按文件名自然排序,可上下调整</p>
+      <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
+    </div>
+
+    <h2>素材</h2>
+    <div class="image-list" id="imageList">
+      <div class="empty-row">还没有图片</div>
+    </div>
+
+    <h2>布局</h2>
+    <div class="field">
+      <select id="layout">
+        <option value="horizontal">↔ 横向拼接</option>
+        <option value="vertical">↕ 纵向拼接</option>
+        <option value="grid">⊞ 网格 (自动列数)</option>
+        <option value="overlay">⊕ 叠加 (overlay)</option>
+      </select>
+    </div>
+
+    <div id="layoutControls"></div>
+
+    <h2>背景 / 间距</h2>
+    <div class="row-fields">
+      <div class="field">
+        <label>背景色</label>
+        <input type="text" id="bgColor" value="transparent" />
+      </div>
+      <div class="field">
+        <label>间距 (px)</label>
+        <input type="number" id="gap" value="8" min="0" />
+      </div>
+    </div>
+    <div class="field">
+      <label>外边距 (px)</label>
+      <input type="number" id="padding" value="0" min="0" />
+    </div>
+
+    <h2>文字水印 (可选)</h2>
+    <div class="field"><label>文字</label><input type="text" id="wmText" placeholder="留空不加水印" /></div>
+    <div class="row-fields">
+      <div class="field"><label>字号 (px)</label><input type="number" id="wmSize" value="24" min="6" /></div>
+      <div class="field"><label>颜色</label><input type="text" id="wmColor" value="rgba(255,255,255,0.8)" /></div>
+    </div>
+    <div class="field">
+      <label>位置</label>
+      <select id="wmPos">
+        <option value="br">右下</option>
+        <option value="bl">左下</option>
+        <option value="tr">右上</option>
+        <option value="tl">左上</option>
+        <option value="center">居中</option>
+      </select>
+    </div>
+
+    <h2>输出</h2>
+    <div class="field">
+      <label>格式</label>
+      <select id="format">
+        <option value="image/png">PNG</option>
+        <option value="image/jpeg">JPEG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>JPEG / WebP 质量 <span id="qualityVal" class="mono">92</span></label>
+      <input type="range" id="quality" min="1" max="100" value="92" />
+    </div>
+    <div class="field">
+      <label>文件名</label>
+      <input type="text" id="filename" value="composed" />
+    </div>
+    <button id="renderBtn" disabled>合成</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-area" id="previewArea">
+      <div class="preview-empty">拖入图片并点击"合成"</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('composer');
+
+(() => {
+  const { $, makeLogger, attachDropZone, naturalSort, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let items = []; // [{name, bitmap, w, h}]
+  let outBlob = null;
+  let outCanvas = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('composer', { outputType: 'image/png' });
+  $('quality').addEventListener('input', e => $('qualityVal').textContent = e.target.value);
+  $('layout').addEventListener('change', renderLayoutControls);
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    files = naturalSort(files.filter(f => f.type.startsWith('image/')));
+    log.dim(`加载 ${files.length} 张图片...`);
+    for (const f of files) {
+      try {
+        const bitmap = await createImageBitmap(f);
+        items.push({ name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height });
+      } catch (e) {
+        log.err(`${f.name}: ${e.message}`);
+      }
+    }
+    log.ok(`加载完成,共 ${items.length} 张素材`);
+    renderImageList();
+    renderLayoutControls();
+    $('renderBtn').disabled = items.length === 0;
+    $('stats').innerHTML = `共 <strong>${items.length}</strong> 张素材`;
+  }
+
+  function renderImageList() {
+    const list = $('imageList');
+    list.innerHTML = '';
+    if (!items.length) { list.innerHTML = '<div class="empty-row">还没有图片</div>'; return; }
+    items.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.className = 'image-row';
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      const tcv = newCanvas(it.w, it.h);
+      tcv.getContext('2d').drawImage(it.bitmap, 0, 0);
+      thumb.appendChild(tcv);
+      row.appendChild(thumb);
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = it.name + ` (${it.w}×${it.h})`;
+      row.appendChild(name);
+      const arrows = document.createElement('div');
+      arrows.className = 'arrows';
+      const up = document.createElement('button'); up.textContent = '↑'; up.disabled = i === 0;
+      up.addEventListener('click', () => { swap(i, i-1); });
+      const down = document.createElement('button'); down.textContent = '↓'; down.disabled = i === items.length - 1;
+      down.addEventListener('click', () => { swap(i, i+1); });
+      const del = document.createElement('button'); del.textContent = '×';
+      del.addEventListener('click', () => { items.splice(i, 1); renderImageList(); renderLayoutControls(); });
+      arrows.appendChild(up); arrows.appendChild(down); arrows.appendChild(del);
+      row.appendChild(arrows);
+      list.appendChild(row);
+    });
+  }
+
+  function swap(a, b) {
+    [items[a], items[b]] = [items[b], items[a]];
+    renderImageList();
+  }
+
+  function renderLayoutControls() {
+    const layout = $('layout').value;
+    const c = $('layoutControls');
+    if (layout === 'horizontal' || layout === 'vertical') {
+      c.innerHTML = `
+        <div class="field">
+          <label>对齐 (跨垂直/水平轴)</label>
+          <select id="align">
+            <option value="center">居中 (推荐)</option>
+            <option value="start">起始</option>
+            <option value="end">末端</option>
+          </select>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="uniformSize" /><span>统一尺寸到最大边</span></label>
+      `;
+    } else if (layout === 'grid') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>列数 (0=自动)</label><input type="number" id="cols" value="0" min="0" /></div>
+          <div class="field"><label>单格大小 (px)</label><input type="number" id="cellSize" value="0" min="0" placeholder="0=用最大" /></div>
+        </div>
+        <div class="info">单格大小填 0 = 用所有图最大边作为格子尺寸</div>
+      `;
+    } else if (layout === 'overlay') {
+      c.innerHTML = `
+        <div class="info">所有图按列表顺序居中叠加,后加的图在上层。画布尺寸取所有图最大边。</div>
+      `;
+    }
+  }
+
+  $('renderBtn').addEventListener('click', async () => {
+    if (!items.length) return;
+    log.dim('合成中...');
+    try {
+      outCanvas = composeImage();
+      const fmt = $('format').value;
+      const q = fmt === 'image/png' ? undefined : parseInt($('quality').value, 10) / 100;
+      outBlob = await canvasToBlob(outCanvas, fmt, q);
+      const area = $('previewArea');
+      area.innerHTML = '';
+      area.appendChild(outCanvas);
+      $('downloadBtn').disabled = false;
+      handoff?.setBlob(outBlob, ($('filename').value || 'composed') + '.' + (fmt === 'image/jpeg' ? 'jpg' : fmt === 'image/webp' ? 'webp' : 'png'), fmt);
+      log.ok(`完成 ${outCanvas.width}×${outCanvas.height} · ${fmtBytes(outBlob.size)}`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  });
+
+  function composeImage() {
+    const layout = $('layout').value;
+    const bg = $('bgColor').value.trim();
+    const gap = parseInt($('gap').value, 10) || 0;
+    const padding = parseInt($('padding').value, 10) || 0;
+
+    let cv;
+    if (layout === 'horizontal') cv = composeStrip('h', gap, padding, bg);
+    else if (layout === 'vertical') cv = composeStrip('v', gap, padding, bg);
+    else if (layout === 'grid') cv = composeGrid(gap, padding, bg);
+    else cv = composeOverlay(padding, bg);
+
+    drawWatermark(cv);
+    return cv;
+  }
+
+  function composeStrip(axis, gap, padding, bg) {
+    const align = $('align')?.value || 'center';
+    const uniform = $('uniformSize')?.checked;
+    let maxCross = 0;
+    let totalMain = 0;
+    let cellW = 0, cellH = 0;
+    if (uniform) {
+      cellW = Math.max(...items.map(it => it.w));
+      cellH = Math.max(...items.map(it => it.h));
+    }
+    for (const it of items) {
+      const w = uniform ? cellW : it.w;
+      const h = uniform ? cellH : it.h;
+      if (axis === 'h') { totalMain += w; if (h > maxCross) maxCross = h; }
+      else              { totalMain += h; if (w > maxCross) maxCross = w; }
+    }
+    totalMain += gap * (items.length - 1);
+    const W = (axis === 'h' ? totalMain : maxCross) + padding * 2;
+    const H = (axis === 'h' ? maxCross : totalMain) + padding * 2;
+    const cv = newCanvas(W, H);
+    const ctx = cv.getContext('2d');
+    fillBg(ctx, W, H, bg);
+    let cursor = padding;
+    for (const it of items) {
+      const w = uniform ? cellW : it.w;
+      const h = uniform ? cellH : it.h;
+      let x, y;
+      if (axis === 'h') {
+        x = cursor;
+        y = align === 'start' ? padding : align === 'end' ? (H - h - padding) : Math.round((H - h) / 2);
+      } else {
+        y = cursor;
+        x = align === 'start' ? padding : align === 'end' ? (W - w - padding) : Math.round((W - w) / 2);
+      }
+      // when uniform, center the actual image inside its cell
+      const drawX = uniform ? x + Math.round((cellW - it.w) / 2) : x;
+      const drawY = uniform ? y + Math.round((cellH - it.h) / 2) : y;
+      ctx.drawImage(it.bitmap, drawX, drawY);
+      cursor += (axis === 'h' ? w : h) + gap;
+    }
+    return cv;
+  }
+
+  function composeGrid(gap, padding, bg) {
+    let cols = parseInt($('cols').value, 10) || 0;
+    let cellSize = parseInt($('cellSize').value, 10) || 0;
+    if (cellSize <= 0) cellSize = Math.max(...items.map(it => Math.max(it.w, it.h)));
+    if (cols <= 0) cols = Math.max(1, Math.round(Math.sqrt(items.length)));
+    const rows = Math.ceil(items.length / cols);
+    const W = padding * 2 + cols * cellSize + gap * (cols - 1);
+    const H = padding * 2 + rows * cellSize + gap * (rows - 1);
+    const cv = newCanvas(W, H);
+    const ctx = cv.getContext('2d');
+    fillBg(ctx, W, H, bg);
+    items.forEach((it, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      const cellX = padding + c * (cellSize + gap);
+      const cellY = padding + r * (cellSize + gap);
+      const ratio = Math.min(cellSize / it.w, cellSize / it.h);
+      const dw = Math.round(it.w * ratio), dh = Math.round(it.h * ratio);
+      const dx = cellX + Math.round((cellSize - dw) / 2);
+      const dy = cellY + Math.round((cellSize - dh) / 2);
+      ctx.drawImage(it.bitmap, 0, 0, it.w, it.h, dx, dy, dw, dh);
+    });
+    return cv;
+  }
+
+  function composeOverlay(padding, bg) {
+    const W = Math.max(...items.map(it => it.w)) + padding * 2;
+    const H = Math.max(...items.map(it => it.h)) + padding * 2;
+    const cv = newCanvas(W, H);
+    const ctx = cv.getContext('2d');
+    fillBg(ctx, W, H, bg);
+    for (const it of items) {
+      const x = Math.round((W - it.w) / 2);
+      const y = Math.round((H - it.h) / 2);
+      ctx.drawImage(it.bitmap, x, y);
+    }
+    return cv;
+  }
+
+  function fillBg(ctx, W, H, bg) {
+    if (!bg || bg === 'transparent' || bg === 'none') return;
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawWatermark(cv) {
+    const text = $('wmText').value;
+    if (!text) return;
+    const ctx = cv.getContext('2d');
+    const size = parseInt($('wmSize').value, 10) || 24;
+    ctx.font = `${size}px sans-serif`;
+    ctx.fillStyle = $('wmColor').value || 'rgba(255,255,255,0.8)';
+    const pos = $('wmPos').value;
+    const m = ctx.measureText(text);
+    const tw = m.width, th = size;
+    const pad = Math.round(size * 0.5);
+    let x = 0, y = 0;
+    if (pos === 'br') { x = cv.width - tw - pad; y = cv.height - pad; ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; }
+    else if (pos === 'bl') { x = pad; y = cv.height - pad; ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; }
+    else if (pos === 'tr') { x = cv.width - tw - pad; y = pad; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; }
+    else if (pos === 'tl') { x = pad; y = pad; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; }
+    else { x = cv.width / 2; y = cv.height / 2; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; }
+    ctx.fillText(text, x, y);
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const name = ($('filename').value || 'composed').replace(/[^\w-]/g, '_');
+    const ext = $('format').value === 'image/jpeg' ? '.jpg' : $('format').value === 'image/webp' ? '.webp' : '.png';
+    download(outBlob, name + ext);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    items = []; outBlob = null; outCanvas = null;
+    $('imageList').innerHTML = '<div class="empty-row">还没有图片</div>';
+    $('previewArea').innerHTML = '<div class="preview-empty">拖入图片并点击"合成"</div>';
+    $('stats').textContent = '未加载';
+    $('renderBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+
+  // initial render
+  renderLayoutControls();
+})();
+</script>
+</body>
+</html>

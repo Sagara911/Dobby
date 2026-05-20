@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Image Editor · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .preview-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 280px;
+  }
+  .preview-col { display: flex; flex-direction: column; gap: 6px; }
+  .preview-col .label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-box canvas, .preview-box img {
+    image-rendering: auto;
+    max-width: 100%;
+  }
+  .preview-box.pixelated canvas, .preview-box.pixelated img { image-rendering: pixelated; }
+  .action-controls {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🖼️ Image Editor</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入图片</p>
+      <p class="hint">
+        PNG / JPG / WebP / GIF (单张)<br/>
+        一次一个操作,叠加请反复处理
+      </p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    </div>
+
+    <h2>操作</h2>
+    <div class="field">
+      <select id="action">
+        <option value="resize">📐 缩放</option>
+        <option value="crop">✂️ 裁剪</option>
+        <option value="rotate">🔄 旋转 / 翻转</option>
+        <option value="text">📝 加文字</option>
+        <option value="pixelate">🧱 像素化</option>
+        <option value="filter">🎚️ 滤镜 / 调色</option>
+        <option value="hsl">🌈 HSL 通道调节</option>
+      </select>
+    </div>
+
+    <div class="action-controls" id="actionControls"></div>
+
+    <h2>输出</h2>
+    <div class="field">
+      <label>格式</label>
+      <select id="format">
+        <option value="image/png">PNG</option>
+        <option value="image/jpeg">JPEG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </div>
+    <div class="field" id="qualityField">
+      <label>质量 (JPEG / WebP) <span id="qualityVal" class="mono">92</span></label>
+      <input type="range" id="quality" min="1" max="100" value="92" />
+    </div>
+    <div class="field">
+      <label>文件名</label>
+      <input type="text" id="filename" value="edited" />
+    </div>
+    <button id="applyBtn" disabled>应用</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="useAsSourceBtn" class="secondary" disabled>把输出作为新输入</button>
+    <div class="row" style="margin-top:6px; gap:6px;">
+      <button id="undoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;">↶ 撤销 (Ctrl+Z)</button>
+      <button id="redoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;">↷ 重做 (Ctrl+Y)</button>
+    </div>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-pair">
+      <div class="preview-col">
+        <div class="label">原图</div>
+        <div class="preview-box" id="srcBox">
+          <div class="preview-empty">拖入图片</div>
+        </div>
+      </div>
+      <div class="preview-col">
+        <div class="label">输出</div>
+        <div class="preview-box" id="outBox">
+          <div class="preview-empty">应用操作后这里显示结果</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('image-editor');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let srcBitmap = null;
+  let srcSize = 0;
+  let outBlob = null;
+  let outBitmap = null;
+  // history stack: [{bitmap, size}], cursor = index of current
+  const history = [];
+  let cursor = -1;
+
+  function pushHistory() {
+    if (!srcBitmap) return;
+    history.length = cursor + 1;
+    history.push({ bitmap: srcBitmap, size: srcSize });
+    cursor = history.length - 1;
+    updateHistoryButtons();
+  }
+  function updateHistoryButtons() {
+    $('undoBtn').disabled = cursor <= 0;
+    $('redoBtn').disabled = cursor >= history.length - 1;
+  }
+  async function applyHistory(idx) {
+    if (idx < 0 || idx >= history.length) return;
+    cursor = idx;
+    const h = history[idx];
+    srcBitmap = h.bitmap;
+    srcSize = h.size;
+    const cv = newCanvas(srcBitmap.width, srcBitmap.height);
+    cv.getContext('2d').drawImage(srcBitmap, 0, 0);
+    $('srcBox').innerHTML = '';
+    $('srcBox').appendChild(cv);
+    $('stats').innerHTML = `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`;
+    updateHistoryButtons();
+    renderActionControls();
+  }
+  $('undoBtn').addEventListener('click', () => applyHistory(cursor - 1));
+  $('redoBtn').addEventListener('click', () => applyHistory(cursor + 1));
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); if (cursor > 0) applyHistory(cursor - 1); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); if (cursor < history.length - 1) applyHistory(cursor + 1); }
+  });
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+
+  $('quality').addEventListener('input', e => $('qualityVal').textContent = e.target.value);
+  $('action').addEventListener('change', renderActionControls);
+
+  const handoff = Toolkit.setupHandoff('image-editor', { outputType: 'image/png' });
+  $('format').addEventListener('change', updateQualityVisibility);
+  function updateQualityVisibility() {
+    $('qualityField').style.display = $('format').value === 'image/png' ? 'none' : '';
+  }
+  updateQualityVisibility();
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!f.type.startsWith('image/')) { log.err('请拖入图片文件'); return; }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      const bitmap = await createImageBitmap(f);
+      srcBitmap = bitmap;
+      srcSize = f.size;
+      const cv = newCanvas(bitmap.width, bitmap.height);
+      cv.getContext('2d').drawImage(bitmap, 0, 0);
+      $('srcBox').innerHTML = '';
+      $('srcBox').appendChild(cv);
+      $('stats').innerHTML = `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('applyBtn').disabled = false;
+      log.ok('加载完成');
+      // reset history with the initial state
+      history.length = 0; cursor = -1;
+      pushHistory();
+      renderActionControls();
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function renderActionControls() {
+    if (!srcBitmap) return;
+    const action = $('action').value;
+    const c = $('actionControls');
+    const w = srcBitmap.width, h = srcBitmap.height;
+    if (action === 'resize') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="newW" value="${w}" min="1" /></div>
+          <div class="field"><label>高</label><input type="number" id="newH" value="${h}" min="1" /></div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>锁定宽高比</span></label>
+      `;
+      const ratio = w / h;
+      $('newW').addEventListener('input', () => { if ($('lockRatio').checked) $('newH').value = Math.round(parseInt($('newW').value, 10) / ratio); });
+      $('newH').addEventListener('input', () => { if ($('lockRatio').checked) $('newW').value = Math.round(parseInt($('newH').value, 10) * ratio); });
+    } else if (action === 'crop') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>X</label><input type="number" id="cropX" value="0" min="0" /></div>
+          <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" /></div>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
+          <div class="field"><label>高</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
+        </div>
+      `;
+    } else if (action === 'rotate') {
+      c.innerHTML = `
+        <div class="field">
+          <label>旋转</label>
+          <select id="rotateAngle">
+            <option value="0">无旋转</option>
+            <option value="90">90° 顺时针</option>
+            <option value="180">180°</option>
+            <option value="270">270° (= 90° 逆时针)</option>
+          </select>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="flipH" /><span>水平翻转</span></label>
+        <label class="checkbox"><input type="checkbox" id="flipV" /><span>垂直翻转</span></label>
+      `;
+    } else if (action === 'text') {
+      c.innerHTML = `
+        <div class="field"><label>文字内容</label><input type="text" id="textContent" value="Hello" /></div>
+        <div class="row-fields">
+          <div class="field"><label>字号 (px)</label><input type="number" id="textSize" value="${Math.max(20, Math.round(h / 10))}" min="6" /></div>
+          <div class="field"><label>颜色</label><input type="text" id="textColor" value="#ffffff" /></div>
+        </div>
+        <div class="field"><label>字体</label>
+          <select id="textFont">
+            <option value="sans-serif">默认无衬线</option>
+            <option value="serif">衬线</option>
+            <option value="monospace">等宽</option>
+            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+            <option value="'PingFang SC', sans-serif">苹方</option>
+            <option value="Impact, sans-serif">Impact (粗体)</option>
+          </select>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>X (px)</label><input type="number" id="textX" value="${Math.round(w * 0.5)}" /></div>
+          <div class="field"><label>Y (px)</label><input type="number" id="textY" value="${Math.round(h * 0.9)}" /></div>
+        </div>
+        <div class="field"><label>对齐</label>
+          <select id="textAlign">
+            <option value="center">居中</option>
+            <option value="left">左</option>
+            <option value="right">右</option>
+          </select>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>描边宽度 (px)</label><input type="number" id="textStroke" value="2" min="0" /></div>
+          <div class="field"><label>描边颜色</label><input type="text" id="textStrokeColor" value="#000000" /></div>
+        </div>
+      `;
+    } else if (action === 'pixelate') {
+      c.innerHTML = `
+        <div class="field">
+          <label>方块大小 (px) <span id="pixSizeVal" class="mono">8</span></label>
+          <input type="range" id="pixSize" min="2" max="64" value="8" />
+        </div>
+        <div class="info">数字越大马赛克越粗</div>
+      `;
+      $('pixSize').addEventListener('input', e => $('pixSizeVal').textContent = e.target.value);
+    } else if (action === 'filter') {
+      c.innerHTML = `
+        <div class="field">
+          <label>预设</label>
+          <select id="filterPreset">
+            <option value="none">自定义</option>
+            <option value="original">原始 (重置)</option>
+            <option value="bw">黑白</option>
+            <option value="sepia">怀旧 (Sepia)</option>
+            <option value="cold">冷色</option>
+            <option value="warm">暖色</option>
+            <option value="vivid">高饱和</option>
+            <option value="contrast">高对比</option>
+            <option value="vintage">复古胶片</option>
+            <option value="invert">反相</option>
+            <option value="dramatic">戏剧化</option>
+            <option value="dreamy">梦幻</option>
+          </select>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="fGray" /><span>灰度</span></label>
+        <label class="checkbox"><input type="checkbox" id="fSepia" /><span>怀旧 (Sepia)</span></label>
+        <label class="checkbox"><input type="checkbox" id="fInvert" /><span>反色</span></label>
+        <div class="field"><label>亮度 <span id="fBriVal" class="mono">100%</span></label><input type="range" id="fBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>对比度 <span id="fConVal" class="mono">100%</span></label><input type="range" id="fCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>饱和度 <span id="fSatVal" class="mono">100%</span></label><input type="range" id="fSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>色相旋转 <span id="fHueVal" class="mono">0°</span></label><input type="range" id="fHue" min="0" max="360" value="0" /></div>
+        <div class="field"><label>模糊 <span id="fBlurVal" class="mono">0px</span></label><input type="range" id="fBlur" min="0" max="20" value="0" /></div>
+      `;
+      const bind = (id, valId, unit) => $(id).addEventListener('input', e => $(valId).textContent = e.target.value + unit);
+      bind('fBri', 'fBriVal', '%'); bind('fCon', 'fConVal', '%'); bind('fSat', 'fSatVal', '%');
+      bind('fHue', 'fHueVal', '°'); bind('fBlur', 'fBlurVal', 'px');
+      // preset → fill sliders
+      const PRESETS = {
+        original: { gray:0, sepia:0, inv:0, bri:100, con:100, sat:100, hue:0, blur:0 },
+        bw:       { gray:1, sepia:0, inv:0, bri:100, con:110, sat:100, hue:0, blur:0 },
+        sepia:    { gray:0, sepia:1, inv:0, bri:105, con:100, sat:100, hue:0, blur:0 },
+        cold:     { gray:0, sepia:0, inv:0, bri:100, con:100, sat:110, hue:200, blur:0 },
+        warm:     { gray:0, sepia:0, inv:0, bri:105, con:105, sat:115, hue:25,  blur:0 },
+        vivid:    { gray:0, sepia:0, inv:0, bri:100, con:110, sat:180, hue:0,   blur:0 },
+        contrast: { gray:0, sepia:0, inv:0, bri:100, con:160, sat:120, hue:0,   blur:0 },
+        vintage:  { gray:0, sepia:1, inv:0, bri:95,  con:115, sat:75,  hue:0,   blur:0 },
+        invert:   { gray:0, sepia:0, inv:1, bri:100, con:100, sat:100, hue:0,   blur:0 },
+        dramatic: { gray:0, sepia:0, inv:0, bri:90,  con:140, sat:130, hue:0,   blur:0 },
+        dreamy:   { gray:0, sepia:0, inv:0, bri:115, con:85,  sat:90,  hue:0,   blur:2 }
+      };
+      $('filterPreset').addEventListener('change', e => {
+        const p = PRESETS[e.target.value];
+        if (!p) return;
+        $('fGray').checked = !!p.gray;
+        $('fSepia').checked = !!p.sepia;
+        $('fInvert').checked = !!p.inv;
+        $('fBri').value = p.bri; $('fBriVal').textContent = p.bri + '%';
+        $('fCon').value = p.con; $('fConVal').textContent = p.con + '%';
+        $('fSat').value = p.sat; $('fSatVal').textContent = p.sat + '%';
+        $('fHue').value = p.hue; $('fHueVal').textContent = p.hue + '°';
+        $('fBlur').value = p.blur; $('fBlurVal').textContent = p.blur + 'px';
+      });
+    } else if (action === 'hsl') {
+      c.innerHTML = `
+        <div class="field">
+          <label>选择色相区间</label>
+          <select id="hslBand">
+            <option value="red">红 (0° / 360°)</option>
+            <option value="orange">橙 (30°)</option>
+            <option value="yellow">黄 (60°)</option>
+            <option value="green">绿 (120°)</option>
+            <option value="cyan">青 (180°)</option>
+            <option value="blue">蓝 (240°)</option>
+            <option value="purple">紫 (300°)</option>
+            <option value="all">全部色相</option>
+          </select>
+        </div>
+        <div class="field"><label>色相偏移 (H) <span id="hslHVal" class="mono">0°</span></label><input type="range" id="hslH" min="-180" max="180" value="0" /></div>
+        <div class="field"><label>饱和度 (S) <span id="hslSVal" class="mono">0</span></label><input type="range" id="hslS" min="-100" max="100" value="0" /></div>
+        <div class="field"><label>明度 (L) <span id="hslLVal" class="mono">0</span></label><input type="range" id="hslL" min="-100" max="100" value="0" /></div>
+        <div class="info">类似 Lightroom 的 HSL 通道调节,只影响选中色相区间内的像素</div>
+      `;
+      const b = (id, val, suf='') => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
+      b('hslH', 'hslHVal', '°'); b('hslS', 'hslSVal'); b('hslL', 'hslLVal');
+    }
+  }
+
+  $('applyBtn').addEventListener('click', async () => {
+    if (!srcBitmap) return;
+    const action = $('action').value;
+    log.dim(`应用 ${action}...`);
+    try {
+      const cv = apply(action);
+      outBitmap = cv;
+      const fmt = $('format').value;
+      const q = fmt === 'image/png' ? undefined : parseInt($('quality').value, 10) / 100;
+      outBlob = await canvasToBlob(cv, fmt, q);
+      $('outBox').innerHTML = '';
+      $('outBox').appendChild(cv);
+      $('downloadBtn').disabled = false;
+      $('useAsSourceBtn').disabled = false;
+      handoff?.setBlob(outBlob, ($('filename').value || 'edited') + '.' + (fmt === 'image/jpeg' ? 'jpg' : fmt === 'image/webp' ? 'webp' : 'png'), fmt);
+      const pct = ((srcSize - outBlob.size) / srcSize * 100);
+      log.ok(`完成 ${cv.width}×${cv.height} · ${fmtBytes(outBlob.size)} (${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%)`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  });
+
+  function apply(action) {
+    const sw = srcBitmap.width, sh = srcBitmap.height;
+    if (action === 'resize') {
+      const w = parseInt($('newW').value, 10), h = parseInt($('newH').value, 10);
+      const cv = newCanvas(w, h);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(srcBitmap, 0, 0, w, h);
+      return cv;
+    }
+    if (action === 'crop') {
+      const x = parseInt($('cropX').value, 10);
+      const y = parseInt($('cropY').value, 10);
+      const w = parseInt($('cropW').value, 10);
+      const h = parseInt($('cropH').value, 10);
+      const cv = newCanvas(w, h);
+      cv.getContext('2d').drawImage(srcBitmap, x, y, w, h, 0, 0, w, h);
+      return cv;
+    }
+    if (action === 'rotate') {
+      const angle = parseInt($('rotateAngle').value, 10);
+      const fh = $('flipH').checked, fv = $('flipV').checked;
+      const rotated = angle === 90 || angle === 270;
+      const w = rotated ? sh : sw, h = rotated ? sw : sh;
+      const cv = newCanvas(w, h);
+      const ctx = cv.getContext('2d');
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate(angle * Math.PI / 180);
+      ctx.scale(fh ? -1 : 1, fv ? -1 : 1);
+      ctx.drawImage(srcBitmap, -sw / 2, -sh / 2);
+      return cv;
+    }
+    if (action === 'text') {
+      const cv = newCanvas(sw, sh);
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(srcBitmap, 0, 0);
+      ctx.font = `${$('textSize').value}px ${$('textFont').value}`;
+      ctx.fillStyle = $('textColor').value;
+      ctx.textAlign = $('textAlign').value;
+      ctx.textBaseline = 'middle';
+      const x = parseInt($('textX').value, 10), y = parseInt($('textY').value, 10);
+      const strokeW = parseInt($('textStroke').value, 10);
+      if (strokeW > 0) {
+        ctx.strokeStyle = $('textStrokeColor').value;
+        ctx.lineWidth = strokeW;
+        ctx.lineJoin = 'round';
+        ctx.strokeText($('textContent').value, x, y);
+      }
+      ctx.fillText($('textContent').value, x, y);
+      return cv;
+    }
+    if (action === 'pixelate') {
+      const block = parseInt($('pixSize').value, 10);
+      const small = newCanvas(Math.max(1, Math.ceil(sw / block)), Math.max(1, Math.ceil(sh / block)));
+      const sctx = small.getContext('2d');
+      sctx.imageSmoothingEnabled = false;
+      sctx.drawImage(srcBitmap, 0, 0, small.width, small.height);
+      const cv = newCanvas(sw, sh);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(small, 0, 0, sw, sh);
+      return cv;
+    }
+    if (action === 'filter') {
+      const parts = [];
+      if ($('fGray').checked) parts.push('grayscale(100%)');
+      if ($('fSepia').checked) parts.push('sepia(100%)');
+      if ($('fInvert').checked) parts.push('invert(100%)');
+      const bri = $('fBri').value; if (bri !== '100') parts.push(`brightness(${bri}%)`);
+      const con = $('fCon').value; if (con !== '100') parts.push(`contrast(${con}%)`);
+      const sat = $('fSat').value; if (sat !== '100') parts.push(`saturate(${sat}%)`);
+      const hue = $('fHue').value; if (hue !== '0') parts.push(`hue-rotate(${hue}deg)`);
+      const blur = $('fBlur').value; if (blur !== '0') parts.push(`blur(${blur}px)`);
+      const cv = newCanvas(sw, sh);
+      const ctx = cv.getContext('2d');
+      ctx.filter = parts.length ? parts.join(' ') : 'none';
+      ctx.drawImage(srcBitmap, 0, 0);
+      return cv;
+    }
+    if (action === 'hsl') {
+      const band = $('hslBand').value;
+      const dH = parseInt($('hslH').value, 10);
+      const dS = parseInt($('hslS').value, 10);
+      const dL = parseInt($('hslL').value, 10);
+      // 色相区间中心
+      const bandCenters = { red:0, orange:30, yellow:60, green:120, cyan:180, blue:240, purple:300 };
+      const bandWidth = 35;
+      const cv = newCanvas(sw, sh);
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(srcBitmap, 0, 0);
+      const img = ctx.getImageData(0, 0, sw, sh);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i+3] === 0) continue;
+        const hsl = rgbToHslEditor(d[i], d[i+1], d[i+2]);
+        let strength = 1;
+        if (band !== 'all') {
+          const center = bandCenters[band];
+          let dist = Math.abs(hsl.h - center);
+          if (dist > 180) dist = 360 - dist;
+          if (dist > bandWidth) continue;
+          const t = 1 - (dist / bandWidth);
+          strength = t * t * (3 - 2 * t);
+        }
+        const newH = ((hsl.h + dH * strength) % 360 + 360) % 360;
+        const newS = Math.max(0, Math.min(100, hsl.s + dS * strength));
+        const newL = Math.max(0, Math.min(100, hsl.l + dL * strength));
+        const rgb = hslToRgbEditor(newH, newS, newL);
+        d[i] = rgb.r; d[i+1] = rgb.g; d[i+2] = rgb.b;
+      }
+      ctx.putImageData(img, 0, 0);
+      return cv;
+    }
+  }
+
+  // local HSL helpers (used by hsl action)
+  function rgbToHslEditor(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h *= 60;
+    }
+    return { h, s: s * 100, l: l * 100 };
+  }
+  function hslToRgbEditor(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    let r,g,b;
+    if (s === 0) { r=g=b=l; }
+    else {
+      const h2r = (p,q,t) => { if (t<0) t+=1; if (t>1) t-=1; if (t<1/6) return p+(q-p)*6*t; if (t<1/2) return q; if (t<2/3) return p+(q-p)*(2/3-t)*6; return p; };
+      const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+      const p = 2*l - q;
+      r = h2r(p,q,h+1/3); g = h2r(p,q,h); b = h2r(p,q,h-1/3);
+    }
+    return { r: Math.round(r*255), g: Math.round(g*255), b: Math.round(b*255) };
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const name = ($('filename').value || 'edited').replace(/[^\w-]/g, '_');
+    const ext = $('format').value === 'image/jpeg' ? '.jpg' : $('format').value === 'image/webp' ? '.webp' : '.png';
+    download(outBlob, name + ext);
+  });
+
+  $('useAsSourceBtn').addEventListener('click', async () => {
+    if (!outBitmap) return;
+    srcBitmap = await createImageBitmap(outBitmap);
+    srcSize = outBlob.size;
+    pushHistory();
+    const cv = newCanvas(srcBitmap.width, srcBitmap.height);
+    cv.getContext('2d').drawImage(srcBitmap, 0, 0);
+    $('srcBox').innerHTML = '';
+    $('srcBox').appendChild(cv);
+    $('outBox').innerHTML = '<div class="preview-empty">应用下一个操作</div>';
+    $('stats').innerHTML = `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`;
+    $('downloadBtn').disabled = true;
+    $('useAsSourceBtn').disabled = true;
+    log.dim('已把输出作为新输入,可以继续叠加操作 (Ctrl+Z 撤销)');
+    renderActionControls();
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    srcBitmap = null; outBlob = null; outBitmap = null;
+    $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
+    $('stats').textContent = '未加载';
+    $('actionControls').innerHTML = '';
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    $('useAsSourceBtn').disabled = true;
+    history.length = 0; cursor = -1;
+    updateHistoryButtons();
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Playable Toolkit",
+  "short_name": "Toolkit",
+  "description": "H5 Playable 制作工具集 — 22 款图像/动画/音视频/代码工具,全部本地运行",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#31f59c",
+  "icons": [
+    { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["productivity", "utilities", "developer"]
+}

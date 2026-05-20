@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>去水印 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .canvas-wrap {
+    flex: 1;
+    background: var(--checker), #0a0a0c;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+    position: relative;
+  }
+  .canvas-stack {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+  }
+  .canvas-stack canvas {
+    display: block;
+    max-width: 100%;
+    image-rendering: pixelated;
+  }
+  .canvas-stack canvas.mask {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.7;
+  }
+  .canvas-stack.brush-mode canvas.src { cursor: crosshair; }
+  .canvas-stack.rect-mode canvas.src { cursor: crosshair; }
+
+  .mode-row {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .mode-row button {
+    flex: 1;
+    background: transparent;
+    color: var(--text-soft);
+    padding: 6px 0;
+    font-size: 12px;
+    border-radius: calc(var(--radius-sm) - 3px);
+    box-shadow: none;
+  }
+  .mode-row button.active {
+    background: var(--jade);
+    color: #0a1a14;
+    box-shadow: 0 0 12px rgba(var(--jade-rgb), 0.4);
+  }
+  .mode-row button:hover { transform: none; background: rgba(255,255,255,0.04); color: var(--text); }
+  .mode-row button.active:hover { background: var(--jade); color: #0a1a14; }
+
+  .preview-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 220px;
+  }
+  .preview-col { display: flex; flex-direction: column; gap: 6px; }
+  .preview-col .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #0a0a0c;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-box canvas, .preview-box img { max-width: 100%; max-height: 280px; image-rendering: pixelated; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🩹 去水印</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入图片</p>
+      <p class="hint">PNG / JPG / WebP</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    </div>
+
+    <h2>选区工具</h2>
+    <div class="mode-row" id="toolModeRow">
+      <button data-tool="brush" class="active" type="button">🖌️ 画刷</button>
+      <button data-tool="rect" type="button">▭ 矩形</button>
+    </div>
+    <div class="field" id="brushSizeField">
+      <label>画刷大小 <span id="brushSizeVal" class="mono">24</span> px</label>
+      <input type="range" id="brushSize" min="4" max="120" value="24" />
+    </div>
+    <button id="clearMaskBtn" class="secondary">清除选区</button>
+
+    <h2>算法</h2>
+    <div class="field">
+      <select id="algoMode">
+        <option value="diffusion">扩散插值 (快, 纯色背景效果好)</option>
+        <option value="ai">AI 模型 (慢, 复杂背景, 首次联网下载)</option>
+      </select>
+    </div>
+    <div class="field" id="diffusionIterField">
+      <label>扩散迭代次数 <span id="iterVal" class="mono">150</span></label>
+      <input type="range" id="iterations" min="20" max="500" value="150" />
+    </div>
+    <div class="field" id="aiModelField" style="display:none">
+      <label>AI 模型</label>
+      <select id="aiModelSelect">
+        <option value="Carve/LaMa-ONNX">LaMa (~200MB, Carve mirror)</option>
+      </select>
+    </div>
+
+    <h2>导出</h2>
+    <div class="field"><label>文件名</label><input type="text" id="filename" value="cleaned" /></div>
+    <button id="applyBtn" disabled>应用去水印</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">输出对比</h2>
+      <div class="preview-pair">
+        <div class="preview-col">
+          <div class="label">原图</div>
+          <div class="preview-box" id="origBox"><div class="preview-empty">未加载</div></div>
+        </div>
+        <div class="preview-col">
+          <div class="label">去水印后</div>
+          <div class="preview-box" id="outBox"><div class="preview-empty">应用后这里显示结果</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('watermark-remove');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let srcBitmap = null;
+  let srcCanvas = null, maskCanvas = null;
+  let srcCtx = null, maskCtx = null;
+  let outBlob = null;
+  let tool = 'brush';
+  let drawing = false;
+  let dragStart = null;
+  let stackEl = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('watermark-remove', { outputType: 'image/png' });
+
+  $('brushSize').addEventListener('input', e => $('brushSizeVal').textContent = e.target.value);
+  $('iterations').addEventListener('input', e => $('iterVal').textContent = e.target.value);
+  $('algoMode').addEventListener('change', e => {
+    $('diffusionIterField').style.display = e.target.value === 'diffusion' ? '' : 'none';
+    $('aiModelField').style.display = e.target.value === 'ai' ? '' : 'none';
+  });
+
+  document.querySelectorAll('#toolModeRow button').forEach(b => {
+    b.addEventListener('click', () => {
+      tool = b.dataset.tool;
+      document.querySelectorAll('#toolModeRow button').forEach(x => x.classList.toggle('active', x === b));
+      $('brushSizeField').style.display = tool === 'brush' ? '' : 'none';
+      if (stackEl) {
+        stackEl.classList.toggle('brush-mode', tool === 'brush');
+        stackEl.classList.toggle('rect-mode', tool === 'rect');
+      }
+    });
+  });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!f.type.startsWith('image/')) { log.err('请拖入图片文件'); return; }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      const bitmap = await createImageBitmap(f);
+      srcBitmap = bitmap;
+      setupCanvas(bitmap);
+      // also preview source in origBox
+      const oc = newCanvas(bitmap.width, bitmap.height);
+      oc.getContext('2d').drawImage(bitmap, 0, 0);
+      $('origBox').innerHTML = ''; $('origBox').appendChild(oc);
+      $('stats').innerHTML = `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('applyBtn').disabled = false;
+      log.ok('图片加载完成,用画刷或矩形选水印区');
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function setupCanvas(bitmap) {
+    const wrap = $('canvasWrap');
+    wrap.innerHTML = '';
+    const stack = document.createElement('div');
+    stack.className = 'canvas-stack ' + (tool + '-mode');
+    stackEl = stack;
+    srcCanvas = newCanvas(bitmap.width, bitmap.height);
+    srcCanvas.className = 'src';
+    srcCtx = srcCanvas.getContext('2d');
+    srcCtx.drawImage(bitmap, 0, 0);
+    maskCanvas = newCanvas(bitmap.width, bitmap.height);
+    maskCanvas.className = 'mask';
+    maskCtx = maskCanvas.getContext('2d');
+    stack.appendChild(srcCanvas);
+    stack.appendChild(maskCanvas);
+    wrap.appendChild(stack);
+    attachMaskEvents();
+  }
+
+  function attachMaskEvents() {
+    const cv = srcCanvas;
+    cv.addEventListener('mousedown', startDraw);
+    cv.addEventListener('mousemove', moveDraw);
+    cv.addEventListener('mouseup', endDraw);
+    cv.addEventListener('mouseleave', endDraw);
+  }
+
+  function getCanvasPos(e) {
+    const r = srcCanvas.getBoundingClientRect();
+    return {
+      x: Math.round((e.clientX - r.left) / r.width * srcCanvas.width),
+      y: Math.round((e.clientY - r.top) / r.height * srcCanvas.height)
+    };
+  }
+
+  function startDraw(e) {
+    drawing = true;
+    const p = getCanvasPos(e);
+    if (tool === 'brush') {
+      paintMask(p.x, p.y);
+    } else if (tool === 'rect') {
+      dragStart = p;
+      // remember current mask for live preview
+      maskCanvas._snapshot = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+    }
+  }
+  function moveDraw(e) {
+    if (!drawing) return;
+    const p = getCanvasPos(e);
+    if (tool === 'brush') {
+      paintMask(p.x, p.y);
+    } else if (tool === 'rect' && dragStart && maskCanvas._snapshot) {
+      maskCtx.putImageData(maskCanvas._snapshot, 0, 0);
+      maskCtx.fillStyle = 'rgba(245, 70, 70, 0.8)';
+      maskCtx.fillRect(
+        Math.min(dragStart.x, p.x), Math.min(dragStart.y, p.y),
+        Math.abs(p.x - dragStart.x), Math.abs(p.y - dragStart.y)
+      );
+    }
+  }
+  function endDraw(e) {
+    if (!drawing) return;
+    drawing = false;
+    if (tool === 'rect' && dragStart) {
+      maskCanvas._snapshot = null;
+      dragStart = null;
+    }
+  }
+
+  function paintMask(x, y) {
+    const r = parseInt($('brushSize').value, 10) / 2;
+    maskCtx.fillStyle = 'rgba(245, 70, 70, 0.8)';
+    maskCtx.beginPath();
+    maskCtx.arc(x, y, r, 0, Math.PI * 2);
+    maskCtx.fill();
+  }
+
+  $('clearMaskBtn').addEventListener('click', () => {
+    if (maskCtx) maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+  });
+
+  $('applyBtn').addEventListener('click', async () => {
+    if (!srcBitmap || !maskCtx) return;
+    const algo = $('algoMode').value;
+    log.dim(`应用 ${algo === 'diffusion' ? '扩散插值' : 'AI 模型'}...`);
+    $('applyBtn').disabled = true;
+    try {
+      const w = srcBitmap.width, h = srcBitmap.height;
+      const imgData = srcCtx.getImageData(0, 0, w, h);
+      const maskData = maskCtx.getImageData(0, 0, w, h).data;
+      // binary mask: where mask alpha > 50
+      const mask = new Uint8Array(w * h);
+      let maskCount = 0;
+      for (let i = 0; i < w * h; i++) {
+        const m = maskData[i * 4 + 3] > 50 ? 1 : 0;
+        mask[i] = m;
+        if (m) maskCount++;
+      }
+      if (maskCount === 0) { log.err('请先用画刷或矩形选中水印区域'); return; }
+      log.dim(`  mask 像素 ${maskCount} / ${w*h} (${(maskCount/(w*h)*100).toFixed(1)}%)`);
+
+      let result;
+      if (algo === 'diffusion') {
+        result = await diffusionInpaint(imgData, mask, parseInt($('iterations').value, 10));
+      } else {
+        result = await aiInpaint(imgData, mask);
+      }
+      const cv = newCanvas(w, h);
+      cv.getContext('2d').putImageData(result, 0, 0);
+      outBlob = await canvasToBlob(cv, 'image/png');
+      $('outBox').innerHTML = ''; $('outBox').appendChild(cv);
+      $('downloadBtn').disabled = false;
+      handoff?.setBlob(outBlob, ($('filename').value || 'cleaned') + '.png');
+      log.ok(`完成 · ${fmtBytes(outBlob.size)}`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('applyBtn').disabled = false;
+      progress.hide();
+    }
+  });
+
+  // ===========================================================
+  // Algorithm A: Diffusion inpainting (Laplacian smoothing)
+  // ===========================================================
+  async function diffusionInpaint(imageData, mask, iterations) {
+    const { width: w, height: h } = imageData;
+    const src = imageData.data;
+    const out = new Uint8ClampedArray(src);
+
+    // initialize mask area to mean of nearby non-mask pixels (radius 30)
+    initializeMaskArea(out, mask, w, h);
+
+    // also keep float buffers for smoother iterative average
+    const r = new Float32Array(w * h);
+    const g = new Float32Array(w * h);
+    const b = new Float32Array(w * h);
+    const a = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      r[i] = out[i*4]; g[i] = out[i*4+1]; b[i] = out[i*4+2]; a[i] = out[i*4+3];
+    }
+    const rn = new Float32Array(w * h);
+    const gn = new Float32Array(w * h);
+    const bn = new Float32Array(w * h);
+    const an = new Float32Array(w * h);
+
+    for (let iter = 0; iter < iterations; iter++) {
+      rn.set(r); gn.set(g); bn.set(b); an.set(a);
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const i = y * w + x;
+          if (!mask[i]) continue;
+          // average 4 neighbors
+          const i1 = i - 1, i2 = i + 1, i3 = i - w, i4 = i + w;
+          rn[i] = (r[i1] + r[i2] + r[i3] + r[i4]) * 0.25;
+          gn[i] = (g[i1] + g[i2] + g[i3] + g[i4]) * 0.25;
+          bn[i] = (b[i1] + b[i2] + b[i3] + b[i4]) * 0.25;
+          an[i] = (a[i1] + a[i2] + a[i3] + a[i4]) * 0.25;
+        }
+      }
+      r.set(rn); g.set(gn); b.set(bn); a.set(an);
+      if ((iter & 15) === 15) {
+        progress.set(iter / iterations);
+        await new Promise(res => setTimeout(res, 0));
+      }
+    }
+
+    const result = new ImageData(w, h);
+    const d = result.data;
+    for (let i = 0; i < w * h; i++) {
+      d[i*4]   = Math.round(r[i]);
+      d[i*4+1] = Math.round(g[i]);
+      d[i*4+2] = Math.round(b[i]);
+      d[i*4+3] = Math.round(a[i]);
+    }
+    return result;
+  }
+
+  function initializeMaskArea(data, mask, w, h) {
+    // For each mask pixel, sample nearest non-mask pixels in a small search radius.
+    // For simplicity / speed: sample 4 directions until hitting non-mask.
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!mask[i]) continue;
+        let r = 0, g = 0, b = 0, a = 0, n = 0;
+        for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]) {
+          for (let step = 1; step < 60; step++) {
+            const nx = x + dx * step, ny = y + dy * step;
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) break;
+            const ni = ny * w + nx;
+            if (!mask[ni]) {
+              r += data[ni*4]; g += data[ni*4+1]; b += data[ni*4+2]; a += data[ni*4+3];
+              n++;
+              break;
+            }
+          }
+        }
+        if (n > 0) {
+          data[i*4]   = r / n;
+          data[i*4+1] = g / n;
+          data[i*4+2] = b / n;
+          data[i*4+3] = a / n;
+        }
+      }
+    }
+  }
+
+  // ===========================================================
+  // Algorithm C: AI inpainting via transformers.js + LaMa ONNX
+  // (lazy-loaded; first run downloads ~200MB)
+  // ===========================================================
+  let _aiModel = null, _aiProcessor = null;
+  async function aiInpaint(imageData, mask) {
+    if (!_aiModel) await loadAiModel();
+    if (!_aiModel) throw new Error('AI 模型未加载,无法处理');
+    const { width: w, height: h } = imageData;
+    // LaMa expects [1, 3, H, W] image + [1, 1, H, W] mask, typically 512×512.
+    // Resize to model input size (use 512 for speed).
+    const inSize = 512;
+    const cv = newCanvas(inSize, inSize);
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    // draw resized source
+    const srcCv = newCanvas(w, h);
+    srcCv.getContext('2d').putImageData(imageData, 0, 0);
+    ctx.drawImage(srcCv, 0, 0, inSize, inSize);
+    const resized = ctx.getImageData(0, 0, inSize, inSize);
+
+    // build resized mask (nearest)
+    const maskSrcCv = newCanvas(w, h);
+    const maskSrcCtx = maskSrcCv.getContext('2d');
+    const mImg = new ImageData(w, h);
+    for (let i = 0; i < w*h; i++) {
+      const v = mask[i] ? 255 : 0;
+      mImg.data[i*4] = v; mImg.data[i*4+1] = v; mImg.data[i*4+2] = v; mImg.data[i*4+3] = 255;
+    }
+    maskSrcCtx.putImageData(mImg, 0, 0);
+    const maskCvR = newCanvas(inSize, inSize);
+    maskCvR.getContext('2d').drawImage(maskSrcCv, 0, 0, inSize, inSize);
+    const maskResized = maskCvR.getContext('2d').getImageData(0, 0, inSize, inSize);
+
+    // Build float tensors. Many LaMa models expect normalized [0,1].
+    const imgF = new Float32Array(3 * inSize * inSize);
+    const mskF = new Float32Array(1 * inSize * inSize);
+    for (let i = 0; i < inSize * inSize; i++) {
+      imgF[i]                         = resized.data[i*4]     / 255;
+      imgF[inSize*inSize + i]         = resized.data[i*4 + 1] / 255;
+      imgF[inSize*inSize * 2 + i]     = resized.data[i*4 + 2] / 255;
+      mskF[i]                         = maskResized.data[i*4] / 255;
+    }
+
+    log.dim('  AI 推理中...');
+    const { Tensor } = window.transformers || await import('https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.mjs');
+    // Use onnxruntime-web's session run
+    const ort = window.ort;
+    if (!ort) throw new Error('onnxruntime-web 未加载');
+    const imgTensor = new ort.Tensor('float32', imgF, [1, 3, inSize, inSize]);
+    const mskTensor = new ort.Tensor('float32', mskF, [1, 1, inSize, inSize]);
+    // LaMa output name varies; try common ones
+    const feeds = { image: imgTensor, mask: mskTensor };
+    let outputs;
+    try { outputs = await _aiModel.run(feeds); }
+    catch (e) {
+      // try alternate input names
+      try { outputs = await _aiModel.run({ img: imgTensor, mask: mskTensor }); }
+      catch (e2) {
+        throw new Error('模型输入接口不匹配: ' + e.message);
+      }
+    }
+    const outKey = Object.keys(outputs)[0];
+    const out = outputs[outKey];
+    // expected [1, 3, inSize, inSize] float32 in [0,1]
+    const od = out.data;
+    const outCv = newCanvas(inSize, inSize);
+    const outImg = outCv.getContext('2d').createImageData(inSize, inSize);
+    for (let i = 0; i < inSize * inSize; i++) {
+      outImg.data[i*4]   = Math.max(0, Math.min(255, Math.round(od[i] * 255)));
+      outImg.data[i*4+1] = Math.max(0, Math.min(255, Math.round(od[inSize*inSize + i] * 255)));
+      outImg.data[i*4+2] = Math.max(0, Math.min(255, Math.round(od[inSize*inSize*2 + i] * 255)));
+      outImg.data[i*4+3] = 255;
+    }
+    outCv.getContext('2d').putImageData(outImg, 0, 0);
+
+    // resize back to original size
+    const finalCv = newCanvas(w, h);
+    finalCv.getContext('2d').imageSmoothingQuality = 'high';
+    finalCv.getContext('2d').drawImage(outCv, 0, 0, w, h);
+    return finalCv.getContext('2d').getImageData(0, 0, w, h);
+  }
+
+  async function loadAiModel() {
+    const modelId = $('aiModelSelect').value;
+    log.dim('加载 onnxruntime-web...');
+    if (!window.ort) {
+      const mod = await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.mjs').catch(async () => {
+        // fallback to non-ESM
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+        return null;
+      });
+      if (mod && mod.default) window.ort = mod.default;
+    }
+    if (!window.ort) throw new Error('onnxruntime-web 加载失败');
+    const modelUrl = `https://huggingface.co/${modelId}/resolve/main/lama_fp32.onnx`;
+    log.dim(`下载 LaMa 模型 (${modelId})...`);
+    progress.set(0);
+    try {
+      const session = await window.ort.InferenceSession.create(modelUrl, {
+        executionProviders: ['webgpu', 'wasm']
+      });
+      _aiModel = session;
+      log.ok('LaMa 模型加载完成');
+    } catch (e) {
+      throw new Error('LaMa 模型加载失败 (可能 URL 不对或网络问题): ' + e.message);
+    }
+    progress.hide();
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const name = ($('filename').value || 'cleaned').replace(/[^\w-]/g, '_');
+    download(outBlob, name + '.png');
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    srcBitmap = null; srcCanvas = null; maskCanvas = null; outBlob = null;
+    $('canvasWrap').innerHTML = '<div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>';
+    $('origBox').innerHTML = '<div class="preview-empty">未加载</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">应用后这里显示结果</div>';
+    $('stats').textContent = '未加载';
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

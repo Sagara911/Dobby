@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Playable Toolkit — H5 Playable 制作工具集</title>
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  body { overflow-x: hidden; }
+
+  /* ===== HERO ===== */
+  .hero {
+    position: relative;
+    z-index: 1;
+    padding: 64px 24px 48px;
+    text-align: center;
+    margin: 0 auto;
+  }
+  /* every direct child of hero is horizontally centered */
+  .hero > * {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    display: block;
+  }
+  /* explicit max-widths so each block is narrower than viewport and shows centering */
+  .hero h1 { max-width: 800px; }
+  /* (副标 .hero p 的 max-width 在下方主样式里统一设) */
+  /* eyebrow is a pill tag — inline-block so it sizes to content; parent text-align centers it */
+  .hero .eyebrow { display: inline-block; }
+  .hero .eyebrow {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+    background: rgba(var(--jade-rgb), 0.1);
+    border: 1px solid rgba(var(--jade-rgb), 0.25);
+    color: var(--jade);
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: #fff;
+    letter-spacing: -0.03em;
+    margin: 0 auto 16px;
+    font-family: "Space Grotesk", sans-serif;
+    text-align: center;
+  }
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--jade), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+  }
+  .hero p {
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    color: rgba(255, 255, 255, 0.62);
+    margin: 0 auto 32px;
+    line-height: 1.6;
+    max-width: 560px;
+    text-align: center;
+  }
+
+  /* search */
+  .search-wrap {
+    position: relative;
+    max-width: 540px;
+    margin: 0 auto 24px;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    padding: 13px 20px 13px 44px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: "Space Grotesk", sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-wrap input:focus {
+    outline: none;
+    border-color: var(--jade);
+    box-shadow: 0 0 0 4px rgba(var(--jade-rgb), 0.14);
+  }
+  .search-wrap .icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .search-wrap .clear {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.06);
+    border: 0;
+    color: var(--muted);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    font-size: 11px;
+    box-shadow: none;
+    display: none;
+  }
+  .search-wrap .clear:hover { background: rgba(255,255,255,0.1); color: var(--text); transform: translateY(-50%); }
+  .search-wrap.has-value .clear { display: block; }
+
+  /* hero stat row */
+  .hero-stats {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .hero-stats .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-stats .stat strong {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .hero-stats .sep {
+    width: 1px; height: 14px;
+    background: var(--border-strong);
+    margin: 0 -6px;
+    align-self: center;
+  }
+
+  /* ===== TOOLS SECTION ===== */
+  .tools-section {
+    position: relative;
+    z-index: 1;
+    max-width: 1240px;
+    margin: 30px auto 60px;
+    padding: 0 24px;
+  }
+
+  /* category header */
+  .cat-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 44px 0 18px;
+    padding-top: 6px;
+  }
+  .cat-header .cat-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.18), rgba(var(--jade-rgb), 0.05));
+    border: 1px solid rgba(var(--jade-rgb), 0.22);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .cat-header .cat-info {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex: 1;
+  }
+  .cat-header .cat-name {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .cat-header .cat-en {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .cat-header .cat-count {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    margin-left: auto;
+    background: rgba(255,255,255,0.04);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+  }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  /* recent section: emphasized container */
+  .recent-section {
+    position: relative;
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.07), rgba(var(--jade-rgb), 0.02));
+    border: 1px solid rgba(var(--jade-rgb), 0.18);
+    border-radius: 14px;
+    padding: 18px 20px 22px;
+    margin: 24px 0 12px;
+  }
+  .recent-section .cat-header { margin-top: 0; margin-bottom: 14px; padding-top: 0; }
+  .recent-section .cat-name { color: var(--jade); }
+
+  /* glassmorphism cards */
+  .tool-card {
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+    overflow: hidden;
+    background: rgba(20, 20, 26, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px 20px 16px;
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 140px;
+  }
+  .tool-card::before,
+  .tool-card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .tool-card::before {
+    z-index: 0;
+    background: radial-gradient(280px circle at var(--mx) var(--my), rgba(var(--jade-rgb), 0.2), rgba(var(--jade-rgb), 0) 65%);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+  }
+  .tool-card::after {
+    z-index: 1;
+    padding: 1px;
+    background: radial-gradient(220px circle at var(--mx) var(--my),
+      rgba(var(--jade-rgb), 0.9) 0%, rgba(var(--jade-rgb), 0.5) 25%,
+      rgba(var(--jade-rgb), 0.12) 55%, rgba(var(--jade-rgb), 0) 78%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    filter: drop-shadow(0 0 8px rgba(var(--jade-rgb), 0.4));
+  }
+  .tool-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(var(--jade-rgb), 0.25);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(var(--jade-rgb), 0.1);
+  }
+  .tool-card:hover::before,
+  .tool-card:hover::after { opacity: 1; }
+  .tool-card > * { position: relative; z-index: 2; }
+
+  .tool-card .icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.15), rgba(var(--jade-rgb), 0.04));
+    border: 1px solid rgba(var(--jade-rgb), 0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+  .tool-card h3 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.005em;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tool-card h3 .card-sub {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .tool-card p {
+    margin: 0;
+    color: var(--muted-2);
+    font-size: 11.5px;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  .empty-search {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* footer */
+  .site-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 24px;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+  }
+  .footer-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .footer-inner .tag { display: inline-flex; align-items: center; gap: 6px; }
+  .footer-inner .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--jade);
+    box-shadow: 0 0 8px rgba(var(--jade-rgb), 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* smooth anchor scroll offset for sticky topbar */
+  .cat-anchor {
+    scroll-margin-top: 90px;
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow">22 Tools · Local-First · No Upload</div>
+    <h1>为 H5 Playable 而生的<br/><span class="accent">本地工具集。</span></h1>
+    <p>图像、动画、音视频、代码、分析 — 全部在浏览器本地运行,文件不上传不离开你的设备。</p>
+    <div class="search-wrap" id="searchWrap">
+      <span class="icon">🔍</span>
+      <input type="text" id="search" placeholder="搜工具名或描述...  (Ctrl+K 聚焦)" autocomplete="off" />
+      <button class="clear" id="searchClear" type="button" aria-label="清空">✕</button>
+    </div>
+    <div class="hero-stats">
+      <span class="stat"><strong>22</strong> 个工具</span>
+      <span class="sep"></span>
+      <span class="stat"><strong>5</strong> 大类</span>
+      <span class="sep"></span>
+      <span class="stat">⚡ 零构建</span>
+      <span class="sep"></span>
+      <span class="stat">🌐 可部署</span>
+    </div>
+  </section>
+
+  <section class="tools-section" id="toolsSection"></section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="tag"><span class="dot"></span>所有处理在本地完成,数据不上传</span>
+    <span>2026 · D:\Game\toolkit</span>
+  </div>
+</footer>
+
+<script src="assets/shared.js"></script>
+<script>
+  const CATEGORIES = [
+    { id: 'image', icon: '🖼️', name: '图像处理',         en: 'Image Tools' },
+    { id: 'anim',  icon: '🎬', name: '动画 / 精灵图',     en: 'Animation' },
+    { id: 'av',    icon: '🔊', name: '音视频',           en: 'Audio / Video' },
+    { id: 'code',  icon: '🗜️', name: '代码 / 打包',       en: 'Code & Bundle' },
+    { id: 'audit', icon: '📊', name: '分析 / 诊断',       en: 'Analyze & Audit' }
+  ];
+
+  // Build card list from shared TOOLS data
+  const CARDS = Toolkit.TOOLS.filter(t => t.id !== 'home');
+
+  const section = document.getElementById('toolsSection');
+  const searchInput = document.getElementById('search');
+  const searchWrap = document.getElementById('searchWrap');
+
+  function makeCard(c) {
+    const a = document.createElement('a');
+    a.className = 'tool-card';
+    a.href = c.href;
+    a.dataset.name = (c.name + ' ' + c.en + ' ' + c.desc).toLowerCase();
+    a.innerHTML = `
+      <div class="icon">${c.icon}</div>
+      <h3>${c.name} <span class="card-sub">${c.en}</span></h3>
+      <p>${c.desc}</p>
+    `;
+    a.addEventListener('mousemove', (e) => {
+      const r = a.getBoundingClientRect();
+      a.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      a.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+    return a;
+  }
+
+  function render(query = '') {
+    section.innerHTML = '';
+    const q = query.trim().toLowerCase();
+
+    // Recent
+    const recent = (Toolkit.Prefs.get('recent') || []).map(id => CARDS.find(c => c.id === id)).filter(Boolean);
+    if (!q && recent.length > 0) {
+      const recentSec = document.createElement('div');
+      recentSec.className = 'recent-section';
+      recentSec.innerHTML = `
+        <div class="cat-header">
+          <div class="cat-icon">⭐</div>
+          <div class="cat-info">
+            <span class="cat-name">最近使用</span>
+            <span class="cat-en">Recent</span>
+          </div>
+          <span class="cat-count">${recent.length}</span>
+        </div>
+        <div class="tools-grid"></div>
+      `;
+      const grid = recentSec.querySelector('.tools-grid');
+      recent.forEach(c => grid.appendChild(makeCard(c)));
+      section.appendChild(recentSec);
+    }
+
+    // Categorized rendering
+    let anyMatch = false;
+    for (const cat of CATEGORIES) {
+      const items = CARDS.filter(c => c.cat === cat.id && (!q || c.name.toLowerCase().includes(q) || c.en.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)));
+      if (!items.length) continue;
+      anyMatch = true;
+      const div = document.createElement('div');
+      div.id = `cat-${cat.id}`;
+      div.className = 'cat-anchor';
+      div.innerHTML = `
+        <div class="cat-header">
+          <div class="cat-icon">${cat.icon}</div>
+          <div class="cat-info">
+            <span class="cat-name">${cat.name}</span>
+            <span class="cat-en">${cat.en}</span>
+          </div>
+          <span class="cat-count">${items.length} / ${CARDS.filter(c => c.cat === cat.id).length}</span>
+        </div>
+        <div class="tools-grid"></div>
+      `;
+      const grid = div.querySelector('.tools-grid');
+      items.forEach(c => grid.appendChild(makeCard(c)));
+      section.appendChild(div);
+    }
+    if (!anyMatch) {
+      section.innerHTML = `<div class="empty-search">没有匹配 "${query}" 的工具,试试其他关键词</div>`;
+    }
+  }
+
+  searchInput.addEventListener('input', (e) => {
+    const v = e.target.value;
+    searchWrap.classList.toggle('has-value', !!v.trim());
+    render(v);
+  });
+  document.getElementById('searchClear').addEventListener('click', () => {
+    searchInput.value = ''; searchWrap.classList.remove('has-value'); render(''); searchInput.focus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      searchInput.focus(); searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = ''; searchWrap.classList.remove('has-value'); render('');
+    }
+  });
+
+  // smooth scroll for category anchors — do NOT update URL hash,
+  // so refresh always brings the user back to the hero (top of page).
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href*="#cat-"]');
+    if (!a) return;
+    const url = new URL(a.href, location.href);
+    if (url.pathname === location.pathname && url.hash.startsWith('#cat-')) {
+      const el = document.querySelector(url.hash);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // intentionally not calling history.replaceState — refresh stays at hero
+      }
+    }
+  });
+
+  Toolkit.injectTopbar('home');
+  render();
+
+  // ensure refresh always lands on top (clear any stale scroll restore)
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+</script>
+</body>
+</html>

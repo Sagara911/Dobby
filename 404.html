@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>404 — Playable Toolkit</title>
+<link rel="stylesheet" href="/assets/shared.css" />
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .not-found {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 40px;
+    max-width: 480px;
+  }
+  .not-found .code {
+    font-size: clamp(5rem, 14vw, 8rem);
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, var(--jade), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .not-found h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.5rem;
+    margin: 16px 0 8px;
+    color: var(--text);
+  }
+  .not-found p {
+    color: var(--muted-2);
+    margin: 0 0 24px;
+    font-size: 13px;
+  }
+  .not-found a.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--jade);
+    color: #0a1a14;
+    padding: 10px 24px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 13px;
+    box-shadow: 0 4px 16px rgba(var(--jade-rgb), 0.3);
+  }
+  .not-found a.btn:hover {
+    background: #67ffbc;
+  }
+</style>
+</head>
+<body>
+  <div class="not-found">
+    <p class="code">404</p>
+    <h1>这个工具不在这里 👀</h1>
+    <p>页面路径错了或者工具被搬家了。回首页搜搜看?</p>
+    <a class="btn" href="/index.html">← 回首页</a>
+  </div>
+  <script src="/assets/shared.js"></script>
+  <script>Toolkit.injectTopbar('home');</script>
+</body>
+</html>

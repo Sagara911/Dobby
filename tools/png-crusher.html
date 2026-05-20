@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>PNG Crusher · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .results {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+  }
+  .results table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .results th, .results td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .results th {
+    color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 600; position: sticky; top: 0; background: var(--panel-2);
+  }
+  .results tr.row:hover { background: var(--panel-2); cursor: pointer; }
+  .results tr.selected { background: var(--accent-soft); }
+  .results .thumb {
+    width: 48px; height: 48px;
+    background: var(--checker), #1a1a1a;
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .results .thumb canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .results .savings { font-weight: 600; }
+  .results .savings.good { color: var(--success); }
+  .results .savings.neutral { color: var(--muted); }
+  .results .savings.bad { color: var(--warning); }
+  .results .mono { font-family: ui-monospace, Consolas, monospace; }
+  .results .row-actions button { padding: 4px 10px; font-size: 11px; }
+  .summary {
+    padding: 10px 14px;
+    background: var(--panel-2);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted-2);
+    display: none;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .summary.show { display: flex; }
+  .summary strong { color: var(--text); }
+  .compare {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 220px;
+  }
+  .compare.show { display: grid; }
+  .compare-col { display: flex; flex-direction: column; gap: 6px; }
+  .compare-col .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .compare-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .compare-box canvas, .compare-box img { max-width: 100%; max-height: 280px; image-rendering: pixelated; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+  .batch-tip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(var(--jade-rgb), 0.06);
+    border: 1px solid rgba(var(--jade-rgb), 0.25);
+    border-left: 3px solid var(--jade);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .batch-tip .batch-tip-icon { font-size: 20px; }
+  .batch-tip .batch-tip-text { flex: 1; }
+  .batch-tip .batch-tip-text strong { color: var(--text); display: inline-block; margin-right: 6px; }
+  .batch-tip .batch-tip-cta {
+    padding: 8px 16px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .range-row .value { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>💎 PNG Crusher</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 PNG (可多张)</p>
+      <p class="hint">
+        批量深度压缩 PNG<br/>
+        自写 palette 编码器,通常 -60~85%
+      </p>
+      <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
+    </div>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+
+    <h2>压缩参数</h2>
+    <div class="field">
+      <label>预设</label>
+      <select id="preset">
+        <option value="custom">自定义</option>
+        <option value="high">高保真 (256 色 + dither)</option>
+        <option value="balanced" selected>平衡 (128 色 + dither)</option>
+        <option value="strong">激进 (64 色 + dither)</option>
+        <option value="extreme">极限 (32 色 + dither)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>目标色数 <span id="colorsVal" class="mono">128</span></label>
+      <input type="range" id="colors" min="2" max="256" value="128" />
+    </div>
+    <label class="checkbox">
+      <input type="checkbox" id="dither" checked />
+      <span>Floyd-Steinberg dithering (减少色块)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="kmeans" checked />
+      <span>K-means 精炼调色板 (慢一些, 质量更好)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="perceptual" checked />
+      <span>感知加权颜色距离 (更符合人眼)</span>
+    </label>
+
+    <h2>透明度</h2>
+    <div class="field">
+      <label>处理</label>
+      <select id="alphaMode">
+        <option value="keep">保留 8-bit alpha</option>
+        <option value="threshold">阈值二值化 (0 或 255)</option>
+        <option value="discard">丢弃 alpha (全不透明)</option>
+      </select>
+    </div>
+    <div class="field" id="alphaThreshField" style="display:none">
+      <label>阈值 <span id="alphaThreshVal" class="mono">128</span></label>
+      <input type="range" id="alphaThresh" min="0" max="255" value="128" />
+    </div>
+
+    <h2>导出</h2>
+    <button id="crushBtn" disabled>开始压缩</button>
+    <button id="zipBtn" class="secondary" disabled>下载全部 (ZIP)</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="batch-tip" id="batchTip" style="display:none">
+      <span class="batch-tip-icon">💡</span>
+      <div class="batch-tip-text">
+        <strong>批量下载提示</strong>
+        多张图片逐张下载会触发 Chrome 的"该网站想要下载多个文件"提示。
+        建议点击左侧 <strong>"下载全部 (ZIP)"</strong> 一次性打包,只触发一次下载。
+      </div>
+      <button class="batch-tip-cta" id="batchTipZipBtn" type="button">下载全部 (ZIP)</button>
+    </div>
+    <div class="compare" id="compareArea">
+      <div class="compare-col">
+        <div class="label">原图 <span id="origInfo" class="mono small muted"></span></div>
+        <div class="compare-box" id="origBox"></div>
+      </div>
+      <div class="compare-col">
+        <div class="label">压缩后 <span id="crushInfo" class="mono small muted"></span></div>
+        <div class="compare-box" id="crushBox"></div>
+      </div>
+    </div>
+    <div class="results" id="results">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>文件名</th>
+            <th>尺寸</th>
+            <th>原体积</th>
+            <th>压缩后</th>
+            <th>节省</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:40px">拖入图片后这里显示压缩结果对比</td></tr>
+        </tbody>
+      </table>
+      <div class="summary" id="summary">
+        <span>共 <strong id="sumCount">0</strong> 张</span>
+        <span>原体积 <strong id="sumOrig">0</strong></span>
+        <span>压缩后 <strong id="sumCrush">0</strong></span>
+        <span>节省 <strong id="sumSavings">0</strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('png-crusher');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, newCanvas, canvasToBlob, makeZip, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let items = []; // [{file, bitmap, imageData, crushedBlob?, crushedSize?}]
+  let selectedIdx = -1;
+
+  // Web Worker (lazy): keeps main thread responsive during heavy quantize/dither
+  let worker = null;
+  let workerJobId = 0;
+  const workerJobs = new Map();
+  function getWorker() {
+    if (!worker) {
+      worker = new Worker('../assets/png-crusher.worker.js');
+      worker.onmessage = (e) => {
+        const { id } = e.data;
+        const job = workerJobs.get(id);
+        if (!job) return;
+        if (e.data.progress !== undefined) {
+          if (job.onProgress) job.onProgress(e.data.progress, e.data.status);
+          return;
+        }
+        workerJobs.delete(id);
+        if (e.data.ok) job.resolve(e.data.png);
+        else job.reject(new Error(e.data.error));
+      };
+      worker.onerror = (e) => {
+        console.error('worker error', e);
+      };
+    }
+    return worker;
+  }
+  function crushInWorker(imageData, opts, onProgress) {
+    return new Promise((resolve, reject) => {
+      const id = ++workerJobId;
+      workerJobs.set(id, { resolve, reject, onProgress });
+      getWorker().postMessage({ id, imageData, opts });
+    });
+  }
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+
+  // cross-tool handoff
+  const handoff = Toolkit.setupHandoff('png-crusher', { outputType: 'image/png' });
+
+  // remember settings
+  Toolkit.Prefs.bindForm('png-crusher', ['preset','colors','dither','kmeans','perceptual','alphaMode','alphaThresh']);
+  // also accept clipboard paste
+  Toolkit.attachPasteImage((file) => handleFiles([file]));
+  // demo button injection (above drop zone)
+  (() => {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = '🎲 用示例图试试';
+    btn.style.cssText = 'width:100%; margin-bottom:8px; padding:6px; font-size:11px;';
+    btn.addEventListener('click', async () => handleFiles([await Toolkit.demoPhotoLike()]));
+    $('dropZone').parentNode.insertBefore(btn, $('dropZone'));
+  })();
+
+  // ===== UI bindings =====
+  $('colors').addEventListener('input', e => { $('colorsVal').textContent = e.target.value; $('preset').value = 'custom'; });
+  $('dither').addEventListener('change', () => $('preset').value = 'custom');
+  $('alphaThresh').addEventListener('input', e => $('alphaThreshVal').textContent = e.target.value);
+  $('alphaMode').addEventListener('change', e => {
+    $('alphaThreshField').style.display = e.target.value === 'threshold' ? '' : 'none';
+  });
+  $('preset').addEventListener('change', e => {
+    const p = e.target.value;
+    if (p === 'high')      { $('colors').value = 256; $('dither').checked = true; }
+    else if (p === 'balanced') { $('colors').value = 128; $('dither').checked = true; }
+    else if (p === 'strong')   { $('colors').value = 64;  $('dither').checked = true; }
+    else if (p === 'extreme')  { $('colors').value = 32;  $('dither').checked = true; }
+    if (p !== 'custom') $('colorsVal').textContent = $('colors').value;
+  });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    log.clear();
+    files = naturalSort(files.filter(f => f.type.startsWith('image/')));
+    log.dim(`加载 ${files.length} 张图片...`);
+    items = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const bitmap = await createImageBitmap(f);
+        const cv = newCanvas(bitmap.width, bitmap.height);
+        cv.getContext('2d').drawImage(bitmap, 0, 0);
+        const imageData = cv.getContext('2d').getImageData(0, 0, bitmap.width, bitmap.height);
+        items.push({ file: f, bitmap, imageData, crushedBlob: null, crushedSize: null });
+      } catch (e) {
+        log.err(`${f.name}: ${e.message}`);
+      }
+      progress.set((i + 1) / files.length);
+    }
+    progress.hide();
+    log.ok(`加载完成 ${items.length} 张`);
+    renderTable();
+    $('crushBtn').disabled = items.length === 0;
+    $('zipBtn').disabled = true;
+    $('stats').innerHTML = `已加载 <strong>${items.length}</strong> 张待压缩`;
+  }
+
+  function renderTable() {
+    const tbody = $('resultsBody');
+    tbody.innerHTML = '';
+    items.forEach((it, i) => {
+      const tr = document.createElement('tr');
+      tr.className = 'row';
+      tr.innerHTML = `
+        <td><div class="thumb"></div></td>
+        <td class="mono">${escapeHtml(it.file.name)}</td>
+        <td class="mono">${it.bitmap.width}×${it.bitmap.height}</td>
+        <td class="mono">${fmtBytes(it.file.size)}</td>
+        <td class="mono" id="crushSize_${i}">—</td>
+        <td class="mono" id="savings_${i}">—</td>
+        <td class="row-actions" id="actions_${i}"></td>
+      `;
+      tbody.appendChild(tr);
+      const thumb = tr.querySelector('.thumb');
+      const cv = newCanvas(it.bitmap.width, it.bitmap.height);
+      cv.getContext('2d').drawImage(it.bitmap, 0, 0);
+      thumb.appendChild(cv);
+      tr.addEventListener('click', () => selectRow(i));
+    });
+    $('summary').classList.toggle('show', items.length > 0);
+    updateSummary();
+  }
+
+  function selectRow(i) {
+    selectedIdx = i;
+    [...$('resultsBody').children].forEach((el, j) => el.classList.toggle('selected', j === i));
+    const it = items[i];
+    if (!it) return;
+    // refresh handoff to point to this row's compressed blob (if any)
+    if (it.crushedBlob && handoff) {
+      const name = it.file.name.replace(/\.[^.]+$/, '') + '_crushed.png';
+      handoff.setBlob(it.crushedBlob, name);
+    }
+    // show comparison
+    $('compareArea').classList.add('show');
+    $('origBox').innerHTML = '';
+    const ocv = newCanvas(it.bitmap.width, it.bitmap.height);
+    ocv.getContext('2d').drawImage(it.bitmap, 0, 0);
+    $('origBox').appendChild(ocv);
+    $('origInfo').textContent = `${it.bitmap.width}×${it.bitmap.height} · ${fmtBytes(it.file.size)}`;
+    if (it.crushedBlob) {
+      $('crushBox').innerHTML = '';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(it.crushedBlob);
+      $('crushBox').appendChild(img);
+      $('crushInfo').textContent = `${fmtBytes(it.crushedBlob.size)} · ${getSavingsPct(it).toFixed(1)}%`;
+    } else {
+      $('crushBox').innerHTML = '<div class="preview-empty">未压缩</div>';
+      $('crushInfo').textContent = '';
+    }
+  }
+
+  function getSavingsPct(it) {
+    if (!it.crushedBlob) return 0;
+    return (it.file.size - it.crushedBlob.size) / it.file.size * 100;
+  }
+
+  function updateSummary() {
+    const orig = items.reduce((s, x) => s + x.file.size, 0);
+    const crushed = items.reduce((s, x) => s + (x.crushedBlob?.size || 0), 0);
+    const hasAny = items.some(x => x.crushedBlob);
+    $('sumCount').textContent = items.length;
+    $('sumOrig').textContent = fmtBytes(orig);
+    $('sumCrush').textContent = hasAny ? fmtBytes(crushed) : '—';
+    $('sumSavings').textContent = hasAny && orig > 0
+      ? `${((orig - crushed) / orig * 100).toFixed(1)}% (${fmtBytes(orig - crushed)})`
+      : '—';
+  }
+
+  function renderRowResult(i) {
+    const it = items[i];
+    $('crushSize_' + i).textContent = fmtBytes(it.crushedBlob.size);
+    const pct = getSavingsPct(it);
+    const cls = pct >= 30 ? 'good' : pct >= 0 ? 'neutral' : 'bad';
+    $('savings_' + i).innerHTML = `<span class="savings ${cls}">${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%</span>`;
+    const actions = $('actions_' + i);
+    actions.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.textContent = '下载';
+    btn.addEventListener('click', (e) => { e.stopPropagation(); downloadCrushed(i); });
+    actions.appendChild(btn);
+  }
+
+  function downloadCrushed(i) {
+    const it = items[i];
+    if (!it.crushedBlob) return;
+    const name = it.file.name.replace(/\.[^.]+$/, '') + '_crushed.png';
+    download(it.crushedBlob, name);
+  }
+
+  $('crushBtn').addEventListener('click', async () => {
+    if (!items.length) return;
+    $('crushBtn').disabled = true;
+    $('zipBtn').disabled = true;
+    const nColors = parseInt($('colors').value, 10);
+    const dither = $('dither').checked;
+    const kmeans = $('kmeans').checked;
+    const perceptual = $('perceptual').checked;
+    const alphaMode = $('alphaMode').value;
+    const alphaThresh = parseInt($('alphaThresh').value, 10);
+
+    log.dim(`开始压缩 (${nColors} 色, dither=${dither}, k-means=${kmeans}, perceptual=${perceptual}, alpha=${alphaMode}) · Web Worker...`);
+    const t0 = performance.now();
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      try {
+        const buf = await crushInWorker(it.imageData, { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh },
+          (pct, status) => progress.set(((i + pct) / items.length))
+        );
+        it.crushedBlob = new Blob([buf], { type: 'image/png' });
+        renderRowResult(i);
+      } catch (e) {
+        log.err(`${it.file.name}: ${e.message}`);
+        console.error(e);
+      }
+      progress.set((i + 1) / items.length);
+    }
+    const t1 = performance.now();
+    progress.hide();
+    updateSummary();
+    log.ok(`压缩完成 ${items.length} 张 · 用时 ${((t1 - t0) / 1000).toFixed(2)}s`);
+    $('crushBtn').disabled = false;
+    const anyCrushed = items.some(x => x.crushedBlob);
+    $('zipBtn').disabled = !anyCrushed;
+    // show batch download tip when there are multiple crushed images
+    const crushedCount = items.filter(x => x.crushedBlob).length;
+    $('batchTip').style.display = crushedCount >= 2 ? 'flex' : 'none';
+    if (selectedIdx >= 0) selectRow(selectedIdx);
+  });
+
+  // inline ZIP shortcut from the batch tip
+  $('batchTipZipBtn').addEventListener('click', () => $('zipBtn').click());
+
+  $('zipBtn').addEventListener('click', async () => {
+    const have = items.filter(x => x.crushedBlob);
+    if (!have.length) return;
+    log.dim('打包 ZIP...');
+    const files = [];
+    for (const it of have) {
+      const data = new Uint8Array(await it.crushedBlob.arrayBuffer());
+      const name = it.file.name.replace(/\.[^.]+$/, '') + '_crushed.png';
+      files.push({ name, data });
+    }
+    const zip = makeZip(files);
+    download(zip, 'crushed.zip');
+    log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    items = []; selectedIdx = -1;
+    $('resultsBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:40px">拖入图片后这里显示压缩结果对比</td></tr>';
+    $('summary').classList.remove('show');
+    $('compareArea').classList.remove('show');
+    $('batchTip').style.display = 'none';
+    $('stats').textContent = '未加载';
+    $('crushBtn').disabled = true;
+    $('zipBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+  function yieldUi() { return new Promise(r => setTimeout(r, 0)); }
+
+  // ====================================================================
+  // PNG Crusher core — median cut (4D incl alpha) + palette PNG encoder
+  // ====================================================================
+  async function crushPng(imageData, opts) {
+    const { width: w, height: h, data: src } = imageData;
+    const { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh } = opts;
+
+    // step 1: prepare pixel array honoring alpha mode
+    const pixels = new Uint8ClampedArray(w * h * 4);
+    pixels.set(src);
+    if (alphaMode === 'threshold') {
+      for (let i = 3; i < pixels.length; i += 4) {
+        pixels[i] = pixels[i] >= alphaThresh ? 255 : 0;
+      }
+    } else if (alphaMode === 'discard') {
+      for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
+    }
+
+    // perceptual weights: human eyes are most sensitive to green, less to blue.
+    // ITU-R BT.601 luma coefficients squared so they apply to squared distance.
+    const W = perceptual
+      ? { r: 0.299, g: 0.587, b: 0.114, a: 0.5 }   // alpha weighted moderately
+      : { r: 1, g: 1, b: 1, a: 1 };
+
+    // step 2: build palette via median-cut (4D RGBA)
+    let palette = buildPalette4D(pixels, w, h, nColors, W);
+
+    // step 3: optional K-means refinement (5 rounds)
+    if (kmeans) {
+      palette = refinePaletteKMeans(pixels, w, h, palette, 5, W);
+    }
+
+    // step 4: map each pixel to nearest palette index (optionally with dither)
+    const indices = dither
+      ? mapWithDither(pixels, w, h, palette, W)
+      : mapNearest(pixels, w, h, palette, W);
+
+    // step 5: encode palette PNG
+    return await encodePalettePng(indices, w, h, palette);
+  }
+
+  // Run K-means on the sampled pixels using the current palette as seeds.
+  function refinePaletteKMeans(pixels, w, h, initialPalette, iterations, W) {
+    // sample (stride) consistent with buildPalette4D
+    const total = w * h;
+    const target = 50000;
+    const stride = Math.max(1, Math.floor(total / target));
+    const samples = [];
+    let counter = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (counter++ % stride === 0) samples.push([pixels[i], pixels[i+1], pixels[i+2], pixels[i+3]]);
+    }
+    if (!samples.length) return initialPalette;
+
+    let centers = initialPalette.map(p => [p.r, p.g, p.b, p.a]);
+    const pn = centers.length;
+    const assignment = new Int32Array(samples.length);
+
+    for (let iter = 0; iter < iterations; iter++) {
+      // assign
+      let changed = 0;
+      for (let s = 0; s < samples.length; s++) {
+        const [r, g, b, a] = samples[s];
+        let best = 0, bestD = Infinity;
+        for (let k = 0; k < pn; k++) {
+          const c = centers[k];
+          const dr = (r - c[0]), dg = (g - c[1]), db = (b - c[2]), da = (a - c[3]);
+          const d = W.r*dr*dr + W.g*dg*dg + W.b*db*db + W.a*da*da;
+          if (d < bestD) { bestD = d; best = k; }
+        }
+        if (assignment[s] !== best) { assignment[s] = best; changed++; }
+      }
+      if (changed === 0) break; // converged
+
+      // update centers
+      const sums = Array.from({ length: pn }, () => [0, 0, 0, 0]);
+      const counts = new Int32Array(pn);
+      for (let s = 0; s < samples.length; s++) {
+        const k = assignment[s];
+        const p = samples[s];
+        sums[k][0] += p[0]; sums[k][1] += p[1]; sums[k][2] += p[2]; sums[k][3] += p[3];
+        counts[k]++;
+      }
+      for (let k = 0; k < pn; k++) {
+        if (counts[k] > 0) {
+          centers[k][0] = sums[k][0] / counts[k];
+          centers[k][1] = sums[k][1] / counts[k];
+          centers[k][2] = sums[k][2] / counts[k];
+          centers[k][3] = sums[k][3] / counts[k];
+        }
+      }
+    }
+    return centers.map(c => ({
+      r: Math.round(c[0]), g: Math.round(c[1]),
+      b: Math.round(c[2]), a: Math.round(c[3])
+    }));
+  }
+
+  function buildPalette4D(pixels, w, h, maxColors, W = { r:1, g:1, b:1, a:1 }) {
+    // sample pixels (up to ~50k samples for speed)
+    const total = w * h;
+    const target = 50000;
+    const stride = Math.max(1, Math.floor(total / target));
+    const samples = [];
+    let counter = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (counter++ % stride === 0) {
+        samples.push([pixels[i], pixels[i+1], pixels[i+2], pixels[i+3]]);
+      }
+    }
+    if (!samples.length) samples.push([0, 0, 0, 0]);
+
+    const boxes = [{ pixels: samples }];
+    const weights = [W.r, W.g, W.b, W.a];
+    while (boxes.length < maxColors) {
+      let bestIdx = -1, bestRange = -1;
+      for (let i = 0; i < boxes.length; i++) {
+        if (boxes[i].pixels.length < 2) continue;
+        const r = boxRange4(boxes[i], weights);
+        if (r.max > bestRange) { bestRange = r.max; bestIdx = i; }
+      }
+      if (bestIdx < 0) break;
+      const { channel } = boxRange4(boxes[bestIdx], weights);
+      boxes[bestIdx].pixels.sort((a, b) => a[channel] - b[channel]);
+      const mid = boxes[bestIdx].pixels.length >> 1;
+      const lo = boxes[bestIdx].pixels.slice(0, mid);
+      const hi = boxes[bestIdx].pixels.slice(mid);
+      boxes.splice(bestIdx, 1, { pixels: lo }, { pixels: hi });
+    }
+
+    return boxes.map(box => {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (const p of box.pixels) { r += p[0]; g += p[1]; b += p[2]; a += p[3]; }
+      const n = box.pixels.length;
+      return {
+        r: Math.round(r / n), g: Math.round(g / n),
+        b: Math.round(b / n), a: Math.round(a / n)
+      };
+    });
+  }
+
+  function boxRange4(box, weights = [1, 1, 1, 1]) {
+    let min = [255, 255, 255, 255], max = [0, 0, 0, 0];
+    for (const p of box.pixels) {
+      for (let c = 0; c < 4; c++) {
+        if (p[c] < min[c]) min[c] = p[c];
+        if (p[c] > max[c]) max[c] = p[c];
+      }
+    }
+    let rangeMax = -1, channel = 0;
+    for (let c = 0; c < 4; c++) {
+      const r = (max[c] - min[c]) * weights[c];
+      if (r > rangeMax) { rangeMax = r; channel = c; }
+    }
+    return { max: rangeMax, channel };
+  }
+
+  function mapNearest(pixels, w, h, palette, W = { r:1, g:1, b:1, a:1 }) {
+    const out = new Uint8Array(w * h);
+    const pn = palette.length;
+    for (let i = 0, j = 0; i < w * h; i++, j += 4) {
+      out[i] = nearestPaletteIndex(pixels[j], pixels[j+1], pixels[j+2], pixels[j+3], palette, pn, W);
+    }
+    return out;
+  }
+
+  function nearestPaletteIndex(r, g, b, a, palette, pn, W = { r:1, g:1, b:1, a:1 }) {
+    let best = 0, bestD = Infinity;
+    for (let k = 0; k < pn; k++) {
+      const p = palette[k];
+      const dr = r - p.r, dg = g - p.g, db = b - p.b, da = a - p.a;
+      const d = W.r*dr*dr + W.g*dg*dg + W.b*db*db + W.a*da*da;
+      if (d < bestD) { bestD = d; best = k; if (d === 0) break; }
+    }
+    return best;
+  }
+
+  function mapWithDither(pixels, w, h, palette, W = { r:1, g:1, b:1, a:1 }) {
+    // Floyd-Steinberg. Operate on Float32 buffer to avoid integer overflow.
+    const buf = new Float32Array(w * h * 4);
+    for (let i = 0; i < buf.length; i++) buf[i] = pixels[i];
+    const out = new Uint8Array(w * h);
+    const pn = palette.length;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const r = buf[idx], g = buf[idx+1], b = buf[idx+2], a = buf[idx+3];
+        const pi = nearestPaletteIndex(
+          Math.max(0, Math.min(255, r)),
+          Math.max(0, Math.min(255, g)),
+          Math.max(0, Math.min(255, b)),
+          Math.max(0, Math.min(255, a)), palette, pn, W);
+        out[y * w + x] = pi;
+        const p = palette[pi];
+        const er = r - p.r, eg = g - p.g, eb = b - p.b, ea = a - p.a;
+        // distribute error: right 7/16, below-left 3/16, below 5/16, below-right 1/16
+        function add(xx, yy, frac) {
+          if (xx < 0 || xx >= w || yy >= h) return;
+          const k = (yy * w + xx) * 4;
+          buf[k]   += er * frac;
+          buf[k+1] += eg * frac;
+          buf[k+2] += eb * frac;
+          buf[k+3] += ea * frac;
+        }
+        add(x + 1, y,     7 / 16);
+        add(x - 1, y + 1, 3 / 16);
+        add(x,     y + 1, 5 / 16);
+        add(x + 1, y + 1, 1 / 16);
+      }
+    }
+    return out;
+  }
+
+  // ===== palette PNG writer =====
+  async function encodePalettePng(indices, w, h, palette) {
+    // scanlines with filter byte 0
+    const lineLen = w + 1;
+    const scan = new Uint8Array(h * lineLen);
+    for (let y = 0; y < h; y++) {
+      scan[y * lineLen] = 0;
+      scan.set(indices.subarray(y * w, (y + 1) * w), y * lineLen + 1);
+    }
+    // zlib compress via CompressionStream
+    const cs = new CompressionStream('deflate');
+    const writer = cs.writable.getWriter();
+    writer.write(scan);
+    writer.close();
+    const idat = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+
+    const out = new ByteSink();
+    out.writeBytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+    // IHDR
+    const ihdr = new Uint8Array(13);
+    const dv = new DataView(ihdr.buffer);
+    dv.setUint32(0, w, false);
+    dv.setUint32(4, h, false);
+    ihdr[8] = 8;   // bit depth
+    ihdr[9] = 3;   // color type = indexed
+    writeChunk(out, 'IHDR', ihdr);
+
+    // PLTE
+    const plte = new Uint8Array(palette.length * 3);
+    palette.forEach((p, i) => { plte[i*3] = p.r; plte[i*3+1] = p.g; plte[i*3+2] = p.b; });
+    writeChunk(out, 'PLTE', plte);
+
+    // tRNS (omit trailing 0xFFs)
+    let lastNon255 = -1;
+    for (let i = 0; i < palette.length; i++) if (palette[i].a < 255) lastNon255 = i;
+    if (lastNon255 >= 0) {
+      const trns = new Uint8Array(lastNon255 + 1);
+      for (let i = 0; i <= lastNon255; i++) trns[i] = palette[i].a;
+      writeChunk(out, 'tRNS', trns);
+    }
+
+    writeChunk(out, 'IDAT', idat);
+    writeChunk(out, 'IEND', new Uint8Array(0));
+    return out.toUint8Array();
+  }
+
+  class ByteSink {
+    constructor() { this.chunks = []; this.totalLen = 0; }
+    writeU8(v) { this.chunks.push(new Uint8Array([v & 0xFF])); this.totalLen += 1; }
+    writeBytes(arr) {
+      const u = arr instanceof Uint8Array ? arr : new Uint8Array(arr);
+      this.chunks.push(u);
+      this.totalLen += u.length;
+    }
+    toUint8Array() {
+      const out = new Uint8Array(this.totalLen);
+      let off = 0;
+      for (const c of this.chunks) { out.set(c, off); off += c.length; }
+      return out;
+    }
+  }
+
+  function writeChunk(out, type, data) {
+    const len = data.length;
+    out.writeBytes([(len >> 24) & 0xFF, (len >> 16) & 0xFF, (len >> 8) & 0xFF, len & 0xFF]);
+    const typeBytes = new Uint8Array([type.charCodeAt(0), type.charCodeAt(1), type.charCodeAt(2), type.charCodeAt(3)]);
+    out.writeBytes(typeBytes);
+    out.writeBytes(data);
+    const crcBuf = new Uint8Array(typeBytes.length + data.length);
+    crcBuf.set(typeBytes, 0);
+    crcBuf.set(data, typeBytes.length);
+    const crc = crc32(crcBuf);
+    out.writeBytes([(crc >>> 24) & 0xFF, (crc >>> 16) & 0xFF, (crc >>> 8) & 0xFF, crc & 0xFF]);
+  }
+
+  function crc32(data) {
+    let table = crc32._t;
+    if (!table) {
+      table = crc32._t = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c;
+      }
+    }
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+})();
+</script>
+</body>
+</html>

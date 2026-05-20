@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>HTML Inliner · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .file-list {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+  }
+  .file-list-empty { padding: 12px; color: var(--muted); text-align: center; }
+  .file-list-row {
+    padding: 4px 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--panel);
+  }
+  .file-list-row:last-child { border-bottom: 0; }
+  .file-list-row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-list-row .size { color: var(--muted); }
+  .file-list-row.inlined .name::before { content: '✓ '; color: var(--success); }
+  .file-list-row.skipped .name::before { content: '⊘ '; color: var(--muted); }
+  .file-list-row.missing .name::before { content: '✗ '; color: var(--danger); }
+
+  .output-area {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 180px;
+  }
+  .output-area .output-stats {
+    padding: 10px 14px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: var(--muted-2);
+  }
+  .output-area .output-stats strong { color: var(--text); }
+  .output-area pre {
+    margin: 0;
+    flex: 1;
+    overflow: auto;
+    padding: 12px 16px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted-2);
+    background: var(--bg);
+  }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .compat-note strong { color: var(--warning); }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📄 HTML Inliner</h1>
+
+    <div class="compat-note">
+      <strong>需要 Chrome 86+ / Edge 86+</strong> (File System Access API)。Firefox / Safari 暂不支持目录选择。
+    </div>
+
+    <button id="pickDirBtn">📁 选择项目文件夹</button>
+    <div class="row" style="margin-top:8px; font-size:11px; color:var(--muted)" id="dirInfo"></div>
+
+    <div class="field" style="margin-top:14px">
+      <label>入口 HTML 文件</label>
+      <select id="entrySelect"><option value="">(选择文件夹后填充)</option></select>
+    </div>
+
+    <h2>内联策略</h2>
+    <label class="checkbox">
+      <input type="checkbox" id="inlineScripts" checked />
+      <span>内联 &lt;script src&gt;</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="inlineStyles" checked />
+      <span>内联 &lt;link rel=stylesheet&gt;</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="inlineImages" checked />
+      <span>内联 &lt;img&gt; / CSS url() 图片</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="inlineFonts" checked />
+      <span>内联字体 (woff / woff2 / ttf)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="inlineMedia" />
+      <span>内联音视频 (体积大,慎用)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="doMinify" />
+      <span>顺便压缩 HTML/CSS (减少空白)</span>
+    </label>
+
+    <div class="field">
+      <label>单文件最大体积 (KB,超过跳过)</label>
+      <input type="number" id="maxFileKb" value="2048" min="1" />
+    </div>
+
+    <h2>导出</h2>
+    <div class="field">
+      <label>输出文件名</label>
+      <input type="text" id="outputName" value="bundle" />
+    </div>
+    <button id="processBtn" disabled>开始打包</button>
+    <button id="downloadBtn" class="secondary" disabled>下载 HTML</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未选择目录</div>
+    <div>
+      <h2 style="margin-top:0">资源处理</h2>
+      <div class="file-list" id="fileList">
+        <div class="file-list-empty">选择目录并打包后这里会显示资源清单</div>
+      </div>
+    </div>
+    <div class="output-area">
+      <div class="output-stats" id="outputStats" style="display:none">
+        <span>原 HTML <strong id="srcSize">—</strong></span>
+        <span>输出 <strong id="outSize">—</strong></span>
+        <span>内联资源 <strong id="inlineCount">0</strong></span>
+        <span>跳过 <strong id="skipCount">0</strong></span>
+      </div>
+      <pre id="outputPreview">选择目录并打包后,这里会显示输出 HTML 的前几行预览。</pre>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('html-inliner');
+
+(() => {
+  const { $, makeLogger, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let dirHandle = null;
+  let fileMap = new Map();   // path -> File
+  let outputBlob = null;
+
+  $('pickDirBtn').addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) {
+      log.err('当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      dirHandle = handle;
+      log.clear();
+      log.dim(`扫描目录 ${handle.name} ...`);
+      fileMap.clear();
+      await walkDir(handle, '');
+      log.ok(`扫描完成,共 ${fileMap.size} 个文件`);
+      const htmlFiles = [...fileMap.keys()].filter(p => /\.html?$/i.test(p)).sort();
+      const sel = $('entrySelect');
+      sel.innerHTML = '';
+      if (htmlFiles.length === 0) {
+        sel.innerHTML = '<option value="">(目录中没有 .html 文件)</option>';
+        $('processBtn').disabled = true;
+      } else {
+        for (const h of htmlFiles) {
+          const opt = document.createElement('option');
+          opt.value = h;
+          opt.textContent = h;
+          sel.appendChild(opt);
+        }
+        // prefer index.html
+        const idxIdx = htmlFiles.indexOf('index.html');
+        if (idxIdx >= 0) sel.value = 'index.html';
+        $('processBtn').disabled = false;
+      }
+      $('dirInfo').textContent = `📂 ${handle.name} · ${fileMap.size} 文件`;
+      $('stats').innerHTML = `目录 <strong>${escapeHtml(handle.name)}</strong> · <strong>${fileMap.size}</strong> 个文件`;
+    } catch (e) {
+      if (e.name !== 'AbortError') log.err(e.message);
+    }
+  });
+
+  async function walkDir(handle, prefix) {
+    for await (const [name, entry] of handle.entries()) {
+      const path = prefix ? `${prefix}/${name}` : name;
+      if (entry.kind === 'file') {
+        const f = await entry.getFile();
+        fileMap.set(path, f);
+      } else if (entry.kind === 'directory') {
+        await walkDir(entry, path);
+      }
+    }
+  }
+
+  $('processBtn').addEventListener('click', async () => {
+    const entryPath = $('entrySelect').value;
+    if (!entryPath) return log.err('请先选择入口 HTML 文件');
+    const file = fileMap.get(entryPath);
+    if (!file) return log.err('入口文件不存在: ' + entryPath);
+
+    $('processBtn').disabled = true;
+    log.dim(`开始打包 ${entryPath} ...`);
+    $('fileList').innerHTML = '';
+
+    const opts = {
+      scripts: $('inlineScripts').checked,
+      styles: $('inlineStyles').checked,
+      images: $('inlineImages').checked,
+      fonts: $('inlineFonts').checked,
+      media: $('inlineMedia').checked,
+      minify: $('doMinify').checked,
+      maxBytes: (parseInt($('maxFileKb').value, 10) || 2048) * 1024
+    };
+
+    const srcText = await file.text();
+    const srcSize = file.size;
+    const entryDir = entryPath.includes('/') ? entryPath.slice(0, entryPath.lastIndexOf('/')) : '';
+    const stats = { inlined: 0, skipped: 0, missing: 0 };
+
+    const outText = await inlineHtml(srcText, entryDir, opts, stats);
+    outputBlob = new Blob([outText], { type: 'text/html' });
+
+    $('srcSize').textContent = fmtBytes(srcSize);
+    $('outSize').textContent = fmtBytes(outputBlob.size);
+    $('inlineCount').textContent = stats.inlined;
+    $('skipCount').textContent = stats.skipped + stats.missing;
+    $('outputStats').style.display = 'flex';
+    $('outputPreview').textContent = outText.slice(0, 1200) + (outText.length > 1200 ? '\n\n... (' + outText.length + ' chars total)' : '');
+    $('downloadBtn').disabled = false;
+    $('processBtn').disabled = false;
+    log.ok(`打包完成 ${fmtBytes(outputBlob.size)}, 内联 ${stats.inlined}, 跳过 ${stats.skipped}, 缺失 ${stats.missing}`);
+  });
+
+  async function inlineHtml(html, baseDir, opts, stats) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // 1. <link rel="stylesheet">
+    if (opts.styles) {
+      const links = [...doc.querySelectorAll('link[rel="stylesheet"][href]')];
+      for (const link of links) {
+        const href = link.getAttribute('href');
+        if (isExternal(href)) { stats.skipped++; reportRow(href, 'skipped', '外链不内联'); continue; }
+        const resolved = resolvePath(baseDir, href);
+        const f = fileMap.get(resolved);
+        if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
+        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+        let css = await f.text();
+        // recursively inline url() refs in CSS
+        const cssDir = resolved.includes('/') ? resolved.slice(0, resolved.lastIndexOf('/')) : '';
+        css = await inlineCssUrls(css, cssDir, opts, stats);
+        const style = doc.createElement('style');
+        style.textContent = css;
+        link.replaceWith(style);
+        stats.inlined++;
+        reportRow(resolved, 'inlined', fmtBytes(f.size));
+      }
+    }
+
+    // 2. <script src>
+    if (opts.scripts) {
+      const scripts = [...doc.querySelectorAll('script[src]')];
+      for (const sc of scripts) {
+        const src = sc.getAttribute('src');
+        if (isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', '外链不内联'); continue; }
+        const resolved = resolvePath(baseDir, src);
+        const f = fileMap.get(resolved);
+        if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
+        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+        const js = await f.text();
+        sc.removeAttribute('src');
+        sc.textContent = js;
+        stats.inlined++;
+        reportRow(resolved, 'inlined', fmtBytes(f.size));
+      }
+    }
+
+    // 3. <img src>, <source src>, <video poster>, etc.
+    const tags = [];
+    if (opts.images) {
+      tags.push(...doc.querySelectorAll('img[src]'));
+      tags.push(...doc.querySelectorAll('image[href]')); // SVG image
+    }
+    if (opts.media) {
+      tags.push(...doc.querySelectorAll('video[src], audio[src], source[src]'));
+    }
+    for (const el of tags) {
+      const attr = el.tagName.toLowerCase() === 'image' ? 'href' : 'src';
+      const src = el.getAttribute(attr);
+      if (!src || src.startsWith('data:') || isExternal(src)) { if (src && isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', '外链不内联'); } continue; }
+      const resolved = resolvePath(baseDir, src);
+      const f = fileMap.get(resolved);
+      if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
+      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+      const dataUrl = await fileToDataUrl(f);
+      el.setAttribute(attr, dataUrl);
+      stats.inlined++;
+      reportRow(resolved, 'inlined', fmtBytes(f.size));
+    }
+
+    // 4. inline CSS url() refs in existing <style> blocks
+    if (opts.images || opts.fonts) {
+      for (const style of doc.querySelectorAll('style')) {
+        style.textContent = await inlineCssUrls(style.textContent, baseDir, opts, stats);
+      }
+    }
+
+    // serialize
+    let serialized = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    if (opts.minify) serialized = minifyHtml(serialized);
+    return serialized;
+  }
+
+  function minifyHtml(s) {
+    // preserve script/style/pre/textarea contents (collapse only outside them)
+    const preserved = [];
+    s = s.replace(/<(script|style|pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, m => {
+      preserved.push(m); return `__PRESERVE_${preserved.length-1}__`;
+    });
+    s = s.replace(/<!--[\s\S]*?-->/g, '');
+    s = s.replace(/>\s+</g, '><');
+    s = s.replace(/\s{2,}/g, ' ');
+    s = s.replace(/__PRESERVE_(\d+)__/g, (_, i) => {
+      // also collapse whitespace inside <style> blocks (safe), leave <script> alone
+      const piece = preserved[+i];
+      if (/^<style\b/i.test(piece)) {
+        return piece.replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/i, (_, attrs, body) => {
+          const min = body
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/\s*([{}:;,>+~])\s*/g, '$1')
+            .replace(/;}/g, '}')
+            .trim();
+          return `<style${attrs}>${min}</style>`;
+        });
+      }
+      return piece;
+    });
+    return s.trim();
+  }
+
+  async function inlineCssUrls(css, baseDir, opts, stats) {
+    const re = /url\(\s*(['"]?)([^'")]+)\1\s*\)/g;
+    const replacements = [];
+    let m;
+    while ((m = re.exec(css)) !== null) {
+      const url = m[2].trim();
+      if (!url || url.startsWith('data:') || isExternal(url)) continue;
+      const resolved = resolvePath(baseDir, url);
+      const f = fileMap.get(resolved);
+      const isFont = /\.(woff2?|ttf|otf|eot)$/i.test(url);
+      const isImg = /\.(png|jpe?g|gif|webp|svg|avif|ico)$/i.test(url);
+      if (isFont && !opts.fonts) continue;
+      if (isImg && !opts.images) continue;
+      if (!f) { stats.missing++; reportRow(resolved, 'missing', 'CSS url() 未找到'); continue; }
+      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+      const dataUrl = await fileToDataUrl(f);
+      replacements.push({ match: m[0], replacement: `url("${dataUrl}")`, path: resolved, size: f.size });
+    }
+    for (const r of replacements) {
+      css = css.split(r.match).join(r.replacement);
+      stats.inlined++;
+      reportRow(r.path, 'inlined', 'CSS url() ' + fmtBytes(r.size));
+    }
+    return css;
+  }
+
+  function resolvePath(baseDir, rel) {
+    if (rel.startsWith('/')) return rel.slice(1);
+    const parts = (baseDir ? baseDir.split('/') : []).concat(rel.split('/'));
+    const out = [];
+    for (const p of parts) {
+      if (p === '' || p === '.') continue;
+      if (p === '..') out.pop();
+      else out.push(p);
+    }
+    return out.join('/');
+  }
+
+  function isExternal(url) {
+    return /^(https?:|\/\/|data:|mailto:|javascript:|#)/i.test(url);
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  function reportRow(path, state, note) {
+    const div = document.createElement('div');
+    div.className = 'file-list-row ' + state;
+    div.innerHTML = `<span class="name">${escapeHtml(path)}</span><span class="size">${escapeHtml(note || '')}</span>`;
+    $('fileList').appendChild(div);
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outputBlob) return;
+    const name = ($('outputName').value || 'bundle').replace(/[^\w-]/g, '_');
+    download(outputBlob, name + '.html');
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    dirHandle = null; fileMap.clear(); outputBlob = null;
+    $('entrySelect').innerHTML = '<option value="">(选择文件夹后填充)</option>';
+    $('dirInfo').textContent = '';
+    $('stats').textContent = '未选择目录';
+    $('fileList').innerHTML = '<div class="file-list-empty">选择目录并打包后这里会显示资源清单</div>';
+    $('outputPreview').textContent = '选择目录并打包后,这里会显示输出 HTML 的前几行预览。';
+    $('outputStats').style.display = 'none';
+    $('processBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+  });
+})();
+</script>
+</body>
+</html>

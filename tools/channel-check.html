@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>渠道规范检查 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .report-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .sum-card {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+  }
+  .sum-card .value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .sum-card .label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .sum-card.pass .value { color: var(--jade); }
+  .sum-card.warn .value { color: var(--warning); }
+  .sum-card.fail .value { color: var(--danger); }
+  .sum-card.info .value { color: var(--text); }
+
+  .check-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .check-item {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .check-item.pass { border-left-color: var(--jade); }
+  .check-item.warn { border-left-color: var(--warning); }
+  .check-item.fail { border-left-color: var(--danger); }
+  .check-item .icon { font-size: 16px; text-align: center; }
+  .check-item.pass .icon { color: var(--jade); }
+  .check-item.warn .icon { color: var(--warning); }
+  .check-item.fail .icon { color: var(--danger); }
+  .check-item .title { font-size: 13px; color: var(--text); font-weight: 500; }
+  .check-item .detail { font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+  .check-item .badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>✅ 渠道规范检查</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 playable HTML</p>
+      <p class="hint">单文件 HTML(用 HTML Inliner 打包后的)</p>
+      <input type="file" id="fileInput" accept=".html,text/html" style="display:none" />
+    </div>
+
+    <h2>目标渠道</h2>
+    <div class="field">
+      <select id="channel">
+        <option value="facebook">Facebook / Meta</option>
+        <option value="google">Google Ads (AdMob)</option>
+        <option value="tiktok">TikTok / 抖音</option>
+        <option value="mintegral">Mintegral</option>
+        <option value="ironsource">IronSource</option>
+        <option value="applovin">AppLovin</option>
+        <option value="unity">Unity Ads</option>
+        <option value="common">通用 (所有渠道兼容)</option>
+      </select>
+    </div>
+
+    <h2>规则参考</h2>
+    <div class="info" id="ruleRef">选个渠道后这里显示该渠道的硬性规则</div>
+
+    <button id="recheckBtn" class="secondary" disabled style="margin-top:14px">重新检查</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+
+    <div class="report-summary" id="summary" style="display:none">
+      <div class="sum-card pass"><div class="value" id="passCount">0</div><div class="label">通过</div></div>
+      <div class="sum-card warn"><div class="value" id="warnCount">0</div><div class="label">警告</div></div>
+      <div class="sum-card fail"><div class="value" id="failCount">0</div><div class="label">失败</div></div>
+      <div class="sum-card info"><div class="value" id="totalSize">—</div><div class="label">文件大小</div></div>
+    </div>
+
+    <h2 style="margin-top:0">检查项</h2>
+    <div class="check-list" id="checkList">
+      <div class="preview-empty">拖入 HTML 文件后这里显示详细检查结果</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('channel-check');
+
+(() => {
+  const { $, makeLogger, attachDropZone, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let srcText = null;
+  let srcSize = 0;
+  let srcName = '';
+
+  // ===== rules per channel =====
+  // each rule: { key, title, severity, check(ctx) -> { pass, detail } }
+  // ctx: { text, size, channel }
+  const RULES = [
+    {
+      key: 'size-limit',
+      title: '文件大小符合渠道上限',
+      severity: 'fail',
+      check: (ctx) => {
+        const limits = {
+          facebook: 5*1024*1024, google: 5*1024*1024,
+          tiktok: 5*1024*1024, mintegral: 5*1024*1024,
+          ironsource: 5*1024*1024, applovin: 5*1024*1024,
+          unity: 5*1024*1024, common: 2*1024*1024
+        };
+        const limit = limits[ctx.channel];
+        return {
+          pass: ctx.size <= limit,
+          detail: `当前 ${fmtBytes(ctx.size)} / 上限 ${fmtBytes(limit)}`
+        };
+      }
+    },
+    {
+      key: 'no-external-script',
+      title: '无外部 <script src>',
+      severity: 'fail',
+      check: (ctx) => {
+        const m = ctx.text.match(/<script[^>]+src\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
+        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 script` : '全部 inline' };
+      }
+    },
+    {
+      key: 'no-external-css',
+      title: '无外部 <link rel=stylesheet>',
+      severity: 'fail',
+      check: (ctx) => {
+        const m = ctx.text.match(/<link[^>]+(?:href|rel)[^>]*?href\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
+        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 stylesheet` : '全部 inline' };
+      }
+    },
+    {
+      key: 'no-external-img',
+      title: '无外部 <img src>',
+      severity: 'warn',
+      check: (ctx) => {
+        const m = ctx.text.match(/<img[^>]+src\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
+        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 img` : '全部 dataURL 或本地' };
+      }
+    },
+    {
+      key: 'no-fetch',
+      title: '不应有 fetch / XMLHttpRequest',
+      severity: 'fail',
+      check: (ctx) => {
+        const f = (ctx.text.match(/\bfetch\s*\(/g) || []).length;
+        const x = (ctx.text.match(/\bnew\s+XMLHttpRequest\b/g) || []).length;
+        return { pass: f === 0 && x === 0, detail: `fetch×${f}, XHR×${x}` };
+      }
+    },
+    {
+      key: 'no-cookie-storage',
+      title: '不应使用 cookie / localStorage / sessionStorage',
+      severity: 'warn',
+      check: (ctx) => {
+        const c = (ctx.text.match(/document\.cookie/g) || []).length;
+        const l = (ctx.text.match(/localStorage/g) || []).length;
+        const s = (ctx.text.match(/sessionStorage/g) || []).length;
+        return { pass: c+l+s === 0, detail: `cookie×${c}, localStorage×${l}, sessionStorage×${s}` };
+      }
+    },
+    {
+      key: 'cta-callback',
+      title: '存在 CTA 回调',
+      severity: 'fail',
+      check: (ctx) => {
+        const channel = ctx.channel;
+        const patterns = {
+          facebook: /FbPlayableAd\.(onCTAClick|track)/,
+          google: /mraid\.(open|expand)/,
+          tiktok: /(playableSDK|tiktokPlayable|onSendCtaClick)/,
+          mintegral: /(mintegral|gameEnd)/i,
+          ironsource: /(ironSource|mraid)/i,
+          applovin: /(applovin|mraid)/i,
+          unity: /(UnityAds|mraid)/i,
+          common: /(mraid|FbPlayableAd|playableSDK|window\.parent\.postMessage)/
+        };
+        const re = patterns[channel];
+        const found = re.test(ctx.text);
+        return { pass: found, detail: found ? '检测到回调代码' : '⚠ 未检测到 CTA 回调,确认按钮能正确跳转' };
+      }
+    },
+    {
+      key: 'has-mraid',
+      title: 'mraid.js 引用 (非 Facebook 渠道需要)',
+      severity: 'warn',
+      check: (ctx) => {
+        if (ctx.channel === 'facebook') return { pass: true, detail: 'Facebook 不需要 mraid' };
+        const m = /mraid\.js/.test(ctx.text);
+        return { pass: m, detail: m ? '已包含 mraid 引用' : '建议在 head 加 <script src="mraid.js"><\/script>' };
+      }
+    },
+    {
+      key: 'viewport-meta',
+      title: '有 viewport meta',
+      severity: 'warn',
+      check: (ctx) => {
+        const has = /<meta[^>]+name\s*=\s*["']viewport/i.test(ctx.text);
+        return { pass: has, detail: has ? 'OK' : '建议加 <meta name="viewport" content="width=device-width,initial-scale=1">' };
+      }
+    },
+    {
+      key: 'no-auto-redirect',
+      title: '无自动跳转 (window.location 赋值)',
+      severity: 'warn',
+      check: (ctx) => {
+        const m = (ctx.text.match(/(?:window\.)?location\s*=\s*["']https?:/g) || []).length;
+        const h = (ctx.text.match(/location\.href\s*=\s*["']https?:/g) || []).length;
+        return { pass: m+h === 0, detail: m+h ? `发现 ${m+h} 处疑似自动跳转` : '无' };
+      }
+    },
+    {
+      key: 'orientation-lock',
+      title: '声明屏幕方向 (orientation)',
+      severity: 'warn',
+      check: (ctx) => {
+        const m = /orientation/i.test(ctx.text);
+        return { pass: m, detail: m ? '检测到 orientation 相关代码' : '建议用 window.orientation 或 CSS @media 适配横竖屏' };
+      }
+    },
+    {
+      key: 'doctype',
+      title: 'HTML5 doctype',
+      severity: 'fail',
+      check: (ctx) => {
+        const m = /^\s*<!DOCTYPE\s+html\s*>/i.test(ctx.text);
+        return { pass: m, detail: m ? '正确' : '需要 <!DOCTYPE html>' };
+      }
+    },
+    {
+      key: 'utf8-meta',
+      title: 'UTF-8 字符集声明',
+      severity: 'warn',
+      check: (ctx) => {
+        const m = /<meta[^>]+charset\s*=\s*["']?utf-8/i.test(ctx.text);
+        return { pass: m, detail: m ? '正确' : '建议 <meta charset="UTF-8">' };
+      }
+    }
+  ];
+
+  const CHANNEL_RULES_REF = {
+    facebook: '上限 5MB(部分位置 2MB) · 单文件 · 必须调 FbPlayableAd.onCTAClick · 禁外部资源 / cookie / fetch',
+    google: '上限 5MB · 单文件 · 用 mraid.open() 跳转 · 必须支持 mraid 1-3 协议',
+    tiktok: '上限 5MB · 单文件 · 用 playableSDK 或 window 回调 · 禁自动跳转',
+    mintegral: '上限 5MB · 单文件 · 用 mraid · CTA 在用户首次点击后触发',
+    ironsource: '上限 5MB · 单文件 · 用 mraid · 禁外部资源',
+    applovin: '上限 5MB · 单文件 · 用 mraid · 必须有 CTA 按钮',
+    unity: '上限 5MB · 单文件 · 用 UnityAds 或 mraid · 横屏 / 竖屏需明确声明',
+    common: '上限 2MB(最严) · 全部规则取交集 · 兼容所有主流渠道'
+  };
+
+  $('channel').addEventListener('change', () => {
+    $('ruleRef').textContent = CHANNEL_RULES_REF[$('channel').value];
+    if (srcText) runCheck();
+  });
+  $('ruleRef').textContent = CHANNEL_RULES_REF.facebook;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  Toolkit.setupHandoff('channel-check', {}); // accepts incoming only, no output
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') {
+      log.err('请拖入 HTML 文件');
+      return;
+    }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      srcText = await f.text();
+      srcSize = f.size;
+      srcName = f.name;
+      $('stats').innerHTML = `<strong>${f.name}</strong> · <strong>${fmtBytes(f.size)}</strong>`;
+      $('recheckBtn').disabled = false;
+      runCheck();
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  $('recheckBtn').addEventListener('click', runCheck);
+
+  function runCheck() {
+    const channel = $('channel').value;
+    const ctx = { text: srcText, size: srcSize, channel };
+    let pass = 0, warn = 0, fail = 0;
+    const items = RULES.map(rule => {
+      const r = rule.check(ctx);
+      let status = 'pass';
+      if (!r.pass) status = rule.severity === 'fail' ? 'fail' : 'warn';
+      if (status === 'pass') pass++;
+      else if (status === 'warn') warn++;
+      else fail++;
+      return { ...rule, ...r, status };
+    });
+    $('passCount').textContent = pass;
+    $('warnCount').textContent = warn;
+    $('failCount').textContent = fail;
+    $('totalSize').textContent = fmtBytes(srcSize);
+    $('summary').style.display = 'grid';
+
+    const cl = $('checkList');
+    cl.innerHTML = items.map(it => `
+      <div class="check-item ${it.status}">
+        <span class="icon">${it.status === 'pass' ? '✓' : it.status === 'warn' ? '⚠' : '✗'}</span>
+        <div>
+          <div class="title">${escapeHtml(it.title)}</div>
+          <div class="detail">${escapeHtml(it.detail)}</div>
+        </div>
+        <span class="badge">${it.status.toUpperCase()}</span>
+      </div>
+    `).join('');
+    log.ok(`检查完成: ${pass} 通过 / ${warn} 警告 / ${fail} 失败`);
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+  $('clearBtn').addEventListener('click', () => {
+    srcText = null; srcSize = 0; srcName = '';
+    $('stats').textContent = '未加载';
+    $('summary').style.display = 'none';
+    $('checkList').innerHTML = '<div class="preview-empty">拖入 HTML 文件后这里显示详细检查结果</div>';
+    $('recheckBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

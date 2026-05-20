@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>瘦身助手 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .advice-list { display: flex; flex-direction: column; gap: 10px; }
+  .advice {
+    background: rgba(20, 20, 26, 0.55);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--jade);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .advice.minor { border-left-color: var(--muted); }
+  .advice .head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  }
+  .advice .head .ico { font-size: 18px; }
+  .advice .head .title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .advice .head .impact {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: rgba(var(--jade-rgb), 0.15);
+    color: var(--jade);
+    letter-spacing: 0.06em;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .advice.minor .head .impact { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .advice .body { font-size: 12px; color: var(--text-soft); margin-bottom: 8px; }
+  .advice .files {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted-2);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .advice .files .file-row {
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  .advice .files .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .advice .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .advice .actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: var(--jade);
+    color: #0a1a14;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .advice .actions a:hover { background: #67ffbc; }
+  .total-summary {
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.12), rgba(var(--jade-rgb), 0.02));
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .total-summary .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .total-summary .value { font-family: "Space Grotesk", sans-serif; font-size: 28px; font-weight: 700; color: var(--jade); }
+  .total-summary .delta { font-size: 12px; color: var(--text-soft); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🩺 瘦身助手</h1>
+
+    <div class="compat-note">需要 Chrome 86+ / Edge 86+ 或现代浏览器拖入文件夹</div>
+
+    <button id="pickDirBtn">📁 选择项目文件夹</button>
+
+    <div class="drop-zone" id="dropZone" style="margin-top:12px">
+      <p>📂 或拖入文件夹</p>
+      <p class="hint">所有文件/递归扫描</p>
+    </div>
+
+    <h2>分析阈值</h2>
+    <div class="field">
+      <label>大 PNG 阈值 (KB)</label>
+      <input type="number" id="bigPngKb" value="50" min="0" />
+    </div>
+    <div class="field">
+      <label>大字体阈值 (KB)</label>
+      <input type="number" id="bigFontKb" value="200" min="0" />
+    </div>
+    <div class="field">
+      <label>大音频阈值 (KB)</label>
+      <input type="number" id="bigAudioKb" value="100" min="0" />
+    </div>
+    <div class="field">
+      <label>序列帧最少帧数</label>
+      <input type="number" id="seqMin" value="4" min="2" />
+    </div>
+
+    <button id="rescanBtn" class="secondary" disabled>重新分析</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未扫描</div>
+    <div class="total-summary" id="totalSummary" style="display:none">
+      <div class="label">瘦身潜力</div>
+      <div class="value" id="potential">—</div>
+      <div class="delta" id="potentialDetail">—</div>
+    </div>
+
+    <h2 style="margin-top:0">建议清单</h2>
+    <div class="advice-list" id="adviceList">
+      <div class="preview-empty">扫描后会列出针对你这个项目的具体瘦身建议</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('slim-coach');
+
+(() => {
+  const { $, makeLogger, attachDropZone, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let files = []; // {path, size, ext, category, name}
+  let totalSize = 0;
+
+  $('pickDirBtn').addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) {
+      log.err('请用 Chrome 86+ / Edge 86+,或直接拖入文件夹');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      files = []; totalSize = 0;
+      log.clear();
+      log.dim(`扫描 ${handle.name} ...`);
+      await walkDir(handle, '');
+      analyze();
+    } catch (e) {
+      if (e.name !== 'AbortError') log.err(e.message);
+    }
+  });
+
+  attachDropZone($('dropZone'), document.createElement('input'), async (droppedFiles) => {
+    if (!droppedFiles.length) return;
+    files = [];
+    totalSize = 0;
+    log.clear();
+    log.dim(`处理 ${droppedFiles.length} 个文件...`);
+    for (const f of droppedFiles) {
+      const path = f.webkitRelativePath || f.name;
+      const ext = (f.name.match(/\.[^./]+$/) || [''])[0].toLowerCase();
+      files.push({ path, name: f.name, size: f.size, ext, category: categorize(ext) });
+      totalSize += f.size;
+    }
+    analyze();
+  });
+
+  async function walkDir(handle, prefix) {
+    for await (const [name, entry] of handle.entries()) {
+      const path = prefix ? `${prefix}/${name}` : name;
+      if (entry.kind === 'file') {
+        const f = await entry.getFile();
+        const ext = (name.match(/\.[^./]+$/) || [''])[0].toLowerCase();
+        files.push({ path, name, size: f.size, ext, category: categorize(ext) });
+        totalSize += f.size;
+      } else if (entry.kind === 'directory') {
+        await walkDir(entry, path);
+      }
+    }
+  }
+
+  function categorize(ext) {
+    if (/\.(png|jpe?g|gif|webp|avif|svg|ico|bmp)$/i.test(ext)) return 'image';
+    if (/\.(ttf|otf|woff2?|eot)$/i.test(ext)) return 'font';
+    if (/\.(js|mjs|cjs)$/i.test(ext)) return 'script';
+    if (/\.(css)$/i.test(ext)) return 'style';
+    if (/\.(mp3|ogg|wav|m4a|flac|aac)$/i.test(ext)) return 'audio';
+    if (/\.(mp4|webm|mov|avi|mkv)$/i.test(ext)) return 'video';
+    if (/\.(html?|xml)$/i.test(ext)) return 'markup';
+    if (/\.(json|csv|tsv|yaml|yml|toml)$/i.test(ext)) return 'data';
+    return 'other';
+  }
+
+  $('rescanBtn').addEventListener('click', analyze);
+
+  function analyze() {
+    if (!files.length) { log.err('请先选择文件夹'); return; }
+    $('stats').innerHTML = `共 <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+    $('rescanBtn').disabled = false;
+
+    const bigPng = parseInt($('bigPngKb').value, 10) * 1024;
+    const bigFont = parseInt($('bigFontKb').value, 10) * 1024;
+    const bigAudio = parseInt($('bigAudioKb').value, 10) * 1024;
+    const seqMin = parseInt($('seqMin').value, 10);
+
+    const advices = [];
+    let totalPotential = 0;
+
+    // 1. big PNGs
+    const bigPngs = files.filter(f => /\.png$/i.test(f.ext) && f.size > bigPng);
+    if (bigPngs.length) {
+      const total = bigPngs.reduce((s, f) => s + f.size, 0);
+      const estimate = total * 0.7; // 估算 PNG 深压能省 70%
+      totalPotential += estimate;
+      advices.push({
+        ico: '💎', impact: `-${fmtBytes(estimate)}`,
+        title: `${bigPngs.length} 张大 PNG (>${$('bigPngKb').value}KB) 可深度压缩`,
+        body: `用 PNG 深压(palette + dither)通常能减 60-85% 体积,视觉无损。`,
+        files: bigPngs.sort((a,b) => b.size - a.size),
+        tool: '../tools/png-crusher.html',
+        toolName: '💎 去 PNG 深压',
+        minor: false
+      });
+    }
+
+    // 2. big fonts
+    const bigFonts = files.filter(f => f.category === 'font' && f.size > bigFont);
+    if (bigFonts.length) {
+      const total = bigFonts.reduce((s, f) => s + f.size, 0);
+      const estimate = total * 0.95; // 中文字体子集化通常能减 95%+
+      totalPotential += estimate;
+      advices.push({
+        ico: '🔠', impact: `-${fmtBytes(estimate)}`,
+        title: `${bigFonts.length} 个大字体可子集化`,
+        body: `中文字体只保留实际用到的字符,通常 50MB → 几 KB。这是 playable 包体瘦身最大头。`,
+        files: bigFonts.sort((a,b) => b.size - a.size),
+        tool: '../tools/font-subset.html',
+        toolName: '🔠 去字体子集化',
+        minor: false
+      });
+    }
+
+    // 3. big audio
+    const bigAudios = files.filter(f => f.category === 'audio' && f.size > bigAudio);
+    if (bigAudios.length) {
+      const total = bigAudios.reduce((s, f) => s + f.size, 0);
+      const estimate = total * 0.6;
+      totalPotential += estimate;
+      advices.push({
+        ico: '🔊', impact: `-${fmtBytes(estimate)}`,
+        title: `${bigAudios.length} 个大音频可压缩`,
+        body: `降采样到 22050Hz + 单声道 + Opus,通常能减 50-70%。`,
+        files: bigAudios.sort((a,b) => b.size - a.size),
+        tool: '../tools/audio-compress.html',
+        toolName: '🔊 去音频压缩',
+        minor: false
+      });
+    }
+
+    // 4. sprite-like sequences
+    const seqGroups = detectSequences(files, seqMin);
+    if (seqGroups.length) {
+      const total = seqGroups.reduce((s, g) => s + g.totalSize, 0);
+      const estimate = total * 0.3;
+      totalPotential += estimate;
+      advices.push({
+        ico: '🎬', impact: `-${fmtBytes(estimate)}`,
+        title: `检测到 ${seqGroups.length} 组序列帧,合并精灵图能减 zlib 冗余`,
+        body: `把 N 张序列帧合成一张精灵图通常更紧凑,且 GPU 友好。`,
+        files: seqGroups.map(g => ({ path: `${g.prefix}_*.${g.ext} (${g.count} 帧)`, size: g.totalSize })),
+        tool: '../tools/sprite-packer.html',
+        toolName: '🎬 去精灵图合成',
+        minor: false
+      });
+    }
+
+    // 5. external script/css (suggest HTML inlining)
+    const htmlFiles = files.filter(f => f.category === 'markup');
+    if (htmlFiles.length) {
+      advices.push({
+        ico: '📄', impact: '改善加载',
+        title: `${htmlFiles.length} 个 HTML 文件,playable 应单文件交付`,
+        body: `用 HTML Inliner 把所有 JS/CSS/图片内联到单 HTML,符合各渠道规范。`,
+        files: htmlFiles,
+        tool: '../tools/html-inliner.html',
+        toolName: '📄 去单文件打包',
+        minor: false
+      });
+    }
+
+    // 6. JPEG could be WebP
+    const jpegs = files.filter(f => /\.(jpe?g)$/i.test(f.ext));
+    if (jpegs.length > 0) {
+      const total = jpegs.reduce((s, f) => s + f.size, 0);
+      const estimate = total * 0.25;
+      totalPotential += estimate;
+      advices.push({
+        ico: '📦', impact: `-${fmtBytes(estimate)}`,
+        title: `${jpegs.length} 张 JPEG 可转 WebP 进一步减 25%`,
+        body: `相同视觉质量下 WebP 通常比 JPEG 小 25-35%。`,
+        files: jpegs.sort((a,b) => b.size - a.size),
+        tool: '../tools/image-optimizer.html',
+        toolName: '📦 去图片压缩',
+        minor: true
+      });
+    }
+
+    // 7. raw video files (suggest converting to WebM/GIF)
+    const videos = files.filter(f => f.category === 'video');
+    if (videos.length) {
+      advices.push({
+        ico: '🎬', impact: '尺寸优化',
+        title: `${videos.length} 个视频文件,playable 中通常需转 WebM 或 GIF`,
+        body: `视频转 WebM/VP9 体积更小,或转 GIF 通用兼容。`,
+        files: videos,
+        tool: '../tools/video-toolkit.html',
+        toolName: '🎬 去视频处理',
+        minor: true
+      });
+    }
+
+    // ----- render -----
+    if (!advices.length) {
+      $('adviceList').innerHTML = '<div class="preview-empty">没有发现明显的瘦身空间 — 项目已经很精简</div>';
+      $('totalSummary').style.display = 'none';
+      return;
+    }
+    $('potential').textContent = fmtBytes(totalPotential);
+    $('potentialDetail').textContent = `估算最多能减少 ${fmtBytes(totalPotential)},占当前 ${(totalPotential/totalSize*100).toFixed(1)}%`;
+    $('totalSummary').style.display = 'block';
+    $('adviceList').innerHTML = advices.map(a => `
+      <div class="advice ${a.minor ? 'minor' : ''}">
+        <div class="head">
+          <span class="ico">${a.ico}</span>
+          <span class="title">${escapeHtml(a.title)}</span>
+          <span class="impact">${escapeHtml(a.impact)}</span>
+        </div>
+        <div class="body">${escapeHtml(a.body)}</div>
+        <div class="files">
+          ${a.files.slice(0, 12).map(f => `<div class="file-row"><span class="name">${escapeHtml(f.path)}</span><span class="mono">${fmtBytes(f.size)}</span></div>`).join('')}
+          ${a.files.length > 12 ? `<div class="muted small" style="text-align:center; margin-top:4px;">... 还有 ${a.files.length - 12} 个</div>` : ''}
+        </div>
+        <div class="actions">
+          <a href="${a.tool}" target="_blank">${a.toolName} →</a>
+        </div>
+      </div>
+    `).join('');
+    log.ok(`生成 ${advices.length} 条建议,潜在节省 ${fmtBytes(totalPotential)}`);
+  }
+
+  // detect sequences like frame_001.png frame_002.png ...
+  function detectSequences(files, minLen) {
+    const imgs = files.filter(f => f.category === 'image');
+    const groups = new Map();
+    for (const f of imgs) {
+      const m = f.name.match(/^(.+?)[\-_.]?(\d{2,4})(\.[^.]+)$/);
+      if (m) {
+        const key = m[1] + '|' + m[3];
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(f);
+      }
+    }
+    const result = [];
+    for (const [key, fs] of groups) {
+      if (fs.length >= minLen) {
+        const [prefix, ext] = key.split('|');
+        const totalSize = fs.reduce((s, f) => s + f.size, 0);
+        result.push({ prefix, ext: ext.replace('.', ''), count: fs.length, totalSize });
+      }
+    }
+    return result.sort((a, b) => b.totalSize - a.totalSize);
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+  $('clearBtn').addEventListener('click', () => {
+    files = []; totalSize = 0;
+    $('stats').textContent = '未扫描';
+    $('totalSummary').style.display = 'none';
+    $('adviceList').innerHTML = '<div class="preview-empty">扫描后会列出针对你这个项目的具体瘦身建议</div>';
+    $('rescanBtn').disabled = true;
+    log.clear();
+  });
+})();
+</script>
+</body>
+</html>

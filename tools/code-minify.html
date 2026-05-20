@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>代码压缩 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab-row button {
+    flex: 1;
+    background: transparent;
+    color: var(--text-soft);
+    padding: 6px 0;
+    font-size: 12px;
+    border-radius: calc(var(--radius-sm) - 3px);
+    box-shadow: none;
+  }
+  .tab-row button.active {
+    background: var(--jade);
+    color: #0a1a14;
+  }
+  .tab-row button:hover { transform: none; }
+  .editor-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 360px;
+  }
+  .editor-col {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .editor-col .label {
+    color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; justify-content: space-between;
+  }
+  .editor-col .label .size { font-family: ui-monospace, Consolas, monospace; }
+  .editor-col textarea {
+    flex: 1;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    resize: none;
+  }
+  .editor-col textarea:focus {
+    border-color: var(--jade);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--jade-rgb), 0.15);
+  }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🗜️ 代码压缩</h1>
+
+    <div class="tab-row" id="langTabs">
+      <button data-lang="css" class="active" type="button">CSS</button>
+      <button data-lang="js" type="button">JS</button>
+      <button data-lang="html" type="button">HTML</button>
+    </div>
+
+    <div id="cssOpts">
+      <h2>CSS 选项</h2>
+      <label class="checkbox"><input type="checkbox" id="cssRemoveComments" checked /><span>删除注释</span></label>
+      <label class="checkbox"><input type="checkbox" id="cssCollapseSpace" checked /><span>压缩空白</span></label>
+      <label class="checkbox"><input type="checkbox" id="cssShortenHex" checked /><span>短颜色 (#ffffff → #fff)</span></label>
+    </div>
+    <div id="jsOpts" style="display:none">
+      <div class="compat-note">JS 压缩用 terser,首次联网 ~250KB</div>
+      <h2>JS 选项</h2>
+      <label class="checkbox"><input type="checkbox" id="jsMangle" checked /><span>变量名混淆 (mangle)</span></label>
+      <label class="checkbox"><input type="checkbox" id="jsCompress" checked /><span>逻辑压缩 (dead code 等)</span></label>
+    </div>
+    <div id="htmlOpts" style="display:none">
+      <h2>HTML 选项</h2>
+      <label class="checkbox"><input type="checkbox" id="htmlRemoveComments" checked /><span>删除注释</span></label>
+      <label class="checkbox"><input type="checkbox" id="htmlCollapseSpace" checked /><span>折叠空白</span></label>
+      <label class="checkbox"><input type="checkbox" id="htmlMinifyInline" checked /><span>顺便压缩内联 &lt;style&gt; / &lt;script&gt;</span></label>
+    </div>
+
+    <h2>文件操作</h2>
+    <input type="file" id="fileInput" accept=".css,.js,.html,.htm,text/*" style="display:none" />
+    <button id="loadFileBtn" class="secondary">加载文件</button>
+    <button id="minifyBtn">压缩</button>
+    <button id="copyBtn" class="secondary" disabled>复制结果</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未输入</div>
+    <div class="editor-grid">
+      <div class="editor-col">
+        <div class="label"><span>输入</span><span class="size" id="inputSize">0 B</span></div>
+        <textarea id="inputEditor" placeholder="粘贴 CSS / JS / HTML 代码"></textarea>
+      </div>
+      <div class="editor-col">
+        <div class="label"><span>输出</span><span class="size" id="outputSize">0 B</span></div>
+        <textarea id="outputEditor" readonly placeholder="压缩后的代码会显示在这里"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('code-minify');
+
+(() => {
+  const { $, makeLogger, download, downloadText, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let lang = 'css';
+  let terserMod = null;
+
+  document.querySelectorAll('#langTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      lang = b.dataset.lang;
+      document.querySelectorAll('#langTabs button').forEach(x => x.classList.toggle('active', x === b));
+      $('cssOpts').style.display = lang === 'css' ? '' : 'none';
+      $('jsOpts').style.display = lang === 'js' ? '' : 'none';
+      $('htmlOpts').style.display = lang === 'html' ? '' : 'none';
+    });
+  });
+
+  $('inputEditor').addEventListener('input', () => updateInputSize());
+  function updateInputSize() {
+    const s = $('inputEditor').value;
+    $('inputSize').textContent = fmtBytes(new Blob([s]).size);
+  }
+  updateInputSize();
+
+  $('loadFileBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const text = await f.text();
+    $('inputEditor').value = text;
+    // auto-detect lang from extension
+    const ext = (f.name.match(/\.[^./]+$/) || [''])[0].toLowerCase();
+    if (/\.css$/i.test(ext)) document.querySelector('#langTabs [data-lang="css"]').click();
+    else if (/\.(js|mjs)$/i.test(ext)) document.querySelector('#langTabs [data-lang="js"]').click();
+    else if (/\.html?$/i.test(ext)) document.querySelector('#langTabs [data-lang="html"]').click();
+    updateInputSize();
+    log.ok(`已加载 ${f.name} (${fmtBytes(f.size)})`);
+  });
+
+  $('minifyBtn').addEventListener('click', async () => {
+    const src = $('inputEditor').value;
+    if (!src.trim()) { log.err('请输入代码'); return; }
+    log.dim(`压缩 ${lang.toUpperCase()}...`);
+    $('minifyBtn').disabled = true;
+    try {
+      let out;
+      if (lang === 'css') out = minifyCSS(src);
+      else if (lang === 'html') out = minifyHTML(src);
+      else out = await minifyJS(src);
+      $('outputEditor').value = out;
+      const inSize = new Blob([src]).size;
+      const outSize = new Blob([out]).size;
+      $('outputSize').textContent = fmtBytes(outSize);
+      const pct = ((inSize - outSize) / inSize * 100);
+      $('stats').innerHTML = `<strong>${fmtBytes(inSize)} → ${fmtBytes(outSize)}</strong> · 压缩率 <strong>${pct.toFixed(1)}%</strong>`;
+      $('copyBtn').disabled = false;
+      $('downloadBtn').disabled = false;
+      log.ok(`压缩完成: -${pct.toFixed(1)}%`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('minifyBtn').disabled = false;
+    }
+  });
+
+  // ===== CSS minify =====
+  function minifyCSS(s) {
+    let out = s;
+    if ($('cssRemoveComments').checked) out = out.replace(/\/\*[\s\S]*?\*\//g, '');
+    if ($('cssCollapseSpace').checked) {
+      out = out.replace(/\s+/g, ' ');
+      out = out.replace(/\s*([{}:;,>+~])\s*/g, '$1');
+      out = out.replace(/;}/g, '}');
+    }
+    if ($('cssShortenHex').checked) {
+      out = out.replace(/#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3\b/gi, '#$1$2$3');
+    }
+    return out.trim();
+  }
+
+  // ===== HTML minify =====
+  function minifyHTML(s) {
+    let out = s;
+    // preserve <pre>, <textarea>, <script>, <style> contents
+    const placeholders = [];
+    out = out.replace(/<(pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, m => {
+      placeholders.push(m);
+      return `__PRESERVED_${placeholders.length - 1}__`;
+    });
+    // optionally compress inline style/script using same minifier
+    out = out.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (m, body) => {
+      const min = $('htmlMinifyInline').checked ? minifyCSS(body) : body;
+      placeholders.push(m.replace(body, min));
+      return `__PRESERVED_${placeholders.length - 1}__`;
+    });
+    out = out.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (m, attrs, body) => {
+      // only basic strip; full JS minify on inline blocks would need async, skip for HTML mode
+      let bodyMin = body;
+      if ($('htmlMinifyInline').checked) {
+        bodyMin = bodyMin.replace(/\/\*[\s\S]*?\*\//g, '');
+        bodyMin = bodyMin.replace(/(^|[^:])\/\/[^\n]*$/gm, '$1');
+        bodyMin = bodyMin.replace(/\s+/g, ' ').trim();
+      }
+      placeholders.push(`<script${attrs}>${bodyMin}<\/script>`);
+      return `__PRESERVED_${placeholders.length - 1}__`;
+    });
+    if ($('htmlRemoveComments').checked) out = out.replace(/<!--[\s\S]*?-->/g, '');
+    if ($('htmlCollapseSpace').checked) {
+      out = out.replace(/>\s+</g, '><');
+      out = out.replace(/\s{2,}/g, ' ');
+    }
+    out = out.replace(/__PRESERVED_(\d+)__/g, (_, i) => placeholders[+i]);
+    return out.trim();
+  }
+
+  // ===== JS minify via terser =====
+  async function minifyJS(s) {
+    if (!terserMod) {
+      log.dim('  加载 terser (首次联网)...');
+      terserMod = await import('https://esm.sh/terser@5.36.0');
+    }
+    const result = await terserMod.minify(s, {
+      compress: $('jsCompress').checked ? { passes: 2, drop_console: false } : false,
+      mangle: $('jsMangle').checked,
+      format: { comments: false }
+    });
+    if (result.error) throw new Error('Terser: ' + result.error.message);
+    return result.code;
+  }
+
+  $('copyBtn').addEventListener('click', async () => {
+    const v = $('outputEditor').value;
+    if (!v) return;
+    try {
+      await navigator.clipboard.writeText(v);
+      log.ok('已复制到剪贴板');
+    } catch (e) {
+      $('outputEditor').select();
+      document.execCommand('copy');
+      log.ok('已复制(兼容模式)');
+    }
+  });
+
+  $('downloadBtn').addEventListener('click', () => {
+    const v = $('outputEditor').value;
+    if (!v) return;
+    const ext = lang === 'js' ? '.min.js' : lang === 'html' ? '.min.html' : '.min.css';
+    const mime = lang === 'js' ? 'application/javascript' : lang === 'html' ? 'text/html' : 'text/css';
+    downloadText(v, `output${ext}`, mime);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    $('inputEditor').value = '';
+    $('outputEditor').value = '';
+    $('inputSize').textContent = '0 B';
+    $('outputSize').textContent = '0 B';
+    $('stats').textContent = '未输入';
+    $('copyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+  });
+})();
+</script>
+</body>
+</html>

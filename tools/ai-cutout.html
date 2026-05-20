@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>AI Cutout · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .preview-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 320px; }
+  .preview-col { display: flex; flex-direction: column; gap: 6px; }
+  .preview-col .label {
+    color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-box canvas, .preview-box img { max-width: 100%; max-height: 100%; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .compat-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--muted-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .compat-note strong { color: var(--accent); }
+  .download-stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--muted);
+    margin-top: 6px;
+    display: none;
+  }
+  .download-stat.show { display: block; }
+  .download-stat .file { color: var(--text); }
+
+  .batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .batch-tile {
+    background: rgba(20, 20, 26, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .batch-tile:hover { border-color: rgba(var(--jade-rgb), 0.4); transform: translateY(-2px); }
+  .batch-tile.selected { border-color: var(--jade); box-shadow: 0 0 0 1px var(--jade); }
+  .batch-tile .thumb {
+    width: 100%; aspect-ratio: 1;
+    background: var(--checker), #0a0a0c;
+    background-size: 14px 14px;
+    background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .batch-tile .thumb canvas, .batch-tile .thumb img {
+    max-width: 100%; max-height: 100%;
+    image-rendering: pixelated;
+  }
+  .batch-tile .status {
+    position: absolute;
+    top: 4px; right: 4px;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .batch-tile .status.pending { background: rgba(255,255,255,0.1); color: var(--muted); }
+  .batch-tile .status.processing { background: rgba(var(--jade-rgb), 0.2); color: var(--jade); }
+  .batch-tile .status.done { background: var(--jade); color: #0a1a14; }
+  .batch-tile .status.error { background: var(--danger); color: #fff; }
+  .batch-tile .name {
+    padding: 6px 8px;
+    font-size: 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--muted-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🤖 AI Cutout</h1>
+
+    <div class="compat-note">
+      <strong>首次使用</strong>需联网下载模型 (≈25-85MB),之后缓存到 IndexedDB 完全离线可用。<br/>
+      支持 WebGPU 加速 (Chrome / Edge),退回 WASM 也能跑。
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入图片 (可多张 / 文件夹)</p>
+      <p class="hint">PNG / JPG / WebP<br/>批量抠图,模型只加载一次</p>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
+    </div>
+
+    <h2>模型</h2>
+    <div class="field">
+      <select id="modelSelect">
+        <option value="Xenova/modnet">MODNet (~25MB · Apache 2.0 可商用)</option>
+        <option value="briaai/RMBG-1.4">RMBG-1.4 (~85MB · 质量更好 · 非商用免费)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>计算后端</label>
+      <select id="device">
+        <option value="webgpu">WebGPU (推荐, Chrome/Edge 113+)</option>
+        <option value="wasm">WASM (兼容性好, 慢一些)</option>
+      </select>
+    </div>
+
+    <h2>后处理</h2>
+    <label class="checkbox">
+      <input type="checkbox" id="alphaThreshold" />
+      <span>硬边缘 (alpha 二值化)</span>
+    </label>
+    <div class="field">
+      <label>边缘羽化 (px) <span id="featherVal" class="mono">0</span></label>
+      <input type="range" id="feather" min="0" max="8" value="0" />
+    </div>
+
+    <h2>输出</h2>
+    <div class="field"><label>文件名前缀</label><input type="text" id="filename" value="cutout" /></div>
+    <button id="loadModelBtn">加载模型</button>
+    <button id="processBtn" disabled>开始抠图</button>
+    <button id="downloadBtn" class="secondary" disabled>下载 (单张)</button>
+    <button id="downloadZipBtn" class="secondary" disabled>下载全部 (ZIP)</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="download-stat" id="dlStat"></div>
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-pair">
+      <div class="preview-col">
+        <div class="label">原图 (点击下方队列切换)</div>
+        <div class="preview-box" id="srcBox">
+          <div class="preview-empty">拖入图片</div>
+        </div>
+      </div>
+      <div class="preview-col">
+        <div class="label">抠图结果 (透明背景)</div>
+        <div class="preview-box" id="outBox">
+          <div class="preview-empty">点击"开始抠图"后这里显示结果</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">批量队列</h2>
+      <div class="batch-grid" id="batchGrid">
+        <div class="preview-empty">拖入多张图后这里显示批量队列</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('ai-cutout');
+</script>
+<script type="module">
+  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, makeZip, naturalSort } = window.Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  // batch queue: [{ file, bitmap, status, outBlob?, outCanvas? }]
+  let items = [];
+  let selectedIdx = -1;
+  // current-shown (alias to selected item's data)
+  let srcBitmap = null;
+  let srcSize = 0;
+  let outBlob = null;
+  let outCanvas = null;
+
+  // model state
+  let model = null, processor = null;
+  let modelId = null;
+  let RawImage = null;
+  let transformers = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = window.Toolkit.setupHandoff('ai-cutout', { outputType: 'image/png' });
+  $('feather').addEventListener('input', e => $('featherVal').textContent = e.target.value);
+  $('alphaThreshold').addEventListener('change', e => {
+    $('feather').disabled = e.target.checked;
+  });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const imgs = naturalSort(files.filter(f => f.type.startsWith('image/')));
+    if (!imgs.length) { log.err('请拖入图片文件'); return; }
+    log.clear();
+    log.dim(`加载 ${imgs.length} 张图片...`);
+    items = [];
+    for (const f of imgs) {
+      try {
+        const bitmap = await createImageBitmap(f);
+        items.push({ file: f, bitmap, status: 'pending', outBlob: null, outCanvas: null });
+      } catch (e) {
+        log.err(`${f.name}: ${e.message}`);
+      }
+    }
+    if (!items.length) return;
+    log.ok(`加载完成 ${items.length} 张`);
+    renderBatchGrid();
+    selectItem(0);
+    $('stats').innerHTML = `<strong>${items.length}</strong> 张待处理 · 单图 <strong>${srcBitmap.width}×${srcBitmap.height}</strong>`;
+
+    if (model) {
+      $('processBtn').disabled = false;
+      $('processBtn').click();
+    } else {
+      log.dim('自动加载模型,完成后开始批量推理...');
+      await loadModel();
+      if (model && items.length) {
+        $('processBtn').disabled = false;
+        $('processBtn').click();
+      }
+    }
+  }
+
+  function renderBatchGrid() {
+    const grid = $('batchGrid');
+    if (!items.length) {
+      grid.innerHTML = '<div class="preview-empty">拖入多张图后这里显示批量队列</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    items.forEach((it, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'batch-tile' + (i === selectedIdx ? ' selected' : '');
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      // show outCanvas if done, else original bitmap
+      const drawCv = newCanvas(it.bitmap.width, it.bitmap.height);
+      drawCv.getContext('2d').drawImage(it.outCanvas || it.bitmap, 0, 0);
+      thumb.appendChild(drawCv);
+      const status = document.createElement('span');
+      status.className = 'status ' + it.status;
+      status.textContent = it.status === 'done' ? '✓' : it.status === 'processing' ? '⋯' : it.status === 'error' ? '✗' : '·';
+      thumb.appendChild(status);
+      tile.appendChild(thumb);
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = it.file.name;
+      tile.appendChild(name);
+      tile.addEventListener('click', () => selectItem(i));
+      grid.appendChild(tile);
+    });
+  }
+
+  function selectItem(i) {
+    if (i < 0 || i >= items.length) return;
+    selectedIdx = i;
+    const it = items[i];
+    srcBitmap = it.bitmap;
+    srcSize = it.file.size;
+    outBlob = it.outBlob;
+    outCanvas = it.outCanvas;
+    const cv = newCanvas(srcBitmap.width, srcBitmap.height);
+    cv.getContext('2d').drawImage(srcBitmap, 0, 0);
+    $('srcBox').innerHTML = '';
+    $('srcBox').appendChild(cv);
+    if (it.outCanvas) {
+      const ocv = newCanvas(it.outCanvas.width, it.outCanvas.height);
+      ocv.getContext('2d').drawImage(it.outCanvas, 0, 0);
+      $('outBox').innerHTML = '';
+      $('outBox').appendChild(ocv);
+    } else {
+      $('outBox').innerHTML = '<div class="preview-empty">还未处理</div>';
+    }
+    $('downloadBtn').disabled = !it.outBlob;
+    [...$('batchGrid').children].forEach((el, j) => el.classList.toggle('selected', j === i));
+  }
+
+  async function loadModel() {
+    const wantId = $('modelSelect').value;
+    const wantDevice = $('device').value;
+    if (model && modelId === wantId + '@' + wantDevice) return;
+    $('loadModelBtn').disabled = true;
+    log.dim(`从 CDN 加载 transformers.js...`);
+    try {
+      if (!transformers) {
+        transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js');
+      }
+      const { AutoModel, AutoProcessor, env } = transformers;
+      RawImage = transformers.RawImage;
+      env.allowLocalModels = false;
+      log.dim(`加载模型 ${wantId} (${wantDevice})...`);
+      const opts = { device: wantDevice, progress_callback: onModelProgress };
+      try {
+        model = await AutoModel.from_pretrained(wantId, opts);
+      } catch (e) {
+        if (wantDevice === 'webgpu') {
+          log.warn(`WebGPU 不可用,退回 WASM...`);
+          opts.device = 'wasm';
+          model = await AutoModel.from_pretrained(wantId, opts);
+        } else throw e;
+      }
+      processor = await AutoProcessor.from_pretrained(wantId, { progress_callback: onModelProgress });
+      modelId = wantId + '@' + wantDevice;
+      $('dlStat').classList.remove('show');
+      log.ok('模型加载完成');
+    } catch (e) {
+      log.err('模型加载失败: ' + e.message);
+      console.error(e);
+    } finally {
+      $('loadModelBtn').disabled = false;
+      progress.hide();
+    }
+  }
+
+  $('loadModelBtn').addEventListener('click', async () => {
+    await loadModel();
+    if (model && items.length) $('processBtn').disabled = false;
+  });
+
+  const dlStats = {};
+  function onModelProgress(data) {
+    if (data.status === 'progress' && data.file) {
+      const total = data.total || 0;
+      const loaded = data.loaded || 0;
+      dlStats[data.file] = { loaded, total };
+      const stat = $('dlStat');
+      stat.classList.add('show');
+      const lines = Object.entries(dlStats).map(([file, s]) =>
+        `<div class="file">${file}</div> &nbsp; ${fmtBytes(s.loaded)} / ${fmtBytes(s.total)} (${s.total ? (s.loaded/s.total*100).toFixed(1) : '?'}%)`
+      );
+      stat.innerHTML = lines.join('<br/>');
+      // overall progress: sum
+      const sumLoaded = Object.values(dlStats).reduce((a, s) => a + s.loaded, 0);
+      const sumTotal = Object.values(dlStats).reduce((a, s) => a + s.total, 0);
+      if (sumTotal > 0) progress.set(sumLoaded / sumTotal);
+    } else if (data.status === 'done' && data.file) {
+      if (dlStats[data.file]) dlStats[data.file].loaded = dlStats[data.file].total;
+    } else if (data.status === 'ready') {
+      progress.hide();
+    }
+  }
+
+  $('processBtn').addEventListener('click', async () => {
+    if (!model || !items.length) return;
+    $('processBtn').disabled = true;
+    $('downloadZipBtn').disabled = true;
+    const pending = items.filter(it => it.status !== 'done');
+    log.dim(`批量推理 ${pending.length} 张...`);
+    const t0 = performance.now();
+    let success = 0, failed = 0;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.status === 'done') continue;
+      it.status = 'processing';
+      renderBatchGrid();
+      if (i === selectedIdx) selectItem(selectedIdx); // refresh selection thumbnails
+      try {
+        await processOne(it);
+        it.status = 'done';
+        success++;
+        if (i === selectedIdx) selectItem(i);
+      } catch (e) {
+        it.status = 'error';
+        failed++;
+        log.err(`${it.file.name}: ${e.message}`);
+        console.error(e);
+      }
+      renderBatchGrid();
+      progress.set((success + failed) / pending.length);
+    }
+    progress.hide();
+    const t1 = performance.now();
+    log.ok(`批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`);
+    $('processBtn').disabled = false;
+    $('downloadZipBtn').disabled = success === 0;
+  });
+
+  async function processOne(it) {
+    const bm = it.bitmap;
+    const cv = newCanvas(bm.width, bm.height);
+    cv.getContext('2d').drawImage(bm, 0, 0);
+    const blob = await canvasToBlob(cv, 'image/png');
+    const url = URL.createObjectURL(blob);
+    const image = await RawImage.fromURL(url);
+    URL.revokeObjectURL(url);
+    const { pixel_values } = await processor(image);
+    const out = await model({ input: pixel_values });
+    let mask = null;
+    for (const k of ['output', 'alphas', 'alpha', 'masks', 'logits', 'pred_masks']) {
+      if (out[k]) { mask = out[k]; break; }
+    }
+    if (!mask) mask = out[Object.keys(out)[0]];
+    const maskCanvas = tensorToCanvas(mask);
+    const resultCanvas = applyMask(bm, maskCanvas);
+    it.outCanvas = resultCanvas;
+    it.outBlob = await canvasToBlob(resultCanvas, 'image/png');
+  }
+
+  function tensorToCanvas(tensor) {
+    // expected shape [1, 1, H, W] or [1, H, W]
+    const dims = tensor.dims;
+    let h, w;
+    if (dims.length === 4) { h = dims[2]; w = dims[3]; }
+    else if (dims.length === 3) { h = dims[1]; w = dims[2]; }
+    else { h = dims[0]; w = dims[1]; }
+    const data = tensor.data;
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const img = ctx.createImageData(w, h);
+    const d = img.data;
+    // normalize: if values are 0-1, scale to 0-255. If logits (negative), apply sigmoid.
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < min) min = data[i];
+      if (data[i] > max) max = data[i];
+    }
+    const useSigmoid = min < -0.01;
+    for (let i = 0; i < w * h; i++) {
+      let v = data[i];
+      if (useSigmoid) v = 1 / (1 + Math.exp(-v));
+      v = Math.max(0, Math.min(1, v));
+      const a = Math.round(v * 255);
+      d[i * 4] = 255; d[i * 4 + 1] = 255; d[i * 4 + 2] = 255; d[i * 4 + 3] = a;
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  }
+
+  function applyMask(bitmap, maskCanvas) {
+    const w = bitmap.width, h = bitmap.height;
+    // resize mask to original size
+    const maskResized = newCanvas(w, h);
+    const mctx = maskResized.getContext('2d');
+    mctx.imageSmoothingQuality = 'high';
+    mctx.drawImage(maskCanvas, 0, 0, w, h);
+    const maskData = mctx.getImageData(0, 0, w, h).data;
+
+    const feather = parseInt($('feather').value, 10) || 0;
+    const threshold = $('alphaThreshold').checked;
+
+    const out = newCanvas(w, h);
+    const octx = out.getContext('2d');
+    octx.drawImage(bitmap, 0, 0);
+    const img = octx.getImageData(0, 0, w, h);
+    const d = img.data;
+    // apply alpha
+    if (threshold) {
+      for (let i = 0; i < w * h; i++) {
+        const a = maskData[i * 4 + 3];
+        d[i * 4 + 3] = a > 128 ? 255 : 0;
+      }
+    } else {
+      for (let i = 0; i < w * h; i++) {
+        d[i * 4 + 3] = maskData[i * 4 + 3];
+      }
+    }
+    octx.putImageData(img, 0, 0);
+
+    if (feather > 0 && !threshold) {
+      // apply blur to alpha channel only by using a temp canvas + filter
+      const tmp = newCanvas(w, h);
+      const tctx = tmp.getContext('2d');
+      tctx.filter = `blur(${feather}px)`;
+      tctx.drawImage(out, 0, 0);
+      return tmp;
+    }
+    return out;
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (selectedIdx < 0 || !items[selectedIdx]?.outBlob) return;
+    const it = items[selectedIdx];
+    const prefix = ($('filename').value || 'cutout').replace(/[^\w-]/g, '_');
+    const baseName = it.file.name.replace(/\.[^.]+$/, '');
+    download(it.outBlob, `${prefix}_${baseName}.png`);
+  });
+
+  $('downloadZipBtn').addEventListener('click', async () => {
+    const done = items.filter(it => it.outBlob);
+    if (!done.length) return;
+    log.dim(`打包 ZIP (${done.length} 张)...`);
+    const prefix = ($('filename').value || 'cutout').replace(/[^\w-]/g, '_');
+    const files = [];
+    for (const it of done) {
+      const data = new Uint8Array(await it.outBlob.arrayBuffer());
+      const baseName = it.file.name.replace(/\.[^.]+$/, '');
+      files.push({ name: `${prefix}_${baseName}.png`, data });
+    }
+    const zip = makeZip(files);
+    download(zip, `${prefix}_batch.zip`);
+    log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    items = []; selectedIdx = -1;
+    srcBitmap = null; outBlob = null; outCanvas = null;
+    $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">点击"开始抠图"后这里显示结果</div>';
+    $('batchGrid').innerHTML = '<div class="preview-empty">拖入多张图后这里显示批量队列</div>';
+    $('stats').textContent = '未加载';
+    $('processBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    $('downloadZipBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+    // keep model loaded
+  });
+</script>
+</body>
+</html>

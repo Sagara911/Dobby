@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>GIF Editor · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .preview-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 220px;
+  }
+  .preview-col {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .preview-col .label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .preview-box canvas, .preview-box img {
+    image-rendering: pixelated;
+    max-width: 100%;
+  }
+  .crop-overlay {
+    position: absolute;
+    border: 1px dashed var(--accent);
+    background: rgba(74, 158, 255, 0.1);
+    cursor: move;
+    pointer-events: none;
+  }
+  .crop-handle {
+    position: absolute;
+    background: var(--accent);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    pointer-events: auto;
+    cursor: nwse-resize;
+  }
+  .action-controls {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-row input[type=range] { flex: 1; }
+  .range-row .value { font-family: ui-monospace, Consolas, monospace; font-size: 11px; min-width: 60px; text-align: right; }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>✏️ GIF Editor</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 GIF</p>
+      <p class="hint">
+        加载后选择一种操作<br/>
+        想叠加多种操作?导出后再拖入
+      </p>
+      <input type="file" id="fileInput" accept="image/gif" style="display:none" />
+    </div>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+
+    <h2>操作</h2>
+    <div class="field">
+      <select id="action">
+        <option value="resize">📐 缩放 (Resize)</option>
+        <option value="crop">✂️ 裁剪 (Crop)</option>
+        <option value="speed">⏩ 调速 (Speed)</option>
+        <option value="reverse">⏪ 反向播放 (Reverse)</option>
+        <option value="trim">✄ 删帧 (Trim)</option>
+        <option value="dropFrames">⊘ 抽帧降 FPS</option>
+        <option value="optimize">📦 优化 (减色)</option>
+        <option value="watermark">📝 加文字水印</option>
+        <option value="filter">🎚️ 滤镜 / 色相</option>
+      </select>
+    </div>
+
+    <div class="action-controls" id="actionControls"></div>
+
+    <h2>输出</h2>
+    <div class="field">
+      <label>文件名</label>
+      <input type="text" id="filename" value="edited" />
+    </div>
+    <div class="field">
+      <label>调色板算法</label>
+      <select id="palette">
+        <option value="median">中位切分 256 色 (慢, 质量好)</option>
+        <option value="uniform">均匀 6×6×6 (快)</option>
+      </select>
+    </div>
+    <button id="applyBtn" disabled>应用 + 生成</button>
+    <button id="downloadBtn" class="secondary" disabled>下载</button>
+    <button id="useAsSourceBtn" class="secondary" disabled>把输出作为新输入</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="preview-pair">
+      <div class="preview-col">
+        <div class="label">原 GIF</div>
+        <div class="preview-box" id="srcBox">
+          <div class="preview-empty">拖入 GIF</div>
+        </div>
+      </div>
+      <div class="preview-col">
+        <div class="label">输出预览</div>
+        <div class="preview-box" id="outBox">
+          <div class="preview-empty">应用操作后这里显示结果</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">所有帧</h2>
+      <div class="frame-grid" id="frameGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
+<script>
+Toolkit.injectTopbar('gif-editor');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let srcFrames = [];   // [{bitmap, w, h, duration_us}]
+  let srcWidth = 0, srcHeight = 0, srcFps = 12;
+  let lastBlob = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('gif-editor', { outputType: 'image/gif' });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!/\.gif$/i.test(f.name) && f.type !== 'image/gif') {
+      log.err('请拖入 GIF 文件');
+      return;
+    }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      const frames = await AnimEncoders.decodeGif(f);
+      srcFrames = frames;
+      srcWidth = frames[0].w;
+      srcHeight = frames[0].h;
+      const avgDuration = frames.reduce((s, fr) => s + (fr.duration || 100000), 0) / frames.length;
+      srcFps = Math.round(1e6 / avgDuration);
+      log.ok(`解码完成 ${frames.length} 帧 · ${srcWidth}×${srcHeight} · ≈${srcFps} FPS`);
+      renderSrcPreview(f);
+      renderFrameGrid();
+      $('stats').innerHTML = `<strong>${frames.length}</strong> 帧 · <strong>${srcWidth}×${srcHeight}</strong> · ≈<strong>${srcFps}</strong> FPS · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('applyBtn').disabled = false;
+      renderActionControls();
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function renderSrcPreview(file) {
+    $('srcBox').innerHTML = '';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.style.maxWidth = '100%';
+    $('srcBox').appendChild(img);
+  }
+
+  function renderFrameGrid() {
+    const grid = $('frameGrid');
+    grid.innerHTML = '';
+    srcFrames.forEach((f, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'frame-tile';
+      const cv = newCanvas(f.w, f.h);
+      cv.getContext('2d').drawImage(f.bitmap, 0, 0);
+      tile.appendChild(cv);
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = i;
+      tile.appendChild(idx);
+      grid.appendChild(tile);
+    });
+  }
+
+  // ===== action controls =====
+  $('action').addEventListener('change', renderActionControls);
+
+  function renderActionControls() {
+    const action = $('action').value;
+    const c = $('actionControls');
+    if (action === 'resize') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>宽 (px)</label><input type="number" id="newW" value="${srcWidth}" min="1" /></div>
+          <div class="field"><label>高 (px)</label><input type="number" id="newH" value="${srcHeight}" min="1" /></div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>锁定宽高比</span></label>
+        <div class="info">改变其中一个会按比例联动另一个</div>
+      `;
+      const ratio = srcWidth / srcHeight;
+      $('newW').addEventListener('input', () => {
+        if ($('lockRatio').checked) $('newH').value = Math.round(parseInt($('newW').value, 10) / ratio);
+      });
+      $('newH').addEventListener('input', () => {
+        if ($('lockRatio').checked) $('newW').value = Math.round(parseInt($('newH').value, 10) * ratio);
+      });
+    } else if (action === 'crop') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>X</label><input type="number" id="cropX" value="0" min="0" /></div>
+          <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" /></div>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="cropW" value="${srcWidth}" min="1" max="${srcWidth}" /></div>
+          <div class="field"><label>高</label><input type="number" id="cropH" value="${srcHeight}" min="1" max="${srcHeight}" /></div>
+        </div>
+        <div class="info">手动输入要保留的矩形区域 (左上角 + 尺寸)</div>
+      `;
+    } else if (action === 'speed') {
+      c.innerHTML = `
+        <div class="field">
+          <label>速度倍率 <span id="speedVal" class="mono">1.0×</span></label>
+          <input type="range" id="speedMul" min="10" max="400" value="100" />
+        </div>
+        <div class="info">当前 ≈ ${srcFps} FPS, 调整后 ≈ <span id="newFpsLabel" class="mono">${srcFps}</span> FPS</div>
+      `;
+      const update = () => {
+        const m = parseInt($('speedMul').value, 10) / 100;
+        $('speedVal').textContent = m.toFixed(2) + '×';
+        $('newFpsLabel').textContent = Math.round(srcFps * m);
+      };
+      $('speedMul').addEventListener('input', update);
+      update();
+    } else if (action === 'reverse') {
+      c.innerHTML = `<div class="info">反向播放,无参数。点击下方"应用"开始处理。</div>`;
+    } else if (action === 'trim') {
+      const last = srcFrames.length - 1;
+      c.innerHTML = `
+        <div class="field">
+          <label>起始帧 <span id="trimStartVal" class="mono">0</span></label>
+          <input type="range" id="trimStart" min="0" max="${last}" value="0" />
+        </div>
+        <div class="field">
+          <label>结束帧 <span id="trimEndVal" class="mono">${last}</span></label>
+          <input type="range" id="trimEnd" min="0" max="${last}" value="${last}" />
+        </div>
+        <div class="info">保留 [起始, 结束] 之间的帧 (包含两端)</div>
+      `;
+      $('trimStart').addEventListener('input', e => $('trimStartVal').textContent = e.target.value);
+      $('trimEnd').addEventListener('input', e => $('trimEndVal').textContent = e.target.value);
+    } else if (action === 'dropFrames') {
+      c.innerHTML = `
+        <div class="field">
+          <label>保留每 N 帧中的 1 帧 <span id="dropNVal" class="mono">2</span></label>
+          <input type="range" id="dropN" min="2" max="10" value="2" />
+        </div>
+        <div class="info">N=2 = 抽掉一半帧 (FPS 减半,体积减半);N=3 = 保留 1/3</div>
+      `;
+      $('dropN').addEventListener('input', e => $('dropNVal').textContent = e.target.value);
+    } else if (action === 'optimize') {
+      c.innerHTML = `
+        <div class="field">
+          <label>色彩位深 (每通道)</label>
+          <select id="bitDepth">
+            <option value="8">8 bit (原始)</option>
+            <option value="6">6 bit</option>
+            <option value="5">5 bit</option>
+            <option value="4" selected>4 bit (推荐)</option>
+            <option value="3">3 bit (海报效果)</option>
+          </select>
+        </div>
+        <div class="info">降低色彩位深后,中位切分调色板能找到更少的色块,大幅减小 GIF 体积</div>
+      `;
+    } else if (action === 'watermark') {
+      c.innerHTML = `
+        <div class="field"><label>文字</label><input type="text" id="wmText" value="© 2026" /></div>
+        <div class="row-fields">
+          <div class="field"><label>字号 (px)</label><input type="number" id="wmSize" value="${Math.max(14, Math.round(srcHeight / 12))}" min="6" /></div>
+          <div class="field"><label>颜色</label><input type="text" id="wmColor" value="rgba(255,255,255,0.85)" /></div>
+        </div>
+        <div class="field">
+          <label>位置</label>
+          <select id="wmPos">
+            <option value="br">右下</option>
+            <option value="bl">左下</option>
+            <option value="tr">右上</option>
+            <option value="tl">左上</option>
+            <option value="center">居中</option>
+          </select>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>描边宽 (px)</label><input type="number" id="wmStroke" value="2" min="0" /></div>
+          <div class="field"><label>描边色</label><input type="text" id="wmStrokeColor" value="rgba(0,0,0,0.8)" /></div>
+        </div>
+      `;
+    } else if (action === 'filter') {
+      c.innerHTML = `
+        <label class="checkbox"><input type="checkbox" id="fGray" /><span>灰度</span></label>
+        <label class="checkbox"><input type="checkbox" id="fSepia" /><span>怀旧 Sepia</span></label>
+        <label class="checkbox"><input type="checkbox" id="fInvert" /><span>反色</span></label>
+        <div class="field"><label>亮度 <span id="fBriVal" class="mono">100%</span></label><input type="range" id="fBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>对比度 <span id="fConVal" class="mono">100%</span></label><input type="range" id="fCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>饱和度 <span id="fSatVal" class="mono">100%</span></label><input type="range" id="fSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>色相旋转 <span id="fHueVal" class="mono">0°</span></label><input type="range" id="fHue" min="0" max="360" value="0" /></div>
+        <div class="info">每帧都会应用同样的滤镜参数。GIF 减色编码后画面会有色阶变化,建议先 trim 再加滤镜</div>
+      `;
+      const b = (id, val, suf) => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
+      b('fBri', 'fBriVal', '%'); b('fCon', 'fConVal', '%'); b('fSat', 'fSatVal', '%'); b('fHue', 'fHueVal', '°');
+    }
+  }
+
+  // ===== apply =====
+  $('applyBtn').addEventListener('click', async () => {
+    if (!srcFrames.length) return;
+    const action = $('action').value;
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.dim(`应用 ${action} + 重编码...`);
+
+    try {
+      const result = transform(action);
+      const blob = await AnimEncoders.buildGif(result.frames, {
+        fps: result.fps,
+        loop: 0,
+        paletteMode: $('palette').value,
+        onProgress: pct => progress.set(pct),
+        onStatus: msg => log.dim('  ' + msg)
+      });
+      lastBlob = blob;
+      log.ok(`生成完成 ${fmtBytes(blob.size)}`);
+      const url = URL.createObjectURL(blob);
+      $('outBox').innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      $('outBox').appendChild(img);
+      $('downloadBtn').disabled = false;
+      $('useAsSourceBtn').disabled = false;
+      handoff?.setBlob(blob, ($('filename').value || 'edited') + '.gif');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('applyBtn').disabled = false;
+      progress.hide();
+    }
+  });
+
+  function transform(action) {
+    let frames = srcFrames;
+    let fps = srcFps;
+    if (action === 'resize') {
+      const w = parseInt($('newW').value, 10), h = parseInt($('newH').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(w, h);
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(f.bitmap, 0, 0, w, h);
+        return { bitmap: cv, w, h };
+      });
+    } else if (action === 'crop') {
+      const x = parseInt($('cropX').value, 10);
+      const y = parseInt($('cropY').value, 10);
+      const w = parseInt($('cropW').value, 10);
+      const h = parseInt($('cropH').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(w, h);
+        cv.getContext('2d').drawImage(f.bitmap, x, y, w, h, 0, 0, w, h);
+        return { bitmap: cv, w, h };
+      });
+    } else if (action === 'speed') {
+      const m = parseInt($('speedMul').value, 10) / 100;
+      fps = Math.max(1, Math.round(srcFps * m));
+    } else if (action === 'reverse') {
+      frames = frames.slice().reverse();
+    } else if (action === 'trim') {
+      const s = parseInt($('trimStart').value, 10);
+      const e = parseInt($('trimEnd').value, 10);
+      const lo = Math.min(s, e), hi = Math.max(s, e);
+      frames = frames.slice(lo, hi + 1);
+    } else if (action === 'dropFrames') {
+      const n = parseInt($('dropN').value, 10);
+      frames = frames.filter((_, i) => i % n === 0);
+      fps = Math.max(1, Math.round(srcFps / n));
+    } else if (action === 'optimize') {
+      const bits = parseInt($('bitDepth').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(f.bitmap, 0, 0);
+        if (bits < 8) quantizeColors(ctx, f.w, f.h, bits);
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    } else if (action === 'watermark') {
+      const text = $('wmText').value || '';
+      const size = parseInt($('wmSize').value, 10) || 16;
+      const color = $('wmColor').value;
+      const stroke = parseInt($('wmStroke').value, 10) || 0;
+      const strokeColor = $('wmStrokeColor').value;
+      const pos = $('wmPos').value;
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(f.bitmap, 0, 0);
+        if (text) {
+          ctx.font = `${size}px sans-serif`;
+          ctx.fillStyle = color;
+          const pad = Math.round(size * 0.4);
+          let x = 0, y = 0;
+          if (pos === 'br') { x = f.w - pad; y = f.h - pad; ctx.textAlign='right'; ctx.textBaseline='bottom'; }
+          else if (pos === 'bl') { x = pad; y = f.h - pad; ctx.textAlign='left'; ctx.textBaseline='bottom'; }
+          else if (pos === 'tr') { x = f.w - pad; y = pad; ctx.textAlign='right'; ctx.textBaseline='top'; }
+          else if (pos === 'tl') { x = pad; y = pad; ctx.textAlign='left'; ctx.textBaseline='top'; }
+          else { x = f.w/2; y = f.h/2; ctx.textAlign='center'; ctx.textBaseline='middle'; }
+          if (stroke > 0) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = stroke;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(text, x, y);
+          }
+          ctx.fillText(text, x, y);
+        }
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    } else if (action === 'filter') {
+      const parts = [];
+      if ($('fGray').checked) parts.push('grayscale(100%)');
+      if ($('fSepia').checked) parts.push('sepia(100%)');
+      if ($('fInvert').checked) parts.push('invert(100%)');
+      const bri = $('fBri').value; if (bri !== '100') parts.push(`brightness(${bri}%)`);
+      const con = $('fCon').value; if (con !== '100') parts.push(`contrast(${con}%)`);
+      const sat = $('fSat').value; if (sat !== '100') parts.push(`saturate(${sat}%)`);
+      const hue = $('fHue').value; if (hue !== '0') parts.push(`hue-rotate(${hue}deg)`);
+      const filterStr = parts.length ? parts.join(' ') : 'none';
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.filter = filterStr;
+        ctx.drawImage(f.bitmap, 0, 0);
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    }
+    return { frames, fps };
+  }
+
+  function quantizeColors(ctx, w, h, bits) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const mask = (0xFF << (8 - bits)) & 0xFF;
+    const half = (1 << (8 - bits)) >> 1;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.min(255, ((d[i]   + half) & mask) | (mask >> bits));
+      d[i+1] = Math.min(255, ((d[i+1] + half) & mask) | (mask >> bits));
+      d[i+2] = Math.min(255, ((d[i+2] + half) & mask) | (mask >> bits));
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!lastBlob) return;
+    const name = ($('filename').value || 'edited').replace(/[^\w-]/g, '_');
+    download(lastBlob, name + '.gif');
+  });
+
+  $('useAsSourceBtn').addEventListener('click', async () => {
+    if (!lastBlob) return;
+    log.dim('解码上一步输出作为新输入...');
+    try {
+      const frames = await AnimEncoders.decodeGif(lastBlob);
+      srcFrames = frames;
+      srcWidth = frames[0].w;
+      srcHeight = frames[0].h;
+      const avgDuration = frames.reduce((s, fr) => s + (fr.duration || 100000), 0) / frames.length;
+      srcFps = Math.round(1e6 / avgDuration);
+      $('srcBox').innerHTML = '';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(lastBlob);
+      img.style.maxWidth = '100%';
+      $('srcBox').appendChild(img);
+      $('outBox').innerHTML = '<div class="preview-empty">应用下一个操作</div>';
+      renderFrameGrid();
+      $('stats').innerHTML = `<strong>${frames.length}</strong> 帧 · <strong>${srcWidth}×${srcHeight}</strong> · ≈<strong>${srcFps}</strong> FPS · 链式步骤`;
+      renderActionControls();
+      $('useAsSourceBtn').disabled = true;
+      $('downloadBtn').disabled = true;
+      lastBlob = null;
+      log.ok('已切换为新输入,可继续叠加操作');
+    } catch (e) {
+      log.err(e.message);
+    }
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    srcFrames = []; lastBlob = null;
+    $('frameGrid').innerHTML = '';
+    $('srcBox').innerHTML = '<div class="preview-empty">拖入 GIF</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
+    $('stats').textContent = '未加载';
+    $('actionControls').innerHTML = '';
+    $('applyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    $('useAsSourceBtn').disabled = true;
+    log.clear();
+    $('fileInput').value = '';
+  });
+})();
+</script>
+</body>
+</html>

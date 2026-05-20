@@ -1,0 +1,1345 @@
+// shared utilities for H5 Playable Toolkit
+// inject the top navigation bar and expose helpers on window.Toolkit
+
+(function () {
+  const TOOLS = [
+    { id: 'home',           cat: 'home',  name: '首页',           en: 'Home',            icon: '🏠', href: 'index.html' },
+    // 图像处理
+    { id: 'image-optimizer',cat: 'image', name: '图片压缩',       en: 'Image Optimizer', icon: '📦', href: 'tools/image-optimizer.html',desc: '批量 PNG/JPG 压缩、缩放、转格式' },
+    { id: 'png-crusher',    cat: 'image', name: 'PNG 深压',       en: 'PNG Crusher',     icon: '💎', href: 'tools/png-crusher.html',    desc: '深度 PNG 压缩 (palette 编码, -60~85%)' },
+    { id: 'image-editor',   cat: 'image', name: '图片编辑',       en: 'Image Editor',    icon: '🖼️', href: 'tools/image-editor.html',   desc: '单图编辑:裁剪 / 旋转 / 加文字 / 像素化 / 滤镜' },
+    { id: 'color-tools',    cat: 'image', name: '调色工具',       en: 'Color Tools',     icon: '🎨', href: 'tools/color-tools.html',    desc: '抠图 / 取色 / 主色提取 / 减色' },
+    { id: 'ai-cutout',      cat: 'image', name: 'AI 抠图',        en: 'AI Cutout',       icon: '🤖', href: 'tools/ai-cutout.html',      desc: 'AI 抠图 (MODNet / RMBG),复杂背景' },
+    { id: 'watermark-remove',cat:'image', name: '去水印',         en: 'Watermark Remove',icon: '🩹', href: 'tools/watermark-remove.html', desc: '画刷 / 矩形选水印区,扩散插值或 AI 模型填充' },
+    { id: 'composer',       cat: 'image', name: '拼图合成',       en: 'Composer',        icon: '🧩', href: 'tools/composer.html',       desc: '多图拼接 / 叠加 / 加水印' },
+    // 动画 / 精灵图
+    { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
+    { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
+    { id: 'gif-maker',      cat: 'anim',  name: 'GIF 制作',       en: 'GIF Maker',       icon: '🎞️', href: 'tools/gif-maker.html',      desc: '序列帧 → GIF / APNG' },
+    { id: 'gif-editor',     cat: 'anim',  name: 'GIF 编辑',       en: 'GIF Editor',      icon: '✏️', href: 'tools/gif-editor.html',     desc: 'GIF 缩放 / 裁剪 / 调速 / 反向 / 减帧 / 优化' },
+    // 音视频
+    { id: 'video-toolkit',  cat: 'av',    name: '视频处理',       en: 'Video Toolkit',   icon: '🎬', href: 'tools/video-toolkit.html',  desc: '视频裁剪 / 抽帧 / 转 GIF / 转 WebM' },
+    { id: 'audio-compress', cat: 'av',    name: '音频压缩',       en: 'Audio Compressor',icon: '🔊', href: 'tools/audio-compress.html', desc: '降采样 / 单声道 / 裁剪 / fade / WAV/Opus 输出' },
+    // 代码 / 打包
+    { id: 'html-inliner',   cat: 'code',  name: '单文件打包',     en: 'HTML Inliner',    icon: '📄', href: 'tools/html-inliner.html',   desc: '把外部 JS/CSS/图片内联为单 HTML' },
+    { id: 'code-minify',    cat: 'code',  name: '代码压缩',       en: 'Code Minify',     icon: '🗜️', href: 'tools/code-minify.html',    desc: 'JS / CSS / HTML 压缩,JS 用 terser' },
+    { id: 'base64',         cat: 'code',  name: 'Base64',         en: 'Base64',          icon: '🔤', href: 'tools/base64.html',         desc: '文件 ↔ base64/dataURL 互转' },
+    { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
+    { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
+    // 分析 / 诊断
+    { id: 'bundle-analyzer',cat: 'audit', name: '包体分析',       en: 'Bundle Analyzer', icon: '📊', href: 'tools/bundle-analyzer.html', desc: '扫描项目目录,显示类别分布 + 大文件清单' },
+    { id: 'channel-check',  cat: 'audit', name: '渠道检查',       en: 'Channel Check',   icon: '✅', href: 'tools/channel-check.html', desc: 'Facebook / Google / TikTok 等渠道规范校验' },
+    { id: 'slim-coach',     cat: 'audit', name: '瘦身助手',       en: 'Slim Coach',      icon: '🩺', href: 'tools/slim-coach.html', desc: '扫描项目,给出针对每类资源的具体瘦身建议' }
+  ];
+
+  // Per-tool inline usage guide (auto-injected to sidebar).
+  const INSTRUCTIONS = {
+    'sprite-packer': [
+      '拖入序列帧(多选 PNG) / 视频 / GIF 文件',
+      '在左侧调整布局、裁剪、统一帧尺寸等参数',
+      '点"导出 PNG + JSON"一次拿到精灵图和 TexturePacker 元数据'
+    ],
+    'atlas-splitter': [
+      '拖入精灵图 + JSON;或只拖 PNG 进入手动网格模式',
+      '动画自动播放,可点单帧选中',
+      '导出为帧 ZIP / 单帧 PNG / 一键转 GIF·APNG'
+    ],
+    'image-optimizer': [
+      '拖入多张图片(PNG/JPG/WebP)',
+      '选输出格式、质量、缩放、色彩位深',
+      '点"开始处理",多张图用 ZIP 一次性下载'
+    ],
+    'png-crusher': [
+      '拖入 PNG(可多张)',
+      '选预设(平衡/激进/极限)或自定义色数 + dither',
+      '点"开始压缩",≥2 张图请用底部"下载全部 (ZIP)"避免 Chrome 多文件提示'
+    ],
+    'gif-maker': [
+      '拖入序列帧(自然排序)',
+      '设 FPS 和循环次数,选 GIF 或 APNG 格式',
+      '点"生成",等编码完成后下载'
+    ],
+    'gif-editor': [
+      '拖入一个 GIF 文件',
+      '选一个操作:裁剪 / 调速 / 反向 / 删帧 / 优化',
+      '点"应用 + 生成"→ 下载;或"把输出作为新输入"继续叠加下一步'
+    ],
+    'image-editor': [
+      '拖入单张图片',
+      '选操作:缩放 / 裁剪 / 旋转 / 加文字 / 像素化 / 滤镜',
+      '点"应用"→ 下载;或"把输出作为新输入"叠加下一个操作'
+    ],
+    'color-tools': [
+      '拖入图片',
+      '选工具:抠图(纯色背景) / 取色器 / 主色提取 / 减色',
+      '取色 / 抠图模式下点击原图采样;应用后导出图片或调色板'
+    ],
+    'ai-cutout': [
+      '拖入 1 张或多张图(支持文件夹),模型会自动下载并批量推理',
+      '默认 MODNet(25MB,适合人像);复杂场景可切到 RMBG-1.4(85MB)',
+      '点队列里任意图查看对比;多张时用"下载全部 (ZIP)"一次性导出'
+    ],
+    'watermark-remove': [
+      '拖入图片,用 🖌️ 画刷 或 ▭ 矩形选中水印区域(红色覆盖区)',
+      '选算法:扩散插值(快,适合纯色/渐变背景)或 AI 模型(慢,适合复杂背景)',
+      '点"应用去水印"等待完成,下载 PNG'
+    ],
+    'video-toolkit': [
+      '拖入视频(MP4 / WebM / MOV),选操作:trim / crop / 调速 / 反向 / 抽帧 / 转 GIF / 色键抠像',
+      '输出格式默认 MP4 (H.264,Chrome/Edge 113+),不支持时回退 WebM',
+      '色键抠像建议输出 PNG ZIP 或 APNG(真透明)'
+    ],
+    'composer': [
+      '拖入多张图片(可在素材列表上下调整顺序或删除)',
+      '选布局:横向 / 纵向 / 网格 / 叠加,设间距、背景色',
+      '可选加文字水印,点"合成"后下载'
+    ],
+    'html-inliner': [
+      '点"选择项目文件夹"(仅 Chrome 86+ / Edge 86+)',
+      '从下拉选入口 HTML,勾选要内联的资源类型',
+      '点"开始打包",下载完全自包含的单 HTML 文件'
+    ],
+    'base64': [
+      '编码模式:拖入任意文件,选 dataURL / 纯 base64 / hex 预览',
+      '解码模式:粘贴 base64 / dataURL 字符串,自动识别 MIME 类型',
+      '点"复制到剪贴板"或下载 .txt'
+    ],
+    'qr-gen': [
+      '输入文本 / URL,或点 URL / WiFi / 名片 / 短信 预设填模板',
+      '调前景背景色、纠错等级、尺寸;可选拖入 logo 嵌中心(用 ECC=H)',
+      '点"生成"后下载 PNG 或 SVG'
+    ],
+    'font-subset': [
+      '拖入 TTF / OTF 字体文件',
+      '填要保留的字符(可点"中文 500 常用字"等预设快速填充)',
+      '点"开始子集化",对比体积变化,下载 TTF + CSS @font-face 代码'
+    ],
+    'audio-compress': [
+      '拖入音频文件,会自动解码并显示波形',
+      '调采样率、声道数、时间裁剪、淡入淡出',
+      '选输出格式(WAV 16/8-bit 或 WebM/Opus),点"开始处理"后下载'
+    ],
+    'bundle-analyzer': [
+      '点"选择项目文件夹"扫描整个目录',
+      '左侧调过滤 / 排序,看大文件分布和类别占比',
+      '可导出 CSV 报告,定位包体杀手'
+    ],
+    'channel-check': [
+      '拖入 playable 单文件 HTML',
+      '选目标渠道 (Facebook / Google / TikTok / Mintegral 等)',
+      '查看通过 / 警告 / 失败的检查项,逐项修复'
+    ],
+    'code-minify': [
+      '左侧选语言 (CSS / JS / HTML)',
+      '粘贴代码,或点"加载文件"导入',
+      '点"压缩",看压缩率,复制或下载结果'
+    ],
+    'slim-coach': [
+      '选择 / 拖入项目文件夹,自动扫描',
+      '看顶部"瘦身潜力"估算,以及下方按类别的具体建议',
+      '点每条建议的"去 XX 工具"按钮跳转处理'
+    ]
+  };
+
+  function injectTopbar(activeId) {
+    const inSubdir = window.location.pathname.includes('/tools/');
+    const prefix = inSubdir ? '../' : '';
+    // wrapper that holds optional back-button pill + main topbar pill, side by side
+    const wrap = document.createElement('div');
+    wrap.className = 'topbar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'topbar';
+
+    // Find the current tool's category (if any) for nav highlighting
+    const currentTool = TOOLS.find(t => t.id === activeId);
+    const currentCat = currentTool?.cat;
+
+    // 5 top-level categories instead of listing every tool
+    const cats = [
+      { id: 'image', name: '图像处理', icon: '🖼️' },
+      { id: 'anim',  name: '动画 / 精灵图', icon: '🎬' },
+      { id: 'av',    name: '音视频', icon: '🔊' },
+      { id: 'code',  name: '代码 / 打包', icon: '🗜️' },
+      { id: 'audit', name: '分析 / 诊断', icon: '📊' }
+    ];
+
+    bar.innerHTML = `
+      <a href="${prefix}index.html" class="brand">
+        <span class="logo">🧰</span>
+        <span>Playable Toolkit</span>
+      </a>
+      <nav>
+        ${cats.map(c => {
+          const tools = TOOLS.filter(t => t.cat === c.id);
+          const isActive = currentCat === c.id;
+          return `
+            <div class="nav-group ${isActive ? 'active' : ''}">
+              <a href="${prefix}index.html#cat-${c.id}" class="nav-cat">
+                <span class="cat-icon">${c.icon}</span>${c.name}
+                <span class="caret">▾</span>
+              </a>
+              <div class="nav-dropdown">
+                ${tools.map(t => `
+                  <a href="${prefix}${t.href}" class="${t.id === activeId ? 'active' : ''}">
+                    <span>${t.icon}</span>
+                    <span class="dd-name">${t.name}</span>
+                    <span class="dd-en">${t.en}</span>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </nav>
+      <div class="meta">本地处理</div>
+    `;
+    wrap.appendChild(bar);
+    document.body.insertBefore(wrap, document.body.firstChild);
+    // mouse-following glow (sets --mx / --my CSS variables)
+    bar.addEventListener('mousemove', (e) => {
+      const r = bar.getBoundingClientRect();
+      bar.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      bar.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+
+    // also auto-inject ambient blob background if not present
+    if (!document.querySelector('.ambient-flow')) {
+      const ambient = document.createElement('div');
+      ambient.className = 'ambient-flow';
+      ambient.setAttribute('aria-hidden', 'true');
+      ambient.innerHTML = `
+        <div class="ambient-blob ambient-blob--a"></div>
+        <div class="ambient-blob ambient-blob--b"></div>
+        <div class="ambient-blob ambient-blob--c"></div>
+        <div class="ambient-blob ambient-blob--d"></div>
+      `;
+      document.body.insertBefore(ambient, document.body.firstChild);
+    }
+
+    // for tool pages: rewrite sidebar h1 + inject instructions + add back-to-home in topbar.
+    const tool = TOOLS.find(t => t.id === activeId);
+    if (tool && tool.id !== 'home') {
+      const h1 = document.querySelector('.sidebar h1');
+      if (h1) {
+        h1.innerHTML = `${tool.icon} ${tool.name} <span class="h1-sub">${tool.en}</span>`;
+      }
+      // add a standalone "← 全部工具" pill as a sibling of the topbar (tool pages only)
+      if (!wrap.querySelector('.topbar-back')) {
+        const back = document.createElement('a');
+        back.className = 'topbar-back';
+        back.href = prefix + 'index.html';
+        back.innerHTML = '<span class="arr">←</span><span>全部工具</span>';
+        wrap.insertBefore(back, bar);
+      }
+      const steps = INSTRUCTIONS[tool.id];
+      if (steps && steps.length) injectInstructions(steps);
+      // mark this tool as recently used
+      Prefs.touchRecent(tool.id);
+    }
+    installErrorBoundary();
+    watchForColorInputs();
+    setupPWA(prefix);
+  }
+
+  // ---------- PWA: inject manifest link + register service worker ----------
+  function setupPWA(prefix) {
+    // 1. inject manifest link
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = prefix + 'manifest.json';
+      document.head.appendChild(link);
+    }
+    // 2. theme-color
+    if (!document.querySelector('meta[name="theme-color"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = '#31f59c';
+      document.head.appendChild(meta);
+    }
+    // 3. apple-touch-icon for iOS
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+      const link = document.createElement('link');
+      link.rel = 'apple-touch-icon';
+      link.href = prefix + 'assets/icon.svg';
+      document.head.appendChild(link);
+    }
+    // 4. register service worker (silently fails on file:// or non-HTTPS non-localhost)
+    if ('serviceWorker' in navigator) {
+      const swUrl = prefix + 'sw.js';
+      navigator.serviceWorker.register(swUrl, { scope: prefix })
+        .catch(err => {
+          // expected to fail on file:// and on http without localhost — silent
+          if (location.protocol !== 'file:') console.warn('[pwa] SW registration failed:', err.message);
+        });
+    }
+  }
+
+  // ---------- DOM helpers ----------
+  const $ = (id) => document.getElementById(id);
+
+  // Inject a collapsible "how to use" block at the top of the sidebar.
+  // Call in tool pages after Toolkit.injectTopbar(). Pass an array of steps (strings or HTML).
+  function injectInstructions(steps, opts = {}) {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    const h1 = sidebar.querySelector('h1');
+    const box = document.createElement('details');
+    box.className = 'instructions';
+    box.open = opts.collapsed ? false : true;
+    box.innerHTML = `
+      <summary>📖 使用步骤</summary>
+      <ol>
+        ${steps.map(s => `<li>${s}</li>`).join('')}
+      </ol>
+      ${opts.note ? `<div class="instructions-note">${opts.note}</div>` : ''}
+    `;
+    if (h1 && h1.nextSibling) {
+      sidebar.insertBefore(box, h1.nextSibling);
+    } else if (h1) {
+      sidebar.appendChild(box);
+    } else {
+      sidebar.insertBefore(box, sidebar.firstChild);
+    }
+  }
+
+  // ---------- log ----------
+  function makeLogger(logEl) {
+    return {
+      line(msg, cls = '') {
+        const div = document.createElement('div');
+        div.className = 'log-line ' + cls;
+        div.textContent = msg;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      },
+      ok(msg)   { this.line('✓ ' + msg, 'ok'); },
+      err(msg)  { this.line('✗ ' + msg, 'err'); },
+      warn(msg) { this.line('⚠ ' + msg, 'warn'); },
+      dim(msg)  { this.line(msg, 'dim'); },
+      clear()   { logEl.innerHTML = ''; }
+    };
+  }
+
+  // ---------- progress ----------
+  function makeProgress(progressEl) {
+    const bar = progressEl.querySelector('.progress-bar');
+    return {
+      set(pct) {
+        if (pct < 0) { progressEl.classList.remove('show'); return; }
+        progressEl.classList.add('show');
+        bar.style.width = (Math.min(1, Math.max(0, pct)) * 100).toFixed(1) + '%';
+      },
+      hide() { progressEl.classList.remove('show'); }
+    };
+  }
+
+  // ---------- drag & drop (with folder support via webkitGetAsEntry) ----------
+  function attachDropZone(dropEl, fileInput, onFiles) {
+    dropEl.addEventListener('click', () => fileInput.click());
+    dropEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropEl.classList.add('dragging');
+    });
+    dropEl.addEventListener('dragleave', () => dropEl.classList.remove('dragging'));
+    dropEl.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropEl.classList.remove('dragging');
+      const items = e.dataTransfer.items;
+      // try webkit entry API for folder support
+      if (items && items.length && items[0].webkitGetAsEntry) {
+        const files = [];
+        const entries = [];
+        for (const it of items) {
+          const ent = it.webkitGetAsEntry && it.webkitGetAsEntry();
+          if (ent) entries.push(ent);
+        }
+        if (entries.some(en => en && en.isDirectory)) {
+          for (const ent of entries) await readEntry(ent, files);
+          onFiles(files);
+          return;
+        }
+      }
+      onFiles(Array.from(e.dataTransfer.files));
+    });
+    fileInput.addEventListener('change', (e) => onFiles(Array.from(e.target.files)));
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+  }
+
+  // recursively read a FileSystemEntry (file or directory) into a flat files[] list
+  async function readEntry(entry, files) {
+    if (entry.isFile) {
+      await new Promise((resolve) => entry.file(f => { files.push(f); resolve(); }, () => resolve()));
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const entries = await new Promise(r => {
+        const all = [];
+        function batch() {
+          reader.readEntries(es => {
+            if (!es.length) r(all);
+            else { all.push(...es); batch(); }
+          }, () => r(all));
+        }
+        batch();
+      });
+      for (const sub of entries) await readEntry(sub, files);
+    }
+  }
+
+  // ---------- natural sort ----------
+  function naturalSort(files) {
+    return files.slice().sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }
+
+  // ---------- download ----------
+  function download(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadText(text, filename, mime = 'text/plain') {
+    download(new Blob([text], { type: mime }), filename);
+  }
+
+  function downloadJson(obj, filename) {
+    downloadText(JSON.stringify(obj, null, 2), filename, 'application/json');
+  }
+
+  // ---------- canvas helpers ----------
+  function newCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+
+  function canvasToBlob(canvas, type = 'image/png', quality) {
+    return new Promise(r => canvas.toBlob(r, type, quality));
+  }
+
+  // ---------- prefs: persistent settings via localStorage ----------
+  // Usage:
+  //   Prefs.bindForm('tool-id', ['fieldId1', 'fieldId2', ...])  -- two-way sync
+  //   Prefs.get('tool-id.key', defaultValue) / Prefs.set(...)
+  const PREFS_KEY = 'toolkit:prefs';
+  function readPrefs() {
+    try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function writePrefs(obj) {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {}
+  }
+  const Prefs = {
+    get(key, defVal) {
+      const all = readPrefs();
+      return key.split('.').reduce((o, k) => (o == null ? undefined : o[k]), all) ?? defVal;
+    },
+    set(key, value) {
+      const all = readPrefs();
+      const parts = key.split('.');
+      let cur = all;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!cur[parts[i]] || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {};
+        cur = cur[parts[i]];
+      }
+      cur[parts[parts.length - 1]] = value;
+      writePrefs(all);
+    },
+    // sync a list of input/select/textarea ids with localStorage under `toolId`
+    bindForm(toolId, ids) {
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const saved = Prefs.get(`tools.${toolId}.${id}`);
+        if (saved !== undefined) {
+          if (el.type === 'checkbox') el.checked = saved;
+          else el.value = saved;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const handler = () => {
+          const v = el.type === 'checkbox' ? el.checked : el.value;
+          Prefs.set(`tools.${toolId}.${id}`, v);
+        };
+        el.addEventListener('change', handler);
+        if (el.tagName === 'INPUT' && el.type !== 'checkbox') el.addEventListener('input', handler);
+      }
+    },
+    // mark a tool as recently used (for landing page "recent" section)
+    touchRecent(toolId) {
+      if (!toolId || toolId === 'home') return;
+      const recent = Prefs.get('recent', []) || [];
+      const next = [toolId, ...recent.filter(x => x !== toolId)].slice(0, 6);
+      Prefs.set('recent', next);
+    }
+  };
+
+  // ---------- toast (non-blocking notifications) ----------
+  function toast(msg, kind = 'info', duration = 3500) {
+    let host = document.getElementById('__toast_host__');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = '__toast_host__';
+      host.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:8px; max-width:360px;';
+      document.body.appendChild(host);
+    }
+    const el = document.createElement('div');
+    const colors = {
+      info:    'background:rgba(20,20,26,0.92); border:1px solid rgba(var(--jade-rgb), 0.4); color:var(--text);',
+      ok:      'background:rgba(20,20,26,0.92); border:1px solid var(--jade); color:var(--jade);',
+      warn:    'background:rgba(20,20,26,0.92); border:1px solid var(--warning); color:var(--warning);',
+      err:     'background:rgba(20,20,26,0.92); border:1px solid var(--danger); color:var(--danger);'
+    };
+    el.style.cssText = `padding:10px 14px; border-radius:8px; font-size:12px; line-height:1.45; backdrop-filter:blur(12px); box-shadow:0 10px 30px rgba(0,0,0,0.4); opacity:0; transform:translateY(8px); transition:opacity 0.2s, transform 0.2s; ${colors[kind] || colors.info}`;
+    el.textContent = msg;
+    host.appendChild(el);
+    requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+    setTimeout(() => {
+      el.style.opacity = '0'; el.style.transform = 'translateY(8px)';
+      setTimeout(() => el.remove(), 240);
+    }, duration);
+  }
+
+  // ---------- global error boundary ----------
+  function installErrorBoundary() {
+    window.addEventListener('error', (e) => {
+      console.error('[uncaught]', e.error || e.message);
+      toast('未捕获错误: ' + (e.error?.message || e.message), 'err', 6000);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('[unhandled rejection]', e.reason);
+      toast('Promise 错误: ' + (e.reason?.message || String(e.reason)), 'err', 6000);
+    });
+  }
+
+  // ---------- compare slider component (before/after) ----------
+  // makeCompareSlider(host, leftEl, rightEl, {leftLabel, rightLabel})
+  // leftEl/rightEl: HTMLCanvasElement or HTMLImageElement of equal size
+  function makeCompareSlider(host, leftEl, rightEl, opts = {}) {
+    host.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'compare-slider';
+    // Determine display size from the right element (or left)
+    const baseEl = rightEl || leftEl;
+    const w = baseEl.width || baseEl.naturalWidth || 400;
+    const h = baseEl.height || baseEl.naturalHeight || 300;
+    wrap.style.width = Math.min(w, 800) + 'px';
+    const frame = document.createElement('div');
+    frame.className = 'frame';
+    frame.style.aspectRatio = `${w} / ${h}`;
+    // bottom = right (after); top = left (before, clipped)
+    const rightClone = rightEl.cloneNode();
+    if (rightEl instanceof HTMLCanvasElement) {
+      rightClone.width = rightEl.width; rightClone.height = rightEl.height;
+      rightClone.getContext('2d').drawImage(rightEl, 0, 0);
+    } else { rightClone.src = rightEl.src; }
+    rightClone.className = 'bottom';
+    frame.appendChild(rightClone);
+    const leftClone = leftEl.cloneNode();
+    if (leftEl instanceof HTMLCanvasElement) {
+      leftClone.width = leftEl.width; leftClone.height = leftEl.height;
+      leftClone.getContext('2d').drawImage(leftEl, 0, 0);
+    } else { leftClone.src = leftEl.src; }
+    leftClone.className = 'top';
+    frame.appendChild(leftClone);
+    if (opts.leftLabel)  { const l = document.createElement('div'); l.className = 'label left';  l.textContent = opts.leftLabel;  frame.appendChild(l); }
+    if (opts.rightLabel) { const l = document.createElement('div'); l.className = 'label right'; l.textContent = opts.rightLabel; frame.appendChild(l); }
+    const handle = document.createElement('div');
+    handle.className = 'handle';
+    frame.appendChild(handle);
+    wrap.appendChild(frame);
+    host.appendChild(wrap);
+
+    function setPos(pct) {
+      pct = Math.max(0, Math.min(100, pct));
+      leftClone.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+      handle.style.left = pct + '%';
+    }
+    setPos(50);
+
+    let dragging = false;
+    function onMove(e) {
+      const r = frame.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      setPos(x / r.width * 100);
+    }
+    handle.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
+    frame.addEventListener('mousedown', (e) => { dragging = true; onMove(e); });
+    document.addEventListener('mousemove', (e) => dragging && onMove(e));
+    document.addEventListener('mouseup', () => { dragging = false; });
+    frame.addEventListener('touchstart', (e) => { dragging = true; onMove(e); }, { passive: true });
+    frame.addEventListener('touchmove', (e) => dragging && onMove(e), { passive: true });
+    frame.addEventListener('touchend', () => { dragging = false; });
+    return { setPos };
+  }
+
+  // ---------- handoff routing table ----------
+  // accepts: which MIME types this tool accepts as input
+  const HANDOFF_ACCEPTS = {
+    'sprite-packer':   ['image/png','image/jpeg','image/gif','image/webp','video/*','application/zip'],
+    'atlas-splitter':  ['image/png'],  // needs JSON too but handoff only carries one file
+    'image-optimizer': ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'png-crusher':     ['image/png','image/jpeg','image/webp','application/zip'],
+    'gif-maker':       ['image/png','image/jpeg','application/zip'],
+    'gif-editor':      ['image/gif'],
+    'image-editor':    ['image/png','image/jpeg','image/webp','image/gif'],
+    'color-tools':     ['image/png','image/jpeg','image/webp'],
+    'ai-cutout':       ['image/png','image/jpeg','image/webp','application/zip'],
+    'watermark-remove':['image/png','image/jpeg','image/webp'],
+    'video-toolkit':   ['video/*'],
+    'composer':        ['image/png','image/jpeg','image/webp','application/zip'],
+    'html-inliner':    [],  // requires directory picker, can't handoff
+    'base64':          ['*/*'],  // accepts anything
+    'qr-gen':          [],
+    'font-subset':     ['font/ttf','font/otf','application/octet-stream'],
+    'audio-compress':  ['audio/*'],
+    'bundle-analyzer': [],
+    'channel-check':   ['text/html'],
+    'code-minify':     ['text/css','application/javascript','text/html'],
+    'slim-coach':      []
+  };
+
+  // Tools to suggest as next step given output MIME type
+  function findTargetsFor(mime) {
+    const matches = [];
+    for (const [toolId, accepts] of Object.entries(HANDOFF_ACCEPTS)) {
+      for (const acc of accepts) {
+        if (acc === '*/*') { matches.push(toolId); break; }
+        if (acc.endsWith('/*')) {
+          if (mime.startsWith(acc.slice(0, -1))) { matches.push(toolId); break; }
+        } else if (acc === mime) {
+          matches.push(toolId);
+          break;
+        }
+      }
+    }
+    return matches;
+  }
+
+  // Setup handoff for a tool page:
+  //   - injects a "📤 发送到..." dropdown into the sidebar
+  //   - the dropdown shows only compatible target tools (based on outputType)
+  //   - returns a controller { setBlob(blob, fileName, mimeOverride) } to update output
+  //   - also auto-consumes incoming handoff: if sessionStorage has data targeting this tool,
+  //     it dispatches a 'drop' event on #dropZone (or calls opts.onIncoming).
+  // Returns the controller SYNCHRONOUSLY (so callers can write
+  //   const handoff = Toolkit.setupHandoff(...)
+  // without awaiting). Incoming handoff consumption is fire-and-forget.
+  function setupHandoff(toolId, opts = {}) {
+    // 1. consume incoming handoff in the background — does not block return
+    (async () => {
+      const incoming = await consumeHandoff(toolId);
+      if (!incoming) return;
+      let toDeliver = [incoming];
+      if (/\.zip$/i.test(incoming.name) || incoming.type === 'application/zip') {
+        try {
+          const extracted = await unzipBlob(incoming);
+          if (extracted.length) {
+            toDeliver = extracted;
+            toast(`✨ 收到 ZIP,自动解压 ${extracted.length} 个文件`, 'ok', 4500);
+          }
+        } catch (e) {
+          toast('ZIP 解压失败,尝试整体处理: ' + e.message, 'warn', 4500);
+        }
+      } else {
+        toast(`✨ 从上一个工具收到 ${incoming.name}`, 'ok', 4500);
+      }
+      const handler = opts.onIncoming || ((filesOrFile) => {
+        const dz = document.getElementById('dropZone');
+        if (dz) {
+          const dt = new DataTransfer();
+          const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
+          arr.forEach(f => dt.items.add(f));
+          dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        }
+      });
+      setTimeout(() => handler(toDeliver), 100);
+    })();
+
+    // 2. inject the dropdown UI (skip for tools that don't produce sendable output)
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar || !opts.outputType) return null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'handoff-wrap';
+    wrap.innerHTML = `
+      <button class="handoff-btn secondary" id="__handoffBtn__" disabled>📤 发送到下一个工具 ▾</button>
+      <div class="handoff-menu" id="__handoffMenu__"></div>
+    `;
+    sidebar.appendChild(wrap);
+
+    let currentBlob = null;
+    let currentName = null;
+    let currentMime = opts.outputType;
+
+    const btn = wrap.querySelector('#__handoffBtn__');
+    const menu = wrap.querySelector('#__handoffMenu__');
+
+    function refresh() {
+      menu.innerHTML = '';
+      const mime = currentMime || opts.outputType;
+      const targets = findTargetsFor(mime).filter(id => id !== toolId);
+      if (!targets.length) { btn.disabled = true; return; }
+      btn.disabled = !currentBlob;
+      for (const tid of targets) {
+        const tool = TOOLS.find(t => t.id === tid);
+        if (!tool) continue;
+        const item = document.createElement('a');
+        item.className = 'handoff-item';
+        item.href = '#';
+        item.innerHTML = `<span class="icon">${tool.icon}</span><span class="name">${tool.name}</span><span class="en">${tool.en}</span>`;
+        item.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (!currentBlob) return;
+          menu.classList.remove('open');
+          try {
+            await sendTo(tid, currentBlob, currentName || ('output.' + mimeExtFor(currentMime)));
+          } catch (e) {
+            // toast already shown inside sendTo on failure
+          }
+        });
+        menu.appendChild(item);
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      menu.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) menu.classList.remove('open');
+    });
+
+    refresh();
+
+    return {
+      setBlob(blob, fileName, mimeOverride) {
+        currentBlob = blob;
+        currentName = fileName;
+        if (mimeOverride) currentMime = mimeOverride;
+        refresh();
+      },
+      clear() {
+        currentBlob = null;
+        currentName = null;
+        refresh();
+      }
+    };
+  }
+
+  function mimeExtFor(mime) {
+    const map = {
+      'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp',
+      'image/gif': 'gif', 'video/mp4': 'mp4', 'video/webm': 'webm',
+      'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/webm': 'webm',
+      'font/ttf': 'ttf', 'application/json': 'json', 'text/html': 'html',
+      'text/css': 'css', 'application/javascript': 'js'
+    };
+    return map[mime] || 'bin';
+  }
+
+  // ---------- color widget: HSV picker popup + screen EyeDropper ----------
+  // Click swatch  → opens HSV color picker (saturation/value square + hue bar + hex/RGB inputs)
+  // Click 🎨 btn → opens screen-level EyeDropper API (Chrome 95+)
+  // Auto-attached to any hex-color text input. Idempotent.
+  function attachEyeDropper(input) {
+    if (input.__eyedropperAttached) return;
+    if (input.tagName !== 'INPUT') return;
+    if (input.type !== 'text' && input.type !== 'color') return;
+    input.__eyedropperAttached = true;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'eyedropper-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    // clickable swatch → opens HSV picker
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'eyedropper-swatch';
+    swatch.title = '点击打开色盘';
+    const updateSwatch = () => {
+      const v = (input.value || '').trim();
+      swatch.style.background = v || 'transparent';
+    };
+    updateSwatch();
+    input.addEventListener('input', updateSwatch);
+    input.addEventListener('change', updateSwatch);
+    swatch.addEventListener('click', (e) => {
+      e.preventDefault();
+      openColorPicker(input, swatch);
+    });
+    wrap.appendChild(swatch);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'eyedropper-btn';
+    btn.title = '吸色管(取屏幕任意像素,Chrome 95+)';
+    btn.innerHTML = '🎨';
+    btn.addEventListener('click', async () => {
+      if (!('EyeDropper' in window)) {
+        toast('浏览器不支持 EyeDropper,请用 Chrome 95+ / Edge 95+', 'warn', 4500);
+        return;
+      }
+      try {
+        const ed = new EyeDropper();
+        const r = await ed.open();
+        input.value = r.sRGBHex;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        updateSwatch();
+        toast(`已吸取 ${r.sRGBHex}`, 'ok', 2500);
+      } catch (e) {
+        // user cancelled / Esc — silent
+      }
+    });
+    wrap.appendChild(btn);
+  }
+
+  // ---------- HSV color picker popup ----------
+  let activePicker = null;
+  function closeColorPicker() {
+    if (!activePicker) return;
+    activePicker.dispose();
+    activePicker = null;
+  }
+  function hsvToRgb(h, s, v) {
+    h = ((h % 360) + 360) % 360;
+    s = Math.max(0, Math.min(1, s));
+    v = Math.max(0, Math.min(1, v));
+    const c = v * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = v - c;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+    }
+    h = (h * 60 + 360) % 360;
+    const s = max === 0 ? 0 : d / max;
+    return [h, s, max];
+  }
+  function parseHexColor(str) {
+    const m = String(str || '').trim().match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i);
+    if (!m) return null;
+    let hex = m[1];
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  }
+  function rgbToHex(r, g, b) {
+    const h = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return ('#' + h(r) + h(g) + h(b)).toUpperCase();
+  }
+  function openColorPicker(input, anchor) {
+    closeColorPicker();
+    const pop = document.createElement('div');
+    pop.className = 'color-picker-pop';
+    pop.innerHTML = `
+      <div class="cp-sv"><div class="cp-sv-marker"></div></div>
+      <div class="cp-hue"><div class="cp-hue-marker"></div></div>
+      <div class="cp-row">
+        <span class="cp-preview"></span>
+        <input class="cp-hex" type="text" maxlength="7" spellcheck="false" />
+      </div>
+      <div class="cp-rgb">
+        <label>R<input type="number" min="0" max="255" data-c="r" /></label>
+        <label>G<input type="number" min="0" max="255" data-c="g" /></label>
+        <label>B<input type="number" min="0" max="255" data-c="b" /></label>
+      </div>
+    `;
+    document.body.appendChild(pop);
+
+    // position below anchor, clamp to viewport
+    const ar = anchor.getBoundingClientRect();
+    const popW = 220, popH = pop.offsetHeight || 260;
+    let left = ar.left;
+    let top = ar.bottom + 6;
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if (top + popH > window.innerHeight - 8) top = ar.top - popH - 6;
+    pop.style.left = Math.max(8, left) + 'px';
+    pop.style.top = Math.max(8, top) + 'px';
+
+    const sv = pop.querySelector('.cp-sv');
+    const svMarker = pop.querySelector('.cp-sv-marker');
+    const hue = pop.querySelector('.cp-hue');
+    const hueMarker = pop.querySelector('.cp-hue-marker');
+    const preview = pop.querySelector('.cp-preview');
+    const hexInput = pop.querySelector('.cp-hex');
+    const rInput = pop.querySelector('input[data-c="r"]');
+    const gInput = pop.querySelector('input[data-c="g"]');
+    const bInput = pop.querySelector('input[data-c="b"]');
+
+    let h = 0, s = 1, v = 1;
+    const initRgb = parseHexColor(input.value) || [255, 0, 0];
+    [h, s, v] = rgbToHsv(...initRgb);
+
+    function render(writeBack = true) {
+      sv.style.background =
+        `linear-gradient(to top, #000, transparent),` +
+        `linear-gradient(to right, #fff, transparent),` +
+        `hsl(${h}, 100%, 50%)`;
+      const svRect = sv.getBoundingClientRect();
+      svMarker.style.left = (s * svRect.width) + 'px';
+      svMarker.style.top = ((1 - v) * svRect.height) + 'px';
+      hueMarker.style.left = (h / 360 * hue.getBoundingClientRect().width) + 'px';
+      const [r, g, b] = hsvToRgb(h, s, v);
+      const hex = rgbToHex(r, g, b);
+      preview.style.background = hex;
+      if (document.activeElement !== hexInput) hexInput.value = hex;
+      if (document.activeElement !== rInput) rInput.value = r;
+      if (document.activeElement !== gInput) gInput.value = g;
+      if (document.activeElement !== bInput) bInput.value = b;
+      if (writeBack) {
+        input.value = hex;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    render(false);
+
+    function makeDrag(el, onMove) {
+      const handler = (e) => {
+        e.preventDefault();
+        const r = el.getBoundingClientRect();
+        const move = (ev) => {
+          const cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+          const cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top;
+          onMove(Math.max(0, Math.min(r.width, cx)) / r.width, Math.max(0, Math.min(r.height, cy)) / r.height);
+        };
+        move(e);
+        const up = () => {
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+          document.removeEventListener('touchmove', move);
+          document.removeEventListener('touchend', up);
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+        document.addEventListener('touchmove', move, { passive: false });
+        document.addEventListener('touchend', up);
+      };
+      el.addEventListener('mousedown', handler);
+      el.addEventListener('touchstart', handler, { passive: false });
+    }
+    makeDrag(sv, (x, y) => { s = x; v = 1 - y; render(); });
+    makeDrag(hue, (x) => { h = x * 360; render(); });
+
+    hexInput.addEventListener('input', () => {
+      const rgb = parseHexColor(hexInput.value);
+      if (!rgb) return;
+      const [nh, ns, nv] = rgbToHsv(...rgb);
+      // keep current h if input has only altered saturation/value (avoid hue jitter on grayscale)
+      if (!(rgb[0] === rgb[1] && rgb[1] === rgb[2])) h = nh;
+      s = ns; v = nv;
+      render();
+    });
+    const onRgb = () => {
+      const r = +rInput.value || 0, g = +gInput.value || 0, b = +bInput.value || 0;
+      const [nh, ns, nv] = rgbToHsv(r, g, b);
+      if (!(r === g && g === b)) h = nh;
+      s = ns; v = nv;
+      render();
+    };
+    rInput.addEventListener('input', onRgb);
+    gInput.addEventListener('input', onRgb);
+    bInput.addEventListener('input', onRgb);
+
+    function onOutside(e) {
+      if (pop.contains(e.target) || anchor.contains(e.target)) return;
+      closeColorPicker();
+    }
+    function onKey(e) { if (e.key === 'Escape') closeColorPicker(); }
+    setTimeout(() => {
+      document.addEventListener('mousedown', onOutside, true);
+      document.addEventListener('keydown', onKey);
+    }, 0);
+
+    activePicker = {
+      pop,
+      dispose: () => {
+        document.removeEventListener('mousedown', onOutside, true);
+        document.removeEventListener('keydown', onKey);
+        pop.remove();
+      }
+    };
+  }
+  function isLikelyColorInput(input) {
+    if (input.__eyedropperAttached) return false;
+    if (input.tagName !== 'INPUT' || input.type !== 'text') return false;
+    const id = (input.id || '') + ' ' + (input.name || '') + ' ' + (input.placeholder || '');
+    if (/color|colour|颜色|背景色|前景|描边色/i.test(id)) return true;
+    const v = (input.value || '').trim();
+    if (/^#[0-9a-f]{3,8}$/i.test(v)) return true;
+    if (/^rgba?\s*\(/i.test(v)) return true;
+    return false;
+  }
+  function autoAttachEyeDroppers(root) {
+    (root || document).querySelectorAll('input[type=text]').forEach(inp => {
+      if (isLikelyColorInput(inp)) attachEyeDropper(inp);
+    });
+  }
+  function watchForColorInputs() {
+    autoAttachEyeDroppers();
+    const obs = new MutationObserver(muts => {
+      for (const m of muts) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType === 1) autoAttachEyeDroppers(n);
+        }
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // ---------- minimal ZIP reader (STORE + deflate) ----------
+  // Used by handoff to auto-expand a ZIP into multiple Files for the target tool.
+  async function unzipBlob(blob) {
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    const files = [];
+    let p = 0;
+    const dec = new TextDecoder('utf-8');
+    while (p < buf.length - 4) {
+      const sig = buf[p] | (buf[p+1] << 8) | (buf[p+2] << 16) | (buf[p+3] << 24);
+      if (sig !== 0x04034b50) break;  // stop at central directory
+      const method = buf[p+8] | (buf[p+9] << 8);
+      const compSize = (buf[p+18] | (buf[p+19]<<8) | (buf[p+20]<<16) | (buf[p+21]<<24)) >>> 0;
+      const nameLen = buf[p+26] | (buf[p+27] << 8);
+      const extraLen = buf[p+28] | (buf[p+29] << 8);
+      const nameStart = p + 30;
+      const name = dec.decode(buf.slice(nameStart, nameStart + nameLen));
+      const dataStart = nameStart + nameLen + extraLen;
+      const data = buf.slice(dataStart, dataStart + compSize);
+      let raw;
+      if (method === 0) {
+        raw = data;
+      } else if (method === 8) {
+        const cs = new DecompressionStream('deflate-raw');
+        const w = cs.writable.getWriter();
+        w.write(data); w.close();
+        raw = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+      } else {
+        throw new Error('unsupported zip method: ' + method);
+      }
+      const extMatch = name.match(/\.[^./]+$/);
+      const ext = extMatch ? extMatch[0].toLowerCase() : '';
+      const mime = ({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.json':'application/json','.txt':'text/plain'})[ext] || 'application/octet-stream';
+      files.push(new File([raw], name, { type: mime }));
+      p = dataStart + compSize;
+    }
+    return files;
+  }
+
+  // ---------- cross-tool handoff (via IndexedDB — handles large blobs that sessionStorage can't) ----------
+  const HANDOFF_KEY = 'toolkit:handoff';
+  const IDB_DB = 'toolkit';
+  const IDB_STORE = 'handoff';
+
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_DB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+          req.result.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbPut(key, value) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  }
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => { db.close(); resolve(req.result); };
+      req.onerror = () => { db.close(); reject(req.error); };
+    });
+  }
+  async function idbDelete(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  }
+
+  // Pure relative path: build it based on whether we're already in /tools/ subfolder.
+  function toolUrl(toolId) {
+    const inSubdir = window.location.pathname.includes('/tools/');
+    const prefix = inSubdir ? './' : './tools/';
+    return prefix + toolId + '.html';
+  }
+
+  async function sendTo(toolId, blob, fileName) {
+    try {
+      await idbPut(HANDOFF_KEY, {
+        toolId, fileName: fileName || 'handoff',
+        blob,  // IndexedDB can store Blob directly — no dataURL encoding!
+        ts: Date.now()
+      });
+    } catch (e) {
+      toast('IndexedDB 写入失败: ' + e.message, 'err', 6000);
+      throw e;
+    }
+    location.href = toolUrl(toolId);
+  }
+
+  // Tool pages call this on load to check if there's a pending handoff for them.
+  async function consumeHandoff(toolId) {
+    let data;
+    try { data = await idbGet(HANDOFF_KEY); } catch { return null; }
+    if (!data || data.toolId !== toolId) return null;
+    try { await idbDelete(HANDOFF_KEY); } catch {}
+    const blob = data.blob;
+    return new File([blob], data.fileName, { type: blob.type || 'application/octet-stream' });
+  }
+
+  // ---------- paste image from clipboard (Ctrl+V) ----------
+  // Returns a Promise<File|null>. Listens once for paste event.
+  function attachPasteImage(onImageFile) {
+    document.addEventListener('paste', (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const it of items) {
+        if (it.type.startsWith('image/')) {
+          const blob = it.getAsFile();
+          if (blob) onImageFile(blob);
+          return;
+        }
+      }
+    });
+  }
+
+  // ---------- demo data: synthetic images / audio for users without sample files ----------
+  function demoSpritesheet(frameCount = 8, frameSize = 80) {
+    const cols = Math.ceil(Math.sqrt(frameCount));
+    const rows = Math.ceil(frameCount / cols);
+    const cv = document.createElement('canvas');
+    cv.width = cols * frameSize; cv.height = rows * frameSize;
+    const ctx = cv.getContext('2d');
+    for (let i = 0; i < frameCount; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      const x = c * frameSize, y = r * frameSize;
+      ctx.fillStyle = `hsl(${i * (360/frameCount)}, 70%, 55%)`;
+      ctx.beginPath();
+      ctx.arc(x + frameSize/2, y + frameSize/2, frameSize * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = `bold ${frameSize * 0.3}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), x + frameSize/2, y + frameSize/2);
+    }
+    return new Promise(r => cv.toBlob(r, 'image/png'));
+  }
+
+  async function demoFrames(count = 8, size = 80) {
+    const blobs = [];
+    for (let i = 0; i < count; i++) {
+      const cv = document.createElement('canvas');
+      cv.width = size; cv.height = size;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = `hsl(${i * (360/count)}, 70%, 55%)`;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${size * 0.3}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), size/2, size/2);
+      const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+      blobs.push(new File([blob], `demo_frame_${String(i).padStart(3, '0')}.png`, { type: 'image/png' }));
+    }
+    return blobs;
+  }
+
+  async function demoPhotoLike() {
+    const cv = document.createElement('canvas');
+    cv.width = 480; cv.height = 320;
+    const ctx = cv.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 480, 320);
+    grad.addColorStop(0, '#2c3e50'); grad.addColorStop(1, '#3498db');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 480, 320);
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `hsla(${Math.random()*360}, 70%, 65%, ${Math.random()*0.5+0.3})`;
+      ctx.beginPath();
+      ctx.arc(Math.random()*480, Math.random()*320, Math.random()*40+10, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 38px sans-serif';
+    ctx.fillText('Demo Image', 130, 175);
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    return new File([blob], 'demo.png', { type: 'image/png' });
+  }
+
+  // ---------- ESM dynamic import with timeout + nice error ----------
+  async function importWithTimeout(url, label = url, timeoutMs = 15000) {
+    return Promise.race([
+      import(/* @vite-ignore */ url).catch(err => {
+        toast(`${label} 加载失败: ${err.message}\n可能是 CDN 暂时不可用,稍后重试`, 'err', 8000);
+        throw err;
+      }),
+      new Promise((_, reject) => setTimeout(() => {
+        toast(`${label} 加载超时 (>${timeoutMs/1000}s),检查网络或换 CDN`, 'err', 8000);
+        reject(new Error(`${label} 加载超时`));
+      }, timeoutMs))
+    ]);
+  }
+
+  // ---------- format size ----------
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  // ---------- minimal ZIP writer (STORE only — fine for PNGs which are already compressed) ----------
+  // files: [{ name: string, data: Uint8Array }]
+  function makeZip(files) {
+    const enc = new TextEncoder();
+    const chunks = [];
+    const centralEntries = [];
+    let offset = 0;
+    const now = new Date();
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+
+    for (const f of files) {
+      const nameBytes = enc.encode(f.name);
+      const crc = crc32(f.data);
+      const size = f.data.length;
+
+      // local file header
+      const lh = new Uint8Array(30 + nameBytes.length);
+      const dv = new DataView(lh.buffer);
+      dv.setUint32(0, 0x04034b50, true);
+      dv.setUint16(4, 20, true);
+      dv.setUint16(6, 0, true);
+      dv.setUint16(8, 0, true);  // method = store
+      dv.setUint16(10, dosTime, true);
+      dv.setUint16(12, dosDate, true);
+      dv.setUint32(14, crc, true);
+      dv.setUint32(18, size, true);
+      dv.setUint32(22, size, true);
+      dv.setUint16(26, nameBytes.length, true);
+      dv.setUint16(28, 0, true);
+      lh.set(nameBytes, 30);
+      chunks.push(lh, f.data);
+
+      // central directory entry
+      const cd = new Uint8Array(46 + nameBytes.length);
+      const cdv = new DataView(cd.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(4, 20, true);
+      cdv.setUint16(6, 20, true);
+      cdv.setUint16(8, 0, true);
+      cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, dosTime, true);
+      cdv.setUint16(14, dosDate, true);
+      cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, size, true);
+      cdv.setUint32(24, size, true);
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint32(42, offset, true);
+      cd.set(nameBytes, 46);
+      centralEntries.push(cd);
+
+      offset += lh.length + f.data.length;
+    }
+
+    const cdStart = offset;
+    let cdSize = 0;
+    for (const c of centralEntries) { chunks.push(c); cdSize += c.length; }
+
+    const eocd = new Uint8Array(22);
+    const ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true);
+    ev.setUint16(10, files.length, true);
+    ev.setUint32(12, cdSize, true);
+    ev.setUint32(16, cdStart, true);
+    chunks.push(eocd);
+
+    return new Blob(chunks, { type: 'application/zip' });
+  }
+
+  function crc32(data) {
+    let table = crc32._t;
+    if (!table) {
+      table = crc32._t = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c;
+      }
+    }
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  window.Toolkit = {
+    TOOLS,
+    injectTopbar,
+    $,
+    injectInstructions,
+    makeLogger,
+    makeProgress,
+    attachDropZone,
+    naturalSort,
+    download,
+    downloadText,
+    downloadJson,
+    newCanvas,
+    canvasToBlob,
+    fmtBytes,
+    makeZip,
+    Prefs,
+    toast,
+    installErrorBoundary,
+    importWithTimeout,
+    makeCompareSlider,
+    sendTo,
+    consumeHandoff,
+    setupHandoff,
+    findTargetsFor,
+    unzipBlob,
+    attachEyeDropper,
+    autoAttachEyeDroppers,
+    attachPasteImage,
+    demoSpritesheet,
+    demoFrames,
+    demoPhotoLike
+  };
+})();

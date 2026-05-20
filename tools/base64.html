@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Base64 工具 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab-row button {
+    flex: 1;
+    background: transparent;
+    color: var(--text-soft);
+    padding: 8px 0;
+    font-size: 12px;
+    border-radius: calc(var(--radius-sm) - 3px);
+    box-shadow: none;
+  }
+  .tab-row button.active {
+    background: var(--jade);
+    color: #0a1a14;
+  }
+  .tab-row button:hover { transform: none; }
+  textarea.output {
+    width: 100%;
+    min-height: 240px;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    resize: vertical;
+    word-break: break-all;
+  }
+  .preview-mini {
+    background: var(--checker), #0a0a0c;
+    background-size: 14px 14px;
+    background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+    margin-top: 8px;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-mini img, .preview-mini canvas { max-width: 100%; max-height: 240px; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔤 Base64</h1>
+
+    <div class="tab-row">
+      <button data-tab="encode" class="active" type="button">📦 编码</button>
+      <button data-tab="decode" type="button">📤 解码</button>
+    </div>
+
+    <div id="encodePanel">
+      <div class="drop-zone" id="dropZone">
+        <p>📂 拖入任意文件</p>
+        <p class="hint">图片 / 字体 / JSON / 二进制都行</p>
+        <input type="file" id="fileInput" style="display:none" />
+      </div>
+      <h2>编码格式</h2>
+      <div class="field">
+        <select id="encodeFormat">
+          <option value="dataurl">dataURL (带 MIME 前缀, 可直接用)</option>
+          <option value="base64">纯 base64 字符串</option>
+          <option value="binary">二进制 / hex 字节预览</option>
+        </select>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" id="wrap" />
+        <span>每 76 字符换行 (RFC 标准格式)</span>
+      </label>
+
+      <h2>结果</h2>
+      <button id="copyBtn" disabled>复制到剪贴板</button>
+      <button id="downloadTextBtn" class="secondary" disabled>下载为 .txt</button>
+    </div>
+
+    <div id="decodePanel" style="display:none">
+      <h2>输入</h2>
+      <div class="field">
+        <label>粘贴 base64 / dataURL</label>
+        <textarea id="decodeInput" rows="6" style="font-family: ui-monospace, monospace; font-size: 11px;"></textarea>
+      </div>
+      <div class="field">
+        <label>文件名 (无扩展自动检测)</label>
+        <input type="text" id="decodeName" value="decoded" />
+      </div>
+      <button id="decodeBtn">解码 → 下载</button>
+      <button id="previewBtn" class="secondary">解码 + 预览</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div>
+      <h2 style="margin-top:0">输出</h2>
+      <textarea id="output" class="output" readonly placeholder="拖入文件后这里显示 base64 / dataURL"></textarea>
+      <div class="preview-mini" id="previewBox" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('base64');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, downloadText, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let lastFile = null;
+  let lastOutput = '';
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  Toolkit.setupHandoff('base64', { outputType: 'application/octet-stream' });
+
+  document.querySelectorAll('.tab-row button').forEach(b => {
+    b.addEventListener('click', () => {
+      const t = b.dataset.tab;
+      document.querySelectorAll('.tab-row button').forEach(x => x.classList.toggle('active', x === b));
+      $('encodePanel').style.display = t === 'encode' ? '' : 'none';
+      $('decodePanel').style.display = t === 'decode' ? '' : 'none';
+    });
+  });
+
+  $('encodeFormat').addEventListener('change', () => { if (lastFile) encodeFile(lastFile); });
+  $('wrap').addEventListener('change', () => { if (lastFile) encodeFile(lastFile); });
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    lastFile = files[0];
+    log.clear();
+    log.dim(`加载 ${lastFile.name} (${fmtBytes(lastFile.size)})...`);
+    await encodeFile(lastFile);
+  }
+
+  async function encodeFile(file) {
+    const fmt = $('encodeFormat').value;
+    const buf = await file.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    let result;
+    if (fmt === 'binary') {
+      result = Array.from(u8.slice(0, 4096))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join(' ');
+      if (u8.length > 4096) result += `\n\n... (${u8.length - 4096} more bytes)`;
+    } else {
+      // base64 encode
+      let bin = '';
+      for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+      const b64 = btoa(bin);
+      let body = b64;
+      if ($('wrap').checked) {
+        body = b64.match(/.{1,76}/g).join('\n');
+      }
+      result = fmt === 'dataurl' ? `data:${file.type || 'application/octet-stream'};base64,${body}` : body;
+    }
+    lastOutput = result;
+    $('output').value = result;
+    $('stats').innerHTML = `<strong>${file.name}</strong> · 原 <strong>${fmtBytes(file.size)}</strong> · 编码后 <strong>${fmtBytes(result.length)}</strong> (+${((result.length - file.size) / file.size * 100).toFixed(1)}%)`;
+    $('copyBtn').disabled = false;
+    $('downloadTextBtn').disabled = false;
+    // image preview if applicable
+    if (file.type.startsWith('image/') && fmt !== 'binary') {
+      const box = $('previewBox');
+      box.style.display = 'flex';
+      box.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = fmt === 'dataurl' ? result : `data:${file.type};base64,${result}`;
+      box.appendChild(img);
+    } else {
+      $('previewBox').style.display = 'none';
+    }
+    log.ok('编码完成');
+  }
+
+  $('copyBtn').addEventListener('click', async () => {
+    if (!lastOutput) return;
+    try {
+      await navigator.clipboard.writeText(lastOutput);
+      log.ok('已复制到剪贴板');
+    } catch (e) {
+      // fallback
+      $('output').select();
+      document.execCommand('copy');
+      log.ok('已复制(使用兼容模式)');
+    }
+  });
+
+  $('downloadTextBtn').addEventListener('click', () => {
+    if (!lastOutput || !lastFile) return;
+    const name = lastFile.name + '.base64.txt';
+    downloadText(lastOutput, name, 'text/plain');
+    log.ok('已下载 ' + name);
+  });
+
+  // ----- decode -----
+  $('decodeBtn').addEventListener('click', () => decodeAndDownload(false));
+  $('previewBtn').addEventListener('click', () => decodeAndDownload(true));
+
+  function decodeAndDownload(previewOnly) {
+    const raw = $('decodeInput').value.trim();
+    if (!raw) { log.err('请粘贴 base64 内容'); return; }
+    try {
+      let b64 = raw, mime = 'application/octet-stream';
+      const m = raw.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);
+      if (m) {
+        mime = m[1];
+        b64 = m[2];
+      }
+      b64 = b64.replace(/\s+/g, '');
+      const bin = atob(b64);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const blob = new Blob([u8], { type: mime });
+      const name = ($('decodeName').value || 'decoded').replace(/[^\w.-]/g, '_');
+      const ext = mimeToExt(mime);
+      if (previewOnly) {
+        const box = $('previewBox');
+        box.style.display = 'flex';
+        box.innerHTML = '';
+        if (mime.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          box.appendChild(img);
+        } else {
+          box.innerHTML = `<div class="muted small">${mime}<br/>${fmtBytes(blob.size)}<br/>(无法预览,请下载)</div>`;
+        }
+        log.ok(`解码完成 ${fmtBytes(blob.size)} (${mime})`);
+      } else {
+        download(blob, name + (name.includes('.') ? '' : ext));
+        log.ok(`已下载 ${name}${ext} (${fmtBytes(blob.size)})`);
+      }
+    } catch (e) {
+      log.err('解码失败: ' + e.message);
+    }
+  }
+
+  function mimeToExt(mime) {
+    const map = {
+      'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/gif': '.gif', 'image/svg+xml': '.svg',
+      'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav',
+      'video/mp4': '.mp4', 'video/webm': '.webm',
+      'application/json': '.json', 'text/plain': '.txt', 'text/html': '.html', 'text/css': '.css',
+      'application/javascript': '.js', 'font/woff2': '.woff2', 'font/woff': '.woff', 'font/ttf': '.ttf'
+    };
+    return map[mime] || '.bin';
+  }
+})();
+</script>
+</body>
+</html>
