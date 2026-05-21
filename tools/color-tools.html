@@ -262,7 +262,8 @@
     </div>
     <button id="applyBtn" disabled>应用 (当前图)</button>
     <button id="batchPreviewBtn" class="secondary" disabled style="display:none">👁 预览所有调色结果</button>
-    <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用 → 下载 ZIP</button>
+    <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用 (生成 ZIP)</button>
+    <button id="batchDownloadZipBtn" class="secondary" disabled style="display:none">💾 下载批量 ZIP</button>
     <button id="downloadBtn" class="secondary" disabled>下载图片</button>
     <button id="downloadPaletteBtn" class="secondary" disabled>下载调色板</button>
     <button id="clearBtn" class="secondary">清空</button>
@@ -317,6 +318,8 @@ Toolkit.injectTopbar('color-tools');
 
   // batch mode: array of File objects (first one mirrors srcBitmap for preview)
   let batchFiles = [];
+  let batchOutBlob = null;
+  let batchOutName = null;
   let fflateMod = null;
   // actions that make sense to batch — others (brush/picker/palette) are per-image only
   const BATCH_ACTIONS = new Set(['transparent', 'replace', 'quantize']);
@@ -399,15 +402,18 @@ Toolkit.injectTopbar('color-tools');
   function updateBatchBtn() {
     const btn = $('batchApplyBtn');
     const previewBtn = $('batchPreviewBtn');
+    const dlBtn = $('batchDownloadZipBtn');
     const action = $('action')?.value;
     const eligible = batchFiles.length > 1 && BATCH_ACTIONS.has(action);
     btn.style.display = batchFiles.length > 1 ? '' : 'none';
     btn.disabled = !eligible;
     btn.textContent = eligible
-      ? `📦 批量应用 ${batchFiles.length} 张 → 下载 ZIP`
+      ? `📦 批量应用 ${batchFiles.length} 张 (生成 ZIP)`
       : `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`;
     previewBtn.style.display = batchFiles.length > 1 ? '' : 'none';
     previewBtn.disabled = !eligible;
+    dlBtn.style.display = batchFiles.length > 1 ? '' : 'none';
+    // dlBtn stays disabled until batch produces an outBlob
     // hide preview area when leaving batch mode
     if (batchFiles.length <= 1) $('batchPreviewArea').style.display = 'none';
   }
@@ -1075,6 +1081,9 @@ Toolkit.injectTopbar('color-tools');
     srcBitmap = null; srcCanvas = null; srcImageData = null;
     outBlob = null; lastPalette = null;
     batchFiles = [];
+    batchOutBlob = null;
+    batchOutName = null;
+    $('batchDownloadZipBtn').disabled = true;
     renderBatchList();
     updateBatchBtn();
     $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
@@ -1214,9 +1223,12 @@ Toolkit.injectTopbar('color-tools');
       const zipped = await new Promise((rs, rj) => fflateMod.zip(zipData, (err, out) => err ? rj(err) : rs(out)));
       const zipBlob = new Blob([zipped], { type: 'application/zip' });
       const outName = ($('filename').value || 'batch') + '.zip';
-      download(zipBlob, outName);
+      batchOutBlob = zipBlob;
+      batchOutName = outName;
+      $('batchDownloadZipBtn').disabled = false;
       handoff?.setBlob(zipBlob, outName, 'application/zip');
       log.ok(`完成 · ${Object.keys(zipData).length} 张 · 原 ${fmtBytes(totalIn)} → ${fmtBytes(totalOut)} → ZIP ${fmtBytes(zipBlob.size)}`);
+      log.dim('点 "💾 下载批量 ZIP" 保存,或点 "📤 发送到下一个工具"');
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -1224,6 +1236,12 @@ Toolkit.injectTopbar('color-tools');
       $('batchApplyBtn').disabled = false;
       $('applyBtn').disabled = false;
     }
+  });
+
+  $('batchDownloadZipBtn').addEventListener('click', () => {
+    if (!batchOutBlob || !batchOutName) return;
+    download(batchOutBlob, batchOutName);
+    log.dim(`已下载 ${batchOutName}`);
   });
 
   // ===== shared transforms (used by both single apply and batch) =====
