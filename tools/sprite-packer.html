@@ -327,8 +327,11 @@ Toolkit.injectTopbar('sprite-packer');
 
     const out = newCanvas(finalW, finalH);
     const octx = out.getContext('2d');
-    const xOff = [margin]; for (let i = 1; i < cols; i++) xOff.push(xOff[i-1] + colWidths[i-1] + padding);
-    const yOff = [margin]; for (let i = 1; i < rows; i++) yOff.push(yOff[i-1] + rowHeights[i-1] + padding);
+    // center the actual sheet content within the (possibly enlarged) final canvas
+    const padX = Math.floor((finalW - sheetW) / 2);
+    const padY = Math.floor((finalH - sheetH) / 2);
+    const xOff = [margin + padX]; for (let i = 1; i < cols; i++) xOff.push(xOff[i-1] + colWidths[i-1] + padding);
+    const yOff = [margin + padY]; for (let i = 1; i < rows; i++) yOff.push(yOff[i-1] + rowHeights[i-1] + padding);
 
     const meta = [];
     processed.forEach((p, i) => {

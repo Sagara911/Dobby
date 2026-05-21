@@ -597,7 +597,7 @@
     'png-crusher':     ['image/png','image/jpeg','image/webp','application/zip'],
     'gif-tools':       ['image/png','image/jpeg','image/gif','application/zip'],
     'image-editor':    ['image/png','image/jpeg','image/webp','image/gif'],
-    'color-tools':     ['image/png','image/jpeg','image/webp'],
+    'color-tools':     ['image/png','image/jpeg','image/webp','application/zip'],
     'ai-cutout':       ['image/png','image/jpeg','image/webp','application/zip'],
     'watermark-remove':['image/png','image/jpeg','image/webp'],
     'video-toolkit':   ['video/*'],
