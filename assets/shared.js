@@ -198,14 +198,10 @@
           `;
         }).join('')}
       </nav>
-      <div class="meta">
-        <button type="button" class="settings-btn" title="设置 (主题 / 鼠标)" aria-label="设置">⚙️</button>
-        <span class="meta-text">本地处理</span>
-      </div>
+      <div class="meta">本地处理</div>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
-    bar.querySelector('.settings-btn')?.addEventListener('click', openSettingsModal);
     // mouse-following glow (sets --mx / --my CSS variables)
     bar.addEventListener('mousemove', (e) => {
       const r = bar.getBoundingClientRect();
@@ -254,27 +250,55 @@
   }
 
   // ============================================================
-  //   Settings: theme + custom cursor (persisted in localStorage)
+  //   Auto theme cycling + cursor loaded from assets/cursor.*
+  //   (no user settings — pure visual sugar)
   // ============================================================
-  const THEME_KEY = 'toolkit-theme';
-  const CURSOR_KEY = 'toolkit-cursor';
-  const THEMES = [
-    { id: 'default', name: '🌑 黑绿(默认)', sample: { bg: '#000', fg: '#31f59c' } },
-    { id: 'light',   name: '☀️ 浅色',       sample: { bg: '#f4f5f8', fg: '#0e9a5c' } },
-    { id: 'blue',    name: '🌊 深蓝',       sample: { bg: '#06101e', fg: '#4ab0ff' } },
-    { id: 'pink',    name: '🌸 樱花粉',     sample: { bg: '#1a0c14', fg: '#ff5b8c' } }
-  ];
 
-  function applySavedSettings() {
-    let theme = null, cursor = null;
-    try { theme = localStorage.getItem(THEME_KEY); } catch (_) {}
-    try { cursor = localStorage.getItem(CURSOR_KEY); } catch (_) {}
-    if (theme && THEMES.some(t => t.id === theme) && theme !== 'default') {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
+  // four palettes the page tweens between, forever.
+  // numbers are RGB. timing: each entry stays "dominant" for THEME_SECS_PER_STEP seconds,
+  // total cycle = N * THEME_SECS_PER_STEP.
+  const THEME_CYCLE = [
+    { bg: [0, 0, 0],     jade: [49, 245, 156], text: [248, 248, 251], soft: [194, 199, 214], champagne: [242, 223, 184] },
+    { bg: [6, 16, 30],   jade: [74, 176, 255], text: [234, 242, 255], soft: [184, 200, 224], champagne: [255, 217, 122] },
+    { bg: [26, 12, 20],  jade: [255, 91, 140], text: [255, 238, 245], soft: [236, 196, 214], champagne: [255, 208, 224] },
+    { bg: [10, 26, 18],  jade: [80, 220, 130], text: [232, 252, 240], soft: [192, 220, 200], champagne: [220, 240, 180] }
+  ];
+  const THEME_SECS_PER_STEP = 14;
+
+  function startThemeCycle() {
+    const lerp = (x, y, t) => Math.round(x + (y - x) * t);
+    const rt = document.documentElement.style;
+    function tick(now) {
+      const tt = (now / 1000 / THEME_SECS_PER_STEP) % THEME_CYCLE.length;
+      const i = Math.floor(tt);
+      const f = tt - i;
+      const ff = f * f * (3 - 2 * f); // smoothstep
+      const a = THEME_CYCLE[i];
+      const b = THEME_CYCLE[(i + 1) % THEME_CYCLE.length];
+      const jr = lerp(a.jade[0], b.jade[0], ff);
+      const jg = lerp(a.jade[1], b.jade[1], ff);
+      const jb = lerp(a.jade[2], b.jade[2], ff);
+      const jc = `${jr}, ${jg}, ${jb}`;
+      rt.setProperty('--jade', `rgb(${jc})`);
+      rt.setProperty('--jade-rgb', jc);
+      rt.setProperty('--jade-soft', `rgba(${jc}, 0.12)`);
+      rt.setProperty('--jade-glow', `rgba(${jc}, 0.35)`);
+      rt.setProperty('--accent', `rgb(${jc})`);
+      rt.setProperty('--accent-soft', `rgba(${jc}, 0.12)`);
+      rt.setProperty('--success', `rgb(${jc})`);
+      const rgbProp = (key) => {
+        const r = lerp(a[key][0], b[key][0], ff);
+        const g = lerp(a[key][1], b[key][1], ff);
+        const bl = lerp(a[key][2], b[key][2], ff);
+        return `rgb(${r}, ${g}, ${bl})`;
+      };
+      rt.setProperty('--bg', rgbProp('bg'));
+      rt.setProperty('--text', rgbProp('text'));
+      rt.setProperty('--text-soft', rgbProp('soft'));
+      rt.setProperty('--champagne', rgbProp('champagne'));
+      requestAnimationFrame(tick);
     }
-    applyCursor(cursor);
+    requestAnimationFrame(tick);
   }
 
   function applyCursor(dataUrl) {
@@ -288,128 +312,34 @@
       style.id = '__toolkit_cursor_style__';
       document.head.appendChild(style);
     }
-    // hot-spot at center is too far from the actual click point on a typical arrow,
-    // so we anchor at (0,0); users can pre-trim the PNG so the tip is top-left.
+    // hot-spot anchored top-left (0,0); shape the PNG so the tip lands there
     style.textContent = `html, body, * { cursor: url("${dataUrl}") 0 0, auto !important; }`;
   }
 
-  function setTheme(themeId) {
-    if (themeId === 'default') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', themeId);
-    }
-    try { localStorage.setItem(THEME_KEY, themeId); } catch (_) {}
-  }
-
-  function setCursorFromFile(file) {
-    return new Promise((resolve, reject) => {
-      if (!file || !/^image\//.test(file.type)) {
-        reject(new Error('请选 PNG / SVG / WebP / GIF 之类的图片'));
-        return;
-      }
-      if (file.size > 256 * 1024) {
-        reject(new Error('图片过大,请用 <256 KB 的图(浏览器对 cursor 有大小限制)'));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('读取失败'));
-      reader.onload = () => {
-        const dataUrl = reader.result;
-        // browsers usually cap cursor at ~128x128. We don't downscale here, just trust the user.
-        try { localStorage.setItem(CURSOR_KEY, dataUrl); } catch (_) {}
-        applyCursor(dataUrl);
-        resolve(dataUrl);
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function clearCustomCursor() {
-    try { localStorage.removeItem(CURSOR_KEY); } catch (_) {}
-    applyCursor(null);
-  }
-
-  function openSettingsModal() {
-    if (document.getElementById('__toolkitSettingsModal__')) return;
-    const wrap = document.createElement('div');
-    wrap.id = '__toolkitSettingsModal__';
-    wrap.className = 'toolkit-settings-modal';
-    let currentTheme = 'default';
-    try { currentTheme = localStorage.getItem(THEME_KEY) || 'default'; } catch (_) {}
-    let currentCursor = null;
-    try { currentCursor = localStorage.getItem(CURSOR_KEY); } catch (_) {}
-
-    wrap.innerHTML = `
-      <div class="ts-card" role="dialog" aria-modal="true">
-        <div class="ts-head">
-          <h2>⚙️ 设置</h2>
-          <button type="button" class="ts-close" aria-label="关闭">×</button>
-        </div>
-        <div class="ts-section">
-          <h3>主题</h3>
-          <div class="ts-themes">
-            ${THEMES.map(t => `
-              <button type="button" class="ts-theme${t.id === currentTheme ? ' active' : ''}" data-theme="${t.id}">
-                <span class="ts-swatch" style="background: linear-gradient(135deg, ${t.sample.bg} 50%, ${t.sample.fg} 50%)"></span>
-                <span>${t.name}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="ts-section">
-          <h3>自定义鼠标指针</h3>
-          <div class="ts-cursor-row">
-            <div class="ts-cursor-preview" style="${currentCursor ? `background-image: url('${currentCursor}')` : ''}"></div>
-            <div style="flex:1">
-              <button type="button" class="ts-cursor-upload">📂 选图片(PNG / SVG / WebP,&lt; 128×128 最佳)</button>
-              <input type="file" class="ts-cursor-input" accept="image/*" style="display:none" />
-              <button type="button" class="ts-cursor-reset secondary">↺ 重置为系统默认</button>
-            </div>
-          </div>
-          <div class="ts-hint">指针图建议透明 PNG / SVG,点击点(hot spot)默认在左上角。修改对所有工具页面生效。</div>
-        </div>
-        <div class="ts-foot">
-          <button type="button" class="ts-done">完成</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(wrap);
-
-    const close = () => { wrap.remove(); document.removeEventListener('keydown', onKey); };
-    const onKey = (e) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', onKey);
-    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
-    wrap.querySelector('.ts-close').addEventListener('click', close);
-    wrap.querySelector('.ts-done').addEventListener('click', close);
-
-    wrap.querySelectorAll('.ts-theme').forEach(b => {
-      b.addEventListener('click', () => {
-        const id = b.dataset.theme;
-        setTheme(id);
-        wrap.querySelectorAll('.ts-theme').forEach(x => x.classList.toggle('active', x === b));
-      });
-    });
-
-    const fileInput = wrap.querySelector('.ts-cursor-input');
-    const preview = wrap.querySelector('.ts-cursor-preview');
-    wrap.querySelector('.ts-cursor-upload').addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async () => {
-      const f = fileInput.files[0];
-      if (!f) return;
+  async function tryLoadCursorFromAssets() {
+    const prefix = window.location.pathname.includes('/tools/') ? '../' : '';
+    const candidates = ['cursor.png', 'cursor.svg', 'cursor.webp', 'cursor.gif'];
+    for (const name of candidates) {
       try {
-        const url = await setCursorFromFile(f);
-        preview.style.backgroundImage = `url('${url}')`;
-        toast('已应用自定义指针', 'ok', 2500);
-      } catch (e) {
-        toast(e.message, 'warn', 4000);
-      }
-    });
-    wrap.querySelector('.ts-cursor-reset').addEventListener('click', () => {
-      clearCustomCursor();
-      preview.style.backgroundImage = '';
-      toast('已恢复系统默认指针', 'ok', 2000);
-    });
+        const resp = await fetch(prefix + 'assets/' + name, { cache: 'no-cache' });
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        const dataUrl = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result);
+          fr.onerror = rej;
+          fr.readAsDataURL(blob);
+        });
+        applyCursor(dataUrl);
+        return;
+      } catch (_) { /* try next candidate */ }
+    }
+    // no cursor file present → leave system default
+  }
+
+  function applySavedSettings() {
+    startThemeCycle();
+    tryLoadCursorFromAssets();
   }
 
   // ---------- PWA: inject manifest link + register service worker ----------
