@@ -171,13 +171,14 @@
       <h2>操作</h2>
       <div class="field">
         <select id="editAction">
+          <option value="compress">🗜️ 一键压缩 (缩放+减色+抽帧)</option>
           <option value="resize">📐 缩放 (Resize)</option>
           <option value="crop">✂️ 裁剪 (Crop)</option>
           <option value="speed">⏩ 调速 (Speed)</option>
           <option value="reverse">⏪ 反向播放 (Reverse)</option>
           <option value="trim">✄ 删帧 (Trim)</option>
           <option value="dropFrames">⊘ 抽帧降 FPS</option>
-          <option value="optimize">📦 优化 (减色)</option>
+          <option value="optimize">📦 优化 (仅减色)</option>
           <option value="watermark">📝 加文字水印</option>
           <option value="filter">🎚️ 滤镜 / 色相</option>
         </select>
@@ -444,6 +445,7 @@ Toolkit.injectTopbar('gif-tools');
   // ============================================================
   let editSrcFrames = [];
   let editSrcWidth = 0, editSrcHeight = 0, editSrcFps = 12;
+  let editSrcSize = 0;
   let editLastBlob = null;
 
   attachDropZone($('editDropZone'), $('editFileInput'), handleEditFiles);
@@ -470,6 +472,7 @@ Toolkit.injectTopbar('gif-tools');
     editSrcFrames = frames;
     editSrcWidth = frames[0].w;
     editSrcHeight = frames[0].h;
+    editSrcSize = fileOrBlob?.size || 0;
     const avgDuration = frames.reduce((s, fr) => s + (fr.duration || 100000), 0) / frames.length;
     editSrcFps = Math.round(1e6 / avgDuration);
     log.ok(`解码完成 ${frames.length} 帧 · ${editSrcWidth}×${editSrcHeight} · ≈${editSrcFps} FPS`);
@@ -502,12 +505,69 @@ Toolkit.injectTopbar('gif-tools');
     });
   }
 
+  const CMP_PRESETS = {
+    light:  { scale: 100, bits: 6, dropN: 1 },
+    med:    { scale: 75,  bits: 5, dropN: 1 },
+    heavy:  { scale: 50,  bits: 4, dropN: 2 },
+  };
+
   function renderEditActionControls() {
     const action = $('editAction').value;
     const c = $('editActionControls');
     const w = editSrcWidth, h = editSrcHeight;
     if (!editSrcFrames.length) { c.innerHTML = '<div class="info">先拖入一个 GIF</div>'; return; }
-    if (action === 'resize') {
+    if (action === 'compress') {
+      const p = CMP_PRESETS.med;
+      c.innerHTML = `
+        <div class="field">
+          <label>预设</label>
+          <select id="editCmpPreset">
+            <option value="light">轻度 (仅减色, ~30% 节省)</option>
+            <option value="med" selected>中度 推荐 (缩 75% + 减色, ~60% 节省)</option>
+            <option value="heavy">重度 (缩 50% + 减色 + 抽帧, ~85% 节省)</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>缩放比例 <span id="editCmpScaleVal" class="mono">${p.scale}%</span></label>
+          <input type="range" id="editCmpScale" min="25" max="100" value="${p.scale}" step="5" />
+        </div>
+        <div class="field">
+          <label>色彩位深 (每通道)</label>
+          <select id="editCmpBits">
+            <option value="8">8 bit (原始)</option>
+            <option value="6" ${p.bits===6?'selected':''}>6 bit</option>
+            <option value="5" ${p.bits===5?'selected':''}>5 bit</option>
+            <option value="4" ${p.bits===4?'selected':''}>4 bit</option>
+            <option value="3" ${p.bits===3?'selected':''}>3 bit (海报感)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>抽帧 (保留每 N 帧)</label>
+          <select id="editCmpDropN">
+            <option value="1" ${p.dropN===1?'selected':''}>不抽帧</option>
+            <option value="2" ${p.dropN===2?'selected':''}>每 2 帧保留 1 (FPS 减半)</option>
+            <option value="3" ${p.dropN===3?'selected':''}>每 3 帧保留 1</option>
+            <option value="4" ${p.dropN===4?'selected':''}>每 4 帧保留 1</option>
+          </select>
+        </div>
+        <div class="info">选预设会自动填三项;改任意一项会切到"自定义"</div>
+      `;
+      const applyPreset = (name) => {
+        const v = CMP_PRESETS[name]; if (!v) return;
+        $('editCmpScale').value = v.scale;
+        $('editCmpScaleVal').textContent = v.scale + '%';
+        $('editCmpBits').value = String(v.bits);
+        $('editCmpDropN').value = String(v.dropN);
+      };
+      $('editCmpPreset').addEventListener('change', e => applyPreset(e.target.value));
+      $('editCmpScale').addEventListener('input', e => {
+        $('editCmpScaleVal').textContent = e.target.value + '%';
+        $('editCmpPreset').value = 'custom';
+      });
+      $('editCmpBits').addEventListener('change', () => { $('editCmpPreset').value = 'custom'; });
+      $('editCmpDropN').addEventListener('change', () => { $('editCmpPreset').value = 'custom'; });
+    } else if (action === 'resize') {
       c.innerHTML = `
         <div class="row-fields">
           <div class="field"><label>宽 (px)</label><input type="number" id="editNewW" value="${w}" min="1" /></div>
@@ -648,6 +708,13 @@ Toolkit.injectTopbar('gif-tools');
       });
       editLastBlob = blob;
       log.ok(`生成完成 ${fmtBytes(blob.size)}`);
+      if (editSrcSize > 0) {
+        const pct = Math.round((1 - blob.size / editSrcSize) * 100);
+        const arrow = pct >= 0 ? '↓' : '↑';
+        const sign = pct >= 0 ? '-' : '+';
+        const fn = pct >= 0 ? 'ok' : 'warn';
+        log[fn](`体积 ${fmtBytes(editSrcSize)} ${arrow} ${fmtBytes(blob.size)} (${sign}${Math.abs(pct)}%)`);
+      }
       const url = URL.createObjectURL(blob);
       $('editOutBox').innerHTML = '';
       const img = document.createElement('img');
@@ -668,7 +735,25 @@ Toolkit.injectTopbar('gif-tools');
   function editTransform(action) {
     let frames = editSrcFrames;
     let fps = editSrcFps;
-    if (action === 'resize') {
+    if (action === 'compress') {
+      const scale = parseInt($('editCmpScale').value, 10) / 100;
+      const bits = parseInt($('editCmpBits').value, 10);
+      const dropN = parseInt($('editCmpDropN').value, 10);
+      if (dropN > 1) {
+        frames = frames.filter((_, i) => i % dropN === 0);
+        fps = Math.max(1, Math.round(editSrcFps / dropN));
+      }
+      const newW = Math.max(1, Math.round(editSrcWidth * scale));
+      const newH = Math.max(1, Math.round(editSrcHeight * scale));
+      frames = frames.map(f => {
+        const cv = newCanvas(newW, newH);
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(f.bitmap, 0, 0, newW, newH);
+        if (bits < 8) quantizeColors(ctx, newW, newH, bits);
+        return { bitmap: cv, w: newW, h: newH };
+      });
+    } else if (action === 'resize') {
       const w = parseInt($('editNewW').value, 10), h = parseInt($('editNewH').value, 10);
       frames = frames.map(f => {
         const cv = newCanvas(w, h);
