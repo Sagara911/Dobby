@@ -219,6 +219,9 @@ Toolkit.injectTopbar('qr-gen');
       $('downloadPngBtn').disabled = false;
       $('downloadSvgBtn').disabled = false;
       $('stats').innerHTML = `<strong>${size}×${size}</strong> · ECC <strong>${ecc}</strong> · ${text.length} 字符`;
+      const pngBlob = await canvasToBlob(cv, 'image/png');
+      const fname = (($('filename').value || 'qrcode').replace(/[^\w-]/g, '_')) + '.png';
+      handoff?.setBlob(pngBlob, fname, 'image/png');
     } catch (e) {
       log.err(e.message);
       console.error(e);

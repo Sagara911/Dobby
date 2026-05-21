@@ -141,6 +141,7 @@ Toolkit.injectTopbar('code-minify');
   const log = makeLogger($('log'));
 
   let lang = 'css';
+  const handoff = Toolkit.setupHandoff('code-minify', { outputType: 'text/css' });
 
   // ---------- worker: do all minify off-thread so large files don't freeze the page ----------
   const worker = new Worker('../assets/code-minify.worker.js', { type: 'module' });
@@ -228,6 +229,11 @@ Toolkit.injectTopbar('code-minify');
       $('outputSize').textContent = fmtBytes(outSize);
       const pct = ((inSize - outSize) / inSize * 100);
       $('stats').innerHTML = `<strong>${fmtBytes(inSize)} → ${fmtBytes(outSize)}</strong> · 压缩率 <strong>${pct.toFixed(1)}%</strong>`;
+      const outMime = lang === 'css' ? 'text/css'
+                    : lang === 'html' ? 'text/html'
+                    : 'application/javascript';
+      const outExt = lang === 'js' ? '.min.js' : lang === 'html' ? '.min.html' : '.min.css';
+      handoff?.setBlob(new Blob([out], { type: outMime }), `output${outExt}`, outMime);
       $('copyBtn').disabled = false;
       $('downloadBtn').disabled = false;
       log.ok(`压缩完成: -${pct.toFixed(1)}%`);

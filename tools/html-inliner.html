@@ -159,6 +159,7 @@
 Toolkit.injectTopbar('html-inliner');
 
 (() => {
+  const handoff = Toolkit.setupHandoff('html-inliner', { outputType: 'text/html' });
   const { $, makeLogger, download, fmtBytes } = Toolkit;
   const log = makeLogger($('log'));
 
@@ -243,6 +244,9 @@ Toolkit.injectTopbar('html-inliner');
 
     const outText = await inlineHtml(srcText, entryDir, opts, stats);
     outputBlob = new Blob([outText], { type: 'text/html' });
+
+    const outName = (($('outputName').value || 'bundle').replace(/[^\w-]/g, '_')) + '.html';
+    handoff?.setBlob(outputBlob, outName, 'text/html');
 
     $('srcSize').textContent = fmtBytes(srcSize);
     $('outSize').textContent = fmtBytes(outputBlob.size);

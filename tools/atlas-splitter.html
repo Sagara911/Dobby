@@ -417,6 +417,7 @@ Toolkit.injectTopbar('atlas-splitter');
     }
     const zip = makeZip(files);
     download(zip, `${prefix}_frames.zip`);
+    handoff?.setBlob(zip, `${prefix}_frames.zip`, 'application/zip');
     log.ok(`已导出 ${files.length} 帧到 ZIP (${Toolkit.fmtBytes(zip.size)})`);
   });
 
@@ -446,6 +447,7 @@ Toolkit.injectTopbar('atlas-splitter');
       const prefix = ($('filePrefix').value || 'animation').replace(/[^\w-]/g, '_');
       const ext = fmt === 'gif' ? 'gif' : 'png';
       download(blob, `${prefix}.${ext}`);
+      handoff?.setBlob(blob, `${prefix}.${ext}`, fmt === 'gif' ? 'image/gif' : 'image/png');
       log.ok(`已导出 ${prefix}.${ext} (${Toolkit.fmtBytes(blob.size)})`);
     } catch (e) {
       log.err(e.message);

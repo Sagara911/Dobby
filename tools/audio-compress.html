@@ -346,6 +346,8 @@ Toolkit.injectTopbar('audio-compress');
       $('savingsStat').textContent = (pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1) + '%';
       $('outPlayer').src = URL.createObjectURL(blob);
       $('downloadBtn').disabled = false;
+      const fname = ($('filename')?.value || 'audio').replace(/[^\w-]/g, '_') + '.' + outExt;
+      handoff?.setBlob(blob, fname, blob.type || (outExt === 'wav' ? 'audio/wav' : 'audio/webm'));
       log.ok(`处理完成 ${fmtBytes(blob.size)} (${(pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1)}%)`);
     } catch (e) {
       log.err(e.message);

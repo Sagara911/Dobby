@@ -133,7 +133,7 @@ Toolkit.injectTopbar('base64');
   let lastOutput = '';
 
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
-  Toolkit.setupHandoff('base64', { outputType: 'application/octet-stream' });
+  const handoff = Toolkit.setupHandoff('base64', { outputType: 'application/octet-stream' });
 
   document.querySelectorAll('.tab-row button').forEach(b => {
     b.addEventListener('click', () => {
@@ -254,7 +254,9 @@ Toolkit.injectTopbar('base64');
         }
         log.ok(`解码完成 ${fmtBytes(blob.size)} (${mime})`);
       } else {
-        download(blob, name + (name.includes('.') ? '' : ext));
+        const outName = name + (name.includes('.') ? '' : ext);
+        download(blob, outName);
+        handoff?.setBlob(blob, outName, mime);
         log.ok(`已下载 ${name}${ext} (${fmtBytes(blob.size)})`);
       }
     } catch (e) {

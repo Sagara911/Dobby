@@ -358,6 +358,7 @@ Toolkit.injectTopbar('image-optimizer');
     }
     const zip = makeZip(files);
     download(zip, 'optimized.zip');
+    handoff?.setBlob(zip, 'optimized.zip', 'application/zip');
     log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
   });
 

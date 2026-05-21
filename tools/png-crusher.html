@@ -464,6 +464,7 @@ Toolkit.injectTopbar('png-crusher');
     }
     const zip = makeZip(files);
     download(zip, 'crushed.zip');
+    handoff?.setBlob(zip, 'crushed.zip', 'application/zip');
     log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
   });
 

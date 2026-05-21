@@ -1176,6 +1176,7 @@ Toolkit.injectTopbar('color-tools');
       const zipBlob = new Blob([zipped], { type: 'application/zip' });
       const outName = ($('filename').value || 'batch') + '.zip';
       download(zipBlob, outName);
+      handoff?.setBlob(zipBlob, outName, 'application/zip');
       log.ok(`完成 · ${Object.keys(zipData).length} 张 · 原 ${fmtBytes(totalIn)} → ${fmtBytes(totalOut)} → ZIP ${fmtBytes(zipBlob.size)}`);
     } catch (e) {
       log.err(e.message);

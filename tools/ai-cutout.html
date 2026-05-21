@@ -403,6 +403,11 @@ Toolkit.injectTopbar('ai-cutout');
     log.ok(`批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`);
     $('processBtn').disabled = false;
     $('downloadZipBtn').disabled = success === 0;
+    // single-image case: stash the lone result so handoff dropdown lights up
+    if (items.length === 1 && items[0].outBlob) {
+      const baseName = items[0].file.name.replace(/\.[^.]+$/, '');
+      handoff?.setBlob(items[0].outBlob, baseName + '_cutout.png', 'image/png');
+    }
   });
 
   async function processOne(it) {
@@ -518,6 +523,7 @@ Toolkit.injectTopbar('ai-cutout');
     }
     const zip = makeZip(files);
     download(zip, `${prefix}_batch.zip`);
+    handoff?.setBlob(zip, `${prefix}_batch.zip`, 'application/zip');
     log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
   });
 
