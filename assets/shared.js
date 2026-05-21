@@ -198,10 +198,14 @@
           `;
         }).join('')}
       </nav>
-      <div class="meta">本地处理</div>
+      <div class="meta">
+        <button type="button" class="settings-btn" title="设置 (主题 / 鼠标)" aria-label="设置">⚙️</button>
+        <span class="meta-text">本地处理</span>
+      </div>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
+    bar.querySelector('.settings-btn')?.addEventListener('click', openSettingsModal);
     // mouse-following glow (sets --mx / --my CSS variables)
     bar.addEventListener('mousemove', (e) => {
       const r = bar.getBoundingClientRect();
@@ -246,6 +250,166 @@
     installErrorBoundary();
     watchForColorInputs();
     setupPWA(prefix);
+    applySavedSettings();
+  }
+
+  // ============================================================
+  //   Settings: theme + custom cursor (persisted in localStorage)
+  // ============================================================
+  const THEME_KEY = 'toolkit-theme';
+  const CURSOR_KEY = 'toolkit-cursor';
+  const THEMES = [
+    { id: 'default', name: '🌑 黑绿(默认)', sample: { bg: '#000', fg: '#31f59c' } },
+    { id: 'light',   name: '☀️ 浅色',       sample: { bg: '#f4f5f8', fg: '#0e9a5c' } },
+    { id: 'blue',    name: '🌊 深蓝',       sample: { bg: '#06101e', fg: '#4ab0ff' } },
+    { id: 'pink',    name: '🌸 樱花粉',     sample: { bg: '#1a0c14', fg: '#ff5b8c' } }
+  ];
+
+  function applySavedSettings() {
+    let theme = null, cursor = null;
+    try { theme = localStorage.getItem(THEME_KEY); } catch (_) {}
+    try { cursor = localStorage.getItem(CURSOR_KEY); } catch (_) {}
+    if (theme && THEMES.some(t => t.id === theme) && theme !== 'default') {
+      document.documentElement.setAttribute('data-theme', theme);
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    applyCursor(cursor);
+  }
+
+  function applyCursor(dataUrl) {
+    let style = document.getElementById('__toolkit_cursor_style__');
+    if (!dataUrl) {
+      if (style) style.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = '__toolkit_cursor_style__';
+      document.head.appendChild(style);
+    }
+    // hot-spot at center is too far from the actual click point on a typical arrow,
+    // so we anchor at (0,0); users can pre-trim the PNG so the tip is top-left.
+    style.textContent = `html, body, * { cursor: url("${dataUrl}") 0 0, auto !important; }`;
+  }
+
+  function setTheme(themeId) {
+    if (themeId === 'default') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', themeId);
+    }
+    try { localStorage.setItem(THEME_KEY, themeId); } catch (_) {}
+  }
+
+  function setCursorFromFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type)) {
+        reject(new Error('请选 PNG / SVG / WebP / GIF 之类的图片'));
+        return;
+      }
+      if (file.size > 256 * 1024) {
+        reject(new Error('图片过大,请用 <256 KB 的图(浏览器对 cursor 有大小限制)'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('读取失败'));
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        // browsers usually cap cursor at ~128x128. We don't downscale here, just trust the user.
+        try { localStorage.setItem(CURSOR_KEY, dataUrl); } catch (_) {}
+        applyCursor(dataUrl);
+        resolve(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function clearCustomCursor() {
+    try { localStorage.removeItem(CURSOR_KEY); } catch (_) {}
+    applyCursor(null);
+  }
+
+  function openSettingsModal() {
+    if (document.getElementById('__toolkitSettingsModal__')) return;
+    const wrap = document.createElement('div');
+    wrap.id = '__toolkitSettingsModal__';
+    wrap.className = 'toolkit-settings-modal';
+    let currentTheme = 'default';
+    try { currentTheme = localStorage.getItem(THEME_KEY) || 'default'; } catch (_) {}
+    let currentCursor = null;
+    try { currentCursor = localStorage.getItem(CURSOR_KEY); } catch (_) {}
+
+    wrap.innerHTML = `
+      <div class="ts-card" role="dialog" aria-modal="true">
+        <div class="ts-head">
+          <h2>⚙️ 设置</h2>
+          <button type="button" class="ts-close" aria-label="关闭">×</button>
+        </div>
+        <div class="ts-section">
+          <h3>主题</h3>
+          <div class="ts-themes">
+            ${THEMES.map(t => `
+              <button type="button" class="ts-theme${t.id === currentTheme ? ' active' : ''}" data-theme="${t.id}">
+                <span class="ts-swatch" style="background: linear-gradient(135deg, ${t.sample.bg} 50%, ${t.sample.fg} 50%)"></span>
+                <span>${t.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="ts-section">
+          <h3>自定义鼠标指针</h3>
+          <div class="ts-cursor-row">
+            <div class="ts-cursor-preview" style="${currentCursor ? `background-image: url('${currentCursor}')` : ''}"></div>
+            <div style="flex:1">
+              <button type="button" class="ts-cursor-upload">📂 选图片(PNG / SVG / WebP,&lt; 128×128 最佳)</button>
+              <input type="file" class="ts-cursor-input" accept="image/*" style="display:none" />
+              <button type="button" class="ts-cursor-reset secondary">↺ 重置为系统默认</button>
+            </div>
+          </div>
+          <div class="ts-hint">指针图建议透明 PNG / SVG,点击点(hot spot)默认在左上角。修改对所有工具页面生效。</div>
+        </div>
+        <div class="ts-foot">
+          <button type="button" class="ts-done">完成</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+
+    const close = () => { wrap.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+    wrap.querySelector('.ts-close').addEventListener('click', close);
+    wrap.querySelector('.ts-done').addEventListener('click', close);
+
+    wrap.querySelectorAll('.ts-theme').forEach(b => {
+      b.addEventListener('click', () => {
+        const id = b.dataset.theme;
+        setTheme(id);
+        wrap.querySelectorAll('.ts-theme').forEach(x => x.classList.toggle('active', x === b));
+      });
+    });
+
+    const fileInput = wrap.querySelector('.ts-cursor-input');
+    const preview = wrap.querySelector('.ts-cursor-preview');
+    wrap.querySelector('.ts-cursor-upload').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const f = fileInput.files[0];
+      if (!f) return;
+      try {
+        const url = await setCursorFromFile(f);
+        preview.style.backgroundImage = `url('${url}')`;
+        toast('已应用自定义指针', 'ok', 2500);
+      } catch (e) {
+        toast(e.message, 'warn', 4000);
+      }
+    });
+    wrap.querySelector('.ts-cursor-reset').addEventListener('click', () => {
+      clearCustomCursor();
+      preview.style.backgroundImage = '';
+      toast('已恢复系统默认指针', 'ok', 2000);
+    });
   }
 
   // ---------- PWA: inject manifest link + register service worker ----------
