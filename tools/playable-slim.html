@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Playable 瘦身 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tab-row { display:flex; gap:4px; background:rgba(0,0,0,0.3); padding:4px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px; }
+  .tab-row button { flex:1; background:transparent; color:var(--text-soft); padding:8px 0; font-size:12px; border-radius:calc(var(--radius-sm) - 3px); box-shadow:none; }
+  .tab-row button.active { background:var(--jade); color:#0a1a14; }
+  .tab-row button:hover { transform:none; }
+
+  .res-list { display:flex; flex-direction:column; gap:4px; max-height:520px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px; background:rgba(0,0,0,0.3); }
+  .res-row {
+    display:grid;
+    grid-template-columns: 36px 80px 1fr auto auto;
+    gap:10px; align-items:center;
+    padding:6px 10px;
+    background:var(--panel); border-radius:var(--radius-sm);
+    font-size:12px;
+  }
+  .res-row .thumb {
+    width:36px; height:36px;
+    border-radius:4px;
+    background: var(--checker), #0a0a0c;
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    border:1px solid var(--border);
+    overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+  }
+  .res-row .thumb img { width:100%; height:100%; object-fit:cover; }
+  .res-row .mime {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size:10px;
+    color:var(--muted-2);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .res-row .fn {
+    font-family: ui-monospace, Consolas, monospace;
+    color:var(--text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .res-row .size {
+    font-family: ui-monospace, Consolas, monospace;
+    color:var(--muted-2);
+    min-width:80px;
+    text-align:right;
+  }
+  .res-row .pct {
+    font-family: ui-monospace, Consolas, monospace;
+    color:var(--jade);
+    min-width:56px;
+    text-align:right;
+    font-size:11px;
+  }
+  .summary {
+    margin-top:10px; padding:10px 12px;
+    background: rgba(var(--jade-rgb), 0.06);
+    border-left: 2px solid var(--jade);
+    border-radius: var(--radius-sm);
+    font-size:12px; color:var(--text);
+    line-height:1.7;
+  }
+  .summary .row { display:flex; justify-content:space-between; }
+  .summary .label { color:var(--muted); }
+  .summary .value { font-family: ui-monospace, Consolas, monospace; }
+  .info { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.55; }
+  .warn-banner {
+    margin-top:8px; padding:8px 12px;
+    background: rgba(245, 208, 49, 0.08);
+    border-left: 2px solid var(--warning);
+    border-radius: var(--radius-sm);
+    font-size:11px; color: var(--text-soft);
+    line-height:1.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🩻 Playable 瘦身</h1>
+
+    <div class="tab-row" id="modeTabs">
+      <button data-mode="split" class="active" type="button">📤 拆出资源</button>
+      <button data-mode="repack" type="button">📥 重组 HTML</button>
+    </div>
+
+    <div id="splitPane">
+      <div class="drop-zone" id="splitDrop">
+        <p>📂 拖入大体积 HTML</p>
+        <p class="hint">扫描 dataURL · 拆出图/音/视/字体</p>
+        <input type="file" id="splitFile" accept=".html,.htm,text/html" style="display:none" />
+      </div>
+      <div class="warn-banner">⚠️ 150 MB+ 文件读取较慢,请耐心;浏览器可能短暂卡 5-30 秒。</div>
+
+      <h2>过滤</h2>
+      <div class="field">
+        <label>最小资源 (字节,小于此值合并到统计但不导出)</label>
+        <input type="number" id="minBytes" value="128" min="0" />
+      </div>
+      <label class="checkbox"><input type="checkbox" id="includeOriginal" checked /><span>ZIP 内附原 HTML 副本</span></label>
+
+      <h2>导出</h2>
+      <div class="field">
+        <label>ZIP 文件名</label>
+        <input type="text" id="splitFilename" value="playable-slim" />
+      </div>
+      <button id="splitExportBtn" disabled>导出资源 ZIP + manifest</button>
+      <button id="splitClearBtn" class="secondary">清空</button>
+    </div>
+
+    <div id="repackPane" style="display:none">
+      <div class="drop-zone" id="repackDrop">
+        <p>📂 拖入压缩后的资源 ZIP</p>
+        <p class="hint">含 manifest.json + 原 HTML + 各资源</p>
+        <input type="file" id="repackFile" accept=".zip,application/zip" style="display:none" />
+      </div>
+      <div class="info" style="margin-top:8px">
+        ZIP 必须包含来自"拆出资源"步骤导出的 <strong>manifest.json</strong> 和 <strong>original/&lt;原文件名&gt;</strong>。
+        资源可以替换为压缩后的同名文件(filename 保持一致)。
+      </div>
+
+      <h2>导出</h2>
+      <div class="field">
+        <label>输出 HTML 文件名</label>
+        <input type="text" id="repackFilename" value="playable-slim" />
+      </div>
+      <button id="repackBtn" disabled>生成瘦身 HTML</button>
+      <button id="repackClearBtn" class="secondary">清空</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">等待文件</div>
+    <div class="info" style="margin-bottom:8px">所有处理在本地完成 · 不上传任何文件 · 流式拆 + ZIP 中转</div>
+    <div class="res-list" id="resList">
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>
+    </div>
+    <div id="summaryBox"></div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('playable-slim');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes, unzipBlob } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('playable-slim', { outputType: 'text/html' });
+
+  let mode = 'split';
+
+  // ===== mode switching =====
+  document.querySelectorAll('#modeTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      mode = b.dataset.mode;
+      document.querySelectorAll('#modeTabs button').forEach(x => x.classList.toggle('active', x === b));
+      $('splitPane').style.display = mode === 'split' ? '' : 'none';
+      $('repackPane').style.display = mode === 'repack' ? '' : 'none';
+      $('stats').textContent = '等待文件';
+      $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+      $('summaryBox').innerHTML = '';
+    });
+  });
+
+  // ====================================================================
+  //   Split mode
+  // ====================================================================
+  let splitState = null; // { fileName, fileSize, htmlText, resources }
+
+  attachDropZone($('splitDrop'), $('splitFile'), files => handleSplitFile(files[0]));
+
+  $('splitClearBtn').addEventListener('click', () => {
+    splitState = null;
+    $('stats').textContent = '等待文件';
+    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+    $('summaryBox').innerHTML = '';
+    $('splitExportBtn').disabled = true;
+    log.clear();
+  });
+
+  async function handleSplitFile(file) {
+    if (!file) return;
+    if (!/\.html?$/i.test(file.name)) { log.warn('建议拖 .html 文件'); }
+    log.clear();
+    log.dim(`读入 ${file.name} (${fmtBytes(file.size)})...`);
+    $('splitExportBtn').disabled = true;
+    try {
+      const t0 = performance.now();
+      const text = await file.text();
+      log.dim(`  读取耗时 ${((performance.now() - t0) / 1000).toFixed(2)}s · ${text.length.toLocaleString()} 字符`);
+
+      log.dim(`扫描内联 dataURL...`);
+      const resources = await scanDataUrls(text);
+      log.ok(`找到 ${resources.length} 个内联资源`);
+
+      splitState = {
+        fileName: file.name,
+        fileSize: file.size,
+        htmlText: text,
+        resources
+      };
+      renderResources(resources, file.size);
+      $('splitExportBtn').disabled = resources.length === 0;
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  }
+
+  // ===== dataURL scanner =====
+  // matches data:[mime];base64,[base64-data]
+  // mime allows letters/digits/+ -. /; base64 chars + optional padding
+  // anchored on data: so it does not start mid-token
+  const DATA_URL_RE = /data:([a-z\d]+\/[a-z\d.+-]+(?:;[a-z\d.=-]+)*?);base64,([A-Za-z0-9+\/]+={0,2})/gi;
+
+  async function scanDataUrls(text) {
+    const resources = [];
+    const minBytes = parseInt($('minBytes').value, 10) || 0;
+    let idx = 0;
+    let lastYield = performance.now();
+    for (const m of text.matchAll(DATA_URL_RE)) {
+      const mime = m[1].toLowerCase();
+      const b64 = m[2];
+      const start = m.index;
+      const end = m.index + m[0].length;
+      // decode base64 length to bytes (without actually decoding for the scan pass)
+      const padding = (b64.match(/=+$/) || [''])[0].length;
+      const originalBytes = Math.floor(b64.length * 3 / 4) - padding;
+      if (originalBytes < minBytes) continue;
+      const ext = mimeToExt(mime);
+      resources.push({
+        index: idx,
+        mime,
+        ext,
+        originalBytes,
+        base64Length: b64.length,
+        htmlOffset: start,
+        htmlEndOffset: end,
+        filename: `assets/${ext}-${String(idx).padStart(3, '0')}.${ext}`,
+        _base64: b64  // kept for later thumbnail / export
+      });
+      idx++;
+      // yield to the event loop occasionally so UI doesn't freeze
+      if (performance.now() - lastYield > 50) {
+        await new Promise(r => setTimeout(r, 0));
+        lastYield = performance.now();
+      }
+    }
+    return resources;
+  }
+
+  function mimeToExt(mime) {
+    const map = {
+      'image/png':'png','image/jpeg':'jpg','image/jpg':'jpg','image/webp':'webp',
+      'image/gif':'gif','image/svg+xml':'svg','image/x-icon':'ico','image/avif':'avif',
+      'audio/mpeg':'mp3','audio/mp3':'mp3','audio/wav':'wav','audio/x-wav':'wav',
+      'audio/ogg':'ogg','audio/webm':'weba','audio/aac':'aac','audio/mp4':'m4a',
+      'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov','video/ogg':'ogv',
+      'font/ttf':'ttf','font/otf':'otf','font/woff':'woff','font/woff2':'woff2',
+      'application/font-woff':'woff','application/font-woff2':'woff2',
+      'application/x-font-ttf':'ttf','application/x-font-otf':'otf',
+      'application/octet-stream':'bin','application/json':'json',
+      'text/plain':'txt','text/css':'css','text/html':'html',
+      'application/javascript':'js','application/x-javascript':'js','text/javascript':'js'
+    };
+    return map[mime] || (mime.split('/')[1] || 'bin').replace(/[^\w.]/g, '');
+  }
+
+  function renderResources(resources, totalSize) {
+    const host = $('resList');
+    if (!resources.length) {
+      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">该 HTML 没找到内联 dataURL</div>';
+      $('stats').textContent = '没有可拆资源';
+      $('summaryBox').innerHTML = '';
+      return;
+    }
+    const sorted = [...resources].sort((a, b) => b.originalBytes - a.originalBytes);
+    host.innerHTML = '';
+    const totalInlined = resources.reduce((a, b) => a + b.base64Length, 0);
+
+    // group by mime → category
+    const byCat = {};
+    for (const r of resources) {
+      const cat = r.mime.split('/')[0];
+      if (!byCat[cat]) byCat[cat] = { count: 0, bytes: 0 };
+      byCat[cat].count++;
+      byCat[cat].bytes += r.originalBytes;
+    }
+
+    for (const r of sorted) {
+      const row = document.createElement('div');
+      row.className = 'res-row';
+      const pct = ((r.base64Length / totalSize) * 100).toFixed(1);
+      const cat = r.mime.split('/')[0];
+      const icon = cat === 'image' ? '🖼' : cat === 'video' ? '🎬' : cat === 'audio' ? '🔊' : cat === 'font' ? '🔠' : '📄';
+      row.innerHTML = `
+        <div class="thumb" data-cat="${cat}">${icon}</div>
+        <div class="mime">${r.mime}</div>
+        <div class="fn" title="${r.filename}">${r.filename}</div>
+        <div class="size">${fmtBytes(r.originalBytes)}</div>
+        <div class="pct">${pct}%</div>
+      `;
+      host.appendChild(row);
+      // lazy thumbnail for images (cap to avoid blowing memory)
+      if (cat === 'image' && r.base64Length < 200_000) {
+        const thumb = row.querySelector('.thumb');
+        const im = new Image();
+        im.src = `data:${r.mime};base64,${r._base64}`;
+        im.onload = () => { thumb.innerHTML = ''; thumb.appendChild(im); };
+      }
+    }
+
+    const catLines = Object.entries(byCat)
+      .sort((a, b) => b[1].bytes - a[1].bytes)
+      .map(([cat, v]) => `<div class="row"><span class="label">${cat}</span><span class="value">${v.count} 个 · ${fmtBytes(v.bytes)}</span></div>`)
+      .join('');
+    $('summaryBox').innerHTML = `<div class="summary">
+      <div class="row"><span class="label">原 HTML</span><span class="value">${fmtBytes(totalSize)}</span></div>
+      <div class="row"><span class="label">内联资源 (base64 占用)</span><span class="value">${fmtBytes(totalInlined)} · ${((totalInlined/totalSize)*100).toFixed(1)}%</span></div>
+      <div class="row"><span class="label">非资源部分 (HTML/JS/CSS)</span><span class="value">${fmtBytes(totalSize - totalInlined)}</span></div>
+      <hr style="border:none; border-top:1px solid var(--border); margin:6px 0">
+      ${catLines}
+    </div>`;
+    $('stats').innerHTML = `<strong>${resources.length}</strong> 个资源 · 总内联 <strong>${fmtBytes(totalInlined)}</strong> · 占 HTML <strong>${((totalInlined/totalSize)*100).toFixed(1)}%</strong>`;
+  }
+
+  // ===== Split export: ZIP =====
+  let fflateMod = null;
+  $('splitExportBtn').addEventListener('click', async () => {
+    if (!splitState) return;
+    $('splitExportBtn').disabled = true;
+    log.dim('加载 fflate (首次联网 ~30KB)...');
+    try {
+      if (!fflateMod) fflateMod = await import('https://esm.sh/fflate@0.8.2');
+      const { resources, htmlText, fileName, fileSize } = splitState;
+      log.dim(`编码 ${resources.length} 个资源...`);
+      const data = {};
+      // manifest
+      const manifest = {
+        version: 1,
+        tool: 'playable-slim',
+        originalName: fileName,
+        originalSize: fileSize,
+        resourceCount: resources.length,
+        resources: resources.map(r => ({
+          index: r.index,
+          mime: r.mime,
+          ext: r.ext,
+          originalBytes: r.originalBytes,
+          base64Length: r.base64Length,
+          htmlOffset: r.htmlOffset,
+          htmlEndOffset: r.htmlEndOffset,
+          filename: r.filename
+        }))
+      };
+      data['manifest.json'] = [new TextEncoder().encode(JSON.stringify(manifest, null, 2)), { level: 9 }];
+      if ($('includeOriginal').checked) {
+        data[`original/${fileName}`] = [new TextEncoder().encode(htmlText), { level: 9 }];
+      }
+      // decode each resource bytes
+      let lastYield = performance.now();
+      for (const r of resources) {
+        const bin = atob(r._base64);
+        const u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        // already-compressed media → STORE (level 0) to save CPU
+        const isMedia = /^(image|video|audio|font)\//.test(r.mime);
+        data[r.filename] = [u8, { level: isMedia ? 0 : 6 }];
+        if (performance.now() - lastYield > 100) {
+          await new Promise(r => setTimeout(r, 0));
+          lastYield = performance.now();
+        }
+      }
+      log.dim('打包 ZIP...');
+      const zipped = await new Promise((resolve, reject) => {
+        fflateMod.zip(data, (err, out) => err ? reject(err) : resolve(out));
+      });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const outName = ($('splitFilename').value || 'playable-slim') + '.zip';
+      download(blob, outName);
+      handoff?.setBlob(blob, outName);
+      log.ok(`完成 · ${fmtBytes(blob.size)} · 已下载`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('splitExportBtn').disabled = false;
+    }
+  });
+
+  // ====================================================================
+  //   Repack mode
+  // ====================================================================
+  let repackState = null; // { manifest, htmlText, replacements: Map<filename, Uint8Array> }
+
+  attachDropZone($('repackDrop'), $('repackFile'), files => handleRepackFile(files[0]));
+
+  $('repackClearBtn').addEventListener('click', () => {
+    repackState = null;
+    $('stats').textContent = '等待文件';
+    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入 ZIP 后这里显示资源对照</div>';
+    $('summaryBox').innerHTML = '';
+    $('repackBtn').disabled = true;
+    log.clear();
+  });
+
+  async function handleRepackFile(file) {
+    if (!file) return;
+    log.clear();
+    log.dim(`解压 ${file.name} (${fmtBytes(file.size)})...`);
+    try {
+      const files = await unzipBlob(file);
+      const manifestFile = files.find(f => f.name === 'manifest.json' || f.name.endsWith('/manifest.json'));
+      if (!manifestFile) throw new Error('ZIP 内没找到 manifest.json');
+      const manifest = JSON.parse(await manifestFile.text());
+      if (manifest.tool !== 'playable-slim') log.warn('manifest 不是 playable-slim 生成的,继续尝试');
+      const origName = manifest.originalName;
+      const origFile = files.find(f => f.name === `original/${origName}` || f.name.endsWith('/' + origName));
+      if (!origFile) throw new Error(`ZIP 内没找到原 HTML: original/${origName}`);
+      const htmlText = await origFile.text();
+      if (htmlText.length !== manifest.originalSize) {
+        log.warn(`原 HTML 长度 ${htmlText.length} 与 manifest 记录 ${manifest.originalSize} 不一致 — 可能已被改动`);
+      }
+      // build replacements map
+      const replacements = new Map();
+      let replaced = 0, unchanged = 0;
+      for (const r of manifest.resources) {
+        const f = files.find(x => x.name === r.filename || x.name.endsWith('/' + r.filename));
+        if (!f) {
+          // missing — will keep original dataURL
+          unchanged++;
+          continue;
+        }
+        const u8 = new Uint8Array(await f.arrayBuffer());
+        replacements.set(r.index, { bytes: u8, mime: r.mime });
+        replaced++;
+      }
+      repackState = { manifest, htmlText, replacements };
+      log.ok(`找到 ${manifest.resourceCount} 个原资源 · 将替换 ${replaced} 个 · 保留 ${unchanged} 个`);
+      renderRepackPreview(manifest, replacements, htmlText.length);
+      $('repackBtn').disabled = false;
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  }
+
+  function renderRepackPreview(manifest, replacements, htmlSize) {
+    const host = $('resList');
+    host.innerHTML = '';
+    let beforeBytes = 0, afterBytes = 0;
+    const sorted = [...manifest.resources].sort((a, b) => b.originalBytes - a.originalBytes);
+    for (const r of sorted) {
+      const rep = replacements.get(r.index);
+      const newBytes = rep ? rep.bytes.length : r.originalBytes;
+      beforeBytes += r.originalBytes;
+      afterBytes += newBytes;
+      const row = document.createElement('div');
+      row.className = 'res-row';
+      const cat = r.mime.split('/')[0];
+      const icon = cat === 'image' ? '🖼' : cat === 'video' ? '🎬' : cat === 'audio' ? '🔊' : cat === 'font' ? '🔠' : '📄';
+      const delta = rep ? ((newBytes - r.originalBytes) / r.originalBytes * 100) : 0;
+      const deltaStr = rep
+        ? (delta < 0 ? `${delta.toFixed(0)}%` : delta > 0 ? `+${delta.toFixed(0)}%` : '0%')
+        : '原';
+      row.innerHTML = `
+        <div class="thumb">${icon}</div>
+        <div class="mime">${r.mime}</div>
+        <div class="fn" title="${r.filename}">${r.filename}</div>
+        <div class="size">${fmtBytes(r.originalBytes)} → ${fmtBytes(newBytes)}</div>
+        <div class="pct" style="color:${rep ? (delta < 0 ? 'var(--jade)' : 'var(--warning)') : 'var(--muted)'}">${deltaStr}</div>
+      `;
+      host.appendChild(row);
+    }
+    // base64 size estimate for after: each byte → 4/3 char
+    const beforeB64 = beforeBytes * 4 / 3;
+    const afterB64 = afterBytes * 4 / 3;
+    const nonAsset = htmlSize - beforeB64;
+    const estimatedSize = nonAsset + afterB64;
+    $('summaryBox').innerHTML = `<div class="summary">
+      <div class="row"><span class="label">原 HTML 体积</span><span class="value">${fmtBytes(htmlSize)}</span></div>
+      <div class="row"><span class="label">原内联资源 (字节)</span><span class="value">${fmtBytes(beforeBytes)}</span></div>
+      <div class="row"><span class="label">压缩后资源 (字节)</span><span class="value">${fmtBytes(afterBytes)}</span></div>
+      <div class="row"><span class="label">资源节省</span><span class="value" style="color:var(--jade)">−${fmtBytes(beforeBytes - afterBytes)} (${((1 - afterBytes/beforeBytes)*100).toFixed(1)}%)</span></div>
+      <hr style="border:none; border-top:1px solid var(--border); margin:6px 0">
+      <div class="row"><span class="label">预计新 HTML 体积</span><span class="value" style="color:var(--jade); font-weight:600">≈ ${fmtBytes(estimatedSize)}</span></div>
+    </div>`;
+    $('stats').innerHTML = `预计新 HTML ≈ <strong style="color:var(--jade)">${fmtBytes(estimatedSize)}</strong> · 从 <strong>${fmtBytes(htmlSize)}</strong>`;
+  }
+
+  // ===== Repack: rebuild HTML =====
+  $('repackBtn').addEventListener('click', async () => {
+    if (!repackState) return;
+    $('repackBtn').disabled = true;
+    log.dim('重建 HTML...');
+    try {
+      const { manifest, htmlText, replacements } = repackState;
+      // sort resources by htmlOffset ascending — we walk through original once
+      const resources = [...manifest.resources].sort((a, b) => a.htmlOffset - b.htmlOffset);
+      // build a list of Blob parts to assemble
+      const parts = [];
+      let cursor = 0;
+      let lastYield = performance.now();
+      for (const r of resources) {
+        // sanity check the dataURL boundary
+        if (r.htmlOffset < cursor) { log.warn(`资源 ${r.index} 偏移异常,跳过`); continue; }
+        parts.push(htmlText.slice(cursor, r.htmlOffset));
+        const rep = replacements.get(r.index);
+        if (rep) {
+          // build new dataURL: data:<mime>;base64,<base64-of-new-bytes>
+          const b64 = bytesToBase64(rep.bytes);
+          parts.push(`data:${rep.mime};base64,${b64}`);
+        } else {
+          // keep original dataURL by slicing it out of htmlText
+          parts.push(htmlText.slice(r.htmlOffset, r.htmlEndOffset));
+        }
+        cursor = r.htmlEndOffset;
+        if (performance.now() - lastYield > 100) {
+          await new Promise(rs => setTimeout(rs, 0));
+          lastYield = performance.now();
+        }
+      }
+      parts.push(htmlText.slice(cursor));
+      const blob = new Blob(parts, { type: 'text/html' });
+      const outName = ($('repackFilename').value || 'playable-slim') + '.html';
+      download(blob, outName);
+      handoff?.setBlob(blob, outName);
+      const orig = htmlText.length;
+      const pct = ((1 - blob.size / orig) * 100).toFixed(1);
+      log.ok(`完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(orig)}, 节省 ${pct}%) · 已下载`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('repackBtn').disabled = false;
+    }
+  });
+
+  // ===== bytes → base64 (chunked to avoid 'argument list too long') =====
+  function bytesToBase64(bytes) {
+    // process in 64K chunks
+    const chunk = 65536;
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+    }
+    return btoa(bin);
+  }
+})();
+</script>
+
+</body>
+</html>

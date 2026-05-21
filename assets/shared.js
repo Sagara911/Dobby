@@ -30,7 +30,8 @@
     // 分析 / 诊断
     { id: 'bundle-analyzer',cat: 'audit', name: '包体分析',       en: 'Bundle Analyzer', icon: '📊', href: 'tools/bundle-analyzer.html', desc: '扫描项目目录,显示类别分布 + 大文件清单' },
     { id: 'channel-check',  cat: 'audit', name: '渠道检查',       en: 'Channel Check',   icon: '✅', href: 'tools/channel-check.html', desc: 'Facebook / Google / TikTok 等渠道规范校验' },
-    { id: 'slim-coach',     cat: 'audit', name: '瘦身助手',       en: 'Slim Coach',      icon: '🩺', href: 'tools/slim-coach.html', desc: '扫描项目,给出针对每类资源的具体瘦身建议' }
+    { id: 'slim-coach',     cat: 'audit', name: '瘦身助手',       en: 'Slim Coach',      icon: '🩺', href: 'tools/slim-coach.html', desc: '扫描项目,给出针对每类资源的具体瘦身建议' },
+    { id: 'playable-slim',  cat: 'audit', name: 'Playable 瘦身',   en: 'Playable Slim',   icon: '🩻', href: 'tools/playable-slim.html', desc: '拆大体积 HTML 内联素材 → 单独压 → 重组,Playable 减肥神器' }
   ];
 
   // Per-tool inline usage guide (auto-injected to sidebar).
@@ -109,6 +110,12 @@
       '拖入文件或文件夹(任意类型),会列在右侧',
       '调"压缩级别"滑块,默认 9 (最强 deflate);追求速度可调低',
       '点"开始打包",看节省率,下载 .zip'
+    ],
+    'playable-slim': [
+      '【拆出资源】拖入大体积 HTML → 自动扫所有 dataURL → 列表显示每个素材的类型/大小',
+      '点"导出 ZIP" → 拿到含 manifest.json + 原 HTML + 各素材文件的压缩包',
+      '用其他工具(image-optimizer / video-toolkit 等)压缩 ZIP 里的素材,保持文件名不变',
+      '【重组】切到"重组 HTML" 标签,拖入压缩后的 ZIP → 工具按 manifest 把素材替换回原位置 → 输出瘦身 HTML'
     ],
     'qr-gen': [
       '输入文本 / URL,或点 URL / WiFi / 名片 / 短信 预设填模板',
@@ -611,7 +618,8 @@
     'bundle-analyzer': [],
     'channel-check':   ['text/html'],
     'code-minify':     ['text/css','application/javascript','text/html'],
-    'slim-coach':      []
+    'slim-coach':      [],
+    'playable-slim':   ['text/html', 'application/zip']
   };
 
   // Tools to suggest as next step given output MIME type
