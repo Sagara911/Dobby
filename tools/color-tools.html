@@ -122,6 +122,51 @@
   }
   .batch-row .rm:hover { color: var(--danger); transform: none; }
 
+  #batchPreviewGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .batch-tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .batch-tile:hover {
+    border-color: rgba(var(--jade-rgb), 0.5);
+    transform: translateY(-1px);
+  }
+  .batch-tile .thumb {
+    height: 130px;
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .batch-tile .thumb canvas, .batch-tile .thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: auto;
+  }
+  .batch-tile .name {
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+  }
+
   .brush-mode-row { display: flex; gap: 6px; }
   .brush-mode-row button {
     flex: 1;
@@ -188,6 +233,7 @@
       <input type="text" id="filename" value="output" />
     </div>
     <button id="applyBtn" disabled>应用 (当前图)</button>
+    <button id="batchPreviewBtn" class="secondary" disabled style="display:none">👁 预览所有调色结果</button>
     <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用 → 下载 ZIP</button>
     <button id="downloadBtn" class="secondary" disabled>下载图片</button>
     <button id="downloadPaletteBtn" class="secondary" disabled>下载调色板</button>
@@ -215,6 +261,14 @@
     <div id="paletteOut" style="display:none">
       <h2 style="margin-top:0">提取的颜色 <span class="muted small">(点击复制)</span></h2>
       <div class="swatch-row" id="swatches"></div>
+    </div>
+
+    <div id="batchPreviewArea" style="display:none; margin-top:16px">
+      <h2 style="margin-top:0; display:flex; align-items:center; gap:8px">
+        批量预览
+        <span id="batchPreviewMeta" style="font-size:11px; color:var(--muted); font-weight:400"></span>
+      </h2>
+      <div id="batchPreviewGrid"></div>
     </div>
   </div>
 </div>
@@ -316,6 +370,7 @@ Toolkit.injectTopbar('color-tools');
 
   function updateBatchBtn() {
     const btn = $('batchApplyBtn');
+    const previewBtn = $('batchPreviewBtn');
     const action = $('action')?.value;
     const eligible = batchFiles.length > 1 && BATCH_ACTIONS.has(action);
     btn.style.display = batchFiles.length > 1 ? '' : 'none';
@@ -323,6 +378,10 @@ Toolkit.injectTopbar('color-tools');
     btn.textContent = eligible
       ? `📦 批量应用 ${batchFiles.length} 张 → 下载 ZIP`
       : `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`;
+    previewBtn.style.display = batchFiles.length > 1 ? '' : 'none';
+    previewBtn.disabled = !eligible;
+    // hide preview area when leaving batch mode
+    if (batchFiles.length <= 1) $('batchPreviewArea').style.display = 'none';
   }
 
   function attachCanvasPicker() {
@@ -989,6 +1048,76 @@ Toolkit.injectTopbar('color-tools');
     $('downloadPaletteBtn').disabled = true;
     log.clear();
     $('fileInput').value = '';
+  });
+
+  // ===== Batch preview: run transform on every file, show thumbnails (no download) =====
+  $('batchPreviewBtn').addEventListener('click', async () => {
+    if (!batchFiles.length) return;
+    const action = $('action').value;
+    if (!BATCH_ACTIONS.has(action)) { log.err(`${action} 不支持批量预览`); return; }
+    $('batchPreviewBtn').disabled = true;
+    log.dim(`生成预览 · ${batchFiles.length} 张...`);
+    try {
+      const area = $('batchPreviewArea');
+      const grid = $('batchPreviewGrid');
+      area.style.display = '';
+      grid.innerHTML = `<div style="grid-column:1/-1; padding:16px; text-align:center; color:var(--muted); font-size:12px">生成中...</div>`;
+      const t0 = performance.now();
+      const tiles = [];
+      for (let i = 0; i < batchFiles.length; i++) {
+        const file = batchFiles[i];
+        try {
+          const bm = await createImageBitmap(file);
+          const w = bm.width, h = bm.height;
+          const cv = newCanvas(w, h);
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(bm, 0, 0);
+          let outCv = null;
+          if (action === 'transparent') outCv = transformTransparent(cv, ctx, w, h);
+          else if (action === 'replace') outCv = transformReplace(cv, ctx, w, h);
+          else if (action === 'quantize') {
+            const id = ctx.getImageData(0, 0, w, h);
+            outCv = transformQuantize(id, w, h);
+          }
+          // downscale to a thumbnail
+          const maxDim = 140;
+          const scale = Math.min(1, maxDim / Math.max(w, h));
+          const tw = Math.max(1, Math.round(w * scale));
+          const th = Math.max(1, Math.round(h * scale));
+          const tcv = newCanvas(tw, th);
+          tcv.getContext('2d').drawImage(outCv, 0, 0, tw, th);
+          tiles.push({ name: file.name, canvas: tcv });
+          bm.close?.();
+          if (i % 3 === 2) await new Promise(r => setTimeout(r, 0));  // yield
+        } catch (err) {
+          tiles.push({ name: file.name, error: err.message });
+        }
+      }
+      grid.innerHTML = '';
+      for (const t of tiles) {
+        const tile = document.createElement('div');
+        tile.className = 'batch-tile';
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        if (t.canvas) thumb.appendChild(t.canvas);
+        else thumb.innerHTML = `<span style="color:var(--danger); font-size:11px">${t.error}</span>`;
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.title = t.name;
+        name.textContent = t.name;
+        tile.appendChild(thumb);
+        tile.appendChild(name);
+        grid.appendChild(tile);
+      }
+      const dt = ((performance.now() - t0) / 1000).toFixed(1);
+      $('batchPreviewMeta').textContent = `${tiles.length} 张 · ${dt}s · 改参数后再点一次刷新`;
+      log.ok(`预览完成 · ${tiles.length} 张 · ${dt}s`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('batchPreviewBtn').disabled = false;
+    }
   });
 
   // ===== Batch apply: run the current action on every file using the same params =====
