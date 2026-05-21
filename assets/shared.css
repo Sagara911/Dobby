@@ -1645,7 +1645,9 @@ button.danger:hover { background: linear-gradient(180deg, #ff7575, var(--danger)
   /* hide the "反馈" label on narrow widths — the icon alone still works */
   .topbar-pill-btn span:not(.emoji) { display: none; }
   .topbar-pill-btn { padding: 0 10px; }
-}
-@media (max-width: 640px) {
+  /* once we have 5 nav categories + 2 right-side buttons, the brand
+     text "Playable Toolkit" starts crashing into the nav. Hide it
+     and keep only the 🧰 logo (matches "if cramped, drop the text"
+     pattern used for the 反馈 label and the meta block). */
   .topbar .brand span:last-child { display: none; }
 }
