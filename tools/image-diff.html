@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>图像对比 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .ab-drops { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ab-drops .drop-zone { min-height: 80px; padding: 10px; }
+  .ab-drops .drop-zone p { font-size: 12px; margin: 2px 0; }
+  .mini-thumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+    font-size: 11px;
+  }
+  .mini-thumb canvas {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    background: var(--checker), #1a1a1a;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border-radius: 3px;
+  }
+  .mini-thumb .info { flex: 1; min-width: 0; font-family: ui-monospace, Consolas, monospace; color: var(--text-soft); }
+  .mini-thumb .info .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  .mini-thumb .info .meta { font-size: 10px; color: var(--muted); }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .metric-card .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+  }
+  .metric-card .value {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 18px;
+    color: var(--jade);
+    font-weight: 600;
+  }
+  .metric-card .sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .preview-area {
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-area canvas, .preview-area img { max-width: 100%; image-rendering: pixelated; }
+  .sxs-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+  .sxs-pair > div { display: flex; flex-direction: column; gap: 4px; }
+  .sxs-pair .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+  .sxs-pair canvas, .sxs-pair img { width: 100%; height: auto; image-rendering: pixelated; }
+  .warning {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 180, 60, 0.12);
+    border-left: 2px solid #ffb43c;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: #ffb43c;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔬 图像对比</h1>
+
+    <div class="ab-drops">
+      <div class="drop-zone" id="dropA">
+        <p>📂 A (原图)</p>
+        <p class="hint">拖入或点击</p>
+        <input type="file" id="fileA" accept="image/*" style="display:none" />
+      </div>
+      <div class="drop-zone" id="dropB">
+        <p>📂 B (新图)</p>
+        <p class="hint">压缩后 / 编辑后</p>
+        <input type="file" id="fileB" accept="image/*" style="display:none" />
+      </div>
+    </div>
+    <div id="thumbA"></div>
+    <div id="thumbB"></div>
+
+    <h2>显示模式</h2>
+    <div class="field">
+      <select id="viewMode">
+        <option value="slider" selected>🎚 滑动对比 (A | B)</option>
+        <option value="sxs">⬌ 并列</option>
+        <option value="heatmap">🌡 差异热图</option>
+        <option value="diffOnly">🎭 仅差异 (减出来的图)</option>
+      </select>
+    </div>
+    <div class="field" id="threshField">
+      <label>差异阈值 <span id="threshVal" class="mono">5</span></label>
+      <input type="range" id="thresh" min="0" max="50" value="5" />
+      <div class="info" style="margin-top:2px">小于阈值的像素不计入"变化像素"百分比 (常见 JPEG 噪点 1-3)</div>
+    </div>
+
+    <h2>对比</h2>
+    <button id="diffBtn" disabled>开始对比</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加入图片</div>
+    <div id="warning"></div>
+    <div class="preview-area" id="previewBox">
+      <div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 A + B 两张图后点"开始对比"</div>
+    </div>
+    <div class="metric-grid" id="metrics" style="display:none">
+      <div class="metric-card">
+        <div class="label">A 体积 / B 体积</div>
+        <div class="value" id="mSize">—</div>
+        <div class="sub" id="mSizeSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">分辨率</div>
+        <div class="value" id="mDim">—</div>
+        <div class="sub" id="mDimSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">变化像素</div>
+        <div class="value" id="mChanged">—</div>
+        <div class="sub" id="mChangedSub">阈值以上 / 总像素</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">平均 Δ / 最大 Δ</div>
+        <div class="value" id="mDelta">—</div>
+        <div class="sub">8-bit luma 距离</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">PSNR</div>
+        <div class="value" id="mPsnr">—</div>
+        <div class="sub" id="mPsnrSub">越高越好;40 dB+ 几乎肉眼无差</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">SSIM</div>
+        <div class="value" id="mSsim">—</div>
+        <div class="sub" id="mSsimSub">越接近 1 越好;0.95+ 视觉接近原图</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('image-diff');
+
+(() => {
+  const { $, makeLogger, attachDropZone, fmtBytes, newCanvas, makeCompareSlider } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // Each side: { file, bitmap, w, h, size, name }
+  let A = null, B = null;
+
+  attachDropZone($('dropA'), $('fileA'), files => loadSide('A', files[0]));
+  attachDropZone($('dropB'), $('fileB'), files => loadSide('B', files[0]));
+  $('viewMode').addEventListener('change', () => { if (A && B) render(); });
+  $('thresh').addEventListener('input', e => {
+    $('threshVal').textContent = e.target.value;
+    if (A && B) render();
+  });
+  $('clearBtn').addEventListener('click', () => {
+    A = B = null;
+    $('thumbA').innerHTML = '';
+    $('thumbB').innerHTML = '';
+    $('previewBox').innerHTML = '<div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 A + B 两张图后点"开始对比"</div>';
+    $('metrics').style.display = 'none';
+    $('warning').innerHTML = '';
+    $('stats').textContent = '未加入图片';
+    $('diffBtn').disabled = true;
+    $('fileA').value = '';
+    $('fileB').value = '';
+    log.clear();
+  });
+  $('diffBtn').addEventListener('click', () => render());
+
+  async function loadSide(side, file) {
+    if (!file) return;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const side_obj = { file, bitmap, w: bitmap.width, h: bitmap.height, size: file.size, name: file.name };
+      if (side === 'A') A = side_obj; else B = side_obj;
+      renderThumb(side, side_obj);
+      updateStats();
+      log.dim(`加载 ${side}: ${file.name} · ${bitmap.width}×${bitmap.height} · ${fmtBytes(file.size)}`);
+      $('diffBtn').disabled = !(A && B);
+      if (A && B) render();
+    } catch (e) {
+      log.err(`${side} 加载失败: ${e.message}`);
+    }
+  }
+
+  function renderThumb(side, obj) {
+    const host = $('thumb' + side);
+    const cv = newCanvas(obj.w, obj.h);
+    cv.getContext('2d').drawImage(obj.bitmap, 0, 0);
+    host.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'mini-thumb';
+    row.innerHTML = `
+      <div></div>
+      <div class="info">
+        <div class="name">${side} · ${obj.name}</div>
+        <div class="meta">${obj.w}×${obj.h} · ${fmtBytes(obj.size)}</div>
+      </div>
+    `;
+    row.firstElementChild.appendChild(cv);
+    host.appendChild(row);
+  }
+
+  function updateStats() {
+    const parts = [];
+    if (A) parts.push(`A: ${A.w}×${A.h} ${fmtBytes(A.size)}`);
+    if (B) parts.push(`B: ${B.w}×${B.h} ${fmtBytes(B.size)}`);
+    $('stats').textContent = parts.length ? parts.join('  ·  ') : '未加入图片';
+    $('warning').innerHTML = (A && B && (A.w !== B.w || A.h !== B.h))
+      ? '<div class="warning">⚠ A 和 B 分辨率不一致, 像素级指标会被强行缩放对齐, 结果仅供参考</div>'
+      : '';
+  }
+
+  // Sample both sides into ImageData at the smaller-of-the-two dimensions
+  // (or, if they match, at native). Returns { w, h, dataA, dataB }.
+  function sampleAligned() {
+    const w = Math.min(A.w, B.w);
+    const h = Math.min(A.h, B.h);
+    const cvA = newCanvas(w, h);
+    const cvB = newCanvas(w, h);
+    const ctxA = cvA.getContext('2d');
+    const ctxB = cvB.getContext('2d');
+    ctxA.imageSmoothingQuality = 'high';
+    ctxB.imageSmoothingQuality = 'high';
+    ctxA.drawImage(A.bitmap, 0, 0, w, h);
+    ctxB.drawImage(B.bitmap, 0, 0, w, h);
+    return {
+      w, h,
+      dataA: ctxA.getImageData(0, 0, w, h).data,
+      dataB: ctxB.getImageData(0, 0, w, h).data,
+      cvA, cvB,
+    };
+  }
+
+  function lumaOf(r, g, b) { return 0.299 * r + 0.587 * g + 0.114 * b; }
+
+  function computeMetrics(dataA, dataB, w, h, threshold) {
+    const n = w * h;
+    let mse = 0;        // mean squared error on luma
+    let absSum = 0;     // sum |luma delta|
+    let maxDelta = 0;
+    let changed = 0;
+    for (let i = 0, j = 0; j < n; i += 4, j++) {
+      const yA = lumaOf(dataA[i], dataA[i+1], dataA[i+2]);
+      const yB = lumaOf(dataB[i], dataB[i+1], dataB[i+2]);
+      const d = yA - yB;
+      const ad = Math.abs(d);
+      mse += d * d;
+      absSum += ad;
+      if (ad > maxDelta) maxDelta = ad;
+      if (ad > threshold) changed++;
+    }
+    mse /= n;
+    const psnr = mse < 1e-9 ? Infinity : 10 * Math.log10((255 * 255) / mse);
+    return {
+      meanAbsDelta: absSum / n,
+      maxDelta,
+      changedPct: (changed / n) * 100,
+      changedCount: changed,
+      totalPixels: n,
+      mse,
+      psnr,
+    };
+  }
+
+  // Windowed SSIM (8×8 box, no Gaussian) on luma. Good enough as a quality
+  // proxy without dragging in a heavy ssim.js dependency.
+  function computeSSIM(dataA, dataB, w, h) {
+    const yA = new Float32Array(w * h);
+    const yB = new Float32Array(w * h);
+    for (let i = 0, j = 0; j < w * h; i += 4, j++) {
+      yA[j] = lumaOf(dataA[i], dataA[i+1], dataA[i+2]);
+      yB[j] = lumaOf(dataB[i], dataB[i+1], dataB[i+2]);
+    }
+    const k1 = 0.01, k2 = 0.03, L = 255;
+    const c1 = (k1 * L) * (k1 * L);
+    const c2 = (k2 * L) * (k2 * L);
+    const N = 8;
+    let sum = 0, count = 0;
+    for (let by = 0; by + N <= h; by += N) {
+      for (let bx = 0; bx + N <= w; bx += N) {
+        let sa = 0, sb = 0;
+        for (let dy = 0; dy < N; dy++) for (let dx = 0; dx < N; dx++) {
+          const idx = (by + dy) * w + (bx + dx);
+          sa += yA[idx]; sb += yB[idx];
+        }
+        const ma = sa / (N * N), mb = sb / (N * N);
+        let va = 0, vb = 0, cov = 0;
+        for (let dy = 0; dy < N; dy++) for (let dx = 0; dx < N; dx++) {
+          const idx = (by + dy) * w + (bx + dx);
+          const da = yA[idx] - ma, db = yB[idx] - mb;
+          va += da * da; vb += db * db; cov += da * db;
+        }
+        va /= (N * N); vb /= (N * N); cov /= (N * N);
+        const ssim = ((2 * ma * mb + c1) * (2 * cov + c2))
+                   / ((ma * ma + mb * mb + c1) * (va + vb + c2));
+        sum += ssim; count++;
+      }
+    }
+    return count ? sum / count : 1;
+  }
+
+  function makeHeatmap(dataA, dataB, w, h, threshold) {
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const img = ctx.createImageData(w, h);
+    const out = img.data;
+    for (let i = 0; i < dataA.length; i += 4) {
+      const yA = lumaOf(dataA[i], dataA[i+1], dataA[i+2]);
+      const yB = lumaOf(dataB[i], dataB[i+1], dataB[i+2]);
+      const ad = Math.abs(yA - yB);
+      if (ad <= threshold) {
+        // dim grayscale of A so non-changed regions stay readable
+        const g = (dataA[i] + dataA[i+1] + dataA[i+2]) / 3 * 0.3;
+        out[i] = g; out[i+1] = g; out[i+2] = g; out[i+3] = 255;
+      } else {
+        // ramp: small → red, medium → orange, large → yellow-white
+        const t = Math.min(1, ad / 60);
+        out[i]   = Math.round(255);
+        out[i+1] = Math.round(80 + t * 175);
+        out[i+2] = Math.round(0  + t * 80);
+        out[i+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  }
+
+  function makeDiffOnly(dataA, dataB, w, h) {
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const img = ctx.createImageData(w, h);
+    const out = img.data;
+    for (let i = 0; i < dataA.length; i += 4) {
+      out[i]   = Math.abs(dataA[i]   - dataB[i]);
+      out[i+1] = Math.abs(dataA[i+1] - dataB[i+1]);
+      out[i+2] = Math.abs(dataA[i+2] - dataB[i+2]);
+      out[i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  }
+
+  function render() {
+    if (!A || !B) return;
+    const t0 = performance.now();
+    const sample = sampleAligned();
+    const threshold = parseInt($('thresh').value, 10) || 0;
+    const m = computeMetrics(sample.dataA, sample.dataB, sample.w, sample.h, threshold);
+    const ssim = computeSSIM(sample.dataA, sample.dataB, sample.w, sample.h);
+    const dt = performance.now() - t0;
+
+    // Metric cards
+    const ratio = B.size / A.size;
+    $('mSize').textContent = `${fmtBytes(A.size)} → ${fmtBytes(B.size)}`;
+    $('mSizeSub').textContent = ratio < 1
+      ? `节省 ${((1 - ratio) * 100).toFixed(1)}%`
+      : `增大 ${((ratio - 1) * 100).toFixed(1)}%`;
+    $('mDim').textContent = (A.w === B.w && A.h === B.h)
+      ? `${A.w}×${A.h}`
+      : `${A.w}×${A.h} vs ${B.w}×${B.h}`;
+    $('mDimSub').textContent = (A.w === B.w && A.h === B.h) ? '一致' : '⚠ 尺寸不同, 已对齐到较小者';
+    $('mChanged').textContent = `${m.changedPct.toFixed(2)}%`;
+    $('mChangedSub').textContent = `${m.changedCount.toLocaleString()} / ${m.totalPixels.toLocaleString()} px (阈值 ${threshold})`;
+    $('mDelta').textContent = `${m.meanAbsDelta.toFixed(2)} / ${m.maxDelta.toFixed(0)}`;
+    $('mPsnr').textContent = isFinite(m.psnr) ? `${m.psnr.toFixed(2)} dB` : '∞ dB';
+    $('mPsnrSub').textContent = isFinite(m.psnr)
+      ? (m.psnr > 40 ? '✓ 高质量' : m.psnr > 30 ? '一般' : '可见损伤')
+      : '完全一致';
+    $('mSsim').textContent = ssim.toFixed(4);
+    $('mSsimSub').textContent = ssim > 0.95 ? '✓ 视觉接近原图'
+                              : ssim > 0.90 ? '轻微差异'
+                              : ssim > 0.75 ? '明显差异'
+                              : '严重差异';
+    $('metrics').style.display = '';
+
+    // Preview area
+    const mode = $('viewMode').value;
+    const host = $('previewBox');
+    host.innerHTML = '';
+    if (mode === 'slider') {
+      makeCompareSlider(host, sample.cvA, sample.cvB, { leftLabel: 'A 原图', rightLabel: 'B 新图' });
+    } else if (mode === 'sxs') {
+      const wrap = document.createElement('div');
+      wrap.className = 'sxs-pair';
+      const colA = document.createElement('div');
+      colA.innerHTML = '<div class="label">A 原图</div>';
+      colA.appendChild(sample.cvA);
+      const colB = document.createElement('div');
+      colB.innerHTML = '<div class="label">B 新图</div>';
+      colB.appendChild(sample.cvB);
+      wrap.appendChild(colA);
+      wrap.appendChild(colB);
+      host.appendChild(wrap);
+    } else if (mode === 'heatmap') {
+      host.appendChild(makeHeatmap(sample.dataA, sample.dataB, sample.w, sample.h, threshold));
+    } else if (mode === 'diffOnly') {
+      host.appendChild(makeDiffOnly(sample.dataA, sample.dataB, sample.w, sample.h));
+    }
+
+    log.ok(`对比完成 · ${dt.toFixed(0)} ms · PSNR ${isFinite(m.psnr) ? m.psnr.toFixed(2) + ' dB' : '∞'} · SSIM ${ssim.toFixed(4)}`);
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -12,6 +12,7 @@
     { id: 'ai-cutout',      cat: 'image', name: 'AI 抠图',        en: 'AI Cutout',       icon: '🤖', href: 'tools/ai-cutout.html',      desc: 'AI 抠图 (MODNet / RMBG),复杂背景' },
     { id: 'watermark-remove',cat:'image', name: '去水印',         en: 'Watermark Remove',icon: '🩹', href: 'tools/watermark-remove.html', desc: '画刷 / 矩形选水印区,扩散插值或 AI 模型填充' },
     { id: 'composer',       cat: 'image', name: '拼图合成',       en: 'Composer',        icon: '🧩', href: 'tools/composer.html',       desc: '多图拼接 / 叠加 / 加水印' },
+    { id: 'image-diff',     cat: 'image', name: '图像对比',       en: 'Image Diff',      icon: '🔬', href: 'tools/image-diff.html',     desc: 'A/B 对比 + 滑动 + 热图 + PSNR/SSIM,压缩前后必备' },
     // 动画 / 精灵图
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
@@ -126,6 +127,11 @@
       '拖入文件或文件夹(可多选,支持 ZIP 自动解压)',
       '模板里写新名,例如 walk_{i:04}{ext}; 可叠加查找替换、大小写、扩展名规则',
       '右侧表格实时预览原名→新名,重名会红色高亮; 没冲突就能点"导出 ZIP"'
+    ],
+    'image-diff': [
+      '拖入 A (原图) 与 B (压缩 / 编辑后),格式自动识别',
+      '4 种显示: 滑动对比 / 并列 / 差异热图 / 仅差异图',
+      '指标卡: 体积变化 · 变化像素 % · 平均/最大 Δ · PSNR · SSIM'
     ],
     'audio-compress': [
       '拖入音频文件,会自动解码并显示波形',
@@ -899,6 +905,7 @@
     'watermark-remove':['image/png','image/jpeg','image/webp','image/gif'],
     'video-toolkit':   ['video/*'],
     'composer':        ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'image-diff':      ['image/png','image/jpeg','image/webp','image/gif'],
     'html-inliner':    [],  // requires directory picker, can't handoff
     'base64':          ['*/*'],  // accepts anything
     'zip-packer':      ['*/*'],  // accepts anything
