@@ -174,6 +174,7 @@
 <script src="../assets/shared.js"></script>
 <script src="../assets/anim-encoders.js"></script>
 <script src="../assets/rife.js"></script>
+<script src="../assets/farneback.js"></script>
 <script>
 Toolkit.injectTopbar('video-toolkit');
 
@@ -336,26 +337,34 @@ Toolkit.injectTopbar('video-toolkit');
           <select id="cfpsMode">
             <option value="dup">帧复制 (快, 不平滑)</option>
             <option value="blend" selected>线性混合 (相邻帧加权, 平滑但 ghost)</option>
-            <option value="optical">🚀 光流补帧 RIFE (慢, 需 WebGPU + ~24 MB 联网)</option>
+            <option value="optical">🚀 光流补帧 (自动: WebGPU=RIFE, 否则=Farnebäck CPU)</option>
+            <option value="optical-rife">└ 强制 RIFE (需 WebGPU + ~21 MB 联网)</option>
+            <option value="optical-fb">└ 强制 Farnebäck (CPU 版, ~8 MB 联网)</option>
           </select>
         </div>
         <div id="cfpsRifeStatus" class="info" style="display:none; padding:8px; background:rgba(255,255,255,0.04); border-radius:4px; margin-top:6px;"></div>
         <div class="info">&le; 30 = 抽帧, &gt; 30 = 补帧。
-          光流补帧用 ONNX Runtime Web + WebGPU + RIFE 模型, 接近 Twixtor 效果但首次使用要下载模型;
-          快速运动也能保持清晰边缘。</div>
+          光流补帧"自动"档会优先 RIFE,没 WebGPU 自动降到 Farnebäck;
+          实拍素材 RIFE 接近 Twixtor,卡通/像素风格化素材两者都可能产生扭曲。</div>
       `;
       $('cfpsTarget').addEventListener('input', e => $('cfpsVal').textContent = e.target.value);
       $('cfpsMode').addEventListener('change', e => {
-        const isRife = e.target.value === 'optical';
+        const mode = e.target.value;
+        const isOptical = /^optical/.test(mode);
         const status = $('cfpsRifeStatus');
-        if (!isRife) { status.style.display = 'none'; return; }
+        if (!isOptical) { status.style.display = 'none'; return; }
         status.style.display = '';
-        if (window.RIFE?.isReady()) {
-          status.textContent = '✓ RIFE 已就绪 (WebGPU)';
-        } else if (!('gpu' in navigator)) {
-          status.innerHTML = '<span style="color:var(--err)">⚠ 当前浏览器不支持 WebGPU,光流补帧不可用 — 请用 Chrome 113+ / Edge 113+,或换其它补帧模式</span>';
-        } else {
-          status.textContent = '点"应用"会先下载 RIFE 模型 (~21 MB),然后开始推理。每帧约 0.2-1s (480p WebGPU)';
+        const hasGpu = 'gpu' in navigator;
+        if (mode === 'optical') {
+          status.textContent = hasGpu
+            ? '将使用 RIFE (WebGPU). 点"应用"开始 (首次 ~21 MB 下载)'
+            : '将使用 Farnebäck (CPU, 当前没 WebGPU). 点"应用"开始 (首次 ~8 MB 下载)';
+        } else if (mode === 'optical-rife') {
+          status.innerHTML = hasGpu
+            ? '强制 RIFE (WebGPU). 首次 ~21 MB 下载, 每帧 0.2-1s (480p)'
+            : '<span style="color:var(--err)">⚠ 当前没 WebGPU, 选"自动"或"强制 Farnebäck"</span>';
+        } else if (mode === 'optical-fb') {
+          status.textContent = '强制 Farnebäck (CPU). 首次 ~8 MB 下载, 每帧 ~0.3-0.6s (480p, 单线程)';
         }
       });
     } else if (action === 'reverse') {
@@ -493,7 +502,7 @@ Toolkit.injectTopbar('video-toolkit');
       if (action === 'frames') await doExtractFrames();
       else if (action === 'toGif') await doToGif();
       else if (action === 'chromaKey') await doChromaKey();
-      else if (action === 'changeFps' && $('cfpsMode')?.value === 'optical') await doChangeFpsRife();
+      else if (action === 'changeFps' && /^optical/.test($('cfpsMode')?.value || '')) await doChangeFpsOptical();
       else await doReencodeWebm(action);  // trim/crop/resize/speed/reverse/filter all share this path
     } catch (e) {
       log.err(e.message);
@@ -710,28 +719,58 @@ Toolkit.injectTopbar('video-toolkit');
     log.ok(`生成 WebM ${fmtBytes(outBlob.size)}`);
   }
 
-  // ChangeFps with RIFE optical-flow interpolation. Assumes a source reference
-  // FPS of 30 (matches the rest of the pipeline's seek sampling). For each
-  // output frame at time t, we compute the bracketing source-frame indices and
-  // either reuse a source sample directly (alpha ≈ 0 or 1) or call RIFE to
-  // synthesize the in-between. Source samples are cached so we never seek the
-  // same time twice in a row.
-  async function doChangeFpsRife() {
-    if (!window.RIFE) throw new Error('RIFE 模块未加载');
+  // ChangeFps with optical-flow interpolation (RIFE on WebGPU, or Farnebäck
+  // on CPU as fallback). Assumes a source reference FPS of 30 (matches the
+  // rest of the pipeline's seek sampling). For each output frame at time t,
+  // we compute the bracketing source-frame indices and either reuse a source
+  // sample directly (alpha ≈ 0 or 1) or call the active backend to synthesize
+  // the in-between. Source samples are cached so we never seek the same time
+  // twice in a row.
+  async function doChangeFpsOptical() {
+    const mode = $('cfpsMode')?.value || 'optical';
     const { w: sw, h: sh, duration } = srcMeta;
     const target = parseInt($('cfpsTarget').value, 10) || 30;
-    // Prepare RIFE (lazy download). Surface progress in the inline status line.
     const statusEl = $('cfpsRifeStatus');
     if (statusEl) statusEl.style.display = '';
-    await window.RIFE.prepare({
-      onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; },
-      onProgress: p => {
-        const pct = (p * 100).toFixed(0);
-        if (statusEl) statusEl.textContent = `下载 RIFE 模型 ${pct}%...`;
-        progress.set(p * 0.2);  // model download = first 20% of the bar
+
+    // Pick backend per user choice, with auto-fallback.
+    //   optical       → RIFE if WebGPU, else Farnebäck, else throw
+    //   optical-rife  → RIFE only (throws if no WebGPU)
+    //   optical-fb    → Farnebäck only
+    let backend = null;  // { name, prepare(), interpolate(A, B, α, out) }
+    const tryRife = async () => {
+      if (!window.RIFE) throw new Error('RIFE 模块未加载');
+      await window.RIFE.prepare({
+        onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; },
+        onProgress: p => {
+          if (statusEl) statusEl.textContent = `下载 RIFE 模型 ${(p*100)|0}%...`;
+          progress.set(p * 0.2);
+        }
+      });
+      return { name: 'RIFE (WebGPU)', interpolate: window.RIFE.interpolate };
+    };
+    const tryFarneback = async () => {
+      if (!window.Farneback) throw new Error('Farnebäck 模块未加载');
+      await window.Farneback.prepare({
+        onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; }
+      });
+      return { name: 'Farnebäck (CPU)', interpolate: window.Farneback.interpolate };
+    };
+    if (mode === 'optical-rife') {
+      backend = await tryRife();
+    } else if (mode === 'optical-fb') {
+      backend = await tryFarneback();
+    } else {
+      // auto: try RIFE first, fall back on any failure
+      try { backend = await tryRife(); }
+      catch (e) {
+        log.warn(`RIFE 不可用 (${e.message}), 降级到 Farnebäck CPU`);
+        if (statusEl) statusEl.textContent = `RIFE 不可用,改用 Farnebäck CPU...`;
+        backend = await tryFarneback();
       }
-    });
-    if (statusEl) statusEl.textContent = '✓ RIFE 就绪, 开始推理';
+    }
+    log.ok(`光流后端: ${backend.name}`);
+    if (statusEl) statusEl.textContent = `✓ ${backend.name} 就绪, 开始推理`;
 
     const fmt = $('outFormat').value;
     const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
@@ -808,7 +847,7 @@ Toolkit.injectTopbar('video-toolkit');
       } else {
         const A = await getSrcAt(srcLo);
         const B = await getSrcAt(Math.min(Math.floor(duration * SRC_FPS), srcHi));
-        await window.RIFE.interpolate(A, B, alpha, tmpInterp);
+        await backend.interpolate(A, B, alpha, tmpInterp);
         frame = tmpInterp;
       }
 
@@ -830,7 +869,7 @@ Toolkit.injectTopbar('video-toolkit');
     progress.set(1);
     showOutput();
     const dt = ((performance.now() - t0) / 1000).toFixed(1);
-    log.ok(`光流补帧完成 · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`);
+    log.ok(`光流补帧完成 (${backend.name}) · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`);
   }
 
   async function doExtractFrames() {

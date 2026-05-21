@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "v17",
+      "date": "2026-05-21",
+      "title": "GIF 透明修复 + 光流补帧自动降级",
+      "items": [
+        "gif encoder 正确写入透明索引,抠图→GIF 不再渗回背景色",
+        "光流补帧加 Farnebäck (CPU) 备选,WebGPU 不可用时自动降级",
+        "新增「强制 RIFE」「强制 Farnebäck」选项给想手动控制的用户"
+      ]
+    },
+    {
       "version": "v15",
       "date": "2026-05-21",
       "title": "光流补帧 (RIFE + WebGPU)",
