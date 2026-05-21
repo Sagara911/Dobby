@@ -4,7 +4,7 @@
 //   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'toolkit-v7';
+const CACHE = 'toolkit-v8';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
@@ -77,6 +77,9 @@ self.addEventListener('fetch', (e) => {
         if (resp.ok) {
           const clone = resp.clone();
           caches.open(CACHE).then(c => c.put(req, clone));
+        } else if (resp.status === 404) {
+          // file deleted from server — purge any stale cached copy so future loads stop serving it
+          caches.open(CACHE).then(c => c.delete(req));
         }
         return resp;
       }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
@@ -94,6 +97,9 @@ self.addEventListener('fetch', (e) => {
         if (resp.ok) {
           const clone = resp.clone();
           caches.open(CACHE).then(c => c.put(req, clone));
+        } else if (resp.status === 404) {
+          // server says gone — drop any stale cached copy so the next visit doesn't resurrect it
+          caches.open(CACHE).then(c => c.delete(req));
         }
         return resp;
       }).catch(() => null);
