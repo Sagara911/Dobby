@@ -46,11 +46,35 @@
 
     const framePixels = frames.map(frameImageData);
 
+    // Detect any transparent pixels across all frames. If present, we reserve
+    // the last palette slot for a "transparent" index so chroma-keyed regions
+    // round-trip cleanly through GIF (the old encoder ignored alpha entirely
+    // and mapped transparent pixels to their nearest RGB — bringing the keyed
+    // background back).
+    let hasTransparency = false;
+    for (const img of framePixels) {
+      const d = img.data;
+      for (let i = 3; i < d.length; i += 4) {
+        if (d[i] < 128) { hasTransparency = true; break; }
+      }
+      if (hasTransparency) break;
+    }
+    const maxColors = hasTransparency ? 255 : 256;
+
     let palette;
     if (paletteMode === 'uniform') palette = buildUniformPalette();
-    else palette = buildMedianCutPalette(framePixels, 256);
+    else palette = buildMedianCutPalette(framePixels, maxColors);
 
-    onStatus(`调色板 ${palette.length / 3} 色,开始 LZW 编码...`);
+    // Reserve the slot AFTER the content palette for transparency. It needs a
+    // dummy RGB (never displayed), so 0,0,0 is fine. Note: we read transparentIdx
+    // BEFORE pushing because palette.length/3 is the next free index.
+    let transparentIdx = -1;
+    if (hasTransparency) {
+      transparentIdx = palette.length / 3;
+      palette.push(0, 0, 0);
+    }
+
+    onStatus(`调色板 ${palette.length / 3} 色${hasTransparency ? ' (含透明)' : ''},开始 LZW 编码...`);
     await yieldUi();
 
     const out = new ByteSink();
@@ -71,18 +95,23 @@
       out.writeU8(0);
     }
 
+    // GCE packed byte layout: bit0=transparency flag, bits2-4=disposal method.
+    // Disposal=2 (restore-to-background) ensures each frame starts cleared so
+    // transparent regions don't accumulate the previous frame's pixels.
+    const gcePacked = hasTransparency ? ((2 << 2) | 0x01) : 0x00;
     const defaultDelay = Math.max(2, Math.round(100 / fps));
     for (let i = 0; i < frames.length; i++) {
       const delay = delays ? Math.max(2, delays[i]) : defaultDelay;
-      out.writeBytes([0x21, 0xF9, 0x04, 0x00]);
+      out.writeBytes([0x21, 0xF9, 0x04, gcePacked]);
       out.writeU16(delay);
-      out.writeU8(0); out.writeU8(0);
+      out.writeU8(transparentIdx >= 0 ? transparentIdx : 0);
+      out.writeU8(0);
       out.writeU8(0x2C);
       out.writeU16(0); out.writeU16(0);
       out.writeU16(w); out.writeU16(h);
       out.writeU8(0);
 
-      const indices = mapToPalette(framePixels[i], palette);
+      const indices = mapToPalette(framePixels[i], palette, transparentIdx);
       lzwEncode(indices, colorBits, out);
 
       onProgress((i + 1) / frames.length);
@@ -162,15 +191,21 @@
     const mid = box.pixels.length >> 1;
     return [{ pixels: box.pixels.slice(0, mid) }, { pixels: box.pixels.slice(mid) }];
   }
-  function mapToPalette(imageData, palette) {
+  function mapToPalette(imageData, palette, transparentIdx) {
     const data = imageData.data;
     const n = data.length / 4;
     const out = new Uint8Array(n);
+    // Only search the content slots (skip the reserved transparent entry).
     const pn = palette.length / 3;
+    const searchN = transparentIdx >= 0 ? transparentIdx : pn;
     for (let i = 0, j = 0; i < n; i++, j += 4) {
+      if (transparentIdx >= 0 && data[j + 3] < 128) {
+        out[i] = transparentIdx;
+        continue;
+      }
       const r = data[j], g = data[j+1], b = data[j+2];
       let best = 0, bestD = Infinity;
-      for (let k = 0; k < pn; k++) {
+      for (let k = 0; k < searchN; k++) {
         const dr = r - palette[k*3], dg = g - palette[k*3+1], db = b - palette[k*3+2];
         const d = dr*dr + dg*dg + db*db;
         if (d < bestD) { bestD = d; best = k; if (d === 0) break; }
