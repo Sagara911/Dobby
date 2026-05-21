@@ -108,6 +108,7 @@
         <option value="crop">🔲 画面裁剪 (Crop)</option>
         <option value="resize">📐 缩放</option>
         <option value="speed">⏩ 调速</option>
+        <option value="changeFps">🎞️ 改 FPS (抽帧 / 补帧)</option>
         <option value="reverse">⏪ 反向播放</option>
         <option value="frames">🖼️ 抽帧 (PNG ZIP)</option>
         <option value="toGif">🎞️ 转 GIF</option>
@@ -323,6 +324,23 @@ Toolkit.injectTopbar('video-toolkit');
         </div>
       `;
       $('speedMul').addEventListener('input', e => $('speedVal').textContent = (e.target.value / 100).toFixed(2) + '×');
+    } else if (action === 'changeFps') {
+      c.innerHTML = `
+        <div class="field">
+          <label>目标 FPS <span id="cfpsVal" class="mono">30</span></label>
+          <input type="range" id="cfpsTarget" min="6" max="60" value="30" />
+        </div>
+        <div class="field">
+          <label>补帧模式 (target &gt; 源 FPS 时)</label>
+          <select id="cfpsMode">
+            <option value="dup">帧复制 (快, 不平滑)</option>
+            <option value="blend" selected>线性混合 (相邻帧加权混合, 平滑但略带 motion-blur)</option>
+          </select>
+        </div>
+        <div class="info">&le; 30 = 抽帧 (跳帧), &gt; 30 = 补帧 (插值)。线性混合不是运动补偿,
+          快速运动会有 ghost; 想要光流级平滑请用 Premiere/After Effects 等专业软件。</div>
+      `;
+      $('cfpsTarget').addEventListener('input', e => $('cfpsVal').textContent = e.target.value);
     } else if (action === 'reverse') {
       c.innerHTML = `<div class="info">反向播放,无参数。需要逐帧抽样,长视频较慢。</div>`;
     } else if (action === 'frames') {
@@ -518,7 +536,12 @@ Toolkit.injectTopbar('video-toolkit');
     const ctx = cv.getContext('2d');
     const fmt = $('outFormat').value;
     const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
-    const fpsNum = 30;
+    // Output FPS: 30 by default, user-overridable via the changeFps action.
+    // For changeFps blend mode, pushFrame stashes the previous source sample
+    // in prevSampleCanvas and composites it under each new frame at 50% alpha,
+    // producing a motion-blur-like smoothing between adjacent samples.
+    const fpsNum = action === 'changeFps' ? (parseInt($('cfpsTarget')?.value, 10) || 30) : 30;
+    const cfpsMode = action === 'changeFps' ? ($('cfpsMode')?.value || 'blend') : 'dup';
     const interval = 1 / fpsNum;
 
     if (fmt === 'mp4') {
@@ -549,15 +572,31 @@ Toolkit.injectTopbar('video-toolkit');
 
       let frameIdx = 0;
       ctx.filter = canvasFilter;
+      // For changeFps blend mode: remember the previously sampled canvas so we
+      // can composite the *next* sample over it at 50% alpha, producing a
+      // half-step motion-blur between adjacent output frames.
+      const prevSample = (action === 'changeFps' && cfpsMode === 'blend') ? newCanvas(outW, outH) : null;
+      const prevCtx = prevSample ? prevSample.getContext('2d') : null;
+      let havePrev = false;
       async function pushFrame(t, ts) {
         await seekVideo(srcVideo, t);
         ctx.clearRect(0, 0, outW, outH);
         ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        if (prevSample && havePrev) {
+          ctx.globalAlpha = 0.5;
+          ctx.drawImage(prevSample, 0, 0);
+          ctx.globalAlpha = 1;
+        }
         const vf = new VideoFrame(cv, { timestamp: ts });
         // keyframe every 30 frames
         encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
         vf.close();
         frameIdx++;
+        if (prevSample) {
+          prevCtx.clearRect(0, 0, outW, outH);
+          prevCtx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+          havePrev = true;
+        }
       }
 
       if (!reverse) {
@@ -602,14 +641,33 @@ Toolkit.injectTopbar('video-toolkit');
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     const done = new Promise(resolve => { recorder.onstop = resolve; });
     recorder.start();
+    // Same blend setup as the MP4 path — for changeFps blend mode, overlay
+    // the previous sample at 50% alpha to fake a half-step in-between frame.
+    const cfpsMode = action === 'changeFps' ? ($('cfpsMode')?.value || 'blend') : 'dup';
+    const prevSample = (action === 'changeFps' && cfpsMode === 'blend') ? newCanvas(outW, outH) : null;
+    const prevCtx = prevSample ? prevSample.getContext('2d') : null;
+    let havePrev = false;
+    const drawSample = (t) => {
+      ctx.clearRect(0, 0, outW, outH);
+      ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+      if (prevSample && havePrev) {
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(prevSample, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+      if (prevSample) {
+        prevCtx.clearRect(0, 0, outW, outH);
+        prevCtx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        havePrev = true;
+      }
+    };
 
     if (!reverse) {
       const playSpan = endT - startT;
       let t = startT;
       while (t < endT) {
         await seekVideo(srcVideo, t);
-        ctx.clearRect(0, 0, outW, outH);
-        ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        drawSample(t);
         if (track.requestFrame) track.requestFrame();
         progress.set((t - startT) / playSpan);
         t += interval * speed;
@@ -619,8 +677,7 @@ Toolkit.injectTopbar('video-toolkit');
       const playSpan = endT - startT;
       while (t > startT) {
         await seekVideo(srcVideo, t);
-        ctx.clearRect(0, 0, outW, outH);
-        ctx.drawImage(srcVideo, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+        drawSample(t);
         if (track.requestFrame) track.requestFrame();
         progress.set(1 - (t - startT) / playSpan);
         t -= interval;

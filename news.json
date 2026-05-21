@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "v14",
+      "date": "2026-05-21",
+      "title": "本轮 5 项修复 / 新功能",
+      "items": [
+        "video-toolkit 色键: YCbCr 距离 + 蒙版 choke,接近 PR Ultra Key 效果",
+        "video-toolkit 新增「🎞️ 改 FPS」: 抽帧 + 线性混合补帧",
+        "gif-tools: 「送到编辑标签」按钮现在 APNG 输出也能用",
+        "playable-slim: 校验图片重编码,防止破损 WebP 替换好图导致显示丢失",
+        "右下角更新推送 toast (你正在看的这个就是)"
+      ]
+    },
+    {
       "version": "v12",
       "date": "2026-05-21",
       "title": "绿幕扣图去溢出修复",
