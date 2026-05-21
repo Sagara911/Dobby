@@ -363,15 +363,44 @@
         }
         if (entries.some(en => en && en.isDirectory)) {
           for (const ent of entries) await readEntry(ent, files);
-          onFiles(files);
+          onFiles(await maybeExpandZips(files));
           return;
         }
       }
-      onFiles(Array.from(e.dataTransfer.files));
+      onFiles(await maybeExpandZips(Array.from(e.dataTransfer.files)));
     });
-    fileInput.addEventListener('change', (e) => onFiles(Array.from(e.target.files)));
+    fileInput.addEventListener('change', async (e) => {
+      onFiles(await maybeExpandZips(Array.from(e.target.files)));
+    });
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => e.preventDefault());
+  }
+
+  // If any dropped file is a .zip, unpack it inline so the tool's
+  // handleFiles() sees the contents as if the user had dropped them directly.
+  // Falls back to the original file if unzip fails (corrupt, password-locked, etc).
+  async function maybeExpandZips(files) {
+    const zips = files.filter(f => f && (f.type === 'application/zip' || /\.zip$/i.test(f.name)));
+    if (!zips.length) return files;
+    const out = [];
+    for (const f of files) {
+      if (zips.includes(f)) {
+        try {
+          const expanded = await unzipBlob(f);
+          if (expanded && expanded.length) {
+            out.push(...expanded);
+            toast(`✨ ZIP "${f.name}" 已自动解压 ${expanded.length} 个文件`, 'ok', 3500);
+            continue;
+          }
+        } catch (err) {
+          console.warn('unzip failed for', f.name, err);
+        }
+        out.push(f);  // keep original if unzip failed or empty
+      } else {
+        out.push(f);
+      }
+    }
+    return out;
   }
 
   // recursively read a FileSystemEntry (file or directory) into a flat files[] list
