@@ -85,11 +85,51 @@
     <h1>🩻 Playable 瘦身</h1>
 
     <div class="tab-row" id="modeTabs">
-      <button data-mode="split" class="active" type="button">📤 拆出资源</button>
+      <button data-mode="auto" class="active" type="button">🤖 一键瘦身</button>
+      <button data-mode="split" type="button">📤 拆出资源</button>
       <button data-mode="repack" type="button">📥 重组 HTML</button>
     </div>
 
-    <div id="splitPane">
+    <div id="autoPane">
+      <div class="drop-zone" id="autoDrop">
+        <p>📂 拖入大 HTML</p>
+        <p class="hint">一次性扫描 + 压缩 + 重组,不需切工具</p>
+        <input type="file" id="autoFile" accept=".html,.htm,text/html" style="display:none" />
+      </div>
+      <div class="warn-banner">⚠️ 视频压缩较慢(主线程 WebCodecs),100 MB 视频约 1-3 分钟,期间页面会忙。</div>
+
+      <h2>质量档</h2>
+      <div class="field">
+        <select id="autoQuality">
+          <option value="tiny">📉 极致小 (体积最优,质量损失明显)</option>
+          <option value="balanced" selected>📦 平衡 (推荐)</option>
+          <option value="safe">🛡️ 保守 (质量优先)</option>
+        </select>
+        <div class="info" id="autoQualityHint">图片 JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono</div>
+      </div>
+
+      <h2>处理范围</h2>
+      <label class="checkbox"><input type="checkbox" id="autoDoImages" checked /><span>压缩图片 (PNG / JPG / WebP) — 快</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDoVideos" checked /><span>压缩视频 (MP4 / WebM) — 慢</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDoAudios" /><span>压缩音频 (WAV) — 中等</span></label>
+
+      <h2>导出</h2>
+      <div class="field">
+        <label>输出 HTML 文件名</label>
+        <input type="text" id="autoFilename" value="playable-slim" />
+      </div>
+      <button id="autoStartBtn" disabled>开始一键瘦身</button>
+      <button id="autoClearBtn" class="secondary">清空</button>
+
+      <div id="autoProgress" style="display:none; margin-top:10px">
+        <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden">
+          <div id="autoProgFill" style="height:100%; width:0%; background:var(--jade); transition:width 0.2s"></div>
+        </div>
+        <div id="autoProgLabel" style="font-size:11px; color:var(--muted); margin-top:4px; font-family:ui-monospace,Consolas,monospace"></div>
+      </div>
+    </div>
+
+    <div id="splitPane" style="display:none">
       <div class="drop-zone" id="splitDrop">
         <p>📂 拖入大体积 HTML</p>
         <p class="hint">扫描 dataURL · 拆出图/音/视/字体</p>
@@ -155,19 +195,30 @@ Toolkit.injectTopbar('playable-slim');
   const log = makeLogger($('log'));
   const handoff = Toolkit.setupHandoff('playable-slim', { outputType: 'text/html' });
 
-  let mode = 'split';
+  let mode = 'auto';
 
   // ===== mode switching =====
   document.querySelectorAll('#modeTabs button').forEach(b => {
     b.addEventListener('click', () => {
       mode = b.dataset.mode;
       document.querySelectorAll('#modeTabs button').forEach(x => x.classList.toggle('active', x === b));
+      $('autoPane').style.display = mode === 'auto' ? '' : 'none';
       $('splitPane').style.display = mode === 'split' ? '' : 'none';
       $('repackPane').style.display = mode === 'repack' ? '' : 'none';
       $('stats').textContent = '等待文件';
       $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
       $('summaryBox').innerHTML = '';
     });
+  });
+
+  // quality preset hints
+  const QUALITY_HINTS = {
+    tiny:     'PNG→WebP q=0.65 · JPG q=0.55 · 视频 480p/400kbps · 音频 11025Hz mono',
+    balanced: 'PNG→WebP q=0.85 · JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono',
+    safe:     'PNG 无损重编 · JPG q=0.88 · 视频 原尺寸/2500kbps · 音频 44100Hz stereo'
+  };
+  $('autoQuality').addEventListener('change', e => {
+    $('autoQualityHint').textContent = QUALITY_HINTS[e.target.value];
   });
 
   // ====================================================================
@@ -546,13 +597,330 @@ Toolkit.injectTopbar('playable-slim');
 
   // ===== bytes → base64 (chunked to avoid 'argument list too long') =====
   function bytesToBase64(bytes) {
-    // process in 64K chunks
     const chunk = 65536;
     let bin = '';
     for (let i = 0; i < bytes.length; i += chunk) {
       bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, bytes.length)));
     }
     return btoa(bin);
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  // ====================================================================
+  //   Auto mode (full pipeline in one click)
+  // ====================================================================
+  let autoState = null;
+  let mp4MuxerMod = null;
+
+  attachDropZone($('autoDrop'), $('autoFile'), files => handleAutoFile(files[0]));
+
+  $('autoClearBtn').addEventListener('click', () => {
+    autoState = null;
+    $('stats').textContent = '等待文件';
+    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+    $('summaryBox').innerHTML = '';
+    $('autoStartBtn').disabled = true;
+    $('autoProgress').style.display = 'none';
+    log.clear();
+  });
+
+  async function handleAutoFile(file) {
+    if (!file) return;
+    log.clear();
+    log.dim(`读入 ${file.name} (${fmtBytes(file.size)})...`);
+    $('autoStartBtn').disabled = true;
+    try {
+      const text = await file.text();
+      log.dim(`扫描内联资源...`);
+      const resources = await scanDataUrls(text);
+      log.ok(`找到 ${resources.length} 个内联资源`);
+      autoState = { fileName: file.name, fileSize: file.size, htmlText: text, resources };
+      renderResources(resources, file.size);
+      $('autoStartBtn').disabled = resources.length === 0;
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function setAutoProgress(frac, label) {
+    $('autoProgress').style.display = '';
+    $('autoProgFill').style.width = (frac * 100).toFixed(1) + '%';
+    $('autoProgLabel').textContent = label;
+  }
+
+  $('autoStartBtn').addEventListener('click', async () => {
+    if (!autoState) return;
+    $('autoStartBtn').disabled = true;
+    $('autoClearBtn').disabled = true;
+    const quality = $('autoQuality').value;
+    const doImages = $('autoDoImages').checked;
+    const doVideos = $('autoDoVideos').checked;
+    const doAudios = $('autoDoAudios').checked;
+
+    log.dim(`开始一键瘦身 · 质量档:${quality}`);
+    const t0 = performance.now();
+    const compressed = new Map();
+    const stats = { tried: 0, shrunk: 0, totalIn: 0, totalOut: 0, skipped: 0 };
+
+    try {
+      for (let i = 0; i < autoState.resources.length; i++) {
+        const r = autoState.resources[i];
+        const cat = r.mime.split('/')[0];
+        setAutoProgress(i / autoState.resources.length, `[${i+1}/${autoState.resources.length}] ${r.filename}`);
+        // give UI a chance to repaint
+        await new Promise(rs => setTimeout(rs, 0));
+
+        const bin = base64ToBytes(r._base64);
+        let result = null;
+        try {
+          if (cat === 'image' && doImages) result = await compressImage(bin, r.mime, quality);
+          else if (cat === 'video' && doVideos) result = await compressVideo(bin, r.mime, quality);
+          else if (cat === 'audio' && doAudios) result = await compressAudio(bin, r.mime, quality);
+        } catch (err) {
+          log.warn(`  ${r.filename}: ${err.message},跳过`);
+        }
+
+        stats.tried++;
+        if (result && result.bytes.length < bin.length * 0.98) {  // require at least 2% saving
+          compressed.set(r.index, result);
+          stats.shrunk++;
+          stats.totalIn += bin.length;
+          stats.totalOut += result.bytes.length;
+        } else {
+          stats.skipped++;
+        }
+      }
+
+      setAutoProgress(0.95, '重组 HTML...');
+      await new Promise(rs => setTimeout(rs, 20));
+
+      // build new HTML (same algorithm as Repack)
+      const parts = [];
+      const sorted = [...autoState.resources].sort((a, b) => a.htmlOffset - b.htmlOffset);
+      let cursor = 0;
+      for (const r of sorted) {
+        if (r.htmlOffset < cursor) continue;
+        parts.push(autoState.htmlText.slice(cursor, r.htmlOffset));
+        const rep = compressed.get(r.index);
+        if (rep) {
+          parts.push(`data:${rep.mime};base64,${bytesToBase64(rep.bytes)}`);
+        } else {
+          parts.push(autoState.htmlText.slice(r.htmlOffset, r.htmlEndOffset));
+        }
+        cursor = r.htmlEndOffset;
+      }
+      parts.push(autoState.htmlText.slice(cursor));
+      const blob = new Blob(parts, { type: 'text/html' });
+
+      setAutoProgress(1, '完成');
+      const outName = ($('autoFilename').value || 'playable-slim') + '.html';
+      download(blob, outName);
+      handoff?.setBlob(blob, outName);
+      const dt = ((performance.now() - t0) / 1000).toFixed(1);
+      const pctTotal = ((1 - blob.size / autoState.fileSize) * 100).toFixed(1);
+      const pctAssets = stats.totalIn > 0 ? ((1 - stats.totalOut / stats.totalIn) * 100).toFixed(1) : '0';
+      log.ok(`完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(autoState.fileSize)}, 整体 -${pctTotal}%) · ${stats.shrunk}/${stats.tried} 资源被压缩(-${pctAssets}%) · ${dt}s`);
+      $('stats').innerHTML = `<strong>${fmtBytes(autoState.fileSize)} → ${fmtBytes(blob.size)}</strong> · 节省 <strong style="color:var(--jade)">${pctTotal}%</strong> · ${stats.shrunk} 资源被压缩`;
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('autoStartBtn').disabled = false;
+      $('autoClearBtn').disabled = false;
+      setTimeout(() => { $('autoProgress').style.display = 'none'; }, 2000);
+    }
+  });
+
+  // ---------- image compression via canvas.toBlob ----------
+  async function compressImage(bytes, mime, quality) {
+    if (mime === 'image/gif' || mime === 'image/svg+xml' || mime === 'image/x-icon') return null;
+    const blob = new Blob([bytes], { type: mime });
+    let bmp;
+    try { bmp = await createImageBitmap(blob); }
+    catch (e) { return null; }
+    const c = document.createElement('canvas');
+    c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    bmp.close?.();
+
+    const presets = {
+      tiny:     { jpg: 0.55, webp: 0.55, pngToWebp: true,  pngWebpQ: 0.65 },
+      balanced: { jpg: 0.75, webp: 0.75, pngToWebp: true,  pngWebpQ: 0.85 },
+      safe:     { jpg: 0.88, webp: 0.88, pngToWebp: false, pngWebpQ: undefined }
+    };
+    const p = presets[quality] || presets.balanced;
+
+    let outMime, outQ;
+    if (mime === 'image/png') {
+      if (p.pngToWebp) { outMime = 'image/webp'; outQ = p.pngWebpQ; }
+      else { outMime = 'image/png'; outQ = undefined; }
+    } else if (mime === 'image/jpeg' || mime === 'image/jpg') {
+      outMime = 'image/jpeg'; outQ = p.jpg;
+    } else if (mime === 'image/webp') {
+      outMime = 'image/webp'; outQ = p.webp;
+    } else if (mime === 'image/avif') {
+      // browser typically can't re-encode AVIF, fall back to no-op
+      return null;
+    } else {
+      return null;
+    }
+
+    const outBlob = await new Promise(r => c.toBlob(r, outMime, outQ));
+    if (!outBlob) return null;
+    return { bytes: new Uint8Array(await outBlob.arrayBuffer()), mime: outMime };
+  }
+
+  // ---------- video compression via WebCodecs + mp4-muxer ----------
+  async function compressVideo(bytes, mime, quality) {
+    if (!('VideoEncoder' in window)) {
+      log.warn('  浏览器不支持 WebCodecs,视频跳过');
+      return null;
+    }
+    if (!mp4MuxerMod) {
+      log.dim('  加载 mp4-muxer (首次联网)...');
+      mp4MuxerMod = await import('https://esm.sh/mp4-muxer@5.1.5');
+    }
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true; video.playsInline = true; video.preload = 'auto';
+    try {
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('视频解析失败'));
+      });
+    } catch (e) {
+      URL.revokeObjectURL(url);
+      throw e;
+    }
+    const sw = video.videoWidth, sh = video.videoHeight, duration = video.duration;
+    if (!sw || !sh || !duration || !isFinite(duration)) {
+      URL.revokeObjectURL(url);
+      return null;
+    }
+
+    const presets = {
+      tiny:     { maxDim: 480, kbps: 400,  fps: 24 },
+      balanced: { maxDim: 720, kbps: 1200, fps: 30 },
+      safe:     { maxDim: Math.max(sw, sh), kbps: 2500, fps: 30 }
+    };
+    const p = presets[quality] || presets.balanced;
+    const scale = Math.min(1, p.maxDim / Math.max(sw, sh));
+    const outW = Math.max(2, Math.round(sw * scale / 2) * 2);
+    const outH = Math.max(2, Math.round(sh * scale / 2) * 2);
+
+    const muxer = new mp4MuxerMod.Muxer({
+      target: new mp4MuxerMod.ArrayBufferTarget(),
+      video: { codec: 'avc', width: outW, height: outH },
+      fastStart: 'in-memory'
+    });
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: e => console.error('encoder', e)
+    });
+    encoder.configure({
+      codec: 'avc1.42001f',
+      width: outW, height: outH,
+      bitrate: p.kbps * 1000,
+      framerate: p.fps
+    });
+
+    const cv = document.createElement('canvas');
+    cv.width = outW; cv.height = outH;
+    const ctx = cv.getContext('2d');
+    const interval = 1 / p.fps;
+    let frameIdx = 0;
+    let t = 0;
+    function seekTo(time) {
+      return new Promise(resolve => {
+        const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+        video.addEventListener('seeked', onSeeked);
+        video.currentTime = Math.min(time, duration - 0.001);
+      });
+    }
+    while (t < duration) {
+      await seekTo(t);
+      ctx.drawImage(video, 0, 0, outW, outH);
+      const vf = new VideoFrame(cv, { timestamp: Math.round((frameIdx / p.fps) * 1e6) });
+      encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
+      vf.close();
+      frameIdx++;
+      t += interval;
+    }
+    await encoder.flush();
+    encoder.close();
+    muxer.finalize();
+    URL.revokeObjectURL(url);
+    return { bytes: new Uint8Array(muxer.target.buffer), mime: 'video/mp4' };
+  }
+
+  // ---------- audio compression: WAV resample + mono ----------
+  async function compressAudio(bytes, mime, quality) {
+    if (!/^audio\/(wav|x-wav)$/i.test(mime)) return null;  // skip already-compressed formats
+    const blob = new Blob([bytes], { type: mime });
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let buf;
+    try { buf = await audioCtx.decodeAudioData(await blob.arrayBuffer()); }
+    catch (e) { audioCtx.close(); return null; }
+    audioCtx.close();
+
+    const presets = {
+      tiny:     { rate: 11025, mono: true },
+      balanced: { rate: 22050, mono: true },
+      safe:     { rate: Math.min(buf.sampleRate, 44100), mono: false }
+    };
+    const p = presets[quality] || presets.balanced;
+    const targetCh = p.mono ? 1 : Math.min(2, buf.numberOfChannels);
+    const targetRate = p.rate;
+
+    const offline = new OfflineAudioContext(targetCh, Math.ceil(buf.duration * targetRate), targetRate);
+    const src = offline.createBufferSource();
+    src.buffer = buf;
+    src.connect(offline.destination);
+    src.start();
+    const resampled = await offline.startRendering();
+    return { bytes: encodeWav16(resampled), mime: 'audio/wav' };
+  }
+
+  function encodeWav16(audioBuffer) {
+    const ch = audioBuffer.numberOfChannels;
+    const sr = audioBuffer.sampleRate;
+    const len = audioBuffer.length;
+    const bps = 2; // 16-bit
+    const dataSize = len * ch * bps;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const v = new DataView(ab);
+    const w = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+    w(0, 'RIFF');
+    v.setUint32(4, 36 + dataSize, true);
+    w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);            // PCM
+    v.setUint16(22, ch, true);
+    v.setUint32(24, sr, true);
+    v.setUint32(28, sr * ch * bps, true);
+    v.setUint16(32, ch * bps, true);
+    v.setUint16(34, 16, true);
+    w(36, 'data');
+    v.setUint32(40, dataSize, true);
+    let off = 44;
+    const channels = [];
+    for (let c = 0; c < ch; c++) channels.push(audioBuffer.getChannelData(c));
+    for (let i = 0; i < len; i++) {
+      for (let c = 0; c < ch; c++) {
+        let s = Math.max(-1, Math.min(1, channels[c][i]));
+        v.setInt16(off, s < 0 ? s * 32768 : s * 32767, true);
+        off += 2;
+      }
+    }
+    return new Uint8Array(ab);
   }
 })();
 </script>
