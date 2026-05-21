@@ -210,10 +210,7 @@
           `;
         }).join('')}
       </nav>
-      <div class="meta">
-        <a href="mailto:huobingli0924@gmail.com" class="meta-email">联系作者: huobingli0924@gmail.com</a>
-        <div class="meta-note">测试阶段, 如有反馈请联系作者</div>
-      </div>
+      <div class="meta">本地处理</div>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
@@ -265,6 +262,46 @@
     maybeShowBackPill();
     maybeShowNewsToast(prefix);
     setupHomeScrollMemory();
+    setupFeedbackChip();
+  }
+
+  // ============================================================
+  //   Floating feedback chip — persistent bottom-right pill with
+  //   the author's email + "测试阶段" note. Collapsed by default
+  //   to stay out of the way; click expands to a small card.
+  //   Dismiss via × persists for the session.
+  // ============================================================
+  function setupFeedbackChip() {
+    if (sessionStorage.getItem('toolkit-feedback-dismissed')) return;
+    if (document.querySelector('.feedback-chip')) return;
+    const chip = document.createElement('div');
+    chip.className = 'feedback-chip';
+    chip.innerHTML = `
+      <button type="button" class="fc-collapsed" title="点击展开">💬 反馈</button>
+      <div class="fc-expanded" style="display:none">
+        <div class="fc-head">
+          <span>🚧 测试阶段</span>
+          <button type="button" class="fc-close" aria-label="关闭">×</button>
+        </div>
+        <div class="fc-body">网站还在测试中, 欢迎邮件反馈使用问题或建议:</div>
+        <a class="fc-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
+      </div>
+    `;
+    document.body.appendChild(chip);
+    const collapsed = chip.querySelector('.fc-collapsed');
+    const expanded  = chip.querySelector('.fc-expanded');
+    collapsed.addEventListener('click', () => {
+      collapsed.style.display = 'none';
+      expanded.style.display = '';
+    });
+    chip.querySelector('.fc-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      // collapse, not full dismiss — user can re-expand. Full dismiss only
+      // via long-press / right-click would be over-engineering; the chip
+      // is small enough that staying visible is fine.
+      expanded.style.display = 'none';
+      collapsed.style.display = '';
+    });
   }
 
   // Remember the home page's scroll position across the home → tool → home

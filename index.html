@@ -57,16 +57,24 @@
   .hero .eyebrow { display: inline-block; }
   .hero .eyebrow {
     display: inline-block;
-    padding: 4px 14px;
+    padding: 6px 16px;
     border-radius: var(--radius-pill);
-    background: rgba(var(--jade-rgb), 0.1);
-    border: 1px solid rgba(var(--jade-rgb), 0.25);
+    background: rgba(var(--jade-rgb), 0.14);
+    border: 1px solid rgba(var(--jade-rgb), 0.4);
     color: var(--jade);
-    font-size: 11px;
+    font-size: 12.5px;
     font-family: ui-monospace, Consolas, monospace;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0.06em;
     margin-bottom: 20px;
+  }
+  .hero .eyebrow-email {
+    color: var(--jade);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+  }
+  .hero .eyebrow-email:hover { color: #fff; text-decoration-color: #fff;
   }
   .hero h1 {
     font-size: clamp(2.2rem, 5.5vw, 4.2rem);
@@ -525,7 +533,7 @@
 
 <main>
   <section class="hero">
-    <div class="eyebrow">23 Tools · Local-First · No Upload</div>
+    <div class="eyebrow">🚧 测试阶段 · 反馈 <a href="mailto:huobingli0924@gmail.com" class="eyebrow-email">huobingli0924@gmail.com</a></div>
     <h1>为 H5 Playable 而生的<br/><span class="accent">本地工具集。</span></h1>
     <p>图像、动画、音视频、代码、分析 — 全部在浏览器本地运行,文件不上传不离开你的设备。</p>
     <div class="search-wrap" id="searchWrap">

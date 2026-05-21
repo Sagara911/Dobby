@@ -485,7 +485,7 @@ a:hover { color: var(--jade); }
 .news-toast {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  bottom: 78px;  /* stack above the .feedback-chip in the same corner */
   width: min(340px, calc(100vw - 32px));
   z-index: 950;
   background: var(--panel-solid);
@@ -595,6 +595,87 @@ a:hover { color: var(--jade); }
   color: var(--text);
   transform: none;
 }
+
+/* =========================================================================
+   Floating feedback chip — bottom-right persistent contact channel.
+   Lives across all pages via setupFeedbackChip in shared.js.
+   ========================================================================= */
+.feedback-chip {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 920;  /* below .news-toast (950) so news stacks on top when both visible */
+  font-family: "Space Grotesk", sans-serif;
+}
+.feedback-chip .fc-collapsed {
+  background: var(--panel-solid);
+  border: 1px solid rgba(var(--jade-rgb), 0.45);
+  color: var(--jade);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.feedback-chip .fc-collapsed:hover {
+  background: rgba(var(--jade-rgb), 0.18);
+  border-color: rgba(var(--jade-rgb), 0.7);
+  transform: translateY(-2px);
+}
+.feedback-chip .fc-expanded {
+  background: var(--panel-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  width: min(300px, calc(100vw - 32px));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 12.5px;
+  color: var(--text-soft);
+  animation: fc-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fc-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); transform-origin: bottom right; }
+  to   { opacity: 1; transform: none; }
+}
+.feedback-chip .fc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--jade);
+  font-weight: 600;
+  font-size: 13px;
+}
+.feedback-chip .fc-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  box-shadow: none;
+}
+.feedback-chip .fc-close:hover { color: var(--text); transform: none; }
+.feedback-chip .fc-body {
+  margin-bottom: 8px;
+  line-height: 1.55;
+}
+.feedback-chip .fc-email {
+  display: block;
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--jade);
+  text-decoration: none;
+  background: rgba(var(--jade-rgb), 0.12);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 12px;
+  transition: background 0.12s;
+}
+.feedback-chip .fc-email:hover { background: rgba(var(--jade-rgb), 0.22); }
 
 /* =========================================================================
    Tool page layout — sidebar + main
