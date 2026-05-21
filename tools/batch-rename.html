@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>批量重命名 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .rename-table {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 540px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .rn-row {
+    display: grid;
+    grid-template-columns: 32px 1fr 22px 1fr 80px 24px;
+    gap: 10px;
+    align-items: center;
+    padding: 5px 8px;
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+  }
+  .rn-row .idx { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; text-align: right; }
+  .rn-row .from, .rn-row .to {
+    font-family: ui-monospace, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .rn-row .from { color: var(--muted-2); }
+  .rn-row .arr { color: var(--jade); text-align: center; }
+  .rn-row .size { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--muted-2); text-align: right; }
+  .rn-row.conflict { background: rgba(220, 60, 60, 0.18); border: 1px solid rgba(220, 60, 60, 0.5); }
+  .rn-row.conflict .to { color: #ff8a8a; }
+  .rn-row.unchanged .to { color: var(--muted); }
+  .rn-row .remove {
+    background: transparent; border: none; color: var(--muted);
+    padding: 2px 4px; cursor: pointer; font-size: 14px; box-shadow: none;
+  }
+  .rn-row .remove:hover { color: var(--danger); transform: none; }
+  .placeholder-hint {
+    margin-top: 4px;
+    padding: 7px 9px;
+    background: rgba(var(--jade-rgb), 0.06);
+    border-left: 2px solid var(--jade);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--text-soft);
+  }
+  .placeholder-hint code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--jade);
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .conflict-banner {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: rgba(220, 60, 60, 0.12);
+    border-left: 2px solid #ff6868;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: #ff8a8a;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🏷️ 批量重命名</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入文件或文件夹</p>
+      <p class="hint">任意类型 · 可多选 · 拖 ZIP 自动解压</p>
+      <input type="file" id="fileInput" multiple style="display:none" />
+      <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none" />
+    </div>
+    <div style="display:flex; gap:6px; margin-top:6px">
+      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件</button>
+      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件夹</button>
+    </div>
+
+    <h2>排序</h2>
+    <div class="field">
+      <label>排序依据 (决定 {i} 编号顺序)</label>
+      <select id="sortBy">
+        <option value="natural" selected>文件名自然排序 (推荐)</option>
+        <option value="mtime">修改时间</option>
+        <option value="size">文件大小</option>
+        <option value="original">保持拖入顺序</option>
+      </select>
+    </div>
+
+    <h2>命名模板</h2>
+    <div class="field">
+      <label>模板</label>
+      <input type="text" id="pattern" value="{base}{ext}" />
+    </div>
+    <div class="placeholder-hint">
+      占位符: <code>{base}</code> 原名(无扩展) · <code>{ext}</code> 扩展名带点 · <code>{i}</code> 序号 · <code>{i:04}</code> 4 位补零 · <code>{name}</code> 完整原名<br/>
+      例: <code>walk_{i:04}{ext}</code> → walk_0001.png · <code>{base}_v2{ext}</code> → 原名加 v2 后缀
+    </div>
+    <div class="row-fields" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+      <div class="field"><label>起始号</label><input type="number" id="startN" value="1" min="0" /></div>
+      <div class="field"><label>步长</label><input type="number" id="stepN" value="1" min="1" /></div>
+    </div>
+
+    <h2>文本替换 (可选)</h2>
+    <div class="field">
+      <label>查找</label>
+      <input type="text" id="findStr" value="" placeholder="留空则跳过" />
+    </div>
+    <div class="field">
+      <label>替换为</label>
+      <input type="text" id="replStr" value="" />
+    </div>
+    <label class="checkbox"><input type="checkbox" id="useRegex" /><span>用正则表达式</span></label>
+    <label class="checkbox"><input type="checkbox" id="caseSensitive" checked /><span>区分大小写</span></label>
+
+    <h2>大小写 / 扩展名</h2>
+    <div class="field">
+      <label>大小写</label>
+      <select id="caseMode">
+        <option value="none" selected>不变</option>
+        <option value="lower">全小写</option>
+        <option value="upper">全大写</option>
+        <option value="title">首字母大写</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>扩展名</label>
+      <select id="extMode">
+        <option value="keep" selected>保持原样</option>
+        <option value="lower">小写</option>
+        <option value="custom">指定为...</option>
+      </select>
+    </div>
+    <div class="field" id="extCustomField" style="display:none">
+      <label>新扩展名 (含或不含点都行)</label>
+      <input type="text" id="extCustom" value=".png" />
+    </div>
+
+    <h2>导出</h2>
+    <div class="field">
+      <label>ZIP 文件名</label>
+      <input type="text" id="zipName" value="renamed" />
+    </div>
+    <button id="exportBtn" disabled>导出 ZIP</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加入文件</div>
+    <div id="conflictBanner"></div>
+    <div class="info" style="margin-bottom:8px">规则按顺序应用: <strong>模板</strong> → <strong>替换</strong> → <strong>大小写</strong> → <strong>扩展名</strong>。重名行会红色高亮。</div>
+    <div class="rename-table" id="renameTable">
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会显示重命名预览</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('batch-rename');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes, naturalSort, makeZip } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('batch-rename', { outputType: 'application/zip' });
+
+  // each entry: { file, name, size, mtime, originalIdx }
+  let files = [];
+  let outBlob = null;
+
+  attachDropZone($('dropZone'), $('fileInput'), addFiles);
+  $('addFilesBtn').addEventListener('click', () => $('fileInput').click());
+  $('addFolderBtn').addEventListener('click', () => $('folderInput').click());
+  $('folderInput').addEventListener('change', e => addFiles(Array.from(e.target.files)));
+
+  function addFiles(incoming) {
+    if (!incoming?.length) return;
+    const baseIdx = files.length;
+    for (let i = 0; i < incoming.length; i++) {
+      const f = incoming[i];
+      files.push({
+        file: f,
+        name: f.webkitRelativePath ? f.webkitRelativePath.replace(/^[^/]+\//, '') : f.name,
+        size: f.size,
+        mtime: f.lastModified || 0,
+        originalIdx: baseIdx + i,
+      });
+    }
+    log.ok(`加入 ${incoming.length} 个文件 (累计 ${files.length})`);
+    refresh();
+  }
+
+  // Live-update on any rule change
+  ['sortBy', 'pattern', 'startN', 'stepN', 'findStr', 'replStr', 'useRegex',
+   'caseSensitive', 'caseMode', 'extMode', 'extCustom'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', refresh);
+    el.addEventListener('change', refresh);
+  });
+  $('extMode').addEventListener('change', e => {
+    $('extCustomField').style.display = e.target.value === 'custom' ? '' : 'none';
+  });
+
+  // Compute the new name for a file given the active rule set.
+  function computeNewName(entry, sequenceIdx, ctx) {
+    const fullName = entry.name;
+    const dot = fullName.lastIndexOf('.');
+    // hidden files like ".env" — treat the whole name as base, no extension
+    const base = dot > 0 ? fullName.slice(0, dot) : fullName;
+    const ext = dot > 0 ? fullName.slice(dot) : '';
+
+    // STEP 1: pattern with placeholders
+    let out = ctx.pattern
+      .replace(/\{base\}/g, base)
+      .replace(/\{ext\}/g, ext)
+      .replace(/\{name\}/g, fullName)
+      .replace(/\{i(?::(\d+))?\}/g, (_, pad) => {
+        const s = String(sequenceIdx);
+        return pad ? s.padStart(parseInt(pad, 10), '0') : s;
+      });
+
+    // STEP 2: find/replace (on the result of the template, not the original)
+    if (ctx.findStr) {
+      if (ctx.useRegex) {
+        try {
+          const flags = ctx.caseSensitive ? 'g' : 'gi';
+          const re = new RegExp(ctx.findStr, flags);
+          out = out.replace(re, ctx.replStr);
+        } catch (e) {
+          // invalid regex — leave name as-is, signal via context
+          ctx.regexError = e.message;
+        }
+      } else if (ctx.caseSensitive) {
+        out = out.split(ctx.findStr).join(ctx.replStr);
+      } else {
+        // case-insensitive plain text replace
+        const lf = ctx.findStr.toLowerCase();
+        let cursor = 0, result = '';
+        while (true) {
+          const idx = out.toLowerCase().indexOf(lf, cursor);
+          if (idx < 0) { result += out.slice(cursor); break; }
+          result += out.slice(cursor, idx) + ctx.replStr;
+          cursor = idx + ctx.findStr.length;
+        }
+        out = result;
+      }
+    }
+
+    // STEP 3: case transform on the BASE (preserve extension's case here;
+    // extension is handled separately in step 4)
+    const dot2 = out.lastIndexOf('.');
+    const base2 = dot2 > 0 ? out.slice(0, dot2) : out;
+    const ext2  = dot2 > 0 ? out.slice(dot2) : '';
+    let newBase = base2;
+    if (ctx.caseMode === 'lower') newBase = base2.toLowerCase();
+    else if (ctx.caseMode === 'upper') newBase = base2.toUpperCase();
+    else if (ctx.caseMode === 'title') {
+      newBase = base2.replace(/(^|[\s_\-.])([a-z])/g, (_, p, c) => p + c.toUpperCase());
+    }
+
+    // STEP 4: extension treatment
+    let newExt = ext2;
+    if (ctx.extMode === 'lower') newExt = ext2.toLowerCase();
+    else if (ctx.extMode === 'custom') {
+      newExt = ctx.extCustom.trim();
+      if (newExt && !newExt.startsWith('.')) newExt = '.' + newExt;
+    }
+
+    return newBase + newExt;
+  }
+
+  function getSortedFiles() {
+    const mode = $('sortBy').value;
+    const arr = files.slice();
+    if (mode === 'natural') {
+      // naturalSort accepts File objects via f.name; our entries have .name too
+      const tmp = arr.map(e => ({ entry: e, key: e.name }));
+      tmp.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: 'base' }));
+      return tmp.map(t => t.entry);
+    }
+    if (mode === 'mtime') arr.sort((a, b) => a.mtime - b.mtime);
+    else if (mode === 'size') arr.sort((a, b) => a.size - b.size);
+    // 'original' = keep insertion order
+    else arr.sort((a, b) => a.originalIdx - b.originalIdx);
+    return arr;
+  }
+
+  function refresh() {
+    const banner = $('conflictBanner');
+    const table = $('renameTable');
+    if (!files.length) {
+      $('stats').textContent = '未加入文件';
+      table.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会显示重命名预览</div>';
+      $('exportBtn').disabled = true;
+      banner.innerHTML = '';
+      return;
+    }
+    const ctx = {
+      pattern: $('pattern').value || '{base}{ext}',
+      findStr: $('findStr').value,
+      replStr: $('replStr').value,
+      useRegex: $('useRegex').checked,
+      caseSensitive: $('caseSensitive').checked,
+      caseMode: $('caseMode').value,
+      extMode: $('extMode').value,
+      extCustom: $('extCustom').value,
+      regexError: null,
+    };
+    const start = parseInt($('startN').value, 10) || 0;
+    const step = Math.max(1, parseInt($('stepN').value, 10) || 1);
+
+    const sorted = getSortedFiles();
+    const seen = new Map();  // newName → array of indices in sorted
+    const rows = sorted.map((entry, i) => {
+      const seqIdx = start + i * step;
+      const newName = computeNewName(entry, seqIdx, ctx);
+      const arr = seen.get(newName) || [];
+      arr.push(i);
+      seen.set(newName, arr);
+      return { entry, newName, seqIdx };
+    });
+
+    const conflicts = new Set();
+    for (const [name, ids] of seen) {
+      if (ids.length > 1) ids.forEach(i => conflicts.add(i));
+      if (!name || name === '.') ids.forEach(i => conflicts.add(i));
+    }
+
+    table.innerHTML = '';
+    rows.forEach((r, i) => {
+      const row = document.createElement('div');
+      const isConflict = conflicts.has(i);
+      const isUnchanged = r.entry.name === r.newName;
+      row.className = 'rn-row' + (isConflict ? ' conflict' : '') + (isUnchanged ? ' unchanged' : '');
+      row.innerHTML = `
+        <span class="idx">${i + 1}</span>
+        <span class="from" title="${r.entry.name}">${r.entry.name}</span>
+        <span class="arr">→</span>
+        <span class="to" title="${r.newName || '(空)'}">${r.newName || '<em style="color:#ff8a8a">(空名)</em>'}</span>
+        <span class="size">${fmtBytes(r.entry.size)}</span>
+        <button class="remove" data-i="${r.entry.originalIdx}" title="移除">×</button>
+      `;
+      row.querySelector('.remove').addEventListener('click', e => {
+        const idx = parseInt(e.target.dataset.i, 10);
+        files = files.filter(x => x.originalIdx !== idx);
+        refresh();
+      });
+      table.appendChild(row);
+    });
+
+    const conflictCount = conflicts.size;
+    if (ctx.regexError) {
+      banner.innerHTML = `<div class="conflict-banner">⚠ 正则表达式错误: ${ctx.regexError}</div>`;
+    } else if (conflictCount > 0) {
+      banner.innerHTML = `<div class="conflict-banner">⚠ ${conflictCount} 个文件名冲突 (红色行) — 调整模板的 {i} 或加唯一性占位符再导出</div>`;
+    } else {
+      banner.innerHTML = '';
+    }
+
+    const changed = rows.filter(r => r.entry.name !== r.newName).length;
+    $('stats').innerHTML = `<strong>${files.length}</strong> 个文件 · <strong>${changed}</strong> 个被改名${conflictCount ? ` · <strong style="color:#ff8a8a">${conflictCount}</strong> 冲突` : ''}`;
+    $('exportBtn').disabled = conflictCount > 0 || ctx.regexError;
+  }
+
+  $('exportBtn').addEventListener('click', async () => {
+    if (!files.length) return;
+    $('exportBtn').disabled = true;
+    log.dim('读取文件 + 打包 ZIP...');
+    try {
+      const ctx = {
+        pattern: $('pattern').value || '{base}{ext}',
+        findStr: $('findStr').value,
+        replStr: $('replStr').value,
+        useRegex: $('useRegex').checked,
+        caseSensitive: $('caseSensitive').checked,
+        caseMode: $('caseMode').value,
+        extMode: $('extMode').value,
+        extCustom: $('extCustom').value,
+        regexError: null,
+      };
+      const start = parseInt($('startN').value, 10) || 0;
+      const step = Math.max(1, parseInt($('stepN').value, 10) || 1);
+      const sorted = getSortedFiles();
+      const zipEntries = [];
+      for (let i = 0; i < sorted.length; i++) {
+        const e = sorted[i];
+        const newName = computeNewName(e, start + i * step, ctx);
+        const buf = new Uint8Array(await e.file.arrayBuffer());
+        zipEntries.push({ name: newName, data: buf });
+      }
+      const blob = await makeZip(zipEntries);
+      outBlob = blob;
+      const zipFilename = ($('zipName').value || 'renamed') + '.zip';
+      log.ok(`打包完成 ${fmtBytes(blob.size)} · ${zipEntries.length} 个文件`);
+      handoff?.setBlob(blob, zipFilename, 'application/zip');
+      download(blob, zipFilename);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('exportBtn').disabled = false;
+    }
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    files = [];
+    outBlob = null;
+    $('fileInput').value = '';
+    $('folderInput').value = '';
+    refresh();
+    log.clear();
+  });
+
+  refresh();
+})();
+</script>
+
+</body>
+</html>

@@ -26,6 +26,7 @@
     { id: 'zip-packer',     cat: 'code',  name: 'ZIP 打包',       en: 'ZIP Packer',      icon: '📦', href: 'tools/zip-packer.html',     desc: '多文件 / 文件夹 → ZIP,deflate level 0-9 可调' },
     { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
+    { id: 'batch-rename',   cat: 'code',  name: '批量重命名',     en: 'Batch Rename',    icon: '🏷️', href: 'tools/batch-rename.html',   desc: '模板 + 查找替换 + 序号补零,实时预览冲突高亮,导出 ZIP' },
     // 分析 / 诊断
     { id: 'bundle-analyzer',cat: 'audit', name: '包体分析',       en: 'Bundle Analyzer', icon: '📊', href: 'tools/bundle-analyzer.html', desc: '扫描项目目录,显示类别分布 + 大文件清单' },
     { id: 'channel-check',  cat: 'audit', name: '渠道检查',       en: 'Channel Check',   icon: '✅', href: 'tools/channel-check.html', desc: 'Facebook / Google / TikTok 等渠道规范校验' },
@@ -120,6 +121,11 @@
       '拖入 TTF / OTF 字体文件',
       '填要保留的字符(可点"中文 500 常用字"等预设快速填充)',
       '点"开始子集化",对比体积变化,下载 TTF + CSS @font-face 代码'
+    ],
+    'batch-rename': [
+      '拖入文件或文件夹(可多选,支持 ZIP 自动解压)',
+      '模板里写新名,例如 walk_{i:04}{ext}; 可叠加查找替换、大小写、扩展名规则',
+      '右侧表格实时预览原名→新名,重名会红色高亮; 没冲突就能点"导出 ZIP"'
     ],
     'audio-compress': [
       '拖入音频文件,会自动解码并显示波形',
@@ -898,6 +904,7 @@
     'zip-packer':      ['*/*'],  // accepts anything
     'qr-gen':          [],
     'font-subset':     ['font/ttf','font/otf','application/octet-stream'],
+    'batch-rename':    ['*/*'],
     'audio-compress':  ['audio/*'],
     'bundle-analyzer': [],
     'channel-check':   ['text/html'],
