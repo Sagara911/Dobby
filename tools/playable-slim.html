@@ -2,6 +2,34 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+/* one-shot legacy cleanup — drops old SW, caches, and localStorage left behind
+   by removed settings UI; reloads once so the fresh code takes over. */
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
 <title>Playable 瘦身 · Playable Toolkit</title>
 <link rel="stylesheet" href="../assets/shared.css" />
 <style>
