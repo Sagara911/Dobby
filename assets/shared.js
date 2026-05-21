@@ -228,6 +228,7 @@
       ambient.className = 'ambient-flow';
       ambient.setAttribute('aria-hidden', 'true');
       ambient.innerHTML = `
+        <div class="ambient-stream"></div>
         <div class="ambient-blob ambient-blob--a"></div>
         <div class="ambient-blob ambient-blob--b"></div>
         <div class="ambient-blob ambient-blob--c"></div>

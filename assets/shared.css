@@ -170,6 +170,43 @@ a:hover { color: var(--jade); }
   background: radial-gradient(circle, rgba(var(--cat-av-rgb), 0.22) 0%, transparent 65%);
   animation: ambientB 26s ease-in-out infinite reverse;
 }
+
+/* Slow rotating multi-color conic gradient — adds a subtle "流光" aurora
+   on top of the blob field. The element is 2x viewport so rotation never
+   reveals empty corners; heavy blur + low opacity + screen blend keeps
+   it ambient rather than distracting. */
+.ambient-stream {
+  position: fixed;
+  left: -50%;
+  top: -50%;
+  width: 200vw;
+  height: 200vh;
+  z-index: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(var(--cat-image-rgb), 0.10),
+    rgba(var(--cat-anim-rgb),  0.10),
+    rgba(var(--cat-av-rgb),    0.10),
+    rgba(var(--cat-code-rgb),  0.10),
+    rgba(var(--cat-audit-rgb), 0.10),
+    rgba(var(--cat-image-rgb), 0.10)
+  );
+  filter: blur(80px);
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  animation: streamRotate 80s linear infinite;
+  will-change: transform;
+}
+@keyframes streamRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+:root[data-theme="light"] .ambient-stream {
+  mix-blend-mode: multiply;
+  opacity: 0.35;
+  filter: blur(100px);
+}
 @keyframes ambientA {
   0%,100% { transform: translate(0, 0) scale(1);       opacity: 0.5; }
   25%     { transform: translate(8vw, 12vh) scale(1.1); opacity: 0.8; }
@@ -684,9 +721,9 @@ a:hover { color: var(--jade); }
    ========================================================================= */
 .feedback-chip {
   position: fixed;
-  left: 16px;
-  top: 90px;  /* sits below the sticky topbar; user moved here so it stops
-                 colliding with the news-toast / 推送 area at bottom-right */
+  right: 16px;
+  top: 90px;  /* sits below the sticky topbar; right edge keeps it clear
+                 of the bottom-right news-toast / 推送 stack */
   z-index: 920;
   font-family: "Space Grotesk", sans-serif;
 }
@@ -719,7 +756,7 @@ a:hover { color: var(--jade); }
   animation: fc-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes fc-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.95); transform-origin: top left; }
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); transform-origin: top right; }
   to   { opacity: 1; transform: none; }
 }
 .feedback-chip .fc-head {
