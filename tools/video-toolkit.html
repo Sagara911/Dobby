@@ -361,6 +361,11 @@ Toolkit.injectTopbar('video-toolkit');
           <input type="range" id="keyFeather" min="0" max="6" value="1" />
         </div>
         <div class="field">
+          <label>蒙版收缩 choke (px) <span id="keyChokeVal" class="mono">1</span></label>
+          <input type="range" id="keyChoke" min="0" max="3" value="1" />
+          <div class="info" style="margin-top:4px;">把蒙版往内收, 干掉主体边缘的绿色毛刺 (PR Ultra Key 同款步骤)</div>
+        </div>
+        <div class="field">
           <label>spill 抑制 (去绿边 / 去绿调)</label>
           <select id="keySpill">
             <option value="0">关</option>
@@ -392,6 +397,7 @@ Toolkit.injectTopbar('video-toolkit');
       `;
       $('keyTol').addEventListener('input', e => $('keyTolVal').textContent = e.target.value);
       $('keyFeather').addEventListener('input', e => $('keyFeatherVal').textContent = e.target.value);
+      $('keyChoke').addEventListener('input', e => $('keyChokeVal').textContent = e.target.value);
     } else if (action === 'filter') {
       c.innerHTML = `
         <div class="field">
@@ -693,6 +699,7 @@ Toolkit.injectTopbar('video-toolkit');
     const keyHex = $('keyColor').value;
     const tol = parseInt($('keyTol').value, 10);
     const feather = parseInt($('keyFeather').value, 10);
+    const choke = parseInt($('keyChoke').value, 10) || 0;
     const spill = parseInt($('keySpill').value, 10);
     const fps = parseInt($('keyFps').value, 10) || 24;
     const outputFmt = $('keyOutput').value;
@@ -720,7 +727,7 @@ Toolkit.injectTopbar('video-toolkit');
         keyRGB = { r: d[0], g: d[1], b: d[2] };
         log.dim(`  自动取色: rgb(${d[0]}, ${d[1]}, ${d[2]})`);
       }
-      applyChromaKeyToCanvas(srcCv, keyRGB, tol, feather, spill);
+      applyChromaKeyToCanvas(srcCv, keyRGB, tol, feather, spill, choke);
       if (outputFmt === 'png-zip') {
         const blob = await canvasToBlob(srcCv, 'image/png');
         framePngBlobs.push(blob);
@@ -886,46 +893,56 @@ Toolkit.injectTopbar('video-toolkit');
     return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
   }
 
-  // chroma key 算法:每像素到目标色的距离 → alpha,边缘羽化用 box blur 到 alpha 通道
-  // spill 抑制:对所有保留像素(包括 alpha=255 的全不透明像素)压制残留的 key 通道,
-  // 这是修复 "FX/光效带绿调" 的关键 — 旧版只处理边缘,完全不透明的半透明特效绿调
-  // 留不下来。spill=1 把绿通道往 max(R,B) 拉一半,spill=2 直接夹到 max(R,B)。
-  function applyChromaKeyToCanvas(canvas, key, tol, feather, spill) {
+  // chroma key 算法:距离用 BT.601 YCbCr 的 Cb-Cr 平面 (丢掉 luma Y),
+  // 跟 Premiere 等专业软件的色键一致 — 同一种颜色不同亮度都能干净抠掉,
+  // 主体上的阴影也不会被误判。
+  // spill 抑制:对所有保留像素压制残留的 key 通道,修复完全不透明的特效
+  // (剑光/烟雾/运动模糊) 带绿调的常见问题。
+  // choke:对 alpha 通道做 px 次 4 邻域最小值卷积,蒙版往内收,
+  // 干掉 anti-aliased 边缘那 1-2 个泛绿的边毛刺 (PR Ultra Key 同款)。
+  function applyChromaKeyToCanvas(canvas, key, tol, feather, spill, choke) {
     const w = canvas.width, h = canvas.height;
     const ctx = canvas.getContext('2d');
     const img = ctx.getImageData(0, 0, w, h);
     const d = img.data;
-    const tolSq = tol * tol * 3;
-    const softLo = tol * 0.6;
-    const softLoSq = softLo * softLo * 3;
+    // BT.601 Cb / Cr of the key color. Y is intentionally omitted.
+    const keyCb = -0.168736 * key.r - 0.331264 * key.g + 0.5 * key.b + 128;
+    const keyCr =  0.5 * key.r - 0.418688 * key.g - 0.081312 * key.b + 128;
+    // Legacy slider is 0..200 in RGB-distance units. Cb-Cr distance is a
+    // tighter scale (max ~127), so map proportionally — tol 60 ≈ chroma 30
+    // (clean key), tol 120 ≈ chroma 60 (looser).
+    const tolChroma = tol * 0.5;
+    const softLoChroma = tolChroma * 0.6;
     const isGreenKey = key.g > key.r && key.g > key.b;
     const isBlueKey  = key.b > key.r && key.b > key.g;
     for (let i = 0; i < d.length; i += 4) {
-      const dr = d[i] - key.r, dg = d[i+1] - key.g, db = d[i+2] - key.b;
-      const ds = dr*dr + dg*dg + db*db;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 128;
+      const cr =  0.5 * r - 0.418688 * g - 0.081312 * b + 128;
+      const dCb = cb - keyCb, dCr = cr - keyCr;
+      const dist = Math.sqrt(dCb * dCb + dCr * dCr);
       let alpha;
-      if (ds <= softLoSq) alpha = 0;
-      else if (ds >= tolSq) alpha = 255;
-      else alpha = Math.round((Math.sqrt(ds) - softLo) / (tol - softLo) * 255);
+      if (dist <= softLoChroma) alpha = 0;
+      else if (dist >= tolChroma) alpha = 255;
+      else alpha = Math.round((dist - softLoChroma) / (tolChroma - softLoChroma) * 255);
       d[i + 3] = alpha;
-      // despill ALL kept pixels (alpha > 0), not just edges. This fixes the
-      // common case of fully-opaque-but-green-tinted FX (sword glows, smoke,
-      // motion-blur trails) that the old gate (alpha < 255) skipped entirely.
+      // despill: applies to ALL kept pixels (including alpha=255)
       if (spill > 0 && alpha > 0) {
         if (isGreenKey) {
-          const cap = Math.max(d[i], d[i+2]);
-          if (d[i+1] > cap) {
-            d[i+1] = spill === 2 ? cap : ((d[i+1] + cap) >> 1);
-          }
+          const cap = Math.max(r, b);
+          if (g > cap) d[i+1] = spill === 2 ? cap : ((g + cap) >> 1);
         } else if (isBlueKey) {
-          const cap = Math.max(d[i], d[i+1]);
-          if (d[i+2] > cap) {
-            d[i+2] = spill === 2 ? cap : ((d[i+2] + cap) >> 1);
-          }
+          const cap = Math.max(r, g);
+          if (b > cap) d[i+2] = spill === 2 ? cap : ((b + cap) >> 1);
         }
       }
     }
     ctx.putImageData(img, 0, 0);
+
+    // matte choke: erode the alpha channel by `choke` pixels via repeated
+    // 4-neighborhood min filter. Done BEFORE feather so the blur softens
+    // the already-tightened edge rather than the original noisy one.
+    if (choke > 0) chokeAlpha(canvas, choke);
 
     if (feather > 0) {
       const tmp = newCanvas(w, h);
@@ -935,6 +952,31 @@ Toolkit.injectTopbar('video-toolkit');
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(tmp, 0, 0);
     }
+  }
+
+  function chokeAlpha(canvas, px) {
+    const w = canvas.width, h = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.getImageData(0, 0, w, h);
+    let a = new Uint8Array(w * h);
+    for (let i = 0, j = 3; i < a.length; i++, j += 4) a[i] = img.data[j];
+    for (let pass = 0; pass < px; pass++) {
+      const next = new Uint8Array(a);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = y * w + x;
+          let m = a[idx];
+          if (x > 0)     m = Math.min(m, a[idx - 1]);
+          if (x < w - 1) m = Math.min(m, a[idx + 1]);
+          if (y > 0)     m = Math.min(m, a[idx - w]);
+          if (y < h - 1) m = Math.min(m, a[idx + w]);
+          next[idx] = m;
+        }
+      }
+      a = next;
+    }
+    for (let i = 0, j = 3; i < a.length; i++, j += 4) img.data[j] = a[i];
+    ctx.putImageData(img, 0, 0);
   }
 
   function showOutput() {
