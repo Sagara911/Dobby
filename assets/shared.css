@@ -346,6 +346,123 @@ a:hover { color: var(--jade); }
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 
+/* ============ handoff undo toast (3-second delayed navigation) ============ */
+.handoff-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  background: var(--panel-solid);
+  border: 1px solid rgba(var(--jade-rgb), 0.45);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px 0;
+  min-width: 280px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(var(--jade-rgb), 0.18);
+  font-size: 13px;
+  color: var(--text);
+  animation: hut-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes hut-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.handoff-undo-toast.hut-cancelled {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.handoff-undo-toast .hut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+}
+.handoff-undo-toast .hut-msg {
+  flex: 1;
+  color: var(--text-soft);
+}
+.handoff-undo-toast .hut-msg strong { color: var(--jade); }
+.handoff-undo-toast .hut-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  box-shadow: none;
+}
+.handoff-undo-toast .hut-cancel:hover {
+  background: rgba(var(--jade-rgb), 0.16);
+  border-color: rgba(var(--jade-rgb), 0.5);
+  color: var(--jade);
+  transform: none;
+}
+.handoff-undo-toast .hut-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+.handoff-undo-toast .hut-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--jade), rgba(var(--jade-rgb), 0.6));
+  border-radius: inherit;
+}
+
+/* ============ "back to previous tool" floating pill ============ */
+.handoff-back-pill {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 900;
+  background: var(--panel-solid);
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  padding: 7px 14px 7px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-family: "Space Grotesk", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  animation: hbp-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes hbp-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: none; }
+}
+.handoff-back-pill:hover {
+  background: rgba(var(--jade-rgb), 0.14);
+  border-color: rgba(var(--jade-rgb), 0.5);
+  color: var(--jade);
+  transform: translateX(2px);
+}
+.handoff-back-pill .arr {
+  font-size: 14px;
+}
+.handoff-back-pill .dismiss {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  margin-left: 4px;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+}
+.handoff-back-pill .dismiss:hover { color: var(--text); transform: none; }
+
 /* =========================================================================
    Tool page layout — sidebar + main
    ========================================================================= */

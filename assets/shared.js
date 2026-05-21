@@ -247,6 +247,32 @@
     watchForColorInputs();
     setupPWA(prefix);
     applySavedSettings();
+    maybeShowBackPill();
+  }
+
+  // If sessionStorage records a handoff source, show a small "⏪ 回到 X" pill
+  // in the bottom-left so the user can hop back if they picked the wrong target.
+  function maybeShowBackPill() {
+    let info;
+    try { info = JSON.parse(sessionStorage.getItem('toolkit-handoff-from') || 'null'); } catch (_) {}
+    if (!info || !info.url) return;
+    // don't show if we ARE the source (e.g. user navigated back manually)
+    if (info.url === location.href) return;
+    const pill = document.createElement('a');
+    pill.className = 'handoff-back-pill';
+    pill.href = info.url;
+    pill.innerHTML = `<span class="arr">⏪</span><span>回到 ${info.toolName}</span><button class="dismiss" type="button" title="不再显示">×</button>`;
+    pill.addEventListener('click', (e) => {
+      if (e.target.classList.contains('dismiss')) {
+        e.preventDefault();
+        try { sessionStorage.removeItem('toolkit-handoff-from'); } catch (_) {}
+        pill.remove();
+        return;
+      }
+      // navigating away — clear the marker so next page doesn't re-show it
+      try { sessionStorage.removeItem('toolkit-handoff-from'); } catch (_) {}
+    });
+    document.body.appendChild(pill);
   }
 
   // ============================================================
@@ -1262,7 +1288,61 @@
       toast('IndexedDB 写入失败: ' + e.message, 'err', 6000);
       throw e;
     }
-    location.href = toolUrl(toolId);
+    // remember where we came from so the target page can show a "back to X" button
+    try {
+      const srcTool = TOOLS.find(t => location.pathname.endsWith(t.href.replace(/^.*\//, '')));
+      sessionStorage.setItem('toolkit-handoff-from', JSON.stringify({
+        toolId: srcTool?.id || null,
+        toolName: srcTool ? `${srcTool.icon} ${srcTool.name}` : '上一个工具',
+        url: location.href,
+        ts: Date.now()
+      }));
+    } catch (_) {}
+    // delayed navigation with cancel toast (like Gmail "undo send")
+    showHandoffUndoToast(toolId);
+  }
+
+  // shows a bottom-center toast with a 3-second progress bar.
+  // clicking 撤回 cancels the navigation; otherwise navigates after the timeout.
+  function showHandoffUndoToast(toolId) {
+    const target = TOOLS.find(t => t.id === toolId);
+    const targetLabel = target ? `${target.icon} ${target.name}` : toolId;
+    const DURATION = 3000;
+    // remove any prior toast (rapid clicks)
+    document.getElementById('__handoffUndoToast__')?.remove();
+    const t = document.createElement('div');
+    t.id = '__handoffUndoToast__';
+    t.className = 'handoff-undo-toast';
+    t.innerHTML = `
+      <div class="hut-row">
+        <span class="hut-msg">📤 即将发送到 <strong>${targetLabel}</strong></span>
+        <button type="button" class="hut-cancel">撤回</button>
+      </div>
+      <div class="hut-bar"><div class="hut-bar-fill"></div></div>
+    `;
+    document.body.appendChild(t);
+    const fill = t.querySelector('.hut-bar-fill');
+    // animate from 100% to 0% over DURATION
+    requestAnimationFrame(() => {
+      fill.style.transition = `width ${DURATION}ms linear`;
+      fill.style.width = '0%';
+    });
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+      // also drop the pending IDB so the target won't pick it up if the user navigates manually later
+      try { idbDelete(HANDOFF_KEY); } catch (_) {}
+      try { sessionStorage.removeItem('toolkit-handoff-from'); } catch (_) {}
+      t.classList.add('hut-cancelled');
+      setTimeout(() => t.remove(), 250);
+      toast('已撤回', 'ok', 1800);
+    };
+    t.querySelector('.hut-cancel').addEventListener('click', cancel);
+    setTimeout(() => {
+      if (cancelled) return;
+      t.remove();
+      location.href = toolUrl(toolId);
+    }, DURATION);
   }
 
   // Tool pages call this on load to check if there's a pending handoff for them.
