@@ -119,6 +119,7 @@
         <input type="text" id="autoFilename" value="playable-slim" />
       </div>
       <button id="autoStartBtn" disabled>开始一键瘦身</button>
+      <button id="autoDownloadBtn" class="secondary" disabled>💾 下载瘦身 HTML</button>
       <button id="autoClearBtn" class="secondary">清空</button>
 
       <div id="autoProgress" style="display:none; margin-top:10px">
@@ -620,14 +621,26 @@ Toolkit.injectTopbar('playable-slim');
 
   attachDropZone($('autoDrop'), $('autoFile'), files => handleAutoFile(files[0]));
 
+  let autoOutBlob = null;
+  let autoOutName = null;
+
   $('autoClearBtn').addEventListener('click', () => {
     autoState = null;
+    autoOutBlob = null;
+    autoOutName = null;
     $('stats').textContent = '等待文件';
     $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
     $('summaryBox').innerHTML = '';
     $('autoStartBtn').disabled = true;
+    $('autoDownloadBtn').disabled = true;
     $('autoProgress').style.display = 'none';
     log.clear();
+  });
+
+  $('autoDownloadBtn').addEventListener('click', () => {
+    if (!autoOutBlob || !autoOutName) return;
+    download(autoOutBlob, autoOutName);
+    log.dim(`已下载 ${autoOutName}`);
   });
 
   async function handleAutoFile(file) {
@@ -635,6 +648,9 @@ Toolkit.injectTopbar('playable-slim');
     log.clear();
     log.dim(`读入 ${file.name} (${fmtBytes(file.size)})...`);
     $('autoStartBtn').disabled = true;
+    $('autoDownloadBtn').disabled = true;
+    autoOutBlob = null;
+    autoOutName = null;
     try {
       const text = await file.text();
       log.dim(`扫描内联资源...`);
@@ -718,14 +734,17 @@ Toolkit.injectTopbar('playable-slim');
       parts.push(autoState.htmlText.slice(cursor));
       const blob = new Blob(parts, { type: 'text/html' });
 
-      setAutoProgress(1, '完成');
+      setAutoProgress(1, '完成 — 点击"💾 下载瘦身 HTML"保存');
       const outName = ($('autoFilename').value || 'playable-slim') + '.html';
-      download(blob, outName);
+      autoOutBlob = blob;
+      autoOutName = outName;
       handoff?.setBlob(blob, outName);
+      $('autoDownloadBtn').disabled = false;
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
       const pctTotal = ((1 - blob.size / autoState.fileSize) * 100).toFixed(1);
       const pctAssets = stats.totalIn > 0 ? ((1 - stats.totalOut / stats.totalIn) * 100).toFixed(1) : '0';
       log.ok(`完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(autoState.fileSize)}, 整体 -${pctTotal}%) · ${stats.shrunk}/${stats.tried} 资源被压缩(-${pctAssets}%) · ${dt}s`);
+      log.dim(`点 "💾 下载瘦身 HTML" 按钮保存文件`);
       $('stats').innerHTML = `<strong>${fmtBytes(autoState.fileSize)} → ${fmtBytes(blob.size)}</strong> · 节省 <strong style="color:var(--jade)">${pctTotal}%</strong> · ${stats.shrunk} 资源被压缩`;
     } catch (e) {
       log.err(e.message);
