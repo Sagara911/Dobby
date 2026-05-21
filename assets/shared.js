@@ -762,14 +762,14 @@
     'sprite-packer':   ['image/png','image/jpeg','image/gif','image/webp','video/*','application/zip'],
     'atlas-splitter':  ['image/png'],  // needs JSON too but handoff only carries one file
     'image-optimizer': ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
-    'png-crusher':     ['image/png','image/jpeg','image/webp','application/zip'],
-    'gif-tools':       ['image/png','image/jpeg','image/gif','application/zip'],
+    'png-crusher':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'gif-tools':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'image-editor':    ['image/png','image/jpeg','image/webp','image/gif'],
-    'color-tools':     ['image/png','image/jpeg','image/webp','application/zip'],
-    'ai-cutout':       ['image/png','image/jpeg','image/webp','application/zip'],
-    'watermark-remove':['image/png','image/jpeg','image/webp'],
+    'color-tools':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'ai-cutout':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'watermark-remove':['image/png','image/jpeg','image/webp','image/gif'],
     'video-toolkit':   ['video/*'],
-    'composer':        ['image/png','image/jpeg','image/webp','application/zip'],
+    'composer':        ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'html-inliner':    [],  // requires directory picker, can't handoff
     'base64':          ['*/*'],  // accepts anything
     'zip-packer':      ['*/*'],  // accepts anything
@@ -1309,12 +1309,15 @@
 
   // shows a bottom-center toast with a 3-second progress bar.
   // clicking 撤回 cancels the navigation; otherwise navigates after the timeout.
+  let __pendingHandoffTimer = null;
   function showHandoffUndoToast(toolId) {
     const target = TOOLS.find(t => t.id === toolId);
     const targetLabel = target ? `${target.icon} ${target.name}` : toolId;
     const DURATION = 3000;
-    // remove any prior toast (rapid clicks)
+    // remove any prior toast AND cancel its pending navigation timer — otherwise a
+    // rapid second send would queue both timeouts and navigate to the older target.
     document.getElementById('__handoffUndoToast__')?.remove();
+    if (__pendingHandoffTimer) { clearTimeout(__pendingHandoffTimer); __pendingHandoffTimer = null; }
     const t = document.createElement('div');
     t.id = '__handoffUndoToast__';
     t.className = 'handoff-undo-toast';
@@ -1332,9 +1335,8 @@
       fill.style.transition = `width ${DURATION}ms linear`;
       fill.style.width = '0%';
     });
-    let cancelled = false;
     const cancel = () => {
-      cancelled = true;
+      if (__pendingHandoffTimer) { clearTimeout(__pendingHandoffTimer); __pendingHandoffTimer = null; }
       // also drop the pending IDB so the target won't pick it up if the user navigates manually later
       try { idbDelete(HANDOFF_KEY); } catch (_) {}
       try { sessionStorage.removeItem('toolkit-handoff-from'); } catch (_) {}
@@ -1343,20 +1345,32 @@
       toast('已撤回', 'ok', 1800);
     };
     t.querySelector('.hut-cancel').addEventListener('click', cancel);
-    setTimeout(() => {
-      if (cancelled) return;
+    __pendingHandoffTimer = setTimeout(() => {
+      __pendingHandoffTimer = null;
       t.remove();
       location.href = toolUrl(toolId);
     }, DURATION);
   }
 
+  // How long an IDB-stashed handoff stays consumable. Anything older is treated as
+  // abandoned (tab closed mid-undo, navigation interrupted, etc.) and dropped on read
+  // so the next visit doesn't auto-consume hours-old data.
+  const HANDOFF_TTL_MS = 5 * 60 * 1000;
+
   // Tool pages call this on load to check if there's a pending handoff for them.
   async function consumeHandoff(toolId) {
     let data;
     try { data = await idbGet(HANDOFF_KEY); } catch { return null; }
-    if (!data || data.toolId !== toolId) return null;
+    if (!data) return null;
+    // Stale entries (any toolId) get cleaned up unconditionally.
+    if (typeof data.ts === 'number' && Date.now() - data.ts > HANDOFF_TTL_MS) {
+      try { await idbDelete(HANDOFF_KEY); } catch {}
+      return null;
+    }
+    if (data.toolId !== toolId) return null;
     try { await idbDelete(HANDOFF_KEY); } catch {}
     const blob = data.blob;
+    if (!blob) return null;
     return new File([blob], data.fileName, { type: blob.type || 'application/octet-stream' });
   }
 
