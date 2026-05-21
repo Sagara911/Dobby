@@ -837,7 +837,21 @@ Toolkit.injectTopbar('playable-slim');
     }
 
     const outBlob = await new Promise(r => c.toBlob(r, outMime, outQ));
-    if (!outBlob) return null;
+    if (!outBlob || outBlob.size < 64) return null;
+    // Verify the re-encoded blob actually decodes back to the same dimensions.
+    // Without this guard, certain images (esp. very large or with unusual
+    // color profiles) silently produce a tiny corrupt WebP that passes the
+    // 2% size-savings threshold and replaces the working original in the
+    // HTML — showing as a broken image in the playable.
+    try {
+      const verifyBmp = await createImageBitmap(outBlob);
+      const okW = verifyBmp.width === c.width;
+      const okH = verifyBmp.height === c.height;
+      verifyBmp.close?.();
+      if (!okW || !okH) return null;
+    } catch (_) {
+      return null;
+    }
     return { bytes: new Uint8Array(await outBlob.arrayBuffer()), mime: outMime };
   }
 
