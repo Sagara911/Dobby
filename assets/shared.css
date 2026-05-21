@@ -567,7 +567,7 @@ a:hover { color: var(--jade); }
 .news-toast {
   position: fixed;
   right: 16px;
-  bottom: 78px;  /* stack above the .feedback-chip in the same corner */
+  bottom: 16px;
   width: min(340px, calc(100vw - 32px));
   z-index: 950;
   background: var(--panel-solid);
@@ -684,9 +684,10 @@ a:hover { color: var(--jade); }
    ========================================================================= */
 .feedback-chip {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 920;  /* below .news-toast (950) so news stacks on top when both visible */
+  left: 16px;
+  top: 90px;  /* sits below the sticky topbar; user moved here so it stops
+                 colliding with the news-toast / 推送 area at bottom-right */
+  z-index: 920;
   font-family: "Space Grotesk", sans-serif;
 }
 .feedback-chip .fc-collapsed {
@@ -704,7 +705,7 @@ a:hover { color: var(--jade); }
 .feedback-chip .fc-collapsed:hover {
   background: rgba(var(--jade-rgb), 0.18);
   border-color: rgba(var(--jade-rgb), 0.7);
-  transform: translateY(-2px);
+  transform: translateY(2px);
 }
 .feedback-chip .fc-expanded {
   background: var(--panel-solid);
@@ -718,7 +719,7 @@ a:hover { color: var(--jade); }
   animation: fc-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes fc-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.95); transform-origin: bottom right; }
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); transform-origin: top left; }
   to   { opacity: 1; transform: none; }
 }
 .feedback-chip .fc-head {
