@@ -57,6 +57,10 @@
       <span>统一帧尺寸 (取最大包围盒)</span>
     </label>
     <label class="checkbox">
+      <input type="checkbox" id="forceSquare" />
+      <span>强制方形帧 (长条卡牌→正方,空白透明)</span>
+    </label>
+    <label class="checkbox">
       <input type="checkbox" id="powerOfTwo" />
       <span>2 的幂次尺寸 (WebGL 友好)</span>
     </label>
@@ -246,6 +250,7 @@ Toolkit.injectTopbar('sprite-packer');
     if (!rawFrames.length) return;
     const trim = $('trim').checked;
     const uniformSize = $('uniformSize').checked;
+    const forceSquare = $('forceSquare').checked;
     const padding = parseInt($('padding').value, 10) || 0;
     const margin = parseInt($('margin').value, 10) || 0;
     let cols = parseInt($('cols').value, 10) || 0;
@@ -275,6 +280,10 @@ Toolkit.injectTopbar('sprite-packer');
     if (uniformSize) {
       frameW = Math.max(...processed.map(p => p.bounds.w));
       frameH = Math.max(...processed.map(p => p.bounds.h));
+      if (forceSquare) {
+        const side = Math.max(frameW, frameH);
+        frameW = frameH = side;
+      }
     }
 
     const n = processed.length;
@@ -413,7 +422,7 @@ Toolkit.injectTopbar('sprite-packer');
     $('fileInput').value = '';
   });
 
-  ['cols','padding','margin','trim','powerOfTwo','uniformSize','dropEmpty'].forEach(id => {
+  ['cols','padding','margin','trim','powerOfTwo','uniformSize','forceSquare','dropEmpty'].forEach(id => {
     $(id).addEventListener('change', () => { if (rawFrames.length) repack(); });
   });
   $('videoFps').addEventListener('change', () => log.dim('ℹ FPS 修改后请重新拖入视频文件'));
