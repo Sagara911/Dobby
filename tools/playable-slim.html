@@ -222,7 +222,25 @@ Toolkit.injectTopbar('playable-slim');
 (() => {
   const { $, makeLogger, attachDropZone, download, fmtBytes, unzipBlob } = Toolkit;
   const log = makeLogger($('log'));
-  const handoff = Toolkit.setupHandoff('playable-slim', { outputType: 'text/html' });
+  const handoff = Toolkit.setupHandoff('playable-slim', {
+    outputType: 'text/html',
+    onIncoming: (files) => {
+      // route by content type:
+      //   ZIP → Repack tab (needs the manifest.json + assets back to rebuild)
+      //   HTML → Auto tab (drop a fresh playable in, one-click compress)
+      const list = Array.isArray(files) ? files : [files];
+      const first = list[0];
+      const isZip = /\.zip$|application\/zip/i.test(first.name + ' ' + (first.type || ''));
+      const targetMode = isZip ? 'repack' : 'auto';
+      document.querySelector(`#modeTabs [data-mode="${targetMode}"]`)?.click();
+      const dzId = targetMode === 'repack' ? 'repackDrop' : 'autoDrop';
+      const dz = document.getElementById(dzId);
+      if (!dz) return;
+      const dt = new DataTransfer();
+      list.forEach(f => dt.items.add(f));
+      setTimeout(() => dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })), 50);
+    }
+  });
 
   let mode = 'auto';
 

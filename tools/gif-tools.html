@@ -263,7 +263,23 @@ Toolkit.injectTopbar('gif-tools');
   const log = makeLogger($('log'));
   const makeProg = makeProgress($('makeProgress'));
   const editProg = makeProgress($('editProgress'));
-  const handoff = Toolkit.setupHandoff('gif-tools', { outputType: 'image/gif' });
+  const handoff = Toolkit.setupHandoff('gif-tools', {
+    outputType: 'image/gif',
+    onIncoming: (files) => {
+      // route by content: GIFs land in the Edit tab, anything else (PNG/JPG
+      // sequence or extracted ZIP frames) lands in the Make tab.
+      const list = Array.isArray(files) ? files : [files];
+      const isGif = list.length === 1 && /\.gif$|^image\/gif$/i.test(list[0].name + ' ' + (list[0].type || ''));
+      const targetMode = isGif ? 'edit' : 'make';
+      document.querySelector(`#modeTabs [data-mode="${targetMode}"]`)?.click();
+      const dz = document.getElementById(targetMode === 'edit' ? 'editDropZone' : 'makeDropZone');
+      if (!dz) return;
+      const dt = new DataTransfer();
+      list.forEach(f => dt.items.add(f));
+      // give the tab switch a tick to render its pane before dispatching the drop
+      setTimeout(() => dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })), 50);
+    }
+  });
 
   // ============================================================
   //   mode switching

@@ -829,13 +829,18 @@
         toast(`✨ 从上一个工具收到 ${incoming.name}`, 'ok', 4500);
       }
       const handler = opts.onIncoming || ((filesOrFile) => {
-        const dz = document.getElementById('dropZone');
-        if (dz) {
-          const dt = new DataTransfer();
-          const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
-          arr.forEach(f => dt.items.add(f));
-          dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        // Look for the well-known #dropZone first; if a tool uses a custom id,
+        // fall back to any element with the .drop-zone class so files at least
+        // reach SOMETHING rather than disappearing silently.
+        const dz = document.getElementById('dropZone') || document.querySelector('.drop-zone');
+        if (!dz) {
+          toast(`收到 ${Array.isArray(filesOrFile) ? filesOrFile.length + ' 个' : ''}文件,但找不到拖入区`, 'warn', 5000);
+          return;
         }
+        const dt = new DataTransfer();
+        const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
+        arr.forEach(f => dt.items.add(f));
+        dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
       });
       setTimeout(() => handler(toDeliver), 100);
     })();
