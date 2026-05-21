@@ -197,10 +197,22 @@
   .cat-header .cat-icon {
     width: 36px; height: 36px;
     border-radius: 10px;
-    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.18), rgba(var(--jade-rgb), 0.05));
-    border: 1px solid rgba(var(--jade-rgb), 0.22);
+    background: linear-gradient(135deg, rgba(var(--cat-rgb, var(--jade-rgb)), 0.22), rgba(var(--cat-rgb, var(--jade-rgb)), 0.05));
+    border: 1px solid rgba(var(--cat-rgb, var(--jade-rgb)), 0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
+  }
+  /* Mirror the data-cat mapping for category section wrappers */
+  .cat-anchor[data-cat="image"] { --cat-rgb: var(--cat-image-rgb); }
+  .cat-anchor[data-cat="anim"]  { --cat-rgb: var(--cat-anim-rgb); }
+  .cat-anchor[data-cat="av"]    { --cat-rgb: var(--cat-av-rgb); }
+  .cat-anchor[data-cat="code"]  { --cat-rgb: var(--cat-code-rgb); }
+  .cat-anchor[data-cat="audit"] { --cat-rgb: var(--cat-audit-rgb); }
+  .cat-anchor[data-cat] .cat-name { color: rgb(var(--cat-rgb)); }
+  .cat-anchor[data-cat] .cat-count {
+    background: rgba(var(--cat-rgb), 0.10);
+    border-color: rgba(var(--cat-rgb), 0.30);
+    color: rgb(var(--cat-rgb));
   }
   .cat-header .cat-info {
     display: flex;
@@ -312,11 +324,35 @@
     width: 38px;
     height: 38px;
     border-radius: 9px;
-    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.15), rgba(var(--jade-rgb), 0.04));
-    border: 1px solid rgba(var(--jade-rgb), 0.2);
+    background: linear-gradient(135deg, rgba(var(--cat-rgb, var(--jade-rgb)), 0.18), rgba(var(--cat-rgb, var(--jade-rgb)), 0.04));
+    border: 1px solid rgba(var(--cat-rgb, var(--jade-rgb)), 0.28);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
     margin-bottom: 4px;
+  }
+  /* Per-category accent override — the home page card generator (and
+     cat-header below) sets data-cat="image|anim|av|code|audit"; that
+     rewrites --cat-rgb so the icon, hover glow, border all retint
+     without needing per-category CSS rules. */
+  .tool-card[data-cat="image"] { --cat-rgb: var(--cat-image-rgb); }
+  .tool-card[data-cat="anim"]  { --cat-rgb: var(--cat-anim-rgb); }
+  .tool-card[data-cat="av"]    { --cat-rgb: var(--cat-av-rgb); }
+  .tool-card[data-cat="code"]  { --cat-rgb: var(--cat-code-rgb); }
+  .tool-card[data-cat="audit"] { --cat-rgb: var(--cat-audit-rgb); }
+  /* Override the hover glow / outline to use --cat-rgb as well */
+  .tool-card[data-cat]::before {
+    background: radial-gradient(280px circle at var(--mx) var(--my),
+      rgba(var(--cat-rgb), 0.22), rgba(var(--cat-rgb), 0) 65%);
+  }
+  .tool-card[data-cat]::after {
+    background: radial-gradient(220px circle at var(--mx) var(--my),
+      rgba(var(--cat-rgb), 0.9) 0%, rgba(var(--cat-rgb), 0.5) 25%,
+      rgba(var(--cat-rgb), 0.12) 55%, rgba(var(--cat-rgb), 0) 78%);
+    filter: drop-shadow(0 0 8px rgba(var(--cat-rgb), 0.45));
+  }
+  .tool-card[data-cat]:hover {
+    border-color: rgba(var(--cat-rgb), 0.32);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(var(--cat-rgb), 0.14);
   }
   .tool-card h3 {
     margin: 0;
@@ -527,6 +563,51 @@
   .news-primary:active {
     transform: translateY(0);
   }
+
+  /* Hero category chips — colorful quick-jump bar that visually advertises
+     the five tool families. Replaces the previous text-only subtitle role
+     as the page's main visual anchor. */
+  .hero-cat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 720px;
+    margin: 0 auto 28px;
+  }
+  .hero-cat-chips a {
+    --c: var(--jade-rgb);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+    background: rgba(var(--c), 0.10);
+    border: 1px solid rgba(var(--c), 0.32);
+    color: rgb(var(--c));
+    font-size: 12.5px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+  .hero-cat-chips a:hover {
+    background: rgba(var(--c), 0.22);
+    border-color: rgba(var(--c), 0.6);
+    transform: translateY(-2px);
+  }
+  .hero-cat-chips a .chip-icon { font-size: 14px; }
+  .hero-cat-chips a .chip-count {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10.5px;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+  .hero-cat-chips a[data-cat="image"] { --c: var(--cat-image-rgb); }
+  .hero-cat-chips a[data-cat="anim"]  { --c: var(--cat-anim-rgb); }
+  .hero-cat-chips a[data-cat="av"]    { --c: var(--cat-av-rgb); }
+  .hero-cat-chips a[data-cat="code"]  { --c: var(--cat-code-rgb); }
+  .hero-cat-chips a[data-cat="audit"] { --c: var(--cat-audit-rgb); }
 </style>
 </head>
 <body>
@@ -541,6 +622,7 @@
       <input type="text" id="search" placeholder="搜工具名或描述...  (Ctrl+K 聚焦)" autocomplete="off" />
       <button class="clear" id="searchClear" type="button" aria-label="清空">✕</button>
     </div>
+    <div class="hero-cat-chips" id="heroCatChips"></div>
     <div class="hero-stats">
       <span class="stat"><strong>23</strong> 个工具</span>
       <span class="sep"></span>
@@ -615,6 +697,19 @@
   // Build card list from shared TOOLS data
   const CARDS = Toolkit.TOOLS.filter(t => t.id !== 'home');
 
+  // Hero category chips — colored quick-jump buttons that double as a visual
+  // anchor for the hero section.
+  (function renderHeroChips() {
+    const host = document.getElementById('heroCatChips');
+    if (!host) return;
+    host.innerHTML = CATEGORIES.map(cat => {
+      const count = CARDS.filter(c => c.cat === cat.id).length;
+      return `<a href="#cat-${cat.id}" data-cat="${cat.id}">
+        <span class="chip-icon">${cat.icon}</span>${cat.name}<span class="chip-count">${count}</span>
+      </a>`;
+    }).join('');
+  })();
+
   const section = document.getElementById('toolsSection');
   const searchInput = document.getElementById('search');
   const searchWrap = document.getElementById('searchWrap');
@@ -623,6 +718,7 @@
     const a = document.createElement('a');
     a.className = 'tool-card';
     a.href = c.href;
+    a.dataset.cat = c.cat;
     a.dataset.name = (c.name + ' ' + c.en + ' ' + c.desc).toLowerCase();
     a.innerHTML = `
       <div class="icon">${c.icon}</div>
@@ -671,6 +767,7 @@
       const div = document.createElement('div');
       div.id = `cat-${cat.id}`;
       div.className = 'cat-anchor';
+      div.dataset.cat = cat.id;
       div.innerHTML = `
         <div class="cat-header">
           <div class="cat-icon">${cat.icon}</div>

@@ -37,6 +37,19 @@
   --accent-hover: #67ffbc;
   --accent-soft:  var(--jade-soft);
 
+  /* per-category accent palette — each tool group gets a recognizable hue.
+     Cards/headers pick the matching --cat-*-rgb via [data-cat="..."]. */
+  --cat-image-rgb:  84, 156, 255;   /* cool blue   */
+  --cat-anim-rgb:   168, 110, 232;  /* violet      */
+  --cat-av-rgb:     255, 110, 130;  /* coral pink  */
+  --cat-code-rgb:   245, 165, 75;   /* amber       */
+  --cat-audit-rgb:  80, 220, 200;   /* teal        */
+  --cat-image:  rgb(var(--cat-image-rgb));
+  --cat-anim:   rgb(var(--cat-anim-rgb));
+  --cat-av:     rgb(var(--cat-av-rgb));
+  --cat-code:   rgb(var(--cat-code-rgb));
+  --cat-audit:  rgb(var(--cat-audit-rgb));
+
   --radius:       12px;
   --radius-sm:    8px;
   --radius-pill:  999px;
@@ -49,8 +62,52 @@
 }
 
 /* Theme cycling lives in shared.js as a rAF loop that rewrites the
-   palette variables every frame. No static [data-theme=...] blocks
-   needed — :root values above are just the starting frame. */
+   palette variables every frame for dark mode. When the user opts
+   into light mode, the cycle bails out and these static overrides
+   take over. */
+:root[data-theme="light"] {
+  --bg:           #f4f5f7;
+  --bg-soft:      #ffffff;
+  --panel:        rgba(0, 0, 0, 0.04);
+  --panel-2:      rgba(0, 0, 0, 0.07);
+  --panel-solid:  #ffffff;
+  --border:       rgba(0, 0, 0, 0.10);
+  --border-strong:rgba(0, 0, 0, 0.20);
+  --text:         #1c1d24;
+  --text-soft:    #3f4250;
+  --muted:        #7a7d8a;
+  --muted-2:      #5a5d6a;
+
+  --jade:         #1ea870;
+  --jade-rgb:     30, 168, 112;
+  --jade-soft:    rgba(30, 168, 112, 0.10);
+  --jade-glow:    rgba(30, 168, 112, 0.32);
+
+  --champagne:    #c89e3a;
+  --soft-gold:    #b3873a;
+  --pearl-gold:   #d4a83c;
+
+  /* Category accents — slightly darker variants so they read on white */
+  --cat-image-rgb:  46, 110, 220;
+  --cat-anim-rgb:   130, 70, 200;
+  --cat-av-rgb:     220, 70, 90;
+  --cat-code-rgb:   215, 130, 30;
+  --cat-audit-rgb:  20, 165, 145;
+
+  --success:      #1ea870;
+  --warning:      #c89e3a;
+  --danger:       #d44545;
+}
+:root[data-theme="light"] body { background: var(--bg); }
+:root[data-theme="light"] .ambient-flow { mix-blend-mode: multiply; opacity: 0.6; }
+:root[data-theme="light"] .tool-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="light"] .hero p { color: rgba(28, 29, 36, 0.7); }
+:root[data-theme="light"] .search-wrap input { background: rgba(255, 255, 255, 0.85); color: var(--text); }
+:root[data-theme="light"] .topbar { background: rgba(255, 255, 255, 0.78); }
+:root[data-theme="light"] .news-modal-card { background: #ffffff; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -86,26 +143,32 @@ a:hover { color: var(--jade); }
 .ambient-blob--a {
   width: 45vw; height: 45vw; max-width: 700px; max-height: 700px;
   left: -8%; top: 10%;
-  background: radial-gradient(circle, rgba(var(--jade-rgb), 0.32) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--cat-image-rgb), 0.30) 0%, transparent 65%);
   animation: ambientA 18s ease-in-out infinite;
 }
 .ambient-blob--b {
   width: 40vw; height: 40vw; max-width: 600px; max-height: 600px;
   right: -5%; top: 35%;
-  background: radial-gradient(circle, rgba(159, 232, 227, 0.24) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--cat-anim-rgb), 0.26) 0%, transparent 65%);
   animation: ambientB 22s ease-in-out infinite;
 }
 .ambient-blob--c {
   width: 50vw; height: 50vw; max-width: 800px; max-height: 800px;
   left: 20%; bottom: 10%;
-  background: radial-gradient(circle, rgba(var(--jade-rgb), 0.2) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--cat-audit-rgb), 0.22) 0%, transparent 65%);
   animation: ambientC 24s ease-in-out infinite;
 }
 .ambient-blob--d {
   width: 35vw; height: 35vw; max-width: 550px; max-height: 550px;
   right: 15%; top: 5%;
-  background: radial-gradient(circle, rgba(242, 223, 184, 0.16) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--cat-code-rgb), 0.22) 0%, transparent 65%);
   animation: ambientD 20s ease-in-out infinite;
+}
+.ambient-blob--e {
+  width: 38vw; height: 38vw; max-width: 600px; max-height: 600px;
+  left: 50%; top: 55%;
+  background: radial-gradient(circle, rgba(var(--cat-av-rgb), 0.22) 0%, transparent 65%);
+  animation: ambientB 26s ease-in-out infinite reverse;
 }
 @keyframes ambientA {
   0%,100% { transform: translate(0, 0) scale(1);       opacity: 0.5; }
@@ -340,6 +403,25 @@ a:hover { color: var(--jade); }
   color: var(--muted);
   letter-spacing: 0.04em;
 }
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.theme-toggle:hover {
+  background: rgba(var(--jade-rgb), 0.16);
+  border-color: rgba(var(--jade-rgb), 0.45);
+  transform: rotate(20deg);
+}
+:root[data-theme="light"] .theme-toggle { background: rgba(0, 0, 0, 0.06); }
 .topbar .meta {
   color: var(--muted);
   font-size: 11px;

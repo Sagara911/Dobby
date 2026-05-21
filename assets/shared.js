@@ -210,6 +210,7 @@
           `;
         }).join('')}
       </nav>
+      <button type="button" class="theme-toggle" id="__themeToggle__" title="切换亮/深主题" aria-label="切换主题">🌓</button>
       <div class="meta">本地处理</div>
     `;
     wrap.appendChild(bar);
@@ -231,6 +232,7 @@
         <div class="ambient-blob ambient-blob--b"></div>
         <div class="ambient-blob ambient-blob--c"></div>
         <div class="ambient-blob ambient-blob--d"></div>
+        <div class="ambient-blob ambient-blob--e"></div>
       `;
       document.body.insertBefore(ambient, document.body.firstChild);
     }
@@ -263,6 +265,43 @@
     maybeShowNewsToast(prefix);
     setupHomeScrollMemory();
     setupFeedbackChip();
+    setupThemeToggle();
+  }
+
+  // ============================================================
+  //   Light / dark theme toggle
+  //   - Default = dark (with the rAF color cycle active)
+  //   - Light = static palette via :root[data-theme="light"] in CSS
+  //   - Choice persists across sessions in localStorage
+  //   - startThemeCycle() bails out when light is active so the
+  //     static palette isn't overwritten frame-by-frame
+  // ============================================================
+  const THEME_PREF_KEY = 'toolkit-theme';
+  function getThemePref() {
+    try { return localStorage.getItem(THEME_PREF_KEY) || 'dark'; } catch (_) { return 'dark'; }
+  }
+  function applyTheme(theme) {
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    try { localStorage.setItem(THEME_PREF_KEY, theme); } catch (_) {}
+    // refresh the toggle's icon if present
+    const btn = document.getElementById('__themeToggle__');
+    if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+  }
+  function setupThemeToggle() {
+    // Apply the stored preference on every page load (the inline-script in
+    // each page hasn't done this yet — first paint will be dark, then this
+    // flips it if needed; harmless for a once-per-session switch).
+    applyTheme(getThemePref());
+    const btn = document.getElementById('__themeToggle__');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const next = getThemePref() === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+    });
   }
 
   // ============================================================
@@ -470,6 +509,17 @@
     const lerp = (x, y, t) => Math.round(x + (y - x) * t);
     const rt = document.documentElement.style;
     function tick(now) {
+      // Skip when the user has opted into the static light theme — otherwise
+      // the rAF would overwrite the [data-theme="light"] palette every frame.
+      if (document.documentElement.getAttribute('data-theme') === 'light') {
+        // Clear any inline overrides we previously wrote, then re-queue
+        // ourselves so we resume cycling if the user flips back to dark.
+        ['--jade','--jade-rgb','--jade-soft','--jade-glow','--accent',
+         '--accent-soft','--success','--bg','--text','--text-soft',
+         '--champagne'].forEach(k => rt.removeProperty(k));
+        requestAnimationFrame(tick);
+        return;
+      }
       const tt = (now / 1000 / THEME_SECS_PER_STEP) % THEME_CYCLE.length;
       const i = Math.floor(tt);
       const f = tt - i;
