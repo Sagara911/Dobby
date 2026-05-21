@@ -258,6 +258,9 @@
     if (!info || !info.url) return;
     // don't show if we ARE the source (e.g. user navigated back manually)
     if (info.url === location.href) return;
+    // idempotent: this is called both from injectTopbar at load and again
+    // from setupHandoff after a delivery commits, so guard against duplicates.
+    if (document.querySelector('.handoff-back-pill')) return;
     const pill = document.createElement('a');
     pill.className = 'handoff-back-pill';
     pill.href = info.url;
@@ -810,39 +813,65 @@
   //   const handoff = Toolkit.setupHandoff(...)
   // without awaiting). Incoming handoff consumption is fire-and-forget.
   function setupHandoff(toolId, opts = {}) {
-    // 1. consume incoming handoff in the background — does not block return
+    // 1. consume incoming handoff in the background — does not block return.
+    // Flow: peek IDB (don't delete); if pending, show 3s countdown toast on
+    // this (target) page. 撤回 → history.back() + delete IDB. Timer fire →
+    // read+delete IDB, set sessionStorage source marker (so the back pill
+    // appears AFTER delivery, not during the countdown), then dispatch.
     (async () => {
-      const incoming = await consumeHandoff(toolId);
-      if (!incoming) return;
-      let toDeliver = [incoming];
-      if (/\.zip$/i.test(incoming.name) || incoming.type === 'application/zip') {
-        try {
-          const extracted = await unzipBlob(incoming);
-          if (extracted.length) {
-            toDeliver = extracted;
-            toast(`✨ 收到 ZIP,自动解压 ${extracted.length} 个文件`, 'ok', 4500);
-          }
-        } catch (e) {
-          toast('ZIP 解压失败,尝试整体处理: ' + e.message, 'warn', 4500);
-        }
-      } else {
-        toast(`✨ 从上一个工具收到 ${incoming.name}`, 'ok', 4500);
-      }
-      const handler = opts.onIncoming || ((filesOrFile) => {
-        // Look for the well-known #dropZone first; if a tool uses a custom id,
-        // fall back to any element with the .drop-zone class so files at least
-        // reach SOMETHING rather than disappearing silently.
-        const dz = document.getElementById('dropZone') || document.querySelector('.drop-zone');
-        if (!dz) {
-          toast(`收到 ${Array.isArray(filesOrFile) ? filesOrFile.length + ' 个' : ''}文件,但找不到拖入区`, 'warn', 5000);
+      const peeked = await peekHandoff(toolId);
+      if (!peeked) return;
+      showIncomingHandoffToast(peeked, async (cancelled) => {
+        if (cancelled) {
+          try { await idbDelete(HANDOFF_KEY); } catch {}
+          // navigate back to source: history.back() is the natural undo of the
+          // forward navigation sendTo did. Fall back to sourceUrl if history
+          // is empty (e.g., target opened in a fresh tab).
+          if (history.length > 1) history.back();
+          else if (peeked.sourceUrl) location.replace(peeked.sourceUrl);
           return;
         }
-        const dt = new DataTransfer();
-        const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
-        arr.forEach(f => dt.items.add(f));
-        dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        const incoming = await consumeHandoff(toolId);
+        if (!incoming) return;
+        try {
+          sessionStorage.setItem('toolkit-handoff-from', JSON.stringify({
+            toolId: peeked.sourceToolId,
+            toolName: peeked.sourceToolName || '上一个工具',
+            url: peeked.sourceUrl,
+            ts: Date.now(),
+          }));
+        } catch (_) {}
+        maybeShowBackPill();
+        let toDeliver = [incoming];
+        if (/\.zip$/i.test(incoming.name) || incoming.type === 'application/zip') {
+          try {
+            const extracted = await unzipBlob(incoming);
+            if (extracted.length) {
+              toDeliver = extracted;
+              toast(`✨ 收到 ZIP,自动解压 ${extracted.length} 个文件`, 'ok', 4500);
+            }
+          } catch (e) {
+            toast('ZIP 解压失败,尝试整体处理: ' + e.message, 'warn', 4500);
+          }
+        } else {
+          toast(`✨ 从上一个工具收到 ${incoming.name}`, 'ok', 4500);
+        }
+        const handler = opts.onIncoming || ((filesOrFile) => {
+          // Look for the well-known #dropZone first; if a tool uses a custom id,
+          // fall back to any element with the .drop-zone class so files at least
+          // reach SOMETHING rather than disappearing silently.
+          const dz = document.getElementById('dropZone') || document.querySelector('.drop-zone');
+          if (!dz) {
+            toast(`收到 ${Array.isArray(filesOrFile) ? filesOrFile.length + ' 个' : ''}文件,但找不到拖入区`, 'warn', 5000);
+            return;
+          }
+          const dt = new DataTransfer();
+          const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
+          arr.forEach(f => dt.items.add(f));
+          dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        });
+        handler(toDeliver);
       });
-      setTimeout(() => handler(toDeliver), 100);
     })();
 
     // 2. inject the dropdown UI (skip for tools that don't produce sendable output)
@@ -1283,39 +1312,39 @@
   }
 
   async function sendTo(toolId, blob, fileName) {
+    const srcTool = TOOLS.find(t => location.pathname.endsWith(t.href.replace(/^.*\//, '')));
     try {
       await idbPut(HANDOFF_KEY, {
-        toolId, fileName: fileName || 'handoff',
+        toolId,
+        fileName: fileName || 'handoff',
         blob,  // IndexedDB can store Blob directly — no dataURL encoding!
-        ts: Date.now()
+        ts: Date.now(),
+        // Source info travels with the blob so the target page's countdown
+        // toast can render "from X" copy and 撤回 knows where to navigate back.
+        sourceUrl: location.href,
+        sourceToolId: srcTool?.id || null,
+        sourceToolName: srcTool ? `${srcTool.icon} ${srcTool.name}` : '上一个工具',
       });
     } catch (e) {
       toast('IndexedDB 写入失败: ' + e.message, 'err', 6000);
       throw e;
     }
-    // remember where we came from so the target page can show a "back to X" button
-    try {
-      const srcTool = TOOLS.find(t => location.pathname.endsWith(t.href.replace(/^.*\//, '')));
-      sessionStorage.setItem('toolkit-handoff-from', JSON.stringify({
-        toolId: srcTool?.id || null,
-        toolName: srcTool ? `${srcTool.icon} ${srcTool.name}` : '上一个工具',
-        url: location.href,
-        ts: Date.now()
-      }));
-    } catch (_) {}
-    // delayed navigation with cancel toast (like Gmail "undo send")
-    showHandoffUndoToast(toolId);
+    // Navigate to the target immediately. The 3s undo window is shown on
+    // the target page (so the user sees the destination tool right away
+    // instead of staring at the source for 3 seconds). The sessionStorage
+    // back-pill marker is also deferred to the target's delivery moment.
+    location.href = toolUrl(toolId);
   }
 
-  // shows a bottom-center toast with a 3-second progress bar.
-  // clicking 撤回 cancels the navigation; otherwise navigates after the timeout.
+  // shows a bottom-center toast with a 3-second progress bar on the TARGET
+  // page after navigation. Calls onDone(true) if 撤回 clicked, onDone(false)
+  // when the countdown completes and the handoff should commit.
   let __pendingHandoffTimer = null;
-  function showHandoffUndoToast(toolId) {
-    const target = TOOLS.find(t => t.id === toolId);
-    const targetLabel = target ? `${target.icon} ${target.name}` : toolId;
+  function showIncomingHandoffToast(peeked, onDone) {
+    const sourceLabel = peeked.sourceToolName || '上一个工具';
     const DURATION = 3000;
-    // remove any prior toast AND cancel its pending navigation timer — otherwise a
-    // rapid second send would queue both timeouts and navigate to the older target.
+    // remove any prior toast AND cancel its pending timer — otherwise a
+    // rapid second pending handoff would race with this one.
     document.getElementById('__handoffUndoToast__')?.remove();
     if (__pendingHandoffTimer) { clearTimeout(__pendingHandoffTimer); __pendingHandoffTimer = null; }
     const t = document.createElement('div');
@@ -1323,32 +1352,27 @@
     t.className = 'handoff-undo-toast';
     t.innerHTML = `
       <div class="hut-row">
-        <span class="hut-msg">📤 即将发送到 <strong>${targetLabel}</strong></span>
+        <span class="hut-msg">📥 即将从 <strong>${sourceLabel}</strong> 接收</span>
         <button type="button" class="hut-cancel">撤回</button>
       </div>
       <div class="hut-bar"><div class="hut-bar-fill"></div></div>
     `;
     document.body.appendChild(t);
     const fill = t.querySelector('.hut-bar-fill');
-    // animate from 100% to 0% over DURATION
     requestAnimationFrame(() => {
       fill.style.transition = `width ${DURATION}ms linear`;
       fill.style.width = '0%';
     });
-    const cancel = () => {
+    t.querySelector('.hut-cancel').addEventListener('click', () => {
       if (__pendingHandoffTimer) { clearTimeout(__pendingHandoffTimer); __pendingHandoffTimer = null; }
-      // also drop the pending IDB so the target won't pick it up if the user navigates manually later
-      try { idbDelete(HANDOFF_KEY); } catch (_) {}
-      try { sessionStorage.removeItem('toolkit-handoff-from'); } catch (_) {}
       t.classList.add('hut-cancelled');
       setTimeout(() => t.remove(), 250);
-      toast('已撤回', 'ok', 1800);
-    };
-    t.querySelector('.hut-cancel').addEventListener('click', cancel);
+      onDone(true);
+    });
     __pendingHandoffTimer = setTimeout(() => {
       __pendingHandoffTimer = null;
       t.remove();
-      location.href = toolUrl(toolId);
+      onDone(false);
     }, DURATION);
   }
 
@@ -1357,17 +1381,24 @@
   // so the next visit doesn't auto-consume hours-old data.
   const HANDOFF_TTL_MS = 5 * 60 * 1000;
 
-  // Tool pages call this on load to check if there's a pending handoff for them.
-  async function consumeHandoff(toolId) {
+  // Read a pending handoff for this tool WITHOUT removing it. Returns null if
+  // missing, stale (auto-cleaned), or targeted at a different tool.
+  async function peekHandoff(toolId) {
     let data;
     try { data = await idbGet(HANDOFF_KEY); } catch { return null; }
     if (!data) return null;
-    // Stale entries (any toolId) get cleaned up unconditionally.
     if (typeof data.ts === 'number' && Date.now() - data.ts > HANDOFF_TTL_MS) {
       try { await idbDelete(HANDOFF_KEY); } catch {}
       return null;
     }
     if (data.toolId !== toolId) return null;
+    return data;
+  }
+
+  // Read+delete a pending handoff for this tool. Returns a File or null.
+  async function consumeHandoff(toolId) {
+    const data = await peekHandoff(toolId);
+    if (!data) return null;
     try { await idbDelete(HANDOFF_KEY); } catch {}
     const blob = data.blob;
     if (!blob) return null;
@@ -1581,6 +1612,7 @@
     makeCompareSlider,
     sendTo,
     consumeHandoff,
+    peekHandoff,
     setupHandoff,
     findTargetsFor,
     unzipBlob,
