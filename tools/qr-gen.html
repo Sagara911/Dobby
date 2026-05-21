@@ -155,7 +155,7 @@ Toolkit.injectTopbar('qr-gen');
     sms: 'SMSTO:13800138000:你好'
   };
   document.querySelectorAll('.preset-row button').forEach(b => {
-    b.addEventListener('click', () => { $('content').value = PRESETS[b.dataset.preset]; });
+    b.addEventListener('click', () => { $('content').value = PRESETS[b.dataset.preset]; scheduleGen(); });
   });
 
   // ----- logo drop -----
@@ -165,57 +165,79 @@ Toolkit.injectTopbar('qr-gen');
     try {
       logoBitmap = await createImageBitmap(files[0]);
       log.ok(`Logo 已加载 ${logoBitmap.width}×${logoBitmap.height}`);
+      scheduleGen();
     } catch (e) { log.err('logo 加载失败: ' + e.message); }
   });
-  $('clearLogoBtn').addEventListener('click', () => { logoBitmap = null; log.dim('Logo 已清除'); });
+  $('clearLogoBtn').addEventListener('click', () => { logoBitmap = null; log.dim('Logo 已清除'); scheduleGen(); });
 
-  // ----- generate -----
-  $('genBtn').addEventListener('click', async () => {
+  // ----- live generate (debounced) -----
+  let genTimer = null;
+  let genInFlight = false;
+  function scheduleGen() {
+    clearTimeout(genTimer);
+    genTimer = setTimeout(generate, 180);
+  }
+
+  async function generate() {
     const text = $('content').value;
-    if (!text) { log.err('请输入要编码的内容'); return; }
+    if (!text) {
+      $('preview').innerHTML = '<div class="preview-empty">输入内容后自动生成</div>';
+      $('downloadPngBtn').disabled = true;
+      $('downloadSvgBtn').disabled = true;
+      $('stats').textContent = '';
+      return;
+    }
+    if (genInFlight) return;  // skip if a previous run is still mid-flight
+    genInFlight = true;
     $('genBtn').disabled = true;
-    log.dim('生成 QR 码...');
     try {
       if (!qrLib) {
-        log.dim('  加载 QR 库 (首次联网)...');
+        log.dim('加载 QR 库 (首次联网)...');
         qrLib = await import('https://esm.sh/qrcode@1.5.3');
       }
       const size = parseInt($('size').value, 10);
       const margin = parseInt($('margin').value, 10);
       const ecc = $('ecc').value;
       const color = { dark: $('fgColor').value, light: $('bgColor').value };
-      // canvas
       const cv = newCanvas(size, size);
       await qrLib.toCanvas(cv, text, { errorCorrectionLevel: ecc, margin, color, width: size });
-      // optional logo overlay
       if (logoBitmap) {
         const pct = parseInt($('logoSize').value, 10) / 100;
         const ls = Math.round(size * pct);
         const lx = Math.round((size - ls) / 2);
         const ly = Math.round((size - ls) / 2);
         const ctx = cv.getContext('2d');
-        // white round-ish backdrop
         ctx.fillStyle = $('bgColor').value;
         const pad = Math.round(ls * 0.08);
         ctx.fillRect(lx - pad, ly - pad, ls + pad*2, ls + pad*2);
         ctx.drawImage(logoBitmap, lx, ly, ls, ls);
       }
       lastCanvas = cv;
-      // SVG version
       lastSvgText = await qrLib.toString(text, { type: 'svg', errorCorrectionLevel: ecc, margin, color, width: size });
       $('preview').innerHTML = '';
       $('preview').appendChild(cv);
       $('downloadPngBtn').disabled = false;
       $('downloadSvgBtn').disabled = false;
       $('stats').innerHTML = `<strong>${size}×${size}</strong> · ECC <strong>${ecc}</strong> · ${text.length} 字符`;
-      log.ok('生成完成');
     } catch (e) {
       log.err(e.message);
       console.error(e);
     } finally {
+      genInFlight = false;
       $('genBtn').disabled = false;
     }
+  }
+
+  // wire all reactive inputs to live-generate
+  ['content', 'size', 'margin', 'ecc', 'fgColor', 'bgColor', 'logoSize'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', scheduleGen);
+    el.addEventListener('change', scheduleGen);
   });
+  // keep the manual button as a fallback (force regen, ignore in-flight guard)
+  $('genBtn').textContent = '🔄 重新生成';
+  $('genBtn').addEventListener('click', () => { genInFlight = false; generate(); });
 
   $('downloadPngBtn').addEventListener('click', async () => {
     if (!lastCanvas) return;

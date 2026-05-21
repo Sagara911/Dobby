@@ -151,6 +151,11 @@ Toolkit.injectTopbar('base64');
     if (!files.length) return;
     lastFile = files[0];
     log.clear();
+    // dropping a file always means "encode this" — force-switch tabs if user
+    // happened to be on the decode panel (dropping a binary file into the
+    // decode textarea would otherwise look broken).
+    const encodeTab = document.querySelector('.tab-row button[data-tab="encode"]');
+    if (encodeTab && !encodeTab.classList.contains('active')) encodeTab.click();
     log.dim(`加载 ${lastFile.name} (${fmtBytes(lastFile.size)})...`);
     await encodeFile(lastFile);
   }

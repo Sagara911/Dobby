@@ -159,6 +159,62 @@ Toolkit.injectTopbar('audio-compress');
   $('startTime').addEventListener('input', e => $('startVal').textContent = (+e.target.value).toFixed(2));
   $('endTime').addEventListener('input', e => $('endVal').textContent = (+e.target.value).toFixed(2));
 
+  // sniff the original sample rate from common audio container headers.
+  // Returns the file's true rate so the UI doesn't only show the AudioContext's
+  // (often 48000) resampled rate.
+  function sniffOriginalSampleRate(buf, fileName) {
+    try {
+      const v = new DataView(buf);
+      if (buf.byteLength < 44) return null;
+      // ---- WAV (RIFF/WAVE) ----
+      if (v.getUint32(0, false) === 0x52494646 && v.getUint32(8, false) === 0x57415645) {
+        let p = 12;
+        while (p < buf.byteLength - 8) {
+          const id = v.getUint32(p, false);
+          const size = v.getUint32(p + 4, true);
+          if (id === 0x666d7420 /* "fmt " */) {
+            return { sr: v.getUint32(p + 12, true), ch: v.getUint16(p + 10, true), format: 'WAV' };
+          }
+          p += 8 + size;
+        }
+      }
+      // ---- MP3 (sync 11-bit 0x7FF) ----
+      // skip ID3v2 if present
+      let start = 0;
+      if (v.getUint32(0, false) >>> 8 === 0x494433) {  // "ID3"
+        const tagSize = (v.getUint8(6) << 21) | (v.getUint8(7) << 14) | (v.getUint8(8) << 7) | v.getUint8(9);
+        start = 10 + tagSize;
+      }
+      for (let p = start; p < Math.min(buf.byteLength - 4, start + 4096); p++) {
+        if (v.getUint8(p) === 0xFF && (v.getUint8(p + 1) & 0xE0) === 0xE0) {
+          const versionBits = (v.getUint8(p + 1) >> 3) & 0x03;
+          const srIdx = (v.getUint8(p + 2) >> 2) & 0x03;
+          if (srIdx === 3) continue;
+          const table = [
+            [11025, 12000, 8000],
+            null,
+            [22050, 24000, 16000],
+            [44100, 48000, 32000]
+          ];
+          const row = table[versionBits];
+          if (row) return { sr: row[srIdx], ch: ((v.getUint8(p + 3) >> 6) & 0x03) === 3 ? 1 : 2, format: 'MP3' };
+        }
+      }
+      // ---- OGG ----
+      if (v.getUint32(0, false) === 0x4F676753 /* "OggS" */) {
+        // sample rate at offset depends on codec; try Vorbis (id pkt at page 1)
+        // skip simple — just return null and rely on AudioContext SR
+      }
+      // ---- M4A (mp4 container) ----
+      if (buf.byteLength > 8 && v.getUint32(4, false) === 0x66747970 /* "ftyp" */) {
+        // mp4 SR is buried in mdhd box; skip detailed parsing here
+      }
+    } catch (_) {}
+    // fallback hint from extension
+    const m = /\.(wav|mp3|ogg|opus|m4a|aac|flac)$/i.exec(fileName || '');
+    return m ? { format: m[1].toUpperCase() } : null;
+  }
+
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
@@ -169,17 +225,26 @@ Toolkit.injectTopbar('audio-compress');
       srcFile = f;
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const buf = await f.arrayBuffer();
+      const origInfo = sniffOriginalSampleRate(buf, f.name);
       srcBuffer = await audioCtx.decodeAudioData(buf.slice(0));
       const d = srcBuffer.duration;
       $('startTime').max = d; $('endTime').max = d;
       $('endTime').value = d.toFixed(2);
       $('endVal').textContent = d.toFixed(2);
       $('origStat').textContent = fmtBytes(f.size);
-      $('stats').innerHTML = `<strong>${d.toFixed(2)}s</strong> · <strong>${srcBuffer.numberOfChannels}</strong> 声道 · <strong>${srcBuffer.sampleRate}</strong> Hz · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+
+      const decodedSr = srcBuffer.sampleRate;
+      const origSr = origInfo?.sr;
+      const resampled = origSr && origSr !== decodedSr;
+      const srHtml = resampled
+        ? `<strong>${origSr}</strong> Hz <span style="color:var(--muted)">(浏览器解码至 ${decodedSr} Hz)</span>`
+        : `<strong>${decodedSr}</strong> Hz`;
+      const fmtTag = origInfo?.format ? ` · ${origInfo.format}` : '';
+      $('stats').innerHTML = `<strong>${d.toFixed(2)}s</strong> · <strong>${srcBuffer.numberOfChannels}</strong> 声道 · ${srHtml}${fmtTag} · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
       $('origPlayer').src = URL.createObjectURL(f);
       drawWaveform(srcBuffer);
       $('processBtn').disabled = false;
-      log.ok(`解码完成: ${d.toFixed(2)}s × ${srcBuffer.numberOfChannels}ch @ ${srcBuffer.sampleRate}Hz`);
+      log.ok(`解码完成: ${d.toFixed(2)}s × ${srcBuffer.numberOfChannels}ch @ ${decodedSr}Hz${resampled ? ` (原 ${origSr}Hz)` : ''}`);
     } catch (e) {
       log.err(e.message);
     }

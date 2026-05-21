@@ -141,7 +141,28 @@ Toolkit.injectTopbar('code-minify');
   const log = makeLogger($('log'));
 
   let lang = 'css';
-  let terserMod = null;
+
+  // ---------- worker: do all minify off-thread so large files don't freeze the page ----------
+  const worker = new Worker('../assets/code-minify.worker.js', { type: 'module' });
+  const pending = new Map();
+  let nextId = 0;
+  worker.addEventListener('message', (e) => {
+    const { id, type, code, error, msg } = e.data;
+    if (type === 'progress') { log.dim('  ' + msg); return; }
+    if (type === 'warn') { log.warn('  ' + msg); return; }
+    const cb = pending.get(id);
+    if (!cb) return;
+    pending.delete(id);
+    if (type === 'done') cb.resolve(code);
+    else if (type === 'error') cb.reject(new Error(error));
+  });
+  function minifyInWorker(lang, src, options) {
+    return new Promise((resolve, reject) => {
+      const id = ++nextId;
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ id, lang, src, options });
+    });
+  }
 
   document.querySelectorAll('#langTabs button').forEach(b => {
     b.addEventListener('click', () => {
@@ -181,17 +202,26 @@ Toolkit.injectTopbar('code-minify');
     log.dim(`压缩 ${lang.toUpperCase()}...`);
     $('minifyBtn').disabled = true;
     try {
-      let out;
-      if (lang === 'css') out = minifyCSS(src);
-      else if (lang === 'html') {
-        // HTML mode pre-loads terser if user opted to minify inline scripts
-        if ($('htmlMinifyInline').checked && !terserMod) {
-          log.dim('  加载 terser (首次联网,用于压缩内联 <script>)...');
-          terserMod = await import('https://esm.sh/terser@5.36.0');
-        }
-        out = await minifyHTML(src);
+      let options;
+      if (lang === 'css') {
+        options = {
+          removeComments: $('cssRemoveComments').checked,
+          collapseSpace:  $('cssCollapseSpace').checked,
+          shortenHex:     $('cssShortenHex').checked
+        };
+      } else if (lang === 'js') {
+        options = {
+          mangle:   $('jsMangle').checked,
+          compress: $('jsCompress').checked
+        };
+      } else {
+        options = {
+          removeComments: $('htmlRemoveComments').checked,
+          collapseSpace:  $('htmlCollapseSpace').checked,
+          minifyInline:   $('htmlMinifyInline').checked
+        };
       }
-      else out = await minifyJS(src);
+      const out = await minifyInWorker(lang, src, options);
       $('outputEditor').value = out;
       const inSize = new Blob([src]).size;
       const outSize = new Blob([out]).size;
@@ -209,108 +239,8 @@ Toolkit.injectTopbar('code-minify');
     }
   });
 
-  // ===== CSS minify =====
-  function minifyCSS(s) {
-    let out = s;
-    if ($('cssRemoveComments').checked) out = out.replace(/\/\*[\s\S]*?\*\//g, '');
-    if ($('cssCollapseSpace').checked) {
-      out = out.replace(/\s+/g, ' ');
-      out = out.replace(/\s*([{}:;,>+~])\s*/g, '$1');
-      out = out.replace(/;}/g, '}');
-    }
-    if ($('cssShortenHex').checked) {
-      out = out.replace(/#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3\b/gi, '#$1$2$3');
-    }
-    return out.trim();
-  }
-
-  // ===== HTML minify =====
-  // async because inline <script> blocks are compressed via terser (real JS minifier)
-  async function minifyHTML(s) {
-    let out = s;
-    const placeholders = [];
-    const preserve = (str) => { placeholders.push(str); return `__PRESERVED_${placeholders.length - 1}__`; };
-
-    // 1. fully preserve <pre> / <textarea> (whitespace-sensitive)
-    out = out.replace(/<(pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, preserve);
-
-    // 2. inline <style>: optional CSS minify
-    {
-      const blocks = [...out.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)];
-      for (const m of blocks) {
-        const body = m[1];
-        const newBody = $('htmlMinifyInline').checked ? minifyCSS(body) : body;
-        const tag = m[0].replace(body, newBody);
-        out = out.replace(m[0], preserve(tag));
-      }
-    }
-
-    // 3. inline <script>: optional JS minify via terser (real minifier, not regex)
-    if ($('htmlMinifyInline').checked) {
-      const scripts = [...out.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
-      for (const m of scripts) {
-        const fullMatch = m[0], attrs = m[1], body = m[2];
-        // skip empty bodies and external script tags
-        if (!body.trim() || /\bsrc\s*=/.test(attrs)) {
-          out = out.replace(fullMatch, preserve(fullMatch));
-          continue;
-        }
-        // skip non-JS script types (e.g. application/json, text/template)
-        const typeMatch = attrs.match(/\btype\s*=\s*['"]?([^'"\s>]+)/i);
-        const stype = typeMatch ? typeMatch[1].toLowerCase() : '';
-        const isJs = !stype || /javascript|module|^text\/javascript$|^application\/javascript$/.test(stype);
-        if (!isJs) {
-          out = out.replace(fullMatch, preserve(fullMatch));
-          continue;
-        }
-        let minBody;
-        try {
-          const result = await terserMod.minify(body, {
-            compress: { passes: 2, drop_console: false },
-            mangle: true,
-            format: { comments: false }
-          });
-          if (result.error) throw result.error;
-          minBody = result.code;
-        } catch (err) {
-          log.warn(`inline <script> 压缩失败,保留原样: ${err.message}`);
-          minBody = body;
-        }
-        out = out.replace(fullMatch, preserve(`<script${attrs}>${minBody}<\/script>`));
-      }
-    } else {
-      // not minifying inline JS — still preserve script bodies so whitespace passes below don't touch them
-      out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, preserve);
-    }
-
-    if ($('htmlRemoveComments').checked) {
-      // strip HTML comments but keep IE conditionals (<!--[if ...]>)
-      out = out.replace(/<!--(?!\[if)[\s\S]*?-->/g, '');
-    }
-    if ($('htmlCollapseSpace').checked) {
-      // collapse whitespace BETWEEN tags only (don't touch text inside tags — could remove inter-word spaces)
-      out = out.replace(/>\s+</g, '><');
-      // collapse runs of whitespace in attribute area / between blocks
-      out = out.replace(/\s{2,}/g, ' ');
-    }
-    out = out.replace(/__PRESERVED_(\d+)__/g, (_, i) => placeholders[+i]);
-    return out.trim();
-  }
-
-  // ===== JS minify via terser =====
-  async function minifyJS(s) {
-    if (!terserMod) {
-      log.dim('  加载 terser (首次联网)...');
-      terserMod = await import('https://esm.sh/terser@5.36.0');
-    }
-    const result = await terserMod.minify(s, {
-      compress: $('jsCompress').checked ? { passes: 2, drop_console: false } : false,
-      mangle: $('jsMangle').checked,
-      format: { comments: false }
-    });
-    if (result.error) throw new Error('Terser: ' + result.error.message);
-    return result.code;
-  }
+  // All actual minify logic lives in assets/code-minify.worker.js so large
+  // files don't freeze the main thread. See minifyInWorker() above.
 
   $('copyBtn').addEventListener('click', async () => {
     const v = $('outputEditor').value;

@@ -191,11 +191,21 @@ Toolkit.injectTopbar('video-toolkit');
     renderActionControls();
   }
 
+  // remember the original bitrate so leaving "一键压缩" can restore it
+  const DEFAULT_BITRATE = $('bitrate').value;
+  let lastAction = null;
+
   function renderActionControls() {
     if (!srcMeta) return;
     const action = $('action').value;
     const c = $('actionControls');
     const { w, h, duration } = srcMeta;
+
+    // if user is leaving the compress action, restore bitrate / format to defaults
+    if (lastAction === 'compress' && action !== 'compress') {
+      $('bitrate').value = DEFAULT_BITRATE;
+    }
+    lastAction = action;
 
     if (action === 'compress') {
       const targetMb = Math.max(0.3, (srcMeta.w * srcMeta.h * srcMeta.duration / 5e6)).toFixed(1);
