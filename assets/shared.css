@@ -460,10 +460,40 @@ a:hover { color: var(--jade); }
   background: rgba(var(--jade-rgb), 0.16);
   border-color: rgba(var(--jade-rgb), 0.45);
 }
-/* Theme toggle gets a satisfying tilt; feedback gets a tiny pop */
+/* Theme toggle gets a satisfying tilt on hover */
 .theme-toggle:hover { transform: rotate(20deg); }
-#__feedbackBtn__:hover { transform: translateY(-1px) scale(1.08); }
 :root[data-theme="light"] .topbar-icon-btn { background: rgba(0, 0, 0, 0.06); }
+
+/* Pill variant for the feedback button — icon + "反馈" label so the
+   purpose is readable, not just an inscrutable emoji. */
+.topbar-pill-btn {
+  background: rgba(var(--jade-rgb), 0.12);
+  border: 1px solid rgba(var(--jade-rgb), 0.40);
+  color: var(--jade);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.topbar-pill-btn .emoji { font-size: 14px; line-height: 1; }
+.topbar-pill-btn:hover {
+  background: rgba(var(--jade-rgb), 0.22);
+  border-color: rgba(var(--jade-rgb), 0.7);
+  transform: translateY(-1px);
+}
+:root[data-theme="light"] .topbar-pill-btn {
+  background: rgba(var(--jade-rgb), 0.10);
+}
 .topbar .meta {
   color: var(--muted);
   font-size: 11px;
@@ -1610,9 +1640,11 @@ button.danger:hover { background: linear-gradient(180deg, #ff7575, var(--danger)
     grid-template-columns: 1fr;
     width: calc(100% - 24px);
   }
-  .topbar { padding: 10px 14px; gap: 10px; flex-wrap: nowrap; border-radius: 18px; }
+  .topbar { padding: 10px 14px; gap: 8px; flex-wrap: nowrap; border-radius: 18px; }
   .topbar nav { gap: 2px; }
-  .topbar .meta { display: none; }
+  /* hide the "反馈" label on narrow widths — the icon alone still works */
+  .topbar-pill-btn span:not(.emoji) { display: none; }
+  .topbar-pill-btn { padding: 0 10px; }
 }
 @media (max-width: 640px) {
   .topbar .brand span:last-child { display: none; }

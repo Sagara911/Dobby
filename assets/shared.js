@@ -210,9 +210,8 @@
           `;
         }).join('')}
       </nav>
-      <button type="button" class="topbar-icon-btn" id="__feedbackBtn__" title="反馈 / 联系作者" aria-label="反馈">💬</button>
       <button type="button" class="topbar-icon-btn theme-toggle" id="__themeToggle__" title="切换亮/深主题" aria-label="切换主题">🌓</button>
-      <div class="meta">本地处理</div>
+      <button type="button" class="topbar-pill-btn" id="__feedbackBtn__" title="反馈 / 联系作者"><span class="emoji">💬</span><span>反馈</span></button>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
