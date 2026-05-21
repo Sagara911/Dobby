@@ -361,11 +361,11 @@ Toolkit.injectTopbar('video-toolkit');
           <input type="range" id="keyFeather" min="0" max="6" value="1" />
         </div>
         <div class="field">
-          <label>spill 抑制 (去绿边)</label>
+          <label>spill 抑制 (去绿边 / 去绿调)</label>
           <select id="keySpill">
             <option value="0">关</option>
-            <option value="1" selected>轻 (按 luma 减少绿通道)</option>
-            <option value="2">强</option>
+            <option value="1">轻 (绿通道半夹到 max(R,B))</option>
+            <option value="2" selected>强 (绿通道直接夹到 max(R,B), 推荐)</option>
           </select>
         </div>
         <div class="field">
@@ -886,47 +886,47 @@ Toolkit.injectTopbar('video-toolkit');
     return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
   }
 
-  // chroma key 算法:每像素到目标色的距离 → alpha
-  // 边缘羽化用 box blur 到 alpha 通道
-  // spill 抑制:当 alpha 0-255 之间(边缘),减少绿通道(避免绿色光晕)
+  // chroma key 算法:每像素到目标色的距离 → alpha,边缘羽化用 box blur 到 alpha 通道
+  // spill 抑制:对所有保留像素(包括 alpha=255 的全不透明像素)压制残留的 key 通道,
+  // 这是修复 "FX/光效带绿调" 的关键 — 旧版只处理边缘,完全不透明的半透明特效绿调
+  // 留不下来。spill=1 把绿通道往 max(R,B) 拉一半,spill=2 直接夹到 max(R,B)。
   function applyChromaKeyToCanvas(canvas, key, tol, feather, spill) {
     const w = canvas.width, h = canvas.height;
     const ctx = canvas.getContext('2d');
     const img = ctx.getImageData(0, 0, w, h);
     const d = img.data;
     const tolSq = tol * tol * 3;
-    // first pass: distance-based alpha (soft via tol range)
-    // alpha gradient: dist < tol*0.6 → fully transparent; dist > tol → fully opaque; linear between
     const softLo = tol * 0.6;
     const softLoSq = softLo * softLo * 3;
+    const isGreenKey = key.g > key.r && key.g > key.b;
+    const isBlueKey  = key.b > key.r && key.b > key.g;
     for (let i = 0; i < d.length; i += 4) {
       const dr = d[i] - key.r, dg = d[i+1] - key.g, db = d[i+2] - key.b;
       const ds = dr*dr + dg*dg + db*db;
       let alpha;
       if (ds <= softLoSq) alpha = 0;
       else if (ds >= tolSq) alpha = 255;
-      else {
-        const t = (Math.sqrt(ds) - softLo) / (tol - softLo);
-        alpha = Math.round(t * 255);
-      }
+      else alpha = Math.round((Math.sqrt(ds) - softLo) / (tol - softLo) * 255);
       d[i + 3] = alpha;
-      // spill suppression on green key: if key is dominant-green, suppress green near edges
-      if (spill > 0 && alpha > 0 && alpha < 255) {
-        const isGreenKey = key.g > key.r && key.g > key.b;
-        const isBlueKey  = key.b > key.r && key.b > key.g;
+      // despill ALL kept pixels (alpha > 0), not just edges. This fixes the
+      // common case of fully-opaque-but-green-tinted FX (sword glows, smoke,
+      // motion-blur trails) that the old gate (alpha < 255) skipped entirely.
+      if (spill > 0 && alpha > 0) {
         if (isGreenKey) {
-          // limit green to max(red, blue) * (1 + spill * 0.1)
-          const cap = Math.max(d[i], d[i+2]) + (spill === 2 ? 0 : 12);
-          if (d[i+1] > cap) d[i+1] = cap;
+          const cap = Math.max(d[i], d[i+2]);
+          if (d[i+1] > cap) {
+            d[i+1] = spill === 2 ? cap : ((d[i+1] + cap) >> 1);
+          }
         } else if (isBlueKey) {
-          const cap = Math.max(d[i], d[i+1]) + (spill === 2 ? 0 : 12);
-          if (d[i+2] > cap) d[i+2] = cap;
+          const cap = Math.max(d[i], d[i+1]);
+          if (d[i+2] > cap) {
+            d[i+2] = spill === 2 ? cap : ((d[i+2] + cap) >> 1);
+          }
         }
       }
     }
     ctx.putImageData(img, 0, 0);
 
-    // feather: blur alpha channel only
     if (feather > 0) {
       const tmp = newCanvas(w, h);
       const tctx = tmp.getContext('2d');
