@@ -249,6 +249,42 @@
     applySavedSettings();
     maybeShowBackPill();
     maybeShowNewsToast(prefix);
+    setupHomeScrollMemory();
+  }
+
+  // Remember the home page's scroll position across the home → tool → home
+  // round trip. Without this, clicking the topbar logo from a tool page
+  // bounces the user all the way back up to the hero, losing the section
+  // they were browsing when they entered the tool.
+  function setupHomeScrollMemory() {
+    const isHome = location.pathname.endsWith('/') || /(^|\/)index\.html$/i.test(location.pathname);
+    if (!isHome) return;
+    const KEY = 'toolkit-home-scroll';
+    // Restore on load — but only when there's no anchor hash (e.g.
+    // index.html#cat-image), so the topbar's category links keep their
+    // explicit "jump to this section" behavior.
+    if (!location.hash) {
+      let saved = null;
+      try { saved = sessionStorage.getItem(KEY); } catch (_) {}
+      const y = saved !== null ? parseInt(saved, 10) : 0;
+      if (y > 0) {
+        // Defer until layout settles. requestAnimationFrame + a second
+        // scrollTo in case the browser's own bfcache restoration ran first
+        // and we now agree with it (no-op) or override (we win).
+        requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'auto' }));
+      }
+    }
+    const save = () => {
+      try { sessionStorage.setItem(KEY, String(Math.round(window.scrollY))); } catch (_) {}
+    };
+    // pagehide fires whether the page is being torn down (regular nav away)
+    // or being put into bfcache. Either way we want the latest scroll saved.
+    window.addEventListener('pagehide', save);
+    // Safari iOS sometimes skips pagehide on app switch — visibilitychange
+    // catches that case.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') save();
+    });
   }
 
   // ============================================================

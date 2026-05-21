@@ -1,6 +1,15 @@
 {
   "entries": [
     {
+      "version": "v18",
+      "date": "2026-05-21",
+      "title": "返回主页保留滚动位置",
+      "items": [
+        "从工具页点 logo 回主页, 自动回到离开主页时的滚动位置",
+        "topbar 分类链接 (index.html#cat-xxx) 不受影响, 照常跳到对应区块"
+      ]
+    },
+    {
       "version": "v17",
       "date": "2026-05-21",
       "title": "GIF 透明修复 + 光流补帧自动降级",
