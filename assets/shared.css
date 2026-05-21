@@ -464,6 +464,123 @@ a:hover { color: var(--jade); }
 .handoff-back-pill .dismiss:hover { color: var(--text); transform: none; }
 
 /* =========================================================================
+   News / "what's new" toast — bottom-right, dismissable, ~320px wide
+   ========================================================================= */
+.news-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(340px, calc(100vw - 32px));
+  z-index: 950;
+  background: var(--panel-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 12px 14px 10px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: news-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes news-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.news-toast.news-toast-out {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.news-toast-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.news-toast-tag {
+  background: rgba(var(--jade-rgb), 0.18);
+  color: var(--jade);
+  border: 1px solid rgba(var(--jade-rgb), 0.35);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.news-toast-title {
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  font-size: 13px;
+}
+.news-toast-x {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  box-shadow: none;
+}
+.news-toast-x:hover { color: var(--text); transform: none; }
+.news-toast-items {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.news-toast-items li {
+  padding: 3px 0 3px 14px;
+  position: relative;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+.news-toast-items li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  color: var(--jade);
+}
+.news-toast-more {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.news-toast-actions {
+  display: flex;
+  gap: 8px;
+}
+.news-toast-refresh,
+.news-toast-dismiss {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-soft);
+  box-shadow: none;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.news-toast-refresh {
+  background: rgba(var(--jade-rgb), 0.16);
+  border-color: rgba(var(--jade-rgb), 0.4);
+  color: var(--jade);
+  font-weight: 600;
+}
+.news-toast-refresh:hover {
+  background: rgba(var(--jade-rgb), 0.28);
+  transform: none;
+}
+.news-toast-dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  transform: none;
+}
+
+/* =========================================================================
    Tool page layout — sidebar + main
    ========================================================================= */
 .tool-layout {

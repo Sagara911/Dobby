@@ -248,6 +248,90 @@
     setupPWA(prefix);
     applySavedSettings();
     maybeShowBackPill();
+    maybeShowNewsToast(prefix);
+  }
+
+  // ============================================================
+  //   "What's new" toast — fetch news.json, show entries newer
+  //   than the last version the user acknowledged. Toast lives
+  //   in the bottom-right with a 刷新 button + dismiss button.
+  // ============================================================
+  const NEWS_SEEN_KEY = 'toolkit-news-seen';
+  async function maybeShowNewsToast(prefix) {
+    // skip on home page (the index already lists news; double-toasting is noisy)
+    if (location.pathname.endsWith('/') || /index\.html$/i.test(location.pathname)) return;
+    let news;
+    try {
+      // Cache-bust so SW/browser caches never hide a fresh entry.
+      const r = await fetch(prefix + 'news.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      news = await r.json();
+    } catch (_) { return; }
+    if (!news || !Array.isArray(news.entries) || !news.entries.length) return;
+    const seen = localStorage.getItem(NEWS_SEEN_KEY) || '';
+    const fresh = [];
+    for (const e of news.entries) {
+      if (e.version === seen) break;  // entries are newest-first; stop at first seen
+      fresh.push(e);
+    }
+    if (!fresh.length) return;
+    renderNewsToast(fresh);
+  }
+
+  function renderNewsToast(entries) {
+    document.getElementById('__newsToast__')?.remove();
+    const t = document.createElement('div');
+    t.id = '__newsToast__';
+    t.className = 'news-toast';
+    const head = entries[0];
+    const moreCount = entries.length - 1;
+    const itemsHtml = (head.items || []).map(i => `<li>${escapeHtml(i)}</li>`).join('');
+    const moreHtml = moreCount > 0
+      ? `<div class="news-toast-more">还有 ${moreCount} 条历史更新…</div>` : '';
+    t.innerHTML = `
+      <div class="news-toast-head">
+        <span class="news-toast-tag">✨ 新版</span>
+        <span class="news-toast-title">${escapeHtml(head.title || head.version)}</span>
+        <button type="button" class="news-toast-x" title="知道了">×</button>
+      </div>
+      <ul class="news-toast-items">${itemsHtml}</ul>
+      ${moreHtml}
+      <div class="news-toast-actions">
+        <button type="button" class="news-toast-refresh">🔄 刷新页面</button>
+        <button type="button" class="news-toast-dismiss">稍后</button>
+      </div>
+    `;
+    document.body.appendChild(t);
+    const markSeen = () => {
+      // mark the latest version as seen, so all current "fresh" entries get cleared
+      try { localStorage.setItem(NEWS_SEEN_KEY, entries[0].version); } catch (_) {}
+    };
+    t.querySelector('.news-toast-x').addEventListener('click', () => {
+      markSeen();
+      t.classList.add('news-toast-out');
+      setTimeout(() => t.remove(), 250);
+    });
+    t.querySelector('.news-toast-dismiss').addEventListener('click', () => {
+      markSeen();
+      t.classList.add('news-toast-out');
+      setTimeout(() => t.remove(), 250);
+    });
+    t.querySelector('.news-toast-refresh').addEventListener('click', async () => {
+      markSeen();
+      // Clear SW cache so the reload picks up the absolute latest, not stale.
+      try {
+        const regs = await navigator.serviceWorker?.getRegistrations() || [];
+        for (const r of regs) r.active?.postMessage('reset-cache');
+      } catch (_) {}
+      // Hard reload bypassing browser cache for shared.js / html.
+      location.reload();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
   }
 
   // If sessionStorage records a handoff source, show a small "⏪ 回到 X" pill
