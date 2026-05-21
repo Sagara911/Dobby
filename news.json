@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "v15",
+      "date": "2026-05-21",
+      "title": "光流补帧 (RIFE + WebGPU)",
+      "items": [
+        "video-toolkit「改 FPS」新增「🚀 光流补帧 RIFE」模式",
+        "首次使用联网下载 ~21 MB 模型,纯前端 WebGPU 推理",
+        "实拍素材效果接近 Twixtor; 卡通/像素动画建议仍用线性混合"
+      ]
+    },
+    {
       "version": "v14",
       "date": "2026-05-21",
       "title": "本轮 5 项修复 / 新功能",

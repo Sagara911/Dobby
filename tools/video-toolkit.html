@@ -173,6 +173,7 @@
 
 <script src="../assets/shared.js"></script>
 <script src="../assets/anim-encoders.js"></script>
+<script src="../assets/rife.js"></script>
 <script>
 Toolkit.injectTopbar('video-toolkit');
 
@@ -334,13 +335,29 @@ Toolkit.injectTopbar('video-toolkit');
           <label>补帧模式 (target &gt; 源 FPS 时)</label>
           <select id="cfpsMode">
             <option value="dup">帧复制 (快, 不平滑)</option>
-            <option value="blend" selected>线性混合 (相邻帧加权混合, 平滑但略带 motion-blur)</option>
+            <option value="blend" selected>线性混合 (相邻帧加权, 平滑但 ghost)</option>
+            <option value="optical">🚀 光流补帧 RIFE (慢, 需 WebGPU + ~24 MB 联网)</option>
           </select>
         </div>
-        <div class="info">&le; 30 = 抽帧 (跳帧), &gt; 30 = 补帧 (插值)。线性混合不是运动补偿,
-          快速运动会有 ghost; 想要光流级平滑请用 Premiere/After Effects 等专业软件。</div>
+        <div id="cfpsRifeStatus" class="info" style="display:none; padding:8px; background:rgba(255,255,255,0.04); border-radius:4px; margin-top:6px;"></div>
+        <div class="info">&le; 30 = 抽帧, &gt; 30 = 补帧。
+          光流补帧用 ONNX Runtime Web + WebGPU + RIFE 模型, 接近 Twixtor 效果但首次使用要下载模型;
+          快速运动也能保持清晰边缘。</div>
       `;
       $('cfpsTarget').addEventListener('input', e => $('cfpsVal').textContent = e.target.value);
+      $('cfpsMode').addEventListener('change', e => {
+        const isRife = e.target.value === 'optical';
+        const status = $('cfpsRifeStatus');
+        if (!isRife) { status.style.display = 'none'; return; }
+        status.style.display = '';
+        if (window.RIFE?.isReady()) {
+          status.textContent = '✓ RIFE 已就绪 (WebGPU)';
+        } else if (!('gpu' in navigator)) {
+          status.innerHTML = '<span style="color:var(--err)">⚠ 当前浏览器不支持 WebGPU,光流补帧不可用 — 请用 Chrome 113+ / Edge 113+,或换其它补帧模式</span>';
+        } else {
+          status.textContent = '点"应用"会先下载 RIFE 模型 (~21 MB),然后开始推理。每帧约 0.2-1s (480p WebGPU)';
+        }
+      });
     } else if (action === 'reverse') {
       c.innerHTML = `<div class="info">反向播放,无参数。需要逐帧抽样,长视频较慢。</div>`;
     } else if (action === 'frames') {
@@ -476,6 +493,7 @@ Toolkit.injectTopbar('video-toolkit');
       if (action === 'frames') await doExtractFrames();
       else if (action === 'toGif') await doToGif();
       else if (action === 'chromaKey') await doChromaKey();
+      else if (action === 'changeFps' && $('cfpsMode')?.value === 'optical') await doChangeFpsRife();
       else await doReencodeWebm(action);  // trim/crop/resize/speed/reverse/filter all share this path
     } catch (e) {
       log.err(e.message);
@@ -690,6 +708,129 @@ Toolkit.injectTopbar('video-toolkit');
     outExt = 'webm';
     showOutput();
     log.ok(`生成 WebM ${fmtBytes(outBlob.size)}`);
+  }
+
+  // ChangeFps with RIFE optical-flow interpolation. Assumes a source reference
+  // FPS of 30 (matches the rest of the pipeline's seek sampling). For each
+  // output frame at time t, we compute the bracketing source-frame indices and
+  // either reuse a source sample directly (alpha ≈ 0 or 1) or call RIFE to
+  // synthesize the in-between. Source samples are cached so we never seek the
+  // same time twice in a row.
+  async function doChangeFpsRife() {
+    if (!window.RIFE) throw new Error('RIFE 模块未加载');
+    const { w: sw, h: sh, duration } = srcMeta;
+    const target = parseInt($('cfpsTarget').value, 10) || 30;
+    // Prepare RIFE (lazy download). Surface progress in the inline status line.
+    const statusEl = $('cfpsRifeStatus');
+    if (statusEl) statusEl.style.display = '';
+    await window.RIFE.prepare({
+      onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; },
+      onProgress: p => {
+        const pct = (p * 100).toFixed(0);
+        if (statusEl) statusEl.textContent = `下载 RIFE 模型 ${pct}%...`;
+        progress.set(p * 0.2);  // model download = first 20% of the bar
+      }
+    });
+    if (statusEl) statusEl.textContent = '✓ RIFE 就绪, 开始推理';
+
+    const fmt = $('outFormat').value;
+    const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
+    const SRC_FPS = 30;  // reference; matches doReencodeWebm's sampling cadence
+    const srcInterval = 1 / SRC_FPS;
+    const outInterval = 1 / target;
+
+    // H.264 only supports even dims
+    const outW = Math.max(2, Math.round(sw / 2) * 2);
+    const outH = Math.max(2, Math.round(sh / 2) * 2);
+
+    // src sample cache (last 2 we visited)
+    const cache = new Map();
+    async function getSrcAt(idx) {
+      if (cache.has(idx)) return cache.get(idx);
+      const t = Math.min(duration - 0.001, idx / SRC_FPS);
+      await seekVideo(srcVideo, t);
+      const cv = newCanvas(outW, outH);
+      cv.getContext('2d').drawImage(srcVideo, 0, 0, sw, sh, 0, 0, outW, outH);
+      cache.set(idx, cv);
+      // keep only the 3 most recent
+      if (cache.size > 3) cache.delete(cache.keys().next().value);
+      return cv;
+    }
+
+    const outCv = newCanvas(outW, outH);
+    const ctx = outCv.getContext('2d');
+    const tmpInterp = newCanvas(outW, outH);
+
+    if (fmt !== 'mp4') {
+      log.warn('光流补帧目前只走 MP4 (WebCodecs) 输出路径');
+      return;
+    }
+    if (!('VideoEncoder' in window)) {
+      throw new Error('当前浏览器不支持 WebCodecs, 光流补帧需要 WebCodecs + WebGPU');
+    }
+
+    log.dim('加载 mp4-muxer (首次联网)...');
+    const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
+    const muxer = new Muxer({
+      target: new ArrayBufferTarget(),
+      video: { codec: 'avc', width: outW, height: outH },
+      fastStart: 'in-memory'
+    });
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: e => log.err('encoder: ' + e.message)
+    });
+    encoder.configure({
+      codec: 'avc1.42001f',
+      width: outW, height: outH,
+      bitrate,
+      framerate: target,
+    });
+
+    const totalOut = Math.max(1, Math.floor(duration * target));
+    log.dim(`输出 ${totalOut} 帧 @ ${target}fps (源参考 ${SRC_FPS}fps), RIFE 推理...`);
+    const t0 = performance.now();
+
+    let frameIdx = 0;
+    for (let i = 0; i < totalOut; i++) {
+      const outTime = i / target;
+      if (outTime >= duration) break;
+      const srcIdxFloat = outTime * SRC_FPS;
+      const srcLo = Math.floor(srcIdxFloat);
+      const srcHi = srcLo + 1;
+      const alpha = srcIdxFloat - srcLo;
+
+      let frame;
+      if (alpha < 0.005) {
+        frame = await getSrcAt(srcLo);
+      } else if (alpha > 0.995) {
+        frame = await getSrcAt(srcHi);
+      } else {
+        const A = await getSrcAt(srcLo);
+        const B = await getSrcAt(Math.min(Math.floor(duration * SRC_FPS), srcHi));
+        await window.RIFE.interpolate(A, B, alpha, tmpInterp);
+        frame = tmpInterp;
+      }
+
+      ctx.clearRect(0, 0, outW, outH);
+      ctx.drawImage(frame, 0, 0);
+      const vf = new VideoFrame(outCv, { timestamp: Math.round((frameIdx / target) * 1e6) });
+      encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
+      vf.close();
+      frameIdx++;
+
+      progress.set(0.2 + 0.78 * (i / totalOut));
+      if (i % 4 === 0) await new Promise(r => setTimeout(r, 0));  // yield to UI
+    }
+    await encoder.flush();
+    encoder.close();
+    muxer.finalize();
+    outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+    outExt = 'mp4';
+    progress.set(1);
+    showOutput();
+    const dt = ((performance.now() - t0) / 1000).toFixed(1);
+    log.ok(`光流补帧完成 · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`);
   }
 
   async function doExtractFrames() {
