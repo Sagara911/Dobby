@@ -99,6 +99,29 @@
   .preview-box.brushable canvas { cursor: none; }
   .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
 
+  .batch-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-soft);
+    border-radius: 4px;
+  }
+  .batch-row + .batch-row { margin-top: 2px; }
+  .batch-row.preview { background: rgba(var(--jade-rgb), 0.08); color: var(--jade); }
+  .batch-row .name {
+    font-family: ui-monospace, Consolas, monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .batch-row .size { font-family: ui-monospace, Consolas, monospace; color: var(--muted-2); }
+  .batch-row .rm {
+    background: transparent; border: none; color: var(--muted);
+    padding: 0 4px; cursor: pointer; font-size: 14px; box-shadow: none;
+  }
+  .batch-row .rm:hover { color: var(--danger); transform: none; }
+
   .brush-mode-row { display: flex; gap: 6px; }
   .brush-mode-row button {
     flex: 1;
@@ -138,10 +161,12 @@
     <h1>🎨 Color Tools</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片</p>
-      <p class="hint">PNG / JPG / WebP</p>
-      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+      <p>📂 拖入图片(可多选)</p>
+      <p class="hint">PNG / JPG / WebP · 多张图同参数批量处理</p>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
     </div>
+
+    <div id="batchFileList" style="display:none; margin-top:8px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); background:rgba(0,0,0,0.3); padding:6px"></div>
 
     <h2>工具</h2>
     <div class="field">
@@ -162,7 +187,8 @@
       <label>文件名</label>
       <input type="text" id="filename" value="output" />
     </div>
-    <button id="applyBtn" disabled>应用</button>
+    <button id="applyBtn" disabled>应用 (当前图)</button>
+    <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用 → 下载 ZIP</button>
     <button id="downloadBtn" class="secondary" disabled>下载图片</button>
     <button id="downloadPaletteBtn" class="secondary" disabled>下载调色板</button>
     <button id="clearBtn" class="secondary">清空</button>
@@ -207,16 +233,24 @@ Toolkit.injectTopbar('color-tools');
   let outBlob = null;
   let lastPalette = null;
 
+  // batch mode: array of File objects (first one mirrors srcBitmap for preview)
+  let batchFiles = [];
+  let fflateMod = null;
+  // actions that make sense to batch — others (brush/picker/palette) are per-image only
+  const BATCH_ACTIONS = new Set(['transparent', 'replace', 'quantize']);
+
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
   const handoff = Toolkit.setupHandoff('color-tools', { outputType: 'image/png' });
-  $('action').addEventListener('change', renderActionControls);
+  $('action').addEventListener('change', () => { renderActionControls(); updateBatchBtn(); });
 
   async function handleFiles(files) {
     if (!files.length) return;
-    const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('请拖入图片文件'); return; }
+    // filter to image files only
+    files = [...files].filter(f => f.type.startsWith('image/'));
+    if (!files.length) { log.err('请拖入图片文件'); return; }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    const f = files[0];
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})${files.length > 1 ? ` + 另外 ${files.length - 1} 张` : ''}...`);
     try {
       const bitmap = await createImageBitmap(f);
       srcBitmap = bitmap;
@@ -227,13 +261,68 @@ Toolkit.injectTopbar('color-tools');
       $('srcBox').innerHTML = '';
       $('srcBox').appendChild(srcCanvas);
       attachCanvasPicker();
-      $('stats').innerHTML = `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      batchFiles = files;
+      renderBatchList();
+      const totalSize = files.reduce((a, b) => a + b.size, 0);
+      $('stats').innerHTML = files.length > 1
+        ? `<strong>${files.length}</strong> 张 · 第一张 <strong>${bitmap.width}×${bitmap.height}</strong> · 共 <strong>${fmtBytes(totalSize)}</strong>`
+        : `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
       $('applyBtn').disabled = false;
-      log.ok('加载完成');
+      updateBatchBtn();
+      log.ok(files.length > 1 ? `加载完成 · ${files.length} 张` : '加载完成');
       renderActionControls();
     } catch (e) {
       log.err(e.message);
     }
+  }
+
+  function renderBatchList() {
+    const host = $('batchFileList');
+    if (batchFiles.length <= 1) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    host.style.display = '';
+    host.innerHTML = batchFiles.map((f, i) => `
+      <div class="batch-row${i === 0 ? ' preview' : ''}">
+        <span class="name" title="${f.name}">${i === 0 ? '👁 ' : ''}${f.name}</span>
+        <span class="size">${fmtBytes(f.size)}</span>
+        <button class="rm" data-idx="${i}" title="移除">×</button>
+      </div>
+    `).join('');
+    host.querySelectorAll('.rm').forEach(b => b.addEventListener('click', async () => {
+      const i = +b.dataset.idx;
+      batchFiles.splice(i, 1);
+      if (i === 0 && batchFiles.length > 0) {
+        // first file removed → re-load the new first as preview
+        const newFirst = batchFiles[0];
+        const bm = await createImageBitmap(newFirst);
+        srcBitmap = bm;
+        srcCanvas = newCanvas(bm.width, bm.height);
+        const ctx = srcCanvas.getContext('2d');
+        ctx.drawImage(bm, 0, 0);
+        srcImageData = ctx.getImageData(0, 0, bm.width, bm.height);
+        $('srcBox').innerHTML = '';
+        $('srcBox').appendChild(srcCanvas);
+        attachCanvasPicker();
+      }
+      if (batchFiles.length === 0) {
+        srcBitmap = null; srcCanvas = null; srcImageData = null;
+        $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
+        $('applyBtn').disabled = true;
+        $('stats').textContent = '未加载';
+      }
+      renderBatchList();
+      updateBatchBtn();
+    }));
+  }
+
+  function updateBatchBtn() {
+    const btn = $('batchApplyBtn');
+    const action = $('action')?.value;
+    const eligible = batchFiles.length > 1 && BATCH_ACTIONS.has(action);
+    btn.style.display = batchFiles.length > 1 ? '' : 'none';
+    btn.disabled = !eligible;
+    btn.textContent = eligible
+      ? `📦 批量应用 ${batchFiles.length} 张 → 下载 ZIP`
+      : `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`;
   }
 
   function attachCanvasPicker() {
@@ -887,6 +976,9 @@ Toolkit.injectTopbar('color-tools');
   $('clearBtn').addEventListener('click', () => {
     srcBitmap = null; srcCanvas = null; srcImageData = null;
     outBlob = null; lastPalette = null;
+    batchFiles = [];
+    renderBatchList();
+    updateBatchBtn();
     $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
     $('outBox').innerHTML = '<div class="preview-empty">应用工具后这里显示结果</div>';
     $('paletteOut').style.display = 'none';
@@ -898,6 +990,150 @@ Toolkit.injectTopbar('color-tools');
     log.clear();
     $('fileInput').value = '';
   });
+
+  // ===== Batch apply: run the current action on every file using the same params =====
+  $('batchApplyBtn').addEventListener('click', async () => {
+    if (!batchFiles.length) return;
+    const action = $('action').value;
+    if (!BATCH_ACTIONS.has(action)) { log.err(`${action} 不支持批量`); return; }
+    $('batchApplyBtn').disabled = true;
+    $('applyBtn').disabled = true;
+    log.dim(`批量 ${action} · ${batchFiles.length} 张...`);
+    try {
+      if (!fflateMod) {
+        log.dim('  加载 fflate (首次联网)...');
+        fflateMod = await import('https://esm.sh/fflate@0.8.2');
+      }
+      const zipData = {};
+      let totalIn = 0, totalOut = 0;
+      for (let i = 0; i < batchFiles.length; i++) {
+        const file = batchFiles[i];
+        try {
+          const bm = await createImageBitmap(file);
+          const w = bm.width, h = bm.height;
+          const cv = newCanvas(w, h);
+          const ctx = cv.getContext('2d');
+          ctx.drawImage(bm, 0, 0);
+          let outCv = null;
+          if (action === 'transparent') outCv = transformTransparent(cv, ctx, w, h);
+          else if (action === 'replace') outCv = transformReplace(cv, ctx, w, h);
+          else if (action === 'quantize') {
+            const imgData = ctx.getImageData(0, 0, w, h);
+            outCv = transformQuantize(imgData, w, h);
+          }
+          const blob = await canvasToBlob(outCv, 'image/png');
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          let outName = `${baseName}.png`;
+          // dedupe name collision
+          if (zipData[outName]) {
+            let n = 1;
+            while (zipData[`${baseName}(${n}).png`]) n++;
+            outName = `${baseName}(${n}).png`;
+          }
+          zipData[outName] = [buf, { level: 0 }];  // PNG already compressed
+          totalIn += file.size;
+          totalOut += blob.size;
+          bm.close?.();
+          log.dim(`  [${i+1}/${batchFiles.length}] ${file.name} → ${fmtBytes(blob.size)}`);
+          // yield to UI between large images
+          if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
+        } catch (err) {
+          log.warn(`  ${file.name} 失败: ${err.message}`);
+        }
+      }
+      log.dim('打包 ZIP...');
+      const zipped = await new Promise((rs, rj) => fflateMod.zip(zipData, (err, out) => err ? rj(err) : rs(out)));
+      const zipBlob = new Blob([zipped], { type: 'application/zip' });
+      const outName = ($('filename').value || 'batch') + '.zip';
+      download(zipBlob, outName);
+      log.ok(`完成 · ${Object.keys(zipData).length} 张 · 原 ${fmtBytes(totalIn)} → ${fmtBytes(totalOut)} → ZIP ${fmtBytes(zipBlob.size)}`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('batchApplyBtn').disabled = false;
+      $('applyBtn').disabled = false;
+    }
+  });
+
+  // ===== shared transforms (used by both single apply and batch) =====
+  function transformTransparent(cv, ctx, w, h) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    let target;
+    if ($('autoCorner').checked) target = { r: d[0], g: d[1], b: d[2] };
+    else {
+      const hex = $('targetColor').value;
+      target = hexToRgb(hex);
+      if (!target) throw new Error('目标色 hex 无效');
+    }
+    const tol = parseInt($('tolerance').value, 10);
+    const tol2 = tol * tol * 3;
+    for (let i = 0; i < d.length; i += 4) {
+      const dr = d[i] - target.r, dg = d[i+1] - target.g, db = d[i+2] - target.b;
+      if (dr*dr + dg*dg + db*db <= tol2) d[i+3] = 0;
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  }
+
+  function transformReplace(cv, ctx, w, h) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const src = hexToRgb($('srcColor').value);
+    const dst = hexToRgb($('dstColor').value);
+    if (!src || !dst) throw new Error('源色或目标色 hex 无效');
+    const tol = parseInt($('repTol').value, 10);
+    const feather = parseInt($('repFeather').value, 10);
+    const srcHsl = rgbToHsl(src.r, src.g, src.b);
+    const dstHsl = rgbToHsl(dst.r, dst.g, dst.b);
+    const hueShift = dstHsl.h - srcHsl.h;
+    const satScale = srcHsl.s > 0 ? (dstHsl.s / srcHsl.s) : 1;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i+3] === 0) continue;
+      const px = rgbToHsl(d[i], d[i+1], d[i+2]);
+      let dh = Math.abs(px.h - srcHsl.h);
+      if (dh > 180) dh = 360 - dh;
+      if (dh > tol) continue;
+      const t = 1 - (dh / tol);
+      const strength = t * t * (3 - 2 * t);
+      const newH = ((px.h + hueShift * strength) % 360 + 360) % 360;
+      const newS = Math.max(0, Math.min(100, px.s * (1 + (satScale - 1) * strength)));
+      const rgb = hslToRgb(newH, newS, px.l);
+      d[i] = rgb.r; d[i+1] = rgb.g; d[i+2] = rgb.b;
+    }
+    ctx.putImageData(img, 0, 0);
+    if (feather > 0) {
+      const blurred = newCanvas(w, h);
+      const bctx = blurred.getContext('2d');
+      bctx.filter = `blur(${feather}px)`;
+      bctx.drawImage(cv, 0, 0);
+      return blurred;
+    }
+    return cv;
+  }
+
+  function transformQuantize(imgData, w, h) {
+    const n = parseInt($('quantN').value, 10);
+    const palette = medianCut(imgData, n);
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const out = ctx.createImageData(w, h);
+    const src = imgData.data, dst = out.data;
+    for (let i = 0; i < src.length; i += 4) {
+      const r = src[i], g = src[i+1], b = src[i+2];
+      let best = palette[0], bestD = Infinity;
+      for (const p of palette) {
+        const dr = r - p.r, dg = g - p.g, db = b - p.b;
+        const d = dr*dr + dg*dg + db*db;
+        if (d < bestD) { bestD = d; best = p; if (d === 0) break; }
+      }
+      dst[i] = best.r; dst[i+1] = best.g; dst[i+2] = best.b; dst[i+3] = src[i+3];
+    }
+    ctx.putImageData(out, 0, 0);
+    return cv;
+  }
 })();
 </script>
 </body>
