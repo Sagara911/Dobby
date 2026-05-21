@@ -61,6 +61,10 @@
       <span>强制方形帧 (长条卡牌→正方,空白透明)</span>
     </label>
     <label class="checkbox">
+      <input type="checkbox" id="squareSheet" />
+      <span>整张精灵图正方形 (短边补透明)</span>
+    </label>
+    <label class="checkbox">
       <input type="checkbox" id="powerOfTwo" />
       <span>2 的幂次尺寸 (WebGL 友好)</span>
     </label>
@@ -310,8 +314,16 @@ Toolkit.injectTopbar('sprite-packer');
 
     const sheetW = margin * 2 + colWidths.reduce((s, w) => s + w, 0) + padding * (cols - 1);
     const sheetH = margin * 2 + rowHeights.reduce((s, h) => s + h, 0) + padding * (rows - 1);
-    const finalW = powerOfTwo ? nextPow2(sheetW) : sheetW;
-    const finalH = powerOfTwo ? nextPow2(sheetH) : sheetH;
+    const squareSheet = $('squareSheet').checked;
+    let finalW = sheetW, finalH = sheetH;
+    if (squareSheet) {
+      const side = Math.max(finalW, finalH);
+      finalW = finalH = side;
+    }
+    if (powerOfTwo) {
+      finalW = nextPow2(finalW);
+      finalH = nextPow2(finalH);
+    }
 
     const out = newCanvas(finalW, finalH);
     const octx = out.getContext('2d');
@@ -422,7 +434,7 @@ Toolkit.injectTopbar('sprite-packer');
     $('fileInput').value = '';
   });
 
-  ['cols','padding','margin','trim','powerOfTwo','uniformSize','forceSquare','dropEmpty'].forEach(id => {
+  ['cols','padding','margin','trim','powerOfTwo','uniformSize','forceSquare','squareSheet','dropEmpty'].forEach(id => {
     $(id).addEventListener('change', () => { if (rawFrames.length) repack(); });
   });
   $('videoFps').addEventListener('change', () => log.dim('ℹ FPS 修改后请重新拖入视频文件'));
