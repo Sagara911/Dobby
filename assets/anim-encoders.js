@@ -355,18 +355,31 @@
   }
 
   // =========================================================================
-  // GIF decoder (uses browser's ImageDecoder API)
+  // Animation decoder (GIF + APNG via ImageDecoder API)
   // =========================================================================
-  async function decodeGif(blobOrBuffer) {
+  // Sniffs magic bytes when mimeHint is not passed. APNG and PNG share the
+  // same magic, so we report 'image/png' for both — ImageDecoder picks up
+  // the animation track if one exists.
+  function sniffAnimMime(buf) {
+    const head = new Uint8Array(buf.slice ? buf.slice(0, 8) : buf.subarray(0, 8));
+    if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46) return 'image/gif';
+    if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47) return 'image/png';
+    return null;
+  }
+
+  async function decodeAnim(blobOrBuffer, mimeHint) {
     if (!('ImageDecoder' in window)) {
       throw new Error('当前浏览器不支持 ImageDecoder API,请用 Chrome 94+ / Edge 94+');
     }
     const buf = blobOrBuffer instanceof Blob ? await blobOrBuffer.arrayBuffer() : blobOrBuffer;
-    const decoder = new ImageDecoder({ data: buf, type: 'image/gif' });
-    await decoder.tracks.ready;  // tracks must be populated before reading selectedTrack
+    const mime = mimeHint || sniffAnimMime(buf);
+    if (!mime) throw new Error('未识别的动画格式 (不是 GIF/PNG)');
+    const decoder = new ImageDecoder({ data: buf, type: mime });
+    await decoder.tracks.ready;
     await decoder.completed;
     const track = decoder.tracks.selectedTrack;
-    if (!track) throw new Error('无法读取 GIF 帧轨道,文件可能损坏');
+    if (!track) throw new Error('无法读取帧轨道,文件可能损坏');
+    if (track.frameCount < 1) throw new Error('文件没有动画帧 (静态图)');
     const frames = [];
     for (let i = 0; i < track.frameCount; i++) {
       const result = await decoder.decode({ frameIndex: i });
@@ -383,5 +396,9 @@
     return frames;
   }
 
-  window.AnimEncoders = { buildGif, buildApng, decodeGif };
+  // Backward-compat alias — old callers passed only GIF blobs. New code
+  // should use decodeAnim which handles both GIF and APNG.
+  const decodeGif = decodeAnim;
+
+  window.AnimEncoders = { buildGif, buildApng, decodeGif, decodeAnim };
 })();

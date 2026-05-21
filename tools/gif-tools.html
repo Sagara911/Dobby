@@ -162,9 +162,9 @@
     <!-- ============ edit pane ============ -->
     <div id="editPane" style="display:none">
       <div class="drop-zone" id="editDropZone">
-        <p>📂 拖入 GIF</p>
+        <p>📂 拖入 GIF 或 APNG</p>
         <p class="hint">加载后选择一种操作<br/>想叠加多种操作?导出后再拖入</p>
-        <input type="file" id="editFileInput" accept="image/gif" style="display:none" />
+        <input type="file" id="editFileInput" accept="image/gif,image/png,.gif,.png" style="display:none" />
       </div>
       <div class="progress" id="editProgress"><div class="progress-bar"></div></div>
 
@@ -395,8 +395,8 @@ Toolkit.injectTopbar('gif-tools');
       img.style.maxWidth = '100%';
       $('makeResultBox').appendChild(img);
       $('makeDownloadBtn').disabled = false;
-      // chain into edit only if output is GIF (decodeGif requires GIF)
-      $('makeUseAsSourceBtn').disabled = makeLastExt !== 'gif';
+      // Edit pane accepts both GIF and APNG (decodeAnim handles either).
+      $('makeUseAsSourceBtn').disabled = false;
       const fname = ($('makeFilename').value || 'animation') + '.' + makeLastExt;
       handoff?.setBlob(blob, fname, makeLastExt === 'gif' ? 'image/gif' : 'image/png');
     } catch (e) {
@@ -415,12 +415,12 @@ Toolkit.injectTopbar('gif-tools');
   });
 
   $('makeUseAsSourceBtn').addEventListener('click', async () => {
-    if (!makeLastBlob || makeLastExt !== 'gif') return;
-    log.dim('把生成结果送到"编辑"标签...');
+    if (!makeLastBlob) return;
+    log.dim(`把生成结果(${makeLastExt.toUpperCase()})送到"编辑"标签...`);
     try {
-      const frames = await AnimEncoders.decodeGif(makeLastBlob);
-      loadEditFrames(frames, makeLastBlob, ($('makeFilename').value || 'animation') + '.gif');
-      // switch tab
+      const mimeHint = makeLastExt === 'gif' ? 'image/gif' : 'image/png';
+      const frames = await AnimEncoders.decodeAnim(makeLastBlob, mimeHint);
+      loadEditFrames(frames, makeLastBlob, ($('makeFilename').value || 'animation') + '.' + makeLastExt);
       document.querySelector('#modeTabs [data-mode="edit"]').click();
     } catch (e) {
       log.err(e.message);
@@ -454,14 +454,16 @@ Toolkit.injectTopbar('gif-tools');
   async function handleEditFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!/\.gif$/i.test(f.name) && f.type !== 'image/gif') {
-      log.err('请拖入 GIF 文件');
+    const isGif = /\.gif$/i.test(f.name) || f.type === 'image/gif';
+    const isPng = /\.png$/i.test(f.name) || f.type === 'image/png';
+    if (!isGif && !isPng) {
+      log.err('请拖入 GIF 或 APNG 文件');
       return;
     }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {
-      const frames = await AnimEncoders.decodeGif(f);
+      const frames = await AnimEncoders.decodeAnim(f, isGif ? 'image/gif' : 'image/png');
       loadEditFrames(frames, f);
     } catch (e) {
       log.err(e.message);
