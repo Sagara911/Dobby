@@ -363,8 +363,10 @@
     }
     const buf = blobOrBuffer instanceof Blob ? await blobOrBuffer.arrayBuffer() : blobOrBuffer;
     const decoder = new ImageDecoder({ data: buf, type: 'image/gif' });
+    await decoder.tracks.ready;  // tracks must be populated before reading selectedTrack
     await decoder.completed;
     const track = decoder.tracks.selectedTrack;
+    if (!track) throw new Error('无法读取 GIF 帧轨道,文件可能损坏');
     const frames = [];
     for (let i = 0; i < track.frameCount; i++) {
       const result = await decoder.decode({ frameIndex: i });

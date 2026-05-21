@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>GIF 工具 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab-row button {
+    flex: 1;
+    background: transparent;
+    color: var(--text-soft);
+    padding: 8px 0;
+    font-size: 12px;
+    border-radius: calc(var(--radius-sm) - 3px);
+    box-shadow: none;
+  }
+  .tab-row button.active {
+    background: var(--jade);
+    color: #0a1a14;
+  }
+  .tab-row button:hover { transform: none; }
+
+  .preview-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 240px;
+  }
+  .preview-col { display: flex; flex-direction: column; gap: 6px; }
+  .preview-col .label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .preview-box {
+    flex: 1;
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .preview-box canvas, .preview-box img {
+    image-rendering: pixelated;
+    max-width: 100%;
+  }
+  .action-controls {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎬 GIF 工具</h1>
+
+    <div class="tab-row" id="modeTabs">
+      <button data-mode="make" class="active" type="button">🎬 制作 (帧 → GIF)</button>
+      <button data-mode="edit" type="button">✏️ 编辑 (GIF → GIF)</button>
+    </div>
+
+    <!-- ============ make pane ============ -->
+    <div id="makePane">
+      <div class="drop-zone" id="makeDropZone">
+        <p>📂 拖入序列帧</p>
+        <p class="hint">多选 PNG / JPG<br/>按文件名自然排序</p>
+        <input type="file" id="makeFileInput" multiple accept="image/*" style="display:none" />
+      </div>
+      <div class="progress" id="makeProgress"><div class="progress-bar"></div></div>
+
+      <h2>动画</h2>
+      <div class="field">
+        <label>FPS</label>
+        <input type="number" id="makeFps" value="12" min="1" max="60" />
+      </div>
+      <div class="field">
+        <label>循环次数 (0 = 无限)</label>
+        <input type="number" id="makeLoop" value="0" min="0" />
+      </div>
+
+      <h2>输出</h2>
+      <div class="field">
+        <label>格式</label>
+        <select id="makeFormat">
+          <option value="gif">GIF (兼容性最好)</option>
+          <option value="apng">APNG (画质好,支持 8-bit alpha)</option>
+        </select>
+      </div>
+      <div class="field" id="makePaletteField">
+        <label>调色板算法 (仅 GIF)</label>
+        <select id="makePalette">
+          <option value="median">中位切分 256 色 (慢, 质量好)</option>
+          <option value="uniform">均匀 6×6×6 (快, 质量一般)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>文件名</label>
+        <input type="text" id="makeFilename" value="animation" />
+      </div>
+
+      <button id="makeBuildBtn" disabled>生成</button>
+      <button id="makeDownloadBtn" class="secondary" disabled>💾 下载</button>
+      <button id="makeUseAsSourceBtn" class="secondary" disabled>把输出送到"编辑"标签</button>
+      <button id="makeClearBtn" class="secondary">清空</button>
+    </div>
+
+    <!-- ============ edit pane ============ -->
+    <div id="editPane" style="display:none">
+      <div class="drop-zone" id="editDropZone">
+        <p>📂 拖入 GIF</p>
+        <p class="hint">加载后选择一种操作<br/>想叠加多种操作?导出后再拖入</p>
+        <input type="file" id="editFileInput" accept="image/gif" style="display:none" />
+      </div>
+      <div class="progress" id="editProgress"><div class="progress-bar"></div></div>
+
+      <h2>操作</h2>
+      <div class="field">
+        <select id="editAction">
+          <option value="resize">📐 缩放 (Resize)</option>
+          <option value="crop">✂️ 裁剪 (Crop)</option>
+          <option value="speed">⏩ 调速 (Speed)</option>
+          <option value="reverse">⏪ 反向播放 (Reverse)</option>
+          <option value="trim">✄ 删帧 (Trim)</option>
+          <option value="dropFrames">⊘ 抽帧降 FPS</option>
+          <option value="optimize">📦 优化 (减色)</option>
+          <option value="watermark">📝 加文字水印</option>
+          <option value="filter">🎚️ 滤镜 / 色相</option>
+        </select>
+      </div>
+
+      <div class="action-controls" id="editActionControls"></div>
+
+      <h2>输出</h2>
+      <div class="field">
+        <label>文件名</label>
+        <input type="text" id="editFilename" value="edited" />
+      </div>
+      <div class="field">
+        <label>调色板算法</label>
+        <select id="editPalette">
+          <option value="median">中位切分 256 色 (慢, 质量好)</option>
+          <option value="uniform">均匀 6×6×6 (快)</option>
+        </select>
+      </div>
+      <button id="editApplyBtn" disabled>应用 + 生成</button>
+      <button id="editDownloadBtn" class="secondary" disabled>💾 下载</button>
+      <button id="editUseAsSourceBtn" class="secondary" disabled>把输出作为新输入</button>
+      <button id="editClearBtn" class="secondary">清空</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+
+    <div id="makeMain">
+      <div class="preview-pair">
+        <div class="preview-col">
+          <div class="label">序列帧 (第一帧)</div>
+          <div class="preview-box" id="makeFirstFrameBox">
+            <div class="preview-empty">拖入序列帧后这里显示首帧</div>
+          </div>
+        </div>
+        <div class="preview-col">
+          <div class="label">生成的动画</div>
+          <div class="preview-box" id="makeResultBox">
+            <div class="preview-empty">生成后这里显示动画预览</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin-top:0">所有帧</h2>
+        <div class="frame-grid" id="makeFrameGrid"></div>
+      </div>
+    </div>
+
+    <div id="editMain" style="display:none">
+      <div class="preview-pair">
+        <div class="preview-col">
+          <div class="label">原 GIF</div>
+          <div class="preview-box" id="editSrcBox">
+            <div class="preview-empty">拖入 GIF</div>
+          </div>
+        </div>
+        <div class="preview-col">
+          <div class="label">输出预览</div>
+          <div class="preview-box" id="editOutBox">
+            <div class="preview-empty">应用操作后这里显示结果</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin-top:0">所有帧</h2>
+        <div class="frame-grid" id="editFrameGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
+<script>
+Toolkit.injectTopbar('gif-tools');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, newCanvas, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const makeProg = makeProgress($('makeProgress'));
+  const editProg = makeProgress($('editProgress'));
+  const handoff = Toolkit.setupHandoff('gif-tools', { outputType: 'image/gif' });
+
+  // ============================================================
+  //   mode switching
+  // ============================================================
+  let mode = 'make';
+  document.querySelectorAll('#modeTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      mode = b.dataset.mode;
+      document.querySelectorAll('#modeTabs button').forEach(x => x.classList.toggle('active', x === b));
+      $('makePane').style.display = mode === 'make' ? '' : 'none';
+      $('editPane').style.display = mode === 'edit' ? '' : 'none';
+      $('makeMain').style.display = mode === 'make' ? '' : 'none';
+      $('editMain').style.display = mode === 'edit' ? '' : 'none';
+    });
+  });
+
+  // ============================================================
+  //   MAKE mode (frames → GIF / APNG)
+  // ============================================================
+  let makeFrames = [];
+  let makeLastBlob = null;
+  let makeLastExt = 'gif';
+
+  attachDropZone($('makeDropZone'), $('makeFileInput'), handleMakeFiles);
+
+  $('makeFormat').addEventListener('change', e => {
+    $('makePaletteField').style.display = e.target.value === 'gif' ? '' : 'none';
+  });
+
+  async function handleMakeFiles(files) {
+    if (!files.length) return;
+    log.clear();
+    files = naturalSort(files.filter(f => f.type.startsWith('image/') && !/\.gif$/i.test(f.name)));
+    log.dim(`加载 ${files.length} 张图片...`);
+    makeFrames = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const bitmap = await createImageBitmap(f);
+        makeFrames.push({ name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height });
+      } catch (e) {
+        log.err(`${f.name}: ${e.message}`);
+      }
+      makeProg.set((i + 1) / files.length);
+    }
+    makeProg.hide();
+    log.ok(`加载完成 ${makeFrames.length} 帧`);
+    renderMakeFrameGrid();
+    if (makeFrames.length) {
+      const first = makeFrames[0];
+      const cv = newCanvas(first.w, first.h);
+      cv.getContext('2d').drawImage(first.bitmap, 0, 0);
+      $('makeFirstFrameBox').innerHTML = '';
+      $('makeFirstFrameBox').appendChild(cv);
+      $('stats').innerHTML = `<strong>${makeFrames.length}</strong> 帧 · 单帧 <strong>${first.w}×${first.h}</strong>`;
+      $('makeBuildBtn').disabled = false;
+    }
+  }
+
+  function renderMakeFrameGrid() {
+    const grid = $('makeFrameGrid');
+    grid.innerHTML = '';
+    makeFrames.forEach((f, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'frame-tile';
+      const cv = newCanvas(f.w, f.h);
+      cv.getContext('2d').drawImage(f.bitmap, 0, 0);
+      tile.appendChild(cv);
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = i;
+      tile.appendChild(idx);
+      grid.appendChild(tile);
+    });
+  }
+
+  $('makeBuildBtn').addEventListener('click', async () => {
+    if (!makeFrames.length) return;
+    const fmt = $('makeFormat').value;
+    const fps = parseInt($('makeFps').value, 10) || 12;
+    const loop = parseInt($('makeLoop').value, 10) || 0;
+    const palette = $('makePalette').value;
+
+    $('makeBuildBtn').disabled = true;
+    $('makeDownloadBtn').disabled = true;
+    $('makeUseAsSourceBtn').disabled = true;
+    log.dim(`生成 ${fmt.toUpperCase()}...`);
+
+    try {
+      const t0 = performance.now();
+      const encoderOpts = {
+        fps, loop,
+        onProgress: pct => makeProg.set(pct),
+        onStatus: msg => log.dim('  ' + msg)
+      };
+      let blob;
+      if (fmt === 'gif') {
+        blob = await AnimEncoders.buildGif(makeFrames, { ...encoderOpts, paletteMode: palette });
+        makeLastExt = 'gif';
+      } else {
+        blob = await AnimEncoders.buildApng(makeFrames, encoderOpts);
+        makeLastExt = 'png';
+      }
+      makeLastBlob = blob;
+      const t1 = performance.now();
+      log.ok(`生成完成 ${fmtBytes(blob.size)} · 用时 ${((t1 - t0) / 1000).toFixed(2)}s`);
+
+      const url = URL.createObjectURL(blob);
+      $('makeResultBox').innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      img.style.maxWidth = '100%';
+      $('makeResultBox').appendChild(img);
+      $('makeDownloadBtn').disabled = false;
+      // chain into edit only if output is GIF (decodeGif requires GIF)
+      $('makeUseAsSourceBtn').disabled = makeLastExt !== 'gif';
+      const fname = ($('makeFilename').value || 'animation') + '.' + makeLastExt;
+      handoff?.setBlob(blob, fname, makeLastExt === 'gif' ? 'image/gif' : 'image/png');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('makeBuildBtn').disabled = false;
+      makeProg.hide();
+    }
+  });
+
+  $('makeDownloadBtn').addEventListener('click', () => {
+    if (!makeLastBlob) return;
+    const name = ($('makeFilename').value || 'animation').replace(/[^\w-]/g, '_');
+    download(makeLastBlob, `${name}.${makeLastExt}`);
+  });
+
+  $('makeUseAsSourceBtn').addEventListener('click', async () => {
+    if (!makeLastBlob || makeLastExt !== 'gif') return;
+    log.dim('把生成结果送到"编辑"标签...');
+    try {
+      const frames = await AnimEncoders.decodeGif(makeLastBlob);
+      loadEditFrames(frames, makeLastBlob, ($('makeFilename').value || 'animation') + '.gif');
+      // switch tab
+      document.querySelector('#modeTabs [data-mode="edit"]').click();
+    } catch (e) {
+      log.err(e.message);
+    }
+  });
+
+  $('makeClearBtn').addEventListener('click', () => {
+    makeFrames = []; makeLastBlob = null;
+    $('makeFrameGrid').innerHTML = '';
+    $('makeFirstFrameBox').innerHTML = '<div class="preview-empty">拖入序列帧后这里显示首帧</div>';
+    $('makeResultBox').innerHTML = '<div class="preview-empty">生成后这里显示动画预览</div>';
+    if (mode === 'make') $('stats').textContent = '未加载';
+    $('makeBuildBtn').disabled = true;
+    $('makeDownloadBtn').disabled = true;
+    $('makeUseAsSourceBtn').disabled = true;
+    log.clear();
+    $('makeFileInput').value = '';
+  });
+
+  // ============================================================
+  //   EDIT mode (GIF → GIF)
+  // ============================================================
+  let editSrcFrames = [];
+  let editSrcWidth = 0, editSrcHeight = 0, editSrcFps = 12;
+  let editLastBlob = null;
+
+  attachDropZone($('editDropZone'), $('editFileInput'), handleEditFiles);
+  $('editAction').addEventListener('change', renderEditActionControls);
+
+  async function handleEditFiles(files) {
+    if (!files.length) return;
+    const f = files[0];
+    if (!/\.gif$/i.test(f.name) && f.type !== 'image/gif') {
+      log.err('请拖入 GIF 文件');
+      return;
+    }
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    try {
+      const frames = await AnimEncoders.decodeGif(f);
+      loadEditFrames(frames, f);
+    } catch (e) {
+      log.err(e.message);
+    }
+  }
+
+  function loadEditFrames(frames, fileOrBlob, displayName) {
+    editSrcFrames = frames;
+    editSrcWidth = frames[0].w;
+    editSrcHeight = frames[0].h;
+    const avgDuration = frames.reduce((s, fr) => s + (fr.duration || 100000), 0) / frames.length;
+    editSrcFps = Math.round(1e6 / avgDuration);
+    log.ok(`解码完成 ${frames.length} 帧 · ${editSrcWidth}×${editSrcHeight} · ≈${editSrcFps} FPS`);
+    $('editSrcBox').innerHTML = '';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(fileOrBlob);
+    img.style.maxWidth = '100%';
+    $('editSrcBox').appendChild(img);
+    renderEditFrameGrid();
+    const sizeStr = fileOrBlob.size ? ` · 原文件 ${fmtBytes(fileOrBlob.size)}` : '';
+    $('stats').innerHTML = `<strong>${frames.length}</strong> 帧 · <strong>${editSrcWidth}×${editSrcHeight}</strong> · ≈<strong>${editSrcFps}</strong> FPS${sizeStr}`;
+    $('editApplyBtn').disabled = false;
+    renderEditActionControls();
+  }
+
+  function renderEditFrameGrid() {
+    const grid = $('editFrameGrid');
+    grid.innerHTML = '';
+    editSrcFrames.forEach((f, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'frame-tile';
+      const cv = newCanvas(f.w, f.h);
+      cv.getContext('2d').drawImage(f.bitmap, 0, 0);
+      tile.appendChild(cv);
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = i;
+      tile.appendChild(idx);
+      grid.appendChild(tile);
+    });
+  }
+
+  function renderEditActionControls() {
+    const action = $('editAction').value;
+    const c = $('editActionControls');
+    const w = editSrcWidth, h = editSrcHeight;
+    if (!editSrcFrames.length) { c.innerHTML = '<div class="info">先拖入一个 GIF</div>'; return; }
+    if (action === 'resize') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>宽 (px)</label><input type="number" id="editNewW" value="${w}" min="1" /></div>
+          <div class="field"><label>高 (px)</label><input type="number" id="editNewH" value="${h}" min="1" /></div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="editLockRatio" checked /><span>锁定宽高比</span></label>
+        <div class="info">改变其中一个会按比例联动另一个</div>
+      `;
+      const ratio = w / h;
+      $('editNewW').addEventListener('input', () => {
+        if ($('editLockRatio').checked) $('editNewH').value = Math.round(parseInt($('editNewW').value, 10) / ratio);
+      });
+      $('editNewH').addEventListener('input', () => {
+        if ($('editLockRatio').checked) $('editNewW').value = Math.round(parseInt($('editNewH').value, 10) * ratio);
+      });
+    } else if (action === 'crop') {
+      c.innerHTML = `
+        <div class="row-fields">
+          <div class="field"><label>X</label><input type="number" id="editCropX" value="0" min="0" /></div>
+          <div class="field"><label>Y</label><input type="number" id="editCropY" value="0" min="0" /></div>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>宽</label><input type="number" id="editCropW" value="${w}" min="1" max="${w}" /></div>
+          <div class="field"><label>高</label><input type="number" id="editCropH" value="${h}" min="1" max="${h}" /></div>
+        </div>
+        <div class="info">手动输入要保留的矩形区域 (左上角 + 尺寸)</div>
+      `;
+    } else if (action === 'speed') {
+      c.innerHTML = `
+        <div class="field">
+          <label>速度倍率 <span id="editSpeedVal" class="mono">1.0×</span></label>
+          <input type="range" id="editSpeedMul" min="10" max="400" value="100" />
+        </div>
+        <div class="info">当前 ≈ ${editSrcFps} FPS, 调整后 ≈ <span id="editNewFpsLabel" class="mono">${editSrcFps}</span> FPS</div>
+      `;
+      const update = () => {
+        const m = parseInt($('editSpeedMul').value, 10) / 100;
+        $('editSpeedVal').textContent = m.toFixed(2) + '×';
+        $('editNewFpsLabel').textContent = Math.round(editSrcFps * m);
+      };
+      $('editSpeedMul').addEventListener('input', update);
+      update();
+    } else if (action === 'reverse') {
+      c.innerHTML = `<div class="info">反向播放,无参数。点击下方"应用"开始处理。</div>`;
+    } else if (action === 'trim') {
+      const last = editSrcFrames.length - 1;
+      c.innerHTML = `
+        <div class="field">
+          <label>起始帧 <span id="editTrimStartVal" class="mono">0</span></label>
+          <input type="range" id="editTrimStart" min="0" max="${last}" value="0" />
+        </div>
+        <div class="field">
+          <label>结束帧 <span id="editTrimEndVal" class="mono">${last}</span></label>
+          <input type="range" id="editTrimEnd" min="0" max="${last}" value="${last}" />
+        </div>
+        <div class="info">保留 [起始, 结束] 之间的帧 (包含两端)</div>
+      `;
+      $('editTrimStart').addEventListener('input', e => $('editTrimStartVal').textContent = e.target.value);
+      $('editTrimEnd').addEventListener('input', e => $('editTrimEndVal').textContent = e.target.value);
+    } else if (action === 'dropFrames') {
+      c.innerHTML = `
+        <div class="field">
+          <label>保留每 N 帧中的 1 帧 <span id="editDropNVal" class="mono">2</span></label>
+          <input type="range" id="editDropN" min="2" max="10" value="2" />
+        </div>
+        <div class="info">N=2 = 抽掉一半帧 (FPS 减半, 体积减半);N=3 = 保留 1/3</div>
+      `;
+      $('editDropN').addEventListener('input', e => $('editDropNVal').textContent = e.target.value);
+    } else if (action === 'optimize') {
+      c.innerHTML = `
+        <div class="field">
+          <label>色彩位深 (每通道)</label>
+          <select id="editBitDepth">
+            <option value="8">8 bit (原始)</option>
+            <option value="6">6 bit</option>
+            <option value="5">5 bit</option>
+            <option value="4" selected>4 bit (推荐)</option>
+            <option value="3">3 bit (海报效果)</option>
+          </select>
+        </div>
+        <div class="info">降低色彩位深后, 中位切分调色板能找到更少的色块, 大幅减小 GIF 体积</div>
+      `;
+    } else if (action === 'watermark') {
+      c.innerHTML = `
+        <div class="field"><label>文字</label><input type="text" id="editWmText" value="© 2026" /></div>
+        <div class="row-fields">
+          <div class="field"><label>字号 (px)</label><input type="number" id="editWmSize" value="${Math.max(14, Math.round(h / 12))}" min="6" /></div>
+          <div class="field"><label>颜色</label><input type="text" id="editWmColor" value="rgba(255,255,255,0.85)" /></div>
+        </div>
+        <div class="field">
+          <label>位置</label>
+          <select id="editWmPos">
+            <option value="br">右下</option>
+            <option value="bl">左下</option>
+            <option value="tr">右上</option>
+            <option value="tl">左上</option>
+            <option value="center">居中</option>
+          </select>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>描边宽 (px)</label><input type="number" id="editWmStroke" value="2" min="0" /></div>
+          <div class="field"><label>描边色</label><input type="text" id="editWmStrokeColor" value="rgba(0,0,0,0.8)" /></div>
+        </div>
+      `;
+    } else if (action === 'filter') {
+      c.innerHTML = `
+        <label class="checkbox"><input type="checkbox" id="editFGray" /><span>灰度</span></label>
+        <label class="checkbox"><input type="checkbox" id="editFSepia" /><span>怀旧 Sepia</span></label>
+        <label class="checkbox"><input type="checkbox" id="editFInvert" /><span>反色</span></label>
+        <div class="field"><label>亮度 <span id="editFBriVal" class="mono">100%</span></label><input type="range" id="editFBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>对比度 <span id="editFConVal" class="mono">100%</span></label><input type="range" id="editFCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>饱和度 <span id="editFSatVal" class="mono">100%</span></label><input type="range" id="editFSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>色相旋转 <span id="editFHueVal" class="mono">0°</span></label><input type="range" id="editFHue" min="0" max="360" value="0" /></div>
+        <div class="info">每帧都会应用同样的滤镜参数。GIF 减色编码后画面会有色阶变化, 建议先 trim 再加滤镜</div>
+      `;
+      const b = (id, val, suf) => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
+      b('editFBri', 'editFBriVal', '%'); b('editFCon', 'editFConVal', '%');
+      b('editFSat', 'editFSatVal', '%'); b('editFHue', 'editFHueVal', '°');
+    }
+  }
+
+  $('editApplyBtn').addEventListener('click', async () => {
+    if (!editSrcFrames.length) return;
+    const action = $('editAction').value;
+    $('editApplyBtn').disabled = true;
+    $('editDownloadBtn').disabled = true;
+    $('editUseAsSourceBtn').disabled = true;
+    log.dim(`应用 ${action} + 重编码...`);
+
+    try {
+      const result = editTransform(action);
+      const blob = await AnimEncoders.buildGif(result.frames, {
+        fps: result.fps,
+        loop: 0,
+        paletteMode: $('editPalette').value,
+        onProgress: pct => editProg.set(pct),
+        onStatus: msg => log.dim('  ' + msg)
+      });
+      editLastBlob = blob;
+      log.ok(`生成完成 ${fmtBytes(blob.size)}`);
+      const url = URL.createObjectURL(blob);
+      $('editOutBox').innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      $('editOutBox').appendChild(img);
+      $('editDownloadBtn').disabled = false;
+      $('editUseAsSourceBtn').disabled = false;
+      handoff?.setBlob(blob, ($('editFilename').value || 'edited') + '.gif');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('editApplyBtn').disabled = false;
+      editProg.hide();
+    }
+  });
+
+  function editTransform(action) {
+    let frames = editSrcFrames;
+    let fps = editSrcFps;
+    if (action === 'resize') {
+      const w = parseInt($('editNewW').value, 10), h = parseInt($('editNewH').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(w, h);
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(f.bitmap, 0, 0, w, h);
+        return { bitmap: cv, w, h };
+      });
+    } else if (action === 'crop') {
+      const x = parseInt($('editCropX').value, 10);
+      const y = parseInt($('editCropY').value, 10);
+      const w = parseInt($('editCropW').value, 10);
+      const h = parseInt($('editCropH').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(w, h);
+        cv.getContext('2d').drawImage(f.bitmap, x, y, w, h, 0, 0, w, h);
+        return { bitmap: cv, w, h };
+      });
+    } else if (action === 'speed') {
+      const m = parseInt($('editSpeedMul').value, 10) / 100;
+      fps = Math.max(1, Math.round(editSrcFps * m));
+    } else if (action === 'reverse') {
+      frames = frames.slice().reverse();
+    } else if (action === 'trim') {
+      const s = parseInt($('editTrimStart').value, 10);
+      const e = parseInt($('editTrimEnd').value, 10);
+      const lo = Math.min(s, e), hi = Math.max(s, e);
+      frames = frames.slice(lo, hi + 1);
+    } else if (action === 'dropFrames') {
+      const n = parseInt($('editDropN').value, 10);
+      frames = frames.filter((_, i) => i % n === 0);
+      fps = Math.max(1, Math.round(editSrcFps / n));
+    } else if (action === 'optimize') {
+      const bits = parseInt($('editBitDepth').value, 10);
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(f.bitmap, 0, 0);
+        if (bits < 8) quantizeColors(ctx, f.w, f.h, bits);
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    } else if (action === 'watermark') {
+      const text = $('editWmText').value || '';
+      const size = parseInt($('editWmSize').value, 10) || 16;
+      const color = $('editWmColor').value;
+      const stroke = parseInt($('editWmStroke').value, 10) || 0;
+      const strokeColor = $('editWmStrokeColor').value;
+      const pos = $('editWmPos').value;
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(f.bitmap, 0, 0);
+        if (text) {
+          ctx.font = `${size}px sans-serif`;
+          ctx.fillStyle = color;
+          const pad = Math.round(size * 0.4);
+          let x = 0, y = 0;
+          if (pos === 'br') { x = f.w - pad; y = f.h - pad; ctx.textAlign='right'; ctx.textBaseline='bottom'; }
+          else if (pos === 'bl') { x = pad; y = f.h - pad; ctx.textAlign='left'; ctx.textBaseline='bottom'; }
+          else if (pos === 'tr') { x = f.w - pad; y = pad; ctx.textAlign='right'; ctx.textBaseline='top'; }
+          else if (pos === 'tl') { x = pad; y = pad; ctx.textAlign='left'; ctx.textBaseline='top'; }
+          else { x = f.w/2; y = f.h/2; ctx.textAlign='center'; ctx.textBaseline='middle'; }
+          if (stroke > 0) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = stroke;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(text, x, y);
+          }
+          ctx.fillText(text, x, y);
+        }
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    } else if (action === 'filter') {
+      const parts = [];
+      if ($('editFGray').checked) parts.push('grayscale(100%)');
+      if ($('editFSepia').checked) parts.push('sepia(100%)');
+      if ($('editFInvert').checked) parts.push('invert(100%)');
+      const bri = $('editFBri').value; if (bri !== '100') parts.push(`brightness(${bri}%)`);
+      const con = $('editFCon').value; if (con !== '100') parts.push(`contrast(${con}%)`);
+      const sat = $('editFSat').value; if (sat !== '100') parts.push(`saturate(${sat}%)`);
+      const hue = $('editFHue').value; if (hue !== '0') parts.push(`hue-rotate(${hue}deg)`);
+      const filterStr = parts.length ? parts.join(' ') : 'none';
+      frames = frames.map(f => {
+        const cv = newCanvas(f.w, f.h);
+        const ctx = cv.getContext('2d');
+        ctx.filter = filterStr;
+        ctx.drawImage(f.bitmap, 0, 0);
+        return { bitmap: cv, w: f.w, h: f.h };
+      });
+    }
+    return { frames, fps };
+  }
+
+  function quantizeColors(ctx, w, h, bits) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const mask = (0xFF << (8 - bits)) & 0xFF;
+    const half = (1 << (8 - bits)) >> 1;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.min(255, ((d[i]   + half) & mask) | (mask >> bits));
+      d[i+1] = Math.min(255, ((d[i+1] + half) & mask) | (mask >> bits));
+      d[i+2] = Math.min(255, ((d[i+2] + half) & mask) | (mask >> bits));
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  $('editDownloadBtn').addEventListener('click', () => {
+    if (!editLastBlob) return;
+    const name = ($('editFilename').value || 'edited').replace(/[^\w-]/g, '_');
+    download(editLastBlob, name + '.gif');
+  });
+
+  $('editUseAsSourceBtn').addEventListener('click', async () => {
+    if (!editLastBlob) return;
+    log.dim('解码上一步输出作为新输入...');
+    try {
+      const frames = await AnimEncoders.decodeGif(editLastBlob);
+      loadEditFrames(frames, editLastBlob, ($('editFilename').value || 'edited') + '.gif');
+      $('editOutBox').innerHTML = '<div class="preview-empty">应用下一个操作</div>';
+      $('editUseAsSourceBtn').disabled = true;
+      $('editDownloadBtn').disabled = true;
+      editLastBlob = null;
+      log.ok('已切换为新输入,可继续叠加操作');
+    } catch (e) {
+      log.err(e.message);
+    }
+  });
+
+  $('editClearBtn').addEventListener('click', () => {
+    editSrcFrames = []; editLastBlob = null;
+    $('editFrameGrid').innerHTML = '';
+    $('editSrcBox').innerHTML = '<div class="preview-empty">拖入 GIF</div>';
+    $('editOutBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
+    if (mode === 'edit') $('stats').textContent = '未加载';
+    $('editActionControls').innerHTML = '';
+    $('editApplyBtn').disabled = true;
+    $('editDownloadBtn').disabled = true;
+    $('editUseAsSourceBtn').disabled = true;
+    log.clear();
+    $('editFileInput').value = '';
+  });
+})();
+</script>
+
+</body>
+</html>

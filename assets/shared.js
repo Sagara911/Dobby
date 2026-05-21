@@ -15,8 +15,7 @@
     // 动画 / 精灵图
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
-    { id: 'gif-maker',      cat: 'anim',  name: 'GIF 制作',       en: 'GIF Maker',       icon: '🎞️', href: 'tools/gif-maker.html',      desc: '序列帧 → GIF / APNG' },
-    { id: 'gif-editor',     cat: 'anim',  name: 'GIF 编辑',       en: 'GIF Editor',      icon: '✏️', href: 'tools/gif-editor.html',     desc: 'GIF 缩放 / 裁剪 / 调速 / 反向 / 减帧 / 优化' },
+    { id: 'gif-tools',      cat: 'anim',  name: 'GIF 工具',       en: 'GIF Tools',       icon: '🎞️', href: 'tools/gif-tools.html',      desc: '制作 (序列帧→GIF/APNG) + 编辑 (缩放/裁剪/调速/反向/减帧/优化/滤镜)' },
     // 音视频
     { id: 'video-toolkit',  cat: 'av',    name: '视频处理',       en: 'Video Toolkit',   icon: '🎬', href: 'tools/video-toolkit.html',  desc: '视频裁剪 / 抽帧 / 转 GIF / 转 WebM' },
     { id: 'audio-compress', cat: 'av',    name: '音频压缩',       en: 'Audio Compressor',icon: '🔊', href: 'tools/audio-compress.html', desc: '降采样 / 单声道 / 裁剪 / fade / WAV/Opus 输出' },
@@ -56,15 +55,10 @@
       '选预设(平衡/激进/极限)或自定义色数 + dither',
       '点"开始压缩",≥2 张图请用底部"下载全部 (ZIP)"避免 Chrome 多文件提示'
     ],
-    'gif-maker': [
-      '拖入序列帧(自然排序)',
-      '设 FPS 和循环次数,选 GIF 或 APNG 格式',
-      '点"生成",等编码完成后下载'
-    ],
-    'gif-editor': [
-      '拖入一个 GIF 文件',
-      '选一个操作:裁剪 / 调速 / 反向 / 删帧 / 优化',
-      '点"应用 + 生成"→ 下载;或"把输出作为新输入"继续叠加下一步'
+    'gif-tools': [
+      '【🎬 制作】拖入序列帧 → 设 FPS / 循环次数 → 选 GIF 或 APNG → 点"生成"',
+      '【✏️ 编辑】拖入已有 GIF → 选操作(裁剪 / 调速 / 反向 / 删帧 / 优化 / 滤镜)→ 应用',
+      '"制作"生成完点"把输出送到编辑标签"可直接进入编辑;编辑里也能"把输出作为新输入"做链式操作'
     ],
     'image-editor': [
       '拖入单张图片',
@@ -601,8 +595,7 @@
     'atlas-splitter':  ['image/png'],  // needs JSON too but handoff only carries one file
     'image-optimizer': ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'png-crusher':     ['image/png','image/jpeg','image/webp','application/zip'],
-    'gif-maker':       ['image/png','image/jpeg','application/zip'],
-    'gif-editor':      ['image/gif'],
+    'gif-tools':       ['image/png','image/jpeg','image/gif','application/zip'],
     'image-editor':    ['image/png','image/jpeg','image/webp','image/gif'],
     'color-tools':     ['image/png','image/jpeg','image/webp'],
     'ai-cutout':       ['image/png','image/jpeg','image/webp','application/zip'],
