@@ -33,6 +33,22 @@
 <title>Video Toolkit · Playable Toolkit</title>
 <link rel="stylesheet" href="../assets/shared.css" />
 <style>
+  .cfps-mb {
+    background: transparent;
+    color: var(--text-soft);
+    border: 1px solid transparent;
+    box-shadow: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .cfps-mb:hover { background: rgba(255, 255, 255, 0.05); transform: none; }
+  .cfps-mb.active {
+    background: var(--jade);
+    color: #0a1a14;
+    font-weight: 600;
+    border-color: var(--jade);
+  }
+  .cfps-mb.active:hover { background: var(--jade); transform: none; }
   .preview-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 280px; }
   .preview-col { display: flex; flex-direction: column; gap: 6px; }
   .preview-col .label {
@@ -329,40 +345,105 @@ Toolkit.injectTopbar('video-toolkit');
     } else if (action === 'changeFps') {
       c.innerHTML = `
         <div class="field">
-          <label>目标 FPS <span id="cfpsVal" class="mono">30</span> <span style="color:var(--muted); font-size:10px; margin-left:6px">(源 FPS 参考: 30)</span></label>
-          <input type="range" id="cfpsTarget" min="6" max="90" value="30" />
+          <label>操作类型</label>
+          <div class="cfps-toggle" style="display:flex; gap:4px; padding:3px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm)">
+            <button type="button" id="cfpsModeDec" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">⊘ 抽帧 (帧数变少)</button>
+            <button type="button" id="cfpsModeInt" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">✨ 补帧 (帧数变多)</button>
+          </div>
         </div>
-        <div style="display:flex; gap:4px; margin-bottom:8px">
-          <button type="button" id="cfpsQ05" class="secondary" style="flex:1; font-size:11px; padding:5px 0">0.5× 抽</button>
-          <button type="button" id="cfpsQ1"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">1×</button>
-          <button type="button" id="cfpsQ2"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">2× 补</button>
-          <button type="button" id="cfpsQ3"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">3× 补</button>
+
+        <div id="cfpsDecPane" style="display:none">
+          <div class="field">
+            <label>保留每 N 帧中的 1 帧 <span id="cfpsDecNVal" class="mono">2</span></label>
+            <input type="range" id="cfpsDecN" min="2" max="6" value="2" />
+          </div>
+          <div style="display:flex; gap:4px; margin-bottom:8px">
+            <button type="button" id="cfpsDecQ2" class="secondary" style="flex:1; font-size:11px; padding:5px 0">N=2 (½)</button>
+            <button type="button" id="cfpsDecQ3" class="secondary" style="flex:1; font-size:11px; padding:5px 0">N=3 (⅓)</button>
+            <button type="button" id="cfpsDecQ4" class="secondary" style="flex:1; font-size:11px; padding:5px 0">N=4 (¼)</button>
+          </div>
         </div>
-        <div class="field">
-          <label>补帧模式 (target &gt; 源 FPS 时)</label>
-          <select id="cfpsMode">
-            <option value="dup">帧复制 (快, 不平滑)</option>
-            <option value="blend" selected>线性混合 (相邻帧加权, 平滑但 ghost)</option>
-            <option value="optical">🚀 光流补帧 (自动: WebGPU=RIFE, 否则=Farnebäck CPU)</option>
-            <option value="optical-rife">└ 强制 RIFE (需 WebGPU + ~21 MB 联网)</option>
-            <option value="optical-fb">└ 强制 Farnebäck (CPU 版, ~8 MB 联网)</option>
-          </select>
+
+        <div id="cfpsIntPane" style="display:none">
+          <div class="field">
+            <label>补帧倍率 <span id="cfpsIntMulVal" class="mono">2.0×</span></label>
+            <input type="range" id="cfpsIntMul" min="15" max="30" value="20" step="1" />
+            <div class="info" style="margin-top:2px">15 = 1.5× · 20 = 2× · 25 = 2.5× · 30 = 3×</div>
+          </div>
+          <div style="display:flex; gap:4px; margin-bottom:8px">
+            <button type="button" id="cfpsIntQ2"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">2×</button>
+            <button type="button" id="cfpsIntQ25" class="secondary" style="flex:1; font-size:11px; padding:5px 0">2.5×</button>
+            <button type="button" id="cfpsIntQ3"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">3×</button>
+          </div>
+          <div class="field">
+            <label>补帧算法</label>
+            <select id="cfpsMode">
+              <option value="dup">帧复制 (快, 不平滑)</option>
+              <option value="blend" selected>线性混合 (相邻帧加权, 平滑但 ghost)</option>
+              <option value="optical">🚀 光流补帧 (自动: WebGPU=RIFE, 否则=Farnebäck CPU)</option>
+              <option value="optical-rife">└ 强制 RIFE (需 WebGPU + ~21 MB 联网)</option>
+              <option value="optical-fb">└ 强制 Farnebäck (CPU 版, ~8 MB 联网)</option>
+            </select>
+          </div>
+          <div id="cfpsRifeStatus" class="info" style="display:none; padding:8px; background:rgba(255,255,255,0.04); border-radius:4px; margin-top:6px;"></div>
         </div>
-        <div id="cfpsRifeStatus" class="info" style="display:none; padding:8px; background:rgba(255,255,255,0.04); border-radius:4px; margin-top:6px;"></div>
-        <div class="info">&le; 30 = 抽帧, &gt; 30 = 补帧。
-          光流补帧"自动"档会优先 RIFE,没 WebGPU 自动降到 Farnebäck;
-          实拍素材 RIFE 接近 Twixtor,卡通/像素风格化素材两者都可能产生扭曲。</div>
+
+        <div class="info" id="cfpsSummary" style="margin-top:6px; padding:7px 10px; background:rgba(var(--jade-rgb), 0.08); border-left:2px solid var(--jade); border-radius:var(--radius-sm); color:var(--text-soft)"></div>
+        <input type="hidden" id="cfpsTarget" value="30" />
       `;
-      $('cfpsTarget').addEventListener('input', e => $('cfpsVal').textContent = e.target.value);
-      // Quick presets — multiply / divide the 30 fps source-reference.
-      const setFps = (v) => {
-        $('cfpsTarget').value = v;
-        $('cfpsVal').textContent = String(v);
+
+      const SRC_FPS = 30;
+      const updateSummary = () => {
+        const isDec = $('cfpsModeDec').classList.contains('active');
+        let target, info;
+        if (isDec) {
+          const n = parseInt($('cfpsDecN').value, 10);
+          target = Math.max(1, Math.round(SRC_FPS / n));
+          info = `抽帧: 保留每 ${n} 帧的 1 帧 → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`;
+        } else {
+          const mul = parseInt($('cfpsIntMul').value, 10) / 10;
+          target = Math.round(SRC_FPS * mul);
+          info = `补帧 ${mul.toFixed(1)}× → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`;
+        }
+        $('cfpsTarget').value = String(target);
+        $('cfpsSummary').textContent = info;
       };
-      $('cfpsQ05').addEventListener('click', () => setFps(15));
-      $('cfpsQ1').addEventListener('click',  () => setFps(30));
-      $('cfpsQ2').addEventListener('click',  () => setFps(60));
-      $('cfpsQ3').addEventListener('click',  () => setFps(90));
+
+      const showPane = (mode) => {
+        const isDec = mode === 'dec';
+        $('cfpsModeDec').classList.toggle('active', isDec);
+        $('cfpsModeInt').classList.toggle('active', !isDec);
+        $('cfpsDecPane').style.display = isDec ? '' : 'none';
+        $('cfpsIntPane').style.display = isDec ? 'none' : '';
+        updateSummary();
+      };
+      $('cfpsModeDec').addEventListener('click', () => showPane('dec'));
+      $('cfpsModeInt').addEventListener('click', () => showPane('int'));
+
+      // dec controls
+      $('cfpsDecN').addEventListener('input', e => {
+        $('cfpsDecNVal').textContent = e.target.value;
+        updateSummary();
+      });
+      const setDecN = (n) => { $('cfpsDecN').value = String(n); $('cfpsDecNVal').textContent = String(n); updateSummary(); };
+      $('cfpsDecQ2').addEventListener('click', () => setDecN(2));
+      $('cfpsDecQ3').addEventListener('click', () => setDecN(3));
+      $('cfpsDecQ4').addEventListener('click', () => setDecN(4));
+
+      // int controls
+      $('cfpsIntMul').addEventListener('input', e => {
+        $('cfpsIntMulVal').textContent = (parseInt(e.target.value, 10) / 10).toFixed(1) + '×';
+        updateSummary();
+      });
+      const setMul = (tenths) => {
+        $('cfpsIntMul').value = String(tenths);
+        $('cfpsIntMulVal').textContent = (tenths / 10).toFixed(1) + '×';
+        updateSummary();
+      };
+      $('cfpsIntQ2').addEventListener('click', () => setMul(20));
+      $('cfpsIntQ25').addEventListener('click', () => setMul(25));
+      $('cfpsIntQ3').addEventListener('click', () => setMul(30));
+
       $('cfpsMode').addEventListener('change', e => {
         const mode = e.target.value;
         const isOptical = /^optical/.test(mode);
@@ -382,6 +463,9 @@ Toolkit.injectTopbar('video-toolkit');
           status.textContent = '强制 Farnebäck (CPU). 首次 ~8 MB 下载, 每帧 ~0.3-0.6s (480p, 单线程)';
         }
       });
+
+      // default = 补帧 2×
+      showPane('int');
     } else if (action === 'reverse') {
       c.innerHTML = `<div class="info">反向播放,无参数。需要逐帧抽样,长视频较慢。</div>`;
     } else if (action === 'frames') {
