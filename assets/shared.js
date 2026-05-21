@@ -210,7 +210,10 @@
           `;
         }).join('')}
       </nav>
-      <div class="meta">本地处理</div>
+      <div class="meta">
+        <a href="mailto:huobingli0924@gmail.com" class="meta-email">联系作者: huobingli0924@gmail.com</a>
+        <div class="meta-note">测试阶段, 如有反馈请联系作者</div>
+      </div>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
