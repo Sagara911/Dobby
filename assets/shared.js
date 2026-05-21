@@ -319,10 +319,16 @@
   async function tryLoadCursorFromAssets() {
     const prefix = window.location.pathname.includes('/tools/') ? '../' : '';
     const candidates = ['cursor.png', 'cursor.svg', 'cursor.webp', 'cursor.gif'];
+    // unique query per page load — guarantees SW cache miss so we get the
+    // real server response (and never resurrect a long-deleted cursor file).
+    const bust = '?v=' + Date.now();
     for (const name of candidates) {
       try {
-        const resp = await fetch(prefix + 'assets/' + name, { cache: 'no-cache' });
+        const resp = await fetch(prefix + 'assets/' + name + bust, { cache: 'no-store' });
         if (!resp.ok) continue;
+        // sanity check the content type so a 200 HTML error page can't fake an image
+        const ct = resp.headers.get('content-type') || '';
+        if (!/^image\//i.test(ct)) continue;
         const blob = await resp.blob();
         const dataUrl = await new Promise((res, rej) => {
           const fr = new FileReader();
