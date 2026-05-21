@@ -329,8 +329,14 @@ Toolkit.injectTopbar('video-toolkit');
     } else if (action === 'changeFps') {
       c.innerHTML = `
         <div class="field">
-          <label>目标 FPS <span id="cfpsVal" class="mono">30</span></label>
-          <input type="range" id="cfpsTarget" min="6" max="60" value="30" />
+          <label>目标 FPS <span id="cfpsVal" class="mono">30</span> <span style="color:var(--muted); font-size:10px; margin-left:6px">(源 FPS 参考: 30)</span></label>
+          <input type="range" id="cfpsTarget" min="6" max="90" value="30" />
+        </div>
+        <div style="display:flex; gap:4px; margin-bottom:8px">
+          <button type="button" id="cfpsQ05" class="secondary" style="flex:1; font-size:11px; padding:5px 0">0.5× 抽</button>
+          <button type="button" id="cfpsQ1"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">1×</button>
+          <button type="button" id="cfpsQ2"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">2× 补</button>
+          <button type="button" id="cfpsQ3"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">3× 补</button>
         </div>
         <div class="field">
           <label>补帧模式 (target &gt; 源 FPS 时)</label>
@@ -348,6 +354,15 @@ Toolkit.injectTopbar('video-toolkit');
           实拍素材 RIFE 接近 Twixtor,卡通/像素风格化素材两者都可能产生扭曲。</div>
       `;
       $('cfpsTarget').addEventListener('input', e => $('cfpsVal').textContent = e.target.value);
+      // Quick presets — multiply / divide the 30 fps source-reference.
+      const setFps = (v) => {
+        $('cfpsTarget').value = v;
+        $('cfpsVal').textContent = String(v);
+      };
+      $('cfpsQ05').addEventListener('click', () => setFps(15));
+      $('cfpsQ1').addEventListener('click',  () => setFps(30));
+      $('cfpsQ2').addEventListener('click',  () => setFps(60));
+      $('cfpsQ3').addEventListener('click',  () => setFps(90));
       $('cfpsMode').addEventListener('change', e => {
         const mode = e.target.value;
         const isOptical = /^optical/.test(mode);
