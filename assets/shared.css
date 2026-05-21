@@ -260,10 +260,10 @@ a:hover { color: var(--jade); }
   z-index: 9000;
   width: min(1180px, calc(100% - 36px));
   margin: 16px auto 24px;
-  padding: 12px 22px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;  /* tightened so the new 💬 button fits without nav overflow */
   border-radius: var(--radius-pill);
   background: rgba(200, 210, 205, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -340,9 +340,10 @@ a:hover { color: var(--jade); }
 }
 .topbar nav {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
   justify-content: center;
+  min-width: 0;
 }
 .topbar .nav-group {
   position: relative;
@@ -350,16 +351,16 @@ a:hover { color: var(--jade); }
 .topbar .nav-cat {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 5px 11px;
   border-radius: var(--radius-pill);
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-soft);
   white-space: nowrap;
   transition: all 0.15s;
   font-weight: 500;
 }
-.topbar .nav-cat .cat-icon { font-size: 14px; }
+.topbar .nav-cat .cat-icon { font-size: 13px; }
 .topbar .nav-cat .caret {
   font-size: 9px;
   margin-left: 2px;
@@ -440,7 +441,8 @@ a:hover { color: var(--jade); }
   color: var(--muted);
   letter-spacing: 0.04em;
 }
-.theme-toggle {
+/* Generic round topbar icon button (used by feedback 💬 + theme 🌓) */
+.topbar-icon-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
   color: var(--text-soft);
@@ -452,13 +454,16 @@ a:hover { color: var(--jade); }
   display: flex; align-items: center; justify-content: center;
   box-shadow: none;
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  flex-shrink: 0;
 }
-.theme-toggle:hover {
+.topbar-icon-btn:hover {
   background: rgba(var(--jade-rgb), 0.16);
   border-color: rgba(var(--jade-rgb), 0.45);
-  transform: rotate(20deg);
 }
-:root[data-theme="light"] .theme-toggle { background: rgba(0, 0, 0, 0.06); }
+/* Theme toggle gets a satisfying tilt; feedback gets a tiny pop */
+.theme-toggle:hover { transform: rotate(20deg); }
+#__feedbackBtn__:hover { transform: translateY(-1px) scale(1.08); }
+:root[data-theme="light"] .topbar-icon-btn { background: rgba(0, 0, 0, 0.06); }
 .topbar .meta {
   color: var(--muted);
   font-size: 11px;
@@ -716,50 +721,29 @@ a:hover { color: var(--jade); }
 }
 
 /* =========================================================================
-   Floating feedback chip — bottom-right persistent contact channel.
-   Lives across all pages via setupFeedbackChip in shared.js.
+   Feedback popover — anchored below the topbar's 💬 button.
+   Rendered on click, dismissed on × or outside-click.
    ========================================================================= */
-.feedback-chip {
+.feedback-popover {
   position: fixed;
-  right: 16px;
-  top: 90px;  /* sits below the sticky topbar; right edge keeps it clear
-                 of the bottom-right news-toast / 推送 stack */
-  z-index: 920;
-  font-family: "Space Grotesk", sans-serif;
-}
-.feedback-chip .fc-collapsed {
-  background: var(--panel-solid);
-  border: 1px solid rgba(var(--jade-rgb), 0.45);
-  color: var(--jade);
-  padding: 8px 14px;
-  border-radius: var(--radius-pill);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
-}
-.feedback-chip .fc-collapsed:hover {
-  background: rgba(var(--jade-rgb), 0.18);
-  border-color: rgba(var(--jade-rgb), 0.7);
-  transform: translateY(2px);
-}
-.feedback-chip .fc-expanded {
+  width: min(300px, calc(100vw - 32px));
+  z-index: 9100;
   background: var(--panel-solid);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 12px 14px;
-  width: min(300px, calc(100vw - 32px));
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-family: "Space Grotesk", sans-serif;
   font-size: 12.5px;
   color: var(--text-soft);
-  animation: fc-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fp-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
 }
-@keyframes fc-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.95); transform-origin: top right; }
+@keyframes fp-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
   to   { opacity: 1; transform: none; }
 }
-.feedback-chip .fc-head {
+.feedback-popover .fp-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -768,7 +752,7 @@ a:hover { color: var(--jade); }
   font-weight: 600;
   font-size: 13px;
 }
-.feedback-chip .fc-close {
+.feedback-popover .fp-close {
   background: transparent;
   border: none;
   color: var(--muted);
@@ -778,12 +762,9 @@ a:hover { color: var(--jade); }
   padding: 0 4px;
   box-shadow: none;
 }
-.feedback-chip .fc-close:hover { color: var(--text); transform: none; }
-.feedback-chip .fc-body {
-  margin-bottom: 8px;
-  line-height: 1.55;
-}
-.feedback-chip .fc-email {
+.feedback-popover .fp-close:hover { color: var(--text); transform: none; }
+.feedback-popover .fp-body { margin-bottom: 8px; line-height: 1.55; }
+.feedback-popover .fp-email {
   display: block;
   font-family: ui-monospace, Consolas, monospace;
   color: var(--jade);
@@ -795,7 +776,7 @@ a:hover { color: var(--jade); }
   font-size: 12px;
   transition: background 0.12s;
 }
-.feedback-chip .fc-email:hover { background: rgba(var(--jade-rgb), 0.22); }
+.feedback-popover .fp-email:hover { background: rgba(var(--jade-rgb), 0.22); }
 
 /* =========================================================================
    Tool page layout — sidebar + main

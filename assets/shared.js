@@ -210,7 +210,8 @@
           `;
         }).join('')}
       </nav>
-      <button type="button" class="theme-toggle" id="__themeToggle__" title="切换亮/深主题" aria-label="切换主题">🌓</button>
+      <button type="button" class="topbar-icon-btn" id="__feedbackBtn__" title="反馈 / 联系作者" aria-label="反馈">💬</button>
+      <button type="button" class="topbar-icon-btn theme-toggle" id="__themeToggle__" title="切换亮/深主题" aria-label="切换主题">🌓</button>
       <div class="meta">本地处理</div>
     `;
     wrap.appendChild(bar);
@@ -306,41 +307,48 @@
   }
 
   // ============================================================
-  //   Floating feedback chip — persistent bottom-right pill with
-  //   the author's email + "测试阶段" note. Collapsed by default
-  //   to stay out of the way; click expands to a small card.
-  //   Dismiss via × persists for the session.
+  //   Topbar feedback button — small 💬 icon button inside the
+  //   topbar capsule. Click toggles a popover anchored below the
+  //   button with the email + 测试阶段 note. Closes on outside-
+  //   click or × button.
   // ============================================================
   function setupFeedbackChip() {
-    if (sessionStorage.getItem('toolkit-feedback-dismissed')) return;
-    if (document.querySelector('.feedback-chip')) return;
-    const chip = document.createElement('div');
-    chip.className = 'feedback-chip';
-    chip.innerHTML = `
-      <button type="button" class="fc-collapsed" title="点击展开">💬 反馈</button>
-      <div class="fc-expanded" style="display:none">
-        <div class="fc-head">
-          <span>🚧 测试阶段</span>
-          <button type="button" class="fc-close" aria-label="关闭">×</button>
-        </div>
-        <div class="fc-body">网站还在测试中, 欢迎邮件反馈使用问题或建议:</div>
-        <a class="fc-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
-      </div>
-    `;
-    document.body.appendChild(chip);
-    const collapsed = chip.querySelector('.fc-collapsed');
-    const expanded  = chip.querySelector('.fc-expanded');
-    collapsed.addEventListener('click', () => {
-      collapsed.style.display = 'none';
-      expanded.style.display = '';
-    });
-    chip.querySelector('.fc-close').addEventListener('click', (e) => {
+    const btn = document.getElementById('__feedbackBtn__');
+    if (!btn) return;
+    let panel = null;
+    let outsideHandler = null;
+    function close() {
+      if (!panel) return;
+      panel.remove(); panel = null;
+      if (outsideHandler) { document.removeEventListener('click', outsideHandler); outsideHandler = null; }
+    }
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // collapse, not full dismiss — user can re-expand. Full dismiss only
-      // via long-press / right-click would be over-engineering; the chip
-      // is small enough that staying visible is fine.
-      expanded.style.display = 'none';
-      collapsed.style.display = '';
+      if (panel) { close(); return; }
+      panel = document.createElement('div');
+      panel.className = 'feedback-popover';
+      panel.innerHTML = `
+        <div class="fp-head">
+          <span>🚧 测试阶段</span>
+          <button type="button" class="fp-close" aria-label="关闭">×</button>
+        </div>
+        <div class="fp-body">网站还在测试中, 欢迎邮件反馈使用问题或建议:</div>
+        <a class="fp-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
+      `;
+      document.body.appendChild(panel);
+      // Anchor below the button, right-aligned to it.
+      const r = btn.getBoundingClientRect();
+      panel.style.top   = (r.bottom + 10) + 'px';
+      panel.style.right = (window.innerWidth - r.right) + 'px';
+      panel.querySelector('.fp-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        close();
+      });
+      outsideHandler = (ev) => {
+        if (panel && !panel.contains(ev.target) && ev.target !== btn) close();
+      };
+      // Bind on the next tick so the click that opened doesn't immediately close.
+      setTimeout(() => document.addEventListener('click', outsideHandler), 0);
     });
   }
 
