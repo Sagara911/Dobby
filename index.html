@@ -355,6 +355,142 @@
   .cat-anchor {
     scroll-margin-top: 90px;
   }
+
+  /* ============ news modal ============ */
+  .news-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: news-fade 0.25s ease-out;
+  }
+  @keyframes news-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .news-card {
+    background: linear-gradient(180deg, #14141a 0%, #0c0c10 100%);
+    border: 1px solid rgba(var(--jade-rgb), 0.35);
+    border-radius: var(--radius);
+    padding: 24px 24px 20px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.7),
+      0 0 80px rgba(var(--jade-rgb), 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    animation: news-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes news-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  .news-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .news-badge {
+    background: var(--jade);
+    color: #0a1a14;
+    font-family: "Space Grotesk", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    box-shadow: 0 0 12px rgba(var(--jade-rgb), 0.45);
+  }
+  .news-head h2 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .news-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 24px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    transition: color 0.15s;
+    box-shadow: none;
+  }
+  .news-close:hover {
+    color: var(--text);
+    transform: none;
+  }
+  .news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .news-list li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: rgba(var(--jade-rgb), 0.04);
+    border: 1px solid rgba(var(--jade-rgb), 0.12);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-soft);
+  }
+  .news-list li:hover {
+    background: rgba(var(--jade-rgb), 0.07);
+    border-color: rgba(var(--jade-rgb), 0.22);
+  }
+  .news-list .news-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+  }
+  .news-list strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .news-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .news-primary {
+    background: var(--jade);
+    color: #0a1a14;
+    border: none;
+    padding: 9px 22px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 13px;
+    font-family: "Space Grotesk", sans-serif;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+  }
+  .news-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .news-primary:active {
+    transform: translateY(0);
+  }
 </style>
 </head>
 <body>
@@ -389,6 +525,46 @@
     <span>2026 · D:\Game\toolkit</span>
   </div>
 </footer>
+
+<!-- ============ 新功能弹窗 (首次访问 / 升级后显示) ============ -->
+<div id="newsModal" class="news-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="newsTitle">
+  <div class="news-card" role="document">
+    <div class="news-head">
+      <span class="news-badge">NEW</span>
+      <h2 id="newsTitle">这一波更新</h2>
+      <button type="button" class="news-close" id="newsClose" aria-label="关闭">×</button>
+    </div>
+    <ul class="news-list" id="newsList">
+      <li>
+        <span class="news-icon">🩻</span>
+        <div><strong>Playable 瘦身</strong> — 拖入大体积 HTML,一键拆素材 → 自动压缩(图/视频/音频)→ 重组,150 MB 级 playable 可压到 10-30 MB。</div>
+      </li>
+      <li>
+        <span class="news-icon">🎬</span>
+        <div><strong>GIF 工具二合一</strong> — 制作和编辑合并为一个工具,两个 tab 切换,做完一键送到编辑继续调整。</div>
+      </li>
+      <li>
+        <span class="news-icon">🗜️</span>
+        <div><strong>视频一键压缩</strong> — Video Toolkit 新增预设动作,3 档体积/质量,自动配比特率和分辨率。</div>
+      </li>
+      <li>
+        <span class="news-icon">📦</span>
+        <div><strong>ZIP 打包</strong> — 多文件 / 文件夹拖入,deflate level 0-9 滑块,默认最强压缩。</div>
+      </li>
+      <li>
+        <span class="news-icon">🎨</span>
+        <div><strong>HSV 色盘</strong> — 所有 hex 颜色输入框旁的色块点击弹出 HSV 色盘(SV 方阵 + 色相条 + RGB)。</div>
+      </li>
+      <li>
+        <span class="news-icon">🖌️</span>
+        <div><strong>抠图笔刷修补</strong> — 调色工具新增笔刷模式,在输出画布上直接涂"擦除"或"保留",修补 AI 抠不干净的边缘。</div>
+      </li>
+    </ul>
+    <div class="news-actions">
+      <button type="button" class="news-primary" id="newsOk">知道了</button>
+    </div>
+  </div>
+</div>
 
 <script src="assets/shared.js"></script>
 <script>
@@ -519,6 +695,32 @@
   // ensure refresh always lands on top (clear any stale scroll restore)
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
+
+  // ============ news modal ============
+  // Bump NEWS_VERSION whenever there's something worth showing again.
+  // Users who have seen this exact version will skip the modal.
+  const NEWS_VERSION = '2026-05-21-v1';
+  const NEWS_KEY = 'toolkit-news-seen';
+
+  function dismissNews() {
+    document.getElementById('newsModal').style.display = 'none';
+    try { localStorage.setItem(NEWS_KEY, NEWS_VERSION); } catch (_) {}
+    document.removeEventListener('keydown', onNewsKey);
+  }
+  function onNewsKey(e) { if (e.key === 'Escape') dismissNews(); }
+
+  function maybeShowNews() {
+    let seen = null;
+    try { seen = localStorage.getItem(NEWS_KEY); } catch (_) {}
+    if (seen === NEWS_VERSION) return;
+    const modal = document.getElementById('newsModal');
+    modal.style.display = 'flex';
+    document.getElementById('newsClose').addEventListener('click', dismissNews);
+    document.getElementById('newsOk').addEventListener('click', dismissNews);
+    modal.addEventListener('click', (e) => { if (e.target === modal) dismissNews(); });
+    document.addEventListener('keydown', onNewsKey);
+  }
+  maybeShowNews();
 </script>
 </body>
 </html>

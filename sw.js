@@ -1,7 +1,10 @@
 // Playable Toolkit service worker — offline-first cache for the whole site.
-// Strategy: cache-first for same-origin assets, network-first for everything else.
+// Strategy:
+//   HTML same-origin → network-first (always try fresh; fall back to cache offline)
+//   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
+//   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'toolkit-v3';
+const CACHE = 'toolkit-v5';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
@@ -18,8 +21,7 @@ const CORE = [
   './tools/atlas-splitter.html',
   './tools/image-optimizer.html',
   './tools/png-crusher.html',
-  './tools/gif-maker.html',
-  './tools/gif-editor.html',
+  './tools/gif-tools.html',
   './tools/image-editor.html',
   './tools/color-tools.html',
   './tools/ai-cutout.html',
@@ -34,7 +36,9 @@ const CORE = [
   './tools/bundle-analyzer.html',
   './tools/channel-check.html',
   './tools/code-minify.html',
-  './tools/slim-coach.html'
+  './tools/slim-coach.html',
+  './tools/zip-packer.html',
+  './tools/playable-slim.html'
 ];
 
 self.addEventListener('install', (e) => {
@@ -58,32 +62,41 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Don't cache cross-origin CDN responses (transformers.js, esm.sh, hugging face) —
-  // they're large and already cached by the browser, plus we don't want stale lib versions.
+  // Don't intercept cross-origin (transformers.js, esm.sh, hugging face, fonts).
   if (url.origin !== location.origin) return;
 
-  e.respondWith(
-    caches.match(req).then(cached => {
-      // network-first for HTML so updates show up; cache-first for assets.
-      const isHtml = req.headers.get('accept')?.includes('text/html');
-      if (isHtml) {
-        return fetch(req).then(resp => {
-          if (resp.ok) {
-            const clone = resp.clone();
-            caches.open(CACHE).then(c => c.put(req, clone));
-          }
-          return resp;
-        }).catch(() => cached || caches.match('./index.html'));
-      }
-      // cache-first for assets
-      if (cached) return cached;
-      return fetch(req).then(resp => {
+  const isHtml = req.headers.get('accept')?.includes('text/html')
+                 || /\.html?$/i.test(url.pathname)
+                 || url.pathname.endsWith('/');
+
+  if (isHtml) {
+    // network-first for HTML — always try fresh, fall back to cache offline.
+    e.respondWith(
+      fetch(req).then(resp => {
         if (resp.ok) {
           const clone = resp.clone();
           caches.open(CACHE).then(c => c.put(req, clone));
         }
         return resp;
-      });
+      }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // stale-while-revalidate for assets:
+  //  - serve cache immediately so the page loads instantly
+  //  - simultaneously fetch a fresh copy in the background and replace the cache
+  //  - the NEXT page load gets the updated asset
+  e.respondWith(
+    caches.match(req).then(cached => {
+      const networkFetch = fetch(req).then(resp => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(req, clone));
+        }
+        return resp;
+      }).catch(() => null);
+      return cached || networkFetch;
     })
   );
 });
@@ -92,5 +105,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('message', (e) => {
   if (e.data === 'reset-cache') {
     caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+  } else if (e.data === 'skip-waiting') {
+    self.skipWaiting();
   }
 });
