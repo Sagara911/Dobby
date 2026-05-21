@@ -338,6 +338,19 @@
   }
 
   function applySavedSettings() {
+    // 1. wipe any localStorage left behind by the removed settings modal.
+    //    Without this, an old browser tab that previously set a custom cursor
+    //    would still be applying it via cached state.
+    try {
+      localStorage.removeItem('toolkit-theme');
+      localStorage.removeItem('toolkit-cursor');
+    } catch (_) {}
+    // 2. drop any cursor style tag injected by an older version of this script.
+    const stale = document.getElementById('__toolkit_cursor_style__');
+    if (stale) stale.remove();
+    // 3. drop any data-theme attribute set by old code.
+    document.documentElement.removeAttribute('data-theme');
+    // 4. install the live theme cycle + try to load a cursor from assets/.
     startThemeCycle();
     tryLoadCursorFromAssets();
   }
