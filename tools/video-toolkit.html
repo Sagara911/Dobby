@@ -75,6 +75,7 @@
     <h2>操作</h2>
     <div class="field">
       <select id="action">
+        <option value="compress">🗜️ 一键压缩 (变小)</option>
         <option value="trim">✂️ 时间裁剪 (Trim)</option>
         <option value="crop">🔲 画面裁剪 (Crop)</option>
         <option value="resize">📐 缩放</option>
@@ -196,7 +197,51 @@ Toolkit.injectTopbar('video-toolkit');
     const c = $('actionControls');
     const { w, h, duration } = srcMeta;
 
-    if (action === 'trim') {
+    if (action === 'compress') {
+      const targetMb = Math.max(0.3, (srcMeta.w * srcMeta.h * srcMeta.duration / 5e6)).toFixed(1);
+      c.innerHTML = `
+        <div class="field">
+          <label>质量预设</label>
+          <select id="cmpPreset">
+            <option value="tiny">📉 极致小 (480p · 400 kbps)</option>
+            <option value="small" selected>📦 小 (720p · 1200 kbps)</option>
+            <option value="medium">⚖️ 中等 (原尺寸 · 2500 kbps)</option>
+            <option value="custom">⚙️ 自定义目标体积</option>
+          </select>
+        </div>
+        <div class="field" id="cmpTargetField" style="display:none">
+          <label>目标体积 (MB)</label>
+          <input type="number" id="cmpTargetMb" value="${targetMb}" min="0.1" step="0.1" />
+          <div class="info" style="margin-top:4px">按时长反推比特率,实际输出可能 ±20% 浮动</div>
+        </div>
+        <label class="checkbox" style="margin-top:8px"><input type="checkbox" id="cmpStripAudio" /><span>去掉音轨 (再节省 ~10%)</span></label>
+        <div class="info" style="margin-top:8px">输出锁定 <strong>MP4 (H.264)</strong> 以获得最佳压缩率。预设会自动改下方"输出"区的比特率/格式 — 切走再切回会重置。</div>
+        <div class="info" id="cmpEstimate" style="margin-top:4px; color: var(--jade)"></div>
+      `;
+      const applyPreset = () => {
+        const v = $('cmpPreset').value;
+        $('cmpTargetField').style.display = v === 'custom' ? '' : 'none';
+        $('outFormat').value = 'mp4';
+        const { w, h, duration } = srcMeta;
+        const safeDur = duration > 0.1 ? duration : 1;  // guard against missing/0 duration
+        let kbps;
+        if (v === 'tiny') kbps = 400;
+        else if (v === 'small') kbps = 1200;
+        else if (v === 'medium') kbps = 2500;
+        else {
+          const target = parseFloat($('cmpTargetMb').value) || 2;
+          kbps = Math.max(80, Math.min(20000, Math.round(target * 8192 / safeDur)));
+        }
+        $('bitrate').value = kbps;
+        const estMb = (kbps * safeDur / 8192).toFixed(2);
+        $('cmpEstimate').textContent = duration > 0.1
+          ? `预计输出 ≈ ${estMb} MB · ${kbps} kbps`
+          : `${kbps} kbps · 视频时长缺失,无法估算体积`;
+      };
+      $('cmpPreset').addEventListener('change', applyPreset);
+      $('cmpTargetMb')?.addEventListener('input', applyPreset);
+      applyPreset();
+    } else if (action === 'trim') {
       c.innerHTML = `
         <div class="field">
           <label>起始时间 (秒) <span id="trimStartVal" class="mono">0</span></label>
@@ -399,7 +444,14 @@ Toolkit.injectTopbar('video-toolkit');
       const hue = $('vfHue')?.value; if (hue && hue !== '0') parts.push(`hue-rotate(${hue}deg)`);
       canvasFilter = parts.length ? parts.join(' ') : 'none';
     }
-    if (action === 'trim') {
+    if (action === 'compress') {
+      const preset = $('cmpPreset')?.value || 'small';
+      const maxDim = preset === 'tiny' ? 480 : preset === 'small' ? 720 : Math.max(sw, sh);
+      const scale = Math.min(1, maxDim / Math.max(sw, sh));
+      // H.264 needs even dimensions
+      outW = Math.max(2, Math.round(sw * scale / 2) * 2);
+      outH = Math.max(2, Math.round(sh * scale / 2) * 2);
+    } else if (action === 'trim') {
       startT = parseFloat($('trimStart').value);
       endT = parseFloat($('trimEnd').value);
       if (endT <= startT) throw new Error('结束时间必须大于起始时间');

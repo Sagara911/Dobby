@@ -24,6 +24,7 @@
     { id: 'html-inliner',   cat: 'code',  name: '单文件打包',     en: 'HTML Inliner',    icon: '📄', href: 'tools/html-inliner.html',   desc: '把外部 JS/CSS/图片内联为单 HTML' },
     { id: 'code-minify',    cat: 'code',  name: '代码压缩',       en: 'Code Minify',     icon: '🗜️', href: 'tools/code-minify.html',    desc: 'JS / CSS / HTML 压缩,JS 用 terser' },
     { id: 'base64',         cat: 'code',  name: 'Base64',         en: 'Base64',          icon: '🔤', href: 'tools/base64.html',         desc: '文件 ↔ base64/dataURL 互转' },
+    { id: 'zip-packer',     cat: 'code',  name: 'ZIP 打包',       en: 'ZIP Packer',      icon: '📦', href: 'tools/zip-packer.html',     desc: '多文件 / 文件夹 → ZIP,deflate level 0-9 可调' },
     { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
     // 分析 / 诊断
@@ -103,6 +104,11 @@
       '编码模式:拖入任意文件,选 dataURL / 纯 base64 / hex 预览',
       '解码模式:粘贴 base64 / dataURL 字符串,自动识别 MIME 类型',
       '点"复制到剪贴板"或下载 .txt'
+    ],
+    'zip-packer': [
+      '拖入文件或文件夹(任意类型),会列在右侧',
+      '调"压缩级别"滑块,默认 9 (最强 deflate);追求速度可调低',
+      '点"开始打包",看节省率,下载 .zip'
     ],
     'qr-gen': [
       '输入文本 / URL,或点 URL / WiFi / 名片 / 短信 预设填模板',
@@ -598,6 +604,7 @@
     'composer':        ['image/png','image/jpeg','image/webp','application/zip'],
     'html-inliner':    [],  // requires directory picker, can't handoff
     'base64':          ['*/*'],  // accepts anything
+    'zip-packer':      ['*/*'],  // accepts anything
     'qr-gen':          [],
     'font-subset':     ['font/ttf','font/otf','application/octet-stream'],
     'audio-compress':  ['audio/*'],

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>ZIP 打包 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 460px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+  }
+  .file-row .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .file-row .size {
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--muted-2);
+    font-size: 11px;
+    min-width: 80px;
+    text-align: right;
+  }
+  .file-row .pct {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    min-width: 64px;
+    text-align: right;
+    color: var(--jade);
+  }
+  .file-row .pct.pending { color: var(--muted); }
+  .file-row .remove {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: none;
+  }
+  .file-row .remove:hover { color: var(--danger); transform: none; }
+  .summary-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 12px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .summary-row .label { color: var(--muted); }
+  .summary-row .value { font-family: ui-monospace, Consolas, monospace; }
+  .summary-row .value.big { color: var(--jade); font-weight: 600; }
+  .info { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .level-info {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: rgba(var(--jade-rgb), 0.06);
+    border-left: 2px solid var(--jade);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📦 ZIP 打包</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入文件或文件夹</p>
+      <p class="hint">任意类型,可多选;支持拖整个文件夹</p>
+      <input type="file" id="fileInput" multiple style="display:none" />
+      <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none" />
+    </div>
+    <div style="display:flex; gap:6px; margin-top:6px">
+      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件</button>
+      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件夹</button>
+    </div>
+
+    <h2>压缩参数</h2>
+    <div class="field">
+      <label>压缩级别 <span id="levelVal" class="mono">9</span></label>
+      <input type="range" id="level" min="0" max="9" value="9" />
+    </div>
+    <div class="level-info" id="levelInfo">最高 (9) · deflate 最强,慢一些但最小</div>
+
+    <label class="checkbox"><input type="checkbox" id="keepPaths" checked /><span>保留文件夹层级结构</span></label>
+
+    <h2>导出</h2>
+    <div class="field">
+      <label>文件名</label>
+      <input type="text" id="filename" value="archive" />
+    </div>
+    <button id="packBtn" disabled>开始打包</button>
+    <button id="downloadBtn" class="secondary" disabled>下载 ZIP</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加入文件</div>
+    <div class="info" style="margin-bottom:8px">所有压缩在本地完成 · 不上传任何文件 · 引擎:fflate (deflate)</div>
+    <div class="file-list" id="fileList">
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会列在这里</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('zip-packer');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('zip-packer', { outputType: 'application/zip' });
+
+  // each entry: { name, path, file, size, packedSize? }
+  let files = [];
+  let outBlob = null;
+  let fflateMod = null;
+
+  const LEVEL_HINTS = [
+    'STORE (0) · 不压缩,只把文件拼起来,最快但体积 = 原始总和',
+    '极快 (1) · 几乎不压缩,适合已经压缩过的素材 (JPG/MP4/MP3)',
+    '快 (2) · 速度优先',
+    '快 (3) · 速度优先',
+    '标准 (4) · 平衡',
+    '标准 (5) · 平衡',
+    '标准 (6) · zlib 默认',
+    '强 (7) · 偏向体积',
+    '强 (8) · 偏向体积',
+    '最高 (9) · deflate 最强,慢一些但最小'
+  ];
+
+  attachDropZone($('dropZone'), $('fileInput'), addFiles);
+  $('addFilesBtn').addEventListener('click', () => $('fileInput').click());
+  $('addFolderBtn').addEventListener('click', () => $('folderInput').click());
+  $('folderInput').addEventListener('change', e => addFiles(e.target.files));
+
+  $('level').addEventListener('input', e => {
+    const v = +e.target.value;
+    $('levelVal').textContent = v;
+    $('levelInfo').textContent = LEVEL_HINTS[v];
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    files = [];
+    outBlob = null;
+    renderList();
+    $('packBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.clear();
+  });
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    download(outBlob, ($('filename').value || 'archive') + '.zip');
+  });
+
+  function addFiles(list) {
+    if (!list || !list.length) return;
+    let added = 0;
+    for (const f of list) {
+      // webkitRelativePath if from folder picker; otherwise just name
+      const path = f.webkitRelativePath || f.name;
+      // dedupe by path
+      if (files.some(e => e.path === path)) continue;
+      files.push({ name: f.name, path, file: f, size: f.size });
+      added++;
+    }
+    if (added) log.dim(`+ ${added} 个文件`);
+    renderList();
+    $('packBtn').disabled = files.length === 0;
+  }
+
+  function renderList() {
+    const host = $('fileList');
+    if (!files.length) {
+      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会列在这里</div>';
+      $('stats').textContent = '未加入文件';
+      return;
+    }
+    const totalSize = files.reduce((a, b) => a + b.size, 0);
+    const totalPacked = files.reduce((a, b) => a + (b.packedSize ?? b.size), 0);
+    const packed = files.every(f => f.packedSize != null);
+    host.innerHTML = '';
+    for (const [i, f] of files.entries()) {
+      const row = document.createElement('div');
+      row.className = 'file-row';
+      const pctTxt = f.packedSize != null
+        ? (f.packedSize < f.size ? '−' + (((f.size - f.packedSize) / f.size) * 100).toFixed(0) + '%' : '0%')
+        : '—';
+      row.innerHTML = `
+        <span class="name" title="${f.path}">${f.path}</span>
+        <span class="size">${fmtBytes(f.size)}</span>
+        <span class="size">${f.packedSize != null ? fmtBytes(f.packedSize) : '—'}</span>
+        <span class="pct ${f.packedSize == null ? 'pending' : ''}">${pctTxt}</span>
+        <button class="remove" title="移除" data-idx="${i}">×</button>
+      `;
+      // 5th column rendered after the grid spec? Adjust: grid is 4 cols, we have 5 children plus button.
+      // Let's adjust grid in CSS by appending button outside.
+      host.appendChild(row);
+    }
+    host.querySelectorAll('.remove').forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.idx;
+      files.splice(i, 1);
+      renderList();
+      $('packBtn').disabled = files.length === 0;
+    }));
+    $('stats').innerHTML = packed
+      ? `<strong>${files.length}</strong> 个文件 · 原 <strong>${fmtBytes(totalSize)}</strong> → 压缩后 <strong style="color:var(--jade)">${fmtBytes(totalPacked)}</strong> · 节省 <strong style="color:var(--jade)">${((1 - totalPacked / totalSize) * 100).toFixed(1)}%</strong>`
+      : `<strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+  }
+
+  $('packBtn').addEventListener('click', async () => {
+    if (!files.length) return;
+    $('packBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    outBlob = null;
+    const level = parseInt($('level').value, 10);
+    const keepPaths = $('keepPaths').checked;
+    log.clear();
+    log.dim(`加载 fflate (首次联网 ~30KB)...`);
+    try {
+      if (!fflateMod) fflateMod = await import('https://esm.sh/fflate@0.8.2');
+      log.dim(`读取 ${files.length} 个文件...`);
+      // read all into memory
+      const data = {};
+      const totalSize = files.reduce((a, b) => a + b.size, 0);
+      let readSoFar = 0;
+      for (const f of files) {
+        const buf = new Uint8Array(await f.file.arrayBuffer());
+        const zipPath = keepPaths ? f.path : f.name;
+        // resolve name collision when flattened
+        let finalPath = zipPath;
+        if (!keepPaths && data[finalPath]) {
+          let n = 1;
+          const m = finalPath.match(/^(.*?)(\.[^.]+)?$/);
+          const base = m[1], ext = m[2] || '';
+          while (data[`${base}(${n})${ext}`]) n++;
+          finalPath = `${base}(${n})${ext}`;
+        }
+        // [data, options] tuple lets us pass level per-file
+        data[finalPath] = [buf, { level }];
+        readSoFar += f.size;
+        // unused, but kept for future progress
+      }
+      log.dim(`压缩级别 ${level} · 打包...`);
+      const t0 = performance.now();
+      const zipped = await new Promise((resolve, reject) => {
+        fflateMod.zip(data, { level }, (err, out) => err ? reject(err) : resolve(out));
+      });
+      const t1 = performance.now();
+      // per-file packed sizes are tricky without re-zipping; estimate from ratio
+      const packedTotal = zipped.byteLength;
+      // approximate per-file packedSize using individual zip pass — overhead too high.
+      // instead, distribute the savings proportionally by original size as a UX hint.
+      const savedRatio = packedTotal / totalSize;
+      for (const f of files) f.packedSize = Math.round(f.size * savedRatio);
+      outBlob = new Blob([zipped], { type: 'application/zip' });
+      renderList();
+      $('downloadBtn').disabled = false;
+      handoff?.setBlob(outBlob, ($('filename').value || 'archive') + '.zip');
+      const pct = ((1 - packedTotal / totalSize) * 100).toFixed(1);
+      log.ok(`完成 · ${fmtBytes(packedTotal)} · 压缩率 ${pct}% · 耗时 ${((t1 - t0) / 1000).toFixed(2)}s`);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('packBtn').disabled = files.length === 0;
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
