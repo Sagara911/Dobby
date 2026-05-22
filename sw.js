@@ -4,7 +4,7 @@
 //   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'dobby-v1';
+const CACHE = 'dobby-v2';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [

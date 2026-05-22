@@ -106,13 +106,18 @@
       <label>文件名前缀</label>
       <input type="text" id="filename" value="spritesheet" />
     </div>
-    <div class="field">
+    <label class="checkbox">
+      <input type="checkbox" id="exportJson" checked />
+      <span>同时导出 JSON 元数据</span>
+    </label>
+    <div class="field" id="jsonFormatField">
       <label>JSON 格式</label>
       <select id="jsonFormat">
         <option value="hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
         <option value="array">TexturePacker JSON Array</option>
         <option value="simple">简洁数组 (自定义引擎)</option>
       </select>
+      <div class="info" style="margin-top:4px">取消勾选只下载 PNG —— 适合规则网格 + 自己算帧位置的渲染流程</div>
     </div>
 
     <button id="exportBtn" disabled>导出 PNG + JSON</button>
@@ -405,15 +410,30 @@ Toolkit.injectTopbar('sprite-packer');
   const avg = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length;
   const nextPow2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
 
+  // 复选框联动:取消勾时隐藏 JSON 格式选项,并把导出按钮文字从
+  // "导出 PNG + JSON" 改成 "导出 PNG"
+  function syncExportJsonUI() {
+    const on = $('exportJson').checked;
+    $('jsonFormatField').style.display = on ? '' : 'none';
+    $('exportBtn').textContent = on ? '导出 PNG + JSON' : '导出 PNG';
+  }
+  $('exportJson').addEventListener('change', syncExportJsonUI);
+  syncExportJsonUI();
+
   $('exportBtn').addEventListener('click', async () => {
     if (!packed) return;
     const name = ($('filename').value || 'spritesheet').replace(/[^\w-]/g, '_');
-    const fmt = $('jsonFormat').value;
     const blob = await canvasToBlob(packed.canvas, 'image/png');
     download(blob, `${name}.png`);
-    downloadJson(buildJson(name, fmt), `${name}.json`);
     handoff?.setBlob(blob, `${name}.png`);
-    log.ok(`已导出 ${name}.png + ${name}.json`);
+    if ($('exportJson').checked) {
+      const fmt = $('jsonFormat').value;
+      downloadJson(buildJson(name, fmt), `${name}.json`);
+      log.ok(`已导出 ${name}.png + ${name}.json`);
+    } else {
+      const f0 = packed.frames[0] || {};
+      log.ok(`已导出 ${name}.png (${packed.cols}列 × ${packed.rows}行, 单帧 ${f0.w || '?'}×${f0.h || '?'})`);
+    }
   });
 
   function buildJson(name, fmt) {
