@@ -509,7 +509,7 @@ Toolkit.injectTopbar('playable-slim');
   // ====================================================================
   let repackState = null; // { manifest, htmlText, replacements: Map<filename, Uint8Array> }
 
-  attachDropZone($('repackDrop'), $('repackFile'), files => handleRepackFile(files[0]));
+  attachDropZone($('repackDrop'), $('repackFile'), files => handleRepackFile(files));
 
   $('repackClearBtn').addEventListener('click', () => {
     repackState = null;
@@ -520,12 +520,73 @@ Toolkit.injectTopbar('playable-slim');
     log.clear();
   });
 
-  async function handleRepackFile(file) {
-    if (!file) return;
+  // Returns true if the given bytes look like a valid asset of the declared
+  // mime, by actually trying to decode them with the browser primitive that
+  // the playable would use at runtime. Catches corrupt outputs from external
+  // compression tools BEFORE they get embedded into the playable HTML.
+  async function validateAssetBytes(bytes, mime) {
+    if (!bytes || bytes.length === 0) return false;
+    if (/^image\//.test(mime)) {
+      try {
+        const blob = new Blob([bytes], { type: mime });
+        const bmp = await createImageBitmap(blob);
+        const ok = bmp.width > 0 && bmp.height > 0;
+        bmp.close?.();
+        return ok;
+      } catch (_) { return false; }
+    }
+    if (/^audio\//.test(mime)) {
+      let ac;
+      try {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+        await ac.decodeAudioData(buf);
+        return true;
+      } catch (_) { return false; }
+      finally { try { await ac?.close?.(); } catch (_) {} }
+    }
+    if (/^video\//.test(mime)) {
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      try {
+        return await new Promise(resolve => {
+          const v = document.createElement('video');
+          v.muted = true; v.preload = 'metadata'; v.src = url;
+          const timer = setTimeout(() => resolve(false), 5000);
+          v.onloadedmetadata = () => { clearTimeout(timer); resolve(v.videoWidth > 0 && v.videoHeight > 0); };
+          v.onerror = () => { clearTimeout(timer); resolve(false); };
+        });
+      } finally { URL.revokeObjectURL(url); }
+    }
+    // For JSON / CSS / JS / fonts: a non-empty buffer is the most we can
+    // cheaply check. Browsers will surface their own errors at runtime; we
+    // trust the user got the file from a real tool.
+    return true;
+  }
+
+  // Accepts either a raw .zip file OR an already-expanded list of files
+  // (shared.js `maybeExpandZips` auto-extracts any .zip dropped onto an
+  // attachDropZone, so we usually receive the expanded files directly —
+  // accepting both shapes makes the function robust to either path).
+  async function handleRepackFile(input) {
+    if (!input) return;
     log.clear();
-    log.dim(`解压 ${file.name} (${fmtBytes(file.size)})...`);
+    let files;
+    if (Array.isArray(input)) {
+      if (!input.length) { log.err('没有文件'); return; }
+      log.dim(`读取 ${input.length} 个文件...`);
+      // If the array contains a single .zip (user dropped a zip and auto-extract
+      // failed for some reason), unzip it now.
+      if (input.length === 1 && /\.zip$/i.test(input[0].name)) {
+        files = await unzipBlob(input[0]);
+      } else {
+        files = input;
+      }
+    } else {
+      log.dim(`解压 ${input.name} (${fmtBytes(input.size)})...`);
+      files = await unzipBlob(input);
+    }
     try {
-      const files = await unzipBlob(file);
       const manifestFile = files.find(f => f.name === 'manifest.json' || f.name.endsWith('/manifest.json'));
       if (!manifestFile) throw new Error('ZIP 内没找到 manifest.json');
       const manifest = JSON.parse(await manifestFile.text());
@@ -537,9 +598,15 @@ Toolkit.injectTopbar('playable-slim');
       if (htmlText.length !== manifest.originalSize) {
         log.warn(`原 HTML 长度 ${htmlText.length} 与 manifest 记录 ${manifest.originalSize} 不一致 — 可能已被改动`);
       }
-      // build replacements map
+      // build replacements map.
+      // Decode-check every user-supplied byte buffer before accepting it as a
+      // replacement: if an external compression tool produced a file that
+      // browsers can't decode, we keep the working original instead of
+      // silently injecting broken bytes. (The auto-compression path inside
+      // this tool already does its own decode-back check; this closes the
+      // same gap on the manual "外部压缩 → 拖回 ZIP" path.)
       const replacements = new Map();
-      let replaced = 0, unchanged = 0;
+      let replaced = 0, unchanged = 0, rejected = 0;
       for (const r of manifest.resources) {
         const f = files.find(x => x.name === r.filename || x.name.endsWith('/' + r.filename));
         if (!f) {
@@ -548,11 +615,19 @@ Toolkit.injectTopbar('playable-slim');
           continue;
         }
         const u8 = new Uint8Array(await f.arrayBuffer());
+        const valid = await validateAssetBytes(u8, r.mime);
+        if (!valid) {
+          log.warn(`  ${r.filename} (${r.mime}): 解码失败,保留原资源`);
+          rejected++;
+          unchanged++;
+          continue;
+        }
         replacements.set(r.index, { bytes: u8, mime: r.mime });
         replaced++;
       }
       repackState = { manifest, htmlText, replacements };
-      log.ok(`找到 ${manifest.resourceCount} 个原资源 · 将替换 ${replaced} 个 · 保留 ${unchanged} 个`);
+      const rejectedMsg = rejected ? ` · 拒收破损 ${rejected} 个` : '';
+      log.ok(`找到 ${manifest.resourceCount} 个原资源 · 将替换 ${replaced} 个 · 保留 ${unchanged} 个${rejectedMsg}`);
       renderRepackPreview(manifest, replacements, htmlText.length);
       $('repackBtn').disabled = false;
     } catch (e) {
