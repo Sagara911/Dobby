@@ -13,6 +13,7 @@
     { id: 'watermark-remove',cat:'image', name: '去水印',         en: 'Watermark Remove',icon: '🩹', href: 'tools/watermark-remove.html', desc: '画刷 / 矩形选水印区,扩散插值或 AI 模型填充' },
     { id: 'composer',       cat: 'image', name: '拼图合成',       en: 'Composer',        icon: '🧩', href: 'tools/composer.html',       desc: '多图拼接 / 叠加 / 加水印' },
     { id: 'image-diff',     cat: 'image', name: '图像对比',       en: 'Image Diff',      icon: '🔬', href: 'tools/image-diff.html',     desc: 'A/B 对比 + 滑动 + 热图 + PSNR/SSIM,压缩前后必备' },
+    { id: 'svg-tools',      cat: 'image', name: 'SVG 工具',       en: 'SVG Tools',       icon: '📐', href: 'tools/svg-tools.html',      desc: 'SVGO 优化 + 转 PNG (1x/2x/3x/4x),批量处理,实时预览' },
     // 动画 / 精灵图
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
@@ -132,6 +133,11 @@
       '拖入 A (原图) 与 B (压缩 / 编辑后),格式自动识别',
       '4 种显示: 滑动对比 / 并列 / 差异热图 / 仅差异图',
       '指标卡: 体积变化 · 变化像素 % · 平均/最大 Δ · PSNR · SSIM'
+    ],
+    'svg-tools': [
+      '拖入 .svg 文件 (可多选)',
+      '模式选 "优化" → SVGO 多 pass + 精度调整,导出更小的 .svg',
+      '模式选 "转 PNG" → 选 1× / 2× / 3× / 4× 或自定义最大边,批量栅格化导出 PNG'
     ],
     'audio-compress': [
       '拖入音频文件,会自动解码并显示波形',
@@ -1004,6 +1010,7 @@
     'video-toolkit':   ['video/*'],
     'composer':        ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'image-diff':      ['image/png','image/jpeg','image/webp','image/gif'],
+    'svg-tools':       ['image/svg+xml'],
     'html-inliner':    [],  // requires directory picker, can't handoff
     'base64':          ['*/*'],  // accepts anything
     'zip-packer':      ['*/*'],  // accepts anything

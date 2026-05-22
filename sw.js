@@ -4,7 +4,7 @@
 //   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'toolkit-v36';
+const CACHE = 'toolkit-v37';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
@@ -33,6 +33,7 @@ const CORE = [
   './tools/video-toolkit.html',
   './tools/composer.html',
   './tools/image-diff.html',
+  './tools/svg-tools.html',
   './tools/html-inliner.html',
   './tools/base64.html',
   './tools/qr-gen.html',

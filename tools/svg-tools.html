@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>SVG 工具 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .svg-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto auto 24px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .svg-row .preview {
+    width: 64px; height: 64px;
+    background: var(--checker), #1a1a1a;
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .svg-row .preview img, .svg-row .preview canvas { max-width: 100%; max-height: 100%; }
+  .svg-row .info {
+    overflow: hidden;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .svg-row .info .name {
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .svg-row .info .meta { font-size: 10px; color: var(--muted); }
+  .svg-row .size, .svg-row .savings {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    min-width: 70px;
+    text-align: right;
+  }
+  .svg-row .savings.good { color: var(--jade); font-weight: 600; }
+  .svg-row .savings.bad { color: #ff8a8a; }
+  .svg-row .remove {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: 14px; box-shadow: none;
+    padding: 2px 4px;
+  }
+  .svg-row .remove:hover { color: var(--danger); }
+  .file-list {
+    max-height: 540px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.25);
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📐 SVG 工具</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 SVG</p>
+      <p class="hint">多选 .svg 文件</p>
+      <input type="file" id="fileInput" accept=".svg,image/svg+xml" multiple style="display:none" />
+    </div>
+
+    <h2>处理模式</h2>
+    <div class="field">
+      <select id="mode">
+        <option value="optimize" selected>✨ 优化 SVG (输出 .svg, 体积变小)</option>
+        <option value="rasterize">🖼 转 PNG (栅格化)</option>
+      </select>
+    </div>
+
+    <h2 id="optHead">优化设置</h2>
+    <div id="optPane">
+      <label class="checkbox"><input type="checkbox" id="optMultipass" checked /><span>多 pass (慢一点, 体积更小)</span></label>
+      <label class="checkbox"><input type="checkbox" id="optRemoveDimensions" /><span>移除 width / height 属性 (留 viewBox)</span></label>
+      <div class="field">
+        <label>小数精度 <span id="precVal" class="mono">3</span></label>
+        <input type="range" id="precision" min="0" max="5" value="3" />
+        <div class="info" style="margin-top:2px">3 ≈ 误差 0.001 px,通常无视觉差异; 数字越小体积越小</div>
+      </div>
+    </div>
+
+    <h2 id="rasHead" style="display:none">栅格化设置</h2>
+    <div id="rasPane" style="display:none">
+      <div class="field">
+        <label>缩放倍率 (相对 viewBox)</label>
+        <select id="rasScale">
+          <option value="1" selected>1× (原尺寸)</option>
+          <option value="2">2× (Retina)</option>
+          <option value="3">3×</option>
+          <option value="4">4×</option>
+          <option value="custom">自定义最大边 (px)</option>
+        </select>
+      </div>
+      <div class="field" id="rasMaxDimField" style="display:none">
+        <label>最大边 (px)</label>
+        <input type="number" id="rasMaxDim" value="512" min="16" max="8192" />
+      </div>
+      <label class="checkbox"><input type="checkbox" id="rasTransparent" checked /><span>背景透明</span></label>
+    </div>
+
+    <h2>导出</h2>
+    <button id="processBtn" disabled>开始处理</button>
+    <button id="downloadZipBtn" class="secondary" disabled>📦 全部下载 ZIP</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加入文件</div>
+    <div class="info" style="margin-bottom:8px">所有处理本地完成 · 引擎:SVGO (CDN 加载,首次 ~150 KB)</div>
+    <div class="file-list" id="fileList">
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入 SVG 后会显示预览 + 体积对比</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('svg-tools');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes, makeZip, newCanvas } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('svg-tools', { outputType: 'image/svg+xml' });
+
+  let svgo = null;
+  // each: { file, text, optimizedText?, rasterizedBlob?, w?, h?, error? }
+  let items = [];
+
+  attachDropZone($('dropZone'), $('fileInput'), addFiles);
+
+  $('mode').addEventListener('change', () => {
+    const isOpt = $('mode').value === 'optimize';
+    $('optHead').style.display = isOpt ? '' : 'none';
+    $('optPane').style.display = isOpt ? '' : 'none';
+    $('rasHead').style.display = isOpt ? 'none' : '';
+    $('rasPane').style.display = isOpt ? 'none' : '';
+  });
+  $('rasScale').addEventListener('change', e => {
+    $('rasMaxDimField').style.display = e.target.value === 'custom' ? '' : 'none';
+  });
+  $('precision').addEventListener('input', e => $('precVal').textContent = e.target.value);
+
+  async function addFiles(files) {
+    if (!files?.length) return;
+    const fresh = [];
+    for (const f of files) {
+      if (!/\.svg$/i.test(f.name) && f.type !== 'image/svg+xml') {
+        log.warn(`${f.name}: 不是 SVG,跳过`);
+        continue;
+      }
+      const text = await f.text();
+      fresh.push({ file: f, text });
+    }
+    items.push(...fresh);
+    if (fresh.length) log.ok(`加入 ${fresh.length} 个 SVG (累计 ${items.length})`);
+    renderRows();
+    $('processBtn').disabled = items.length === 0;
+  }
+
+  function renderRows() {
+    const host = $('fileList');
+    if (!items.length) {
+      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入 SVG 后会显示预览 + 体积对比</div>';
+      $('stats').textContent = '未加入文件';
+      return;
+    }
+    host.innerHTML = '';
+    items.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.className = 'svg-row';
+      const beforeSize = it.text.length;
+      const out = it.optimizedText ?? null;
+      const outBlob = it.rasterizedBlob ?? null;
+      const afterSize = out ? out.length : outBlob ? outBlob.size : null;
+      const pct = afterSize !== null ? Math.round((1 - afterSize / beforeSize) * 100) : null;
+      const savingsClass = pct === null ? '' : pct >= 0 ? 'good' : 'bad';
+      const savingsText = pct === null ? '—' : (pct >= 0 ? '-' : '+') + Math.abs(pct) + '%';
+      row.innerHTML = `
+        <div class="preview"></div>
+        <div class="info">
+          <div class="name" title="${it.file.name}">${it.file.name}${it.error ? ' ⚠' : ''}</div>
+          <div class="meta">${fmtBytes(beforeSize)}${afterSize !== null ? ` → ${fmtBytes(afterSize)}` : ''}${it.error ? ' · ' + it.error.slice(0, 30) : ''}</div>
+        </div>
+        <span class="size">${fmtBytes(beforeSize)}</span>
+        <span class="savings ${savingsClass}">${savingsText}</span>
+        <button class="remove" data-i="${i}" title="移除">×</button>
+      `;
+      const preview = row.querySelector('.preview');
+      const img = new Image();
+      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(out || it.text);
+      img.onload = () => preview.appendChild(img);
+      img.onerror = () => { preview.textContent = '⚠'; };
+      row.querySelector('.remove').addEventListener('click', e => {
+        const idx = parseInt(e.target.dataset.i, 10);
+        items.splice(idx, 1);
+        renderRows();
+        $('processBtn').disabled = items.length === 0;
+      });
+      host.appendChild(row);
+    });
+    const totalBefore = items.reduce((s, x) => s + x.text.length, 0);
+    const processed = items.filter(x => x.optimizedText || x.rasterizedBlob);
+    const totalAfter = processed.reduce((s, x) => s + ((x.optimizedText?.length) || (x.rasterizedBlob?.size) || 0), 0);
+    const pct = totalBefore > 0 && totalAfter > 0 ? ((1 - totalAfter / totalBefore) * 100).toFixed(1) : null;
+    $('stats').innerHTML = `<strong>${items.length}</strong> 个 SVG · 总 <strong>${fmtBytes(totalBefore)}</strong>${processed.length ? ` · 处理后 <strong>${fmtBytes(totalAfter)}</strong> · 节省 <strong style="color:var(--jade)">${pct}%</strong>` : ''}`;
+  }
+
+  async function ensureSvgo() {
+    if (svgo) return svgo;
+    log.dim('加载 SVGO (首次联网 ~150 KB)...');
+    svgo = await import('https://esm.sh/svgo@3.3.2');
+    log.ok('SVGO 就绪');
+    return svgo;
+  }
+
+  $('processBtn').addEventListener('click', async () => {
+    if (!items.length) return;
+    $('processBtn').disabled = true;
+    const mode = $('mode').value;
+    try {
+      if (mode === 'optimize') await runOptimize();
+      else await runRasterize();
+      $('downloadZipBtn').disabled = items.every(it => !it.optimizedText && !it.rasterizedBlob);
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('processBtn').disabled = false;
+    }
+  });
+
+  async function runOptimize() {
+    const mod = await ensureSvgo();
+    const multipass = $('optMultipass').checked;
+    const removeDimensions = $('optRemoveDimensions').checked;
+    const precision = parseInt($('precision').value, 10);
+    for (const it of items) {
+      try {
+        const cfg = {
+          multipass,
+          floatPrecision: precision,
+          plugins: removeDimensions
+            ? ['preset-default', 'removeDimensions']
+            : ['preset-default'],
+        };
+        const result = mod.optimize(it.text, cfg);
+        // Sanity: optimized must still parse as SVG (cheap check: starts with <svg or <?xml)
+        const t = result.data.trim();
+        if (!t.startsWith('<') || result.data.length < 32) {
+          throw new Error('SVGO 输出过短或不是 SVG');
+        }
+        // If somehow larger, keep original (rare for SVGO but safe)
+        it.optimizedText = result.data.length < it.text.length ? result.data : it.text;
+        it.error = null;
+      } catch (e) {
+        it.error = e.message;
+        it.optimizedText = null;
+        log.warn(`${it.file.name}: ${e.message}`);
+      }
+    }
+    renderRows();
+    // Update handoff with the first optimized SVG for chaining
+    const first = items.find(x => x.optimizedText);
+    if (first && handoff) {
+      const fname = first.file.name.replace(/\.svg$/i, '') + '.opt.svg';
+      handoff.setBlob(new Blob([first.optimizedText], { type: 'image/svg+xml' }), fname, 'image/svg+xml');
+    }
+    log.ok(`完成 · ${items.filter(x => x.optimizedText).length} 个 SVG 优化成功`);
+  }
+
+  async function runRasterize() {
+    const scaleMode = $('rasScale').value;
+    const transparent = $('rasTransparent').checked;
+    for (const it of items) {
+      try {
+        // Parse viewBox / width / height to know intrinsic size
+        const m = /viewBox\s*=\s*"([\d.\-+\s]+)"/i.exec(it.text);
+        let baseW = 0, baseH = 0;
+        if (m) {
+          const v = m[1].trim().split(/\s+/).map(parseFloat);
+          if (v.length === 4) { baseW = v[2]; baseH = v[3]; }
+        }
+        if (!baseW || !baseH) {
+          const wm = /<svg[^>]*\swidth\s*=\s*"([\d.]+)/i.exec(it.text);
+          const hm = /<svg[^>]*\sheight\s*=\s*"([\d.]+)/i.exec(it.text);
+          if (wm && hm) { baseW = parseFloat(wm[1]); baseH = parseFloat(hm[1]); }
+        }
+        if (!baseW || !baseH) { baseW = baseH = 256; }
+        let outW, outH;
+        if (scaleMode === 'custom') {
+          const maxDim = parseInt($('rasMaxDim').value, 10) || 512;
+          const r = maxDim / Math.max(baseW, baseH);
+          outW = Math.max(1, Math.round(baseW * r));
+          outH = Math.max(1, Math.round(baseH * r));
+        } else {
+          const s = parseInt(scaleMode, 10);
+          outW = Math.max(1, Math.round(baseW * s));
+          outH = Math.max(1, Math.round(baseH * s));
+        }
+        const cv = newCanvas(outW, outH);
+        const ctx = cv.getContext('2d');
+        if (!transparent) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, outW, outH);
+        }
+        // Draw via image element using svg data URL
+        const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(it.text);
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => { ctx.drawImage(img, 0, 0, outW, outH); resolve(); };
+          img.onerror = () => reject(new Error('SVG 渲染失败'));
+          img.src = url;
+        });
+        const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+        if (!blob || blob.size < 64) throw new Error('PNG 输出过短');
+        it.rasterizedBlob = blob;
+        it.w = outW; it.h = outH;
+        it.error = null;
+      } catch (e) {
+        it.error = e.message;
+        it.rasterizedBlob = null;
+        log.warn(`${it.file.name}: ${e.message}`);
+      }
+    }
+    renderRows();
+    const first = items.find(x => x.rasterizedBlob);
+    if (first && handoff) {
+      const fname = first.file.name.replace(/\.svg$/i, '') + '.png';
+      handoff.setBlob(first.rasterizedBlob, fname, 'image/png');
+    }
+    log.ok(`完成 · ${items.filter(x => x.rasterizedBlob).length} 个 SVG 栅格化成功`);
+  }
+
+  $('downloadZipBtn').addEventListener('click', async () => {
+    const mode = $('mode').value;
+    const files = [];
+    for (const it of items) {
+      if (mode === 'optimize' && it.optimizedText) {
+        const base = it.file.name.replace(/\.svg$/i, '') + '.opt.svg';
+        files.push({ name: base, data: new TextEncoder().encode(it.optimizedText) });
+      } else if (mode === 'rasterize' && it.rasterizedBlob) {
+        const base = it.file.name.replace(/\.svg$/i, '') + '.png';
+        files.push({ name: base, data: new Uint8Array(await it.rasterizedBlob.arrayBuffer()) });
+      }
+    }
+    if (!files.length) { log.warn('没有可下载的输出'); return; }
+    const zip = makeZip(files);
+    download(zip, mode === 'optimize' ? 'optimized-svg.zip' : 'rasterized-png.zip');
+    log.ok(`打包 ${files.length} 个文件`);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    items = [];
+    renderRows();
+    $('processBtn').disabled = true;
+    $('downloadZipBtn').disabled = true;
+    $('fileInput').value = '';
+    log.clear();
+  });
+})();
+</script>
+
+</body>
+</html>
