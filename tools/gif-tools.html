@@ -142,9 +142,11 @@
         </select>
       </div>
       <div class="field" id="makeApngHint" style="display:none">
-        <div class="info" style="padding:7px 10px; background:rgba(255,180,60,0.10); border-left:2px solid #ffb43c; border-radius:6px; line-height:1.5; color:#ffd998">
-          ⚠ APNG 是动画图片,但 <strong>Windows 图片查看器 / Mac 预览只显示第一帧</strong>。要看动画,把文件拖入 Chrome/Firefox/Edge 浏览器,或嵌到网页 <code>&lt;img&gt;</code> 标签里。<br/>
-          需要更兼容的动图 → 选 GIF。
+        <div class="info" style="padding:8px 11px; background:rgba(var(--jade-rgb),0.08); border-left:2px solid var(--jade); border-radius:6px; line-height:1.55; color:var(--text-soft)">
+          <strong style="color:var(--jade)">💡 APNG 是真动图</strong> — 24-bit 色 + 8-bit alpha (透明边缘平滑),比 GIF 强很多。<br/><br/>
+          <strong>✓ 会动的环境</strong>: 浏览器(拖入或 &lt;img&gt;) · Telegram/Discord · playable runtime · Pixi/Phaser/Cocos<br/>
+          <strong style="color:#ffb43c">✗ 只看第一帧</strong>: Windows 照片 · Mac 预览.app · 资源管理器缩略图<br/><br/>
+          下载后用浏览器或在线工具 <code>ezgif.com</code> 拖入,就能看到动画。要 100% 兼容选 GIF。
         </div>
       </div>
       <div class="field" id="makePaletteField">
@@ -161,6 +163,7 @@
 
       <button id="makeBuildBtn" disabled>生成</button>
       <button id="makeDownloadBtn" class="secondary" disabled>💾 下载</button>
+      <button id="makeOpenInTabBtn" class="secondary" disabled>🌐 浏览器新标签打开 (验证动图)</button>
       <button id="makeUseAsSourceBtn" class="secondary" disabled>把输出送到"编辑"标签</button>
       <button id="makeClearBtn" class="secondary">清空</button>
     </div>
@@ -406,6 +409,7 @@ Toolkit.injectTopbar('gif-tools');
       img.style.maxWidth = '100%';
       $('makeResultBox').appendChild(img);
       $('makeDownloadBtn').disabled = false;
+      $('makeOpenInTabBtn').disabled = false;
       // Edit pane accepts both GIF and APNG (decodeAnim handles either).
       $('makeUseAsSourceBtn').disabled = false;
       const fname = ($('makeFilename').value || 'animation') + '.' + makeLastExt;
@@ -423,6 +427,18 @@ Toolkit.injectTopbar('gif-tools');
     if (!makeLastBlob) return;
     const name = ($('makeFilename').value || 'animation').replace(/[^\w-]/g, '_');
     download(makeLastBlob, `${name}.${makeLastExt}`);
+  });
+
+  // Open the generated animation in a fresh browser tab — proves to the
+  // user that the APNG / GIF is a real animation (the inline preview in
+  // makeResultBox already plays it, but a full-page view dispels any
+  // doubt about whether the file itself is animated).
+  $('makeOpenInTabBtn').addEventListener('click', () => {
+    if (!makeLastBlob) return;
+    const url = URL.createObjectURL(makeLastBlob);
+    window.open(url, '_blank');
+    // revoke later so the new tab has time to load
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   });
 
   $('makeUseAsSourceBtn').addEventListener('click', async () => {
@@ -446,6 +462,7 @@ Toolkit.injectTopbar('gif-tools');
     if (mode === 'make') $('stats').textContent = '未加载';
     $('makeBuildBtn').disabled = true;
     $('makeDownloadBtn').disabled = true;
+    $('makeOpenInTabBtn').disabled = true;
     $('makeUseAsSourceBtn').disabled = true;
     log.clear();
     $('makeFileInput').value = '';
