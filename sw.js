@@ -1,10 +1,10 @@
-// Playable Toolkit service worker — offline-first cache for the whole site.
+﻿// Dobby service worker — offline-first cache for the whole site.
 // Strategy:
 //   HTML same-origin → network-first (always try fresh; fall back to cache offline)
 //   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'toolkit-v39';
+const CACHE = 'dobby-v1';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [

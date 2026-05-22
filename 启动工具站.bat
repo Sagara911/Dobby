@@ -1,10 +1,10 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
-title Playable Toolkit
+title Dobby
 
 echo.
 echo  ╔══════════════════════════════════════════════════════╗
-echo  ║          🧰  Playable Toolkit — H5 工具集            ║
+echo  ║          🧦  Dobby — H5 工具集            ║
 echo  ╚══════════════════════════════════════════════════════╝
 echo.
 echo  正在启动本地服务器...

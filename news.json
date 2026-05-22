@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v1",
+      "date": "2026-05-21",
+      "title": "Dobby is free! 站点正式更名",
+      "items": [
+        "「Playable Toolkit」更名为 「Dobby」 —— 你的本地素材精灵",
+        "logo 由 🧰 工具箱换成 🧦 (致敬解放小精灵的那只袜子)",
+        "404 页面 / 文案全部 Dobby 化,工具功能完全不变",
+        "下次 GitHub 仓库改名后,网址会变为 sagara911.github.io/dobby/"
+      ]
+    },
+    {
       "version": "v38",
       "date": "2026-05-21",
       "title": "进阶三套: AVIF · SVG · Lottie",

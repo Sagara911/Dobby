@@ -1,4 +1,4 @@
-// shared utilities for H5 Playable Toolkit
+﻿// shared utilities for H5 Dobby
 // inject the top navigation bar and expose helpers on window.Toolkit
 
 (function () {
@@ -195,9 +195,9 @@
     ];
 
     bar.innerHTML = `
-      <a href="${prefix}index.html" class="brand">
-        <span class="logo">🧰</span>
-        <span>Playable Toolkit</span>
+      <a href="${prefix}index.html" class="brand" title="Dobby is free!">
+        <span class="logo">🧦</span>
+        <span>Dobby</span>
       </a>
       <nav>
         ${cats.map(c => {

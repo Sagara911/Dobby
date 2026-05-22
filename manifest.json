@@ -1,7 +1,7 @@
-{
-  "name": "Playable Toolkit",
-  "short_name": "Toolkit",
-  "description": "H5 Playable 制作工具集 — 22 款图像/动画/音视频/代码工具,全部本地运行",
+﻿{
+  "name": "Dobby — 你的本地素材精灵",
+  "short_name": "Dobby",
+  "description": "Dobby is free! 26 款图像/动画/音视频/代码工具,全部浏览器本地运行,文件不上传。",
   "lang": "zh-CN",
   "start_url": "./index.html",
   "scope": "./",

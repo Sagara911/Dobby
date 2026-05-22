@@ -1,11 +1,11 @@
-#!/bin/bash
-# Playable Toolkit — mac / Linux launcher
+﻿#!/bin/bash
+# Dobby — mac / Linux launcher
 
 cd "$(dirname "$0")"
 
 echo ""
 echo " ╔══════════════════════════════════════════════════════╗"
-echo " ║         🧰  Playable Toolkit — H5 工具集             ║"
+echo " ║         🧦  Dobby — H5 工具集             ║"
 echo " ╚══════════════════════════════════════════════════════╝"
 echo ""
 

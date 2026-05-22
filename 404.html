@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -30,7 +30,7 @@
   })();
 })();
 </script>
-<title>404 — Playable Toolkit</title>
+<title>404 — Dobby</title>
 <link rel="stylesheet" href="/assets/shared.css" />
 <style>
   body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
@@ -79,14 +79,35 @@
   .not-found a.btn:hover {
     background: #67ffbc;
   }
+  .not-found .sock {
+    font-size: 4rem;
+    margin: 0 0 8px;
+    display: inline-block;
+    animation: dobby-wiggle 2.6s ease-in-out infinite;
+  }
+  @keyframes dobby-wiggle {
+    0%, 100% { transform: rotate(-8deg); }
+    50%      { transform: rotate(8deg); }
+  }
+  .not-found .quote {
+    font-style: italic;
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-top: 18px;
+    line-height: 1.6;
+  }
+  .not-found .quote::before { content: "「 "; opacity: 0.5; }
+  .not-found .quote::after  { content: " 」"; opacity: 0.5; }
 </style>
 </head>
 <body>
   <div class="not-found">
+    <div class="sock">🧦</div>
     <p class="code">404</p>
-    <h1>这个工具不在这里 👀</h1>
-    <p>页面路径错了或者工具被搬家了。回首页搜搜看?</p>
-    <a class="btn" href="/index.html">← 回首页</a>
+    <h1>Bad Dobby! Bad Dobby!</h1>
+    <p>Dobby couldn't find this page —— 路径写错了, 或者这个工具还没被 Dobby 接管。回首页让 Dobby 重新给你找。</p>
+    <a class="btn" href="/index.html">← 回首页让 Dobby 帮你</a>
+    <p class="quote">Dobby is free, but Dobby still couldn't find this page for you, sir.</p>
   </div>
   <script src="/assets/shared.js"></script>
   <script>Toolkit.injectTopbar('home');</script>
