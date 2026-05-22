@@ -251,12 +251,62 @@
     out.writeU8(0);
   }
 
+  // Chunked Uint8Array sink. Used to use a plain JS Array which works for
+  // small outputs but blows up for large APNG/GIF builds (151+ frames at
+  // 2K+ resolution): a JS Array stores each numeric element as ~8 bytes,
+  // so an N-byte output occupies ~8N memory, and the final
+  // `new Uint8Array(jsArray)` step trips "Invalid array length" once
+  // jsArray.length passes the engine's typed-array allocation ceiling.
+  // The chunked version stores bytes natively (1 byte = 1 byte) and
+  // does one final concat into the output buffer.
   class ByteSink {
-    constructor() { this.bytes = []; }
-    writeU8(v) { this.bytes.push(v & 0xFF); }
-    writeU16(v) { this.bytes.push(v & 0xFF, (v >> 8) & 0xFF); }
-    writeBytes(arr) { for (const b of arr) this.bytes.push(b & 0xFF); }
-    toUint8Array() { return new Uint8Array(this.bytes); }
+    constructor() {
+      this.chunks = [];                       // list of filled Uint8Array chunks
+      this.current = new Uint8Array(65536);   // 64 KB initial; grows on demand
+      this.pos = 0;
+      this.totalSealed = 0;                   // bytes in sealed chunks
+    }
+    _grow(needed) {
+      if (this.pos + needed <= this.current.length) return;
+      // seal current chunk and start a fresh one. Grow chunk size geometrically
+      // so very large outputs don't cause O(N) chunk count.
+      this.chunks.push(this.current.subarray(0, this.pos));
+      this.totalSealed += this.pos;
+      const next = Math.max(this.current.length * 2, needed, 65536);
+      this.current = new Uint8Array(next);
+      this.pos = 0;
+    }
+    writeU8(v) {
+      this._grow(1);
+      this.current[this.pos++] = v & 0xFF;
+    }
+    writeU16(v) {
+      this._grow(2);
+      this.current[this.pos++] = v & 0xFF;
+      this.current[this.pos++] = (v >> 8) & 0xFF;
+    }
+    writeBytes(arr) {
+      const len = arr.length;
+      if (len === 0) return;
+      this._grow(len);
+      // Fast path for typed arrays — use .set() instead of element-by-element.
+      if (ArrayBuffer.isView(arr)) {
+        this.current.set(arr, this.pos);
+        this.pos += len;
+      } else {
+        for (let i = 0; i < len; i++) this.current[this.pos++] = arr[i] & 0xFF;
+      }
+    }
+    toUint8Array() {
+      const out = new Uint8Array(this.totalSealed + this.pos);
+      let offset = 0;
+      for (const c of this.chunks) {
+        out.set(c, offset);
+        offset += c.length;
+      }
+      if (this.pos) out.set(this.current.subarray(0, this.pos), offset);
+      return out;
+    }
   }
   class BlockWriter {
     constructor(out) { this.out = out; this.buf = []; }
@@ -371,10 +421,13 @@
     const typeBytes = [type.charCodeAt(0), type.charCodeAt(1), type.charCodeAt(2), type.charCodeAt(3)];
     out.writeBytes(typeBytes);
     out.writeBytes(data);
-    const crc = crc32png(new Uint8Array([...typeBytes, ...data]));
+    const crc = crc32png(typeBytes, data);
     out.writeBytes([(crc >> 24) & 0xFF, (crc >> 16) & 0xFF, (crc >> 8) & 0xFF, crc & 0xFF]);
   }
-  function crc32png(data) {
+  // Accepts variadic byte sources (Uint8Array or number[]) and CRCs them
+  // serially. Saves a full copy per chunk vs. the previous spread-into-Array
+  // approach, which was the second blowup vector for large APNG builds.
+  function crc32png(...parts) {
     let table = crc32png._t;
     if (!table) {
       table = crc32png._t = new Uint32Array(256);
@@ -385,7 +438,10 @@
       }
     }
     let crc = 0xFFFFFFFF;
-    for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+    for (const part of parts) {
+      const len = part.length;
+      for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ table[(crc ^ part[i]) & 0xFF];
+    }
     return (crc ^ 0xFFFFFFFF) >>> 0;
   }
 

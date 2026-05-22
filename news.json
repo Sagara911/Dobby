@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v5",
+      "date": "2026-05-22",
+      "title": "GIF / APNG 编码器扛大帧数 — 100+ 帧不再 'Invalid array length'",
+      "items": [
+        "GIF 工具生成 APNG / GIF 时,大帧数(150+ 张大图)会报 'Invalid array length' 直接炸掉 —— 编码器内部用 JS Array 累积字节,每个 number 占 ~8 字节,几百 MB 输出实际占 ~几 GB 内存,撞死",
+        "改成 chunked Uint8Array 累积(1 byte = 1 byte 真实占用),并把 crc32 计算从「每 chunk 复制一遍 IDAT 数据」改成「直接喂多个 buffer」,内存/速度双优化",
+        "之前会炸的工作流(GIF 工具拖入序列帧 → 生成 APNG / GIF,几百帧大图)现在不会再炸"
+      ]
+    },
+    {
       "version": "dobby-v4",
       "date": "2026-05-22",
       "title": "Playable 瘦身 — 拒收破损素材 + 修复重组拖入",
