@@ -86,6 +86,7 @@
     ],
     'video-toolkit': [
       '拖入视频(MP4 / WebM / MOV),选操作:trim / crop / 调速 / 反向 / 抽帧 / 转 GIF / 色键抠像',
+      '或者反过来拖一组序列帧(PNG/JPG/WebP),会自动切到「帧合成视频」动作,设 FPS / 输出尺寸,导出 MP4',
       '输出格式默认 MP4 (H.264,Chrome/Edge 113+),不支持时回退 WebM',
       '色键抠像建议输出 PNG ZIP 或 APNG(真透明)'
     ],
@@ -961,7 +962,7 @@
     'color-tools':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'ai-cutout':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'watermark-remove':['image/png','image/jpeg','image/webp','image/gif'],
-    'video-toolkit':   ['video/*'],
+    'video-toolkit':   ['video/*','image/png','image/jpeg','image/webp','application/zip'],
     'composer':        ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'image-diff':      ['image/png','image/jpeg','image/webp','image/gif'],
     'svg-tools':       ['image/svg+xml'],

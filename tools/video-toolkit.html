@@ -109,8 +109,8 @@
     </div>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入视频</p>
-      <p class="hint">MP4 / WebM / MOV<br/>所有处理在浏览器本地完成</p>
+      <p id="dzTitle">📂 拖入视频</p>
+      <p class="hint" id="dzHint">MP4 / WebM / MOV<br/>所有处理在浏览器本地完成</p>
       <input type="file" id="fileInput" accept="video/*" style="display:none" />
     </div>
 
@@ -127,6 +127,7 @@
         <option value="changeFps">🎞️ 改 FPS (抽帧 / 补帧)</option>
         <option value="reverse">⏪ 反向播放</option>
         <option value="frames">🖼️ 抽帧 (PNG ZIP)</option>
+        <option value="fromFrames">🎬 帧合成视频 (Frames → MP4)</option>
         <option value="toGif">🎞️ 转 GIF</option>
         <option value="chromaKey">🌿 色键抠像 (绿幕去背景)</option>
         <option value="filter">🎚️ 滤镜 / 色相 / 调色</option>
@@ -204,24 +205,60 @@
 Toolkit.injectTopbar('video-toolkit');
 
 (() => {
-  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, makeZip } = Toolkit;
+  const { $, makeLogger, makeProgress, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, makeZip, naturalSort } = Toolkit;
   const log = makeLogger($('log'));
   const progress = makeProgress($('progress'));
 
   let srcVideo = null;
   let srcUrl = null;
   let srcMeta = null;  // {w, h, duration}
+  let srcFrames = [];  // for fromFrames action: [{bitmap, w, h, name}]
   let outBlob = null;
   let outExt = 'webm';
 
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
   const handoff = Toolkit.setupHandoff('video-toolkit', { outputType: 'video/mp4' });
-  $('action').addEventListener('change', renderActionControls);
+  $('action').addEventListener('change', () => { updateDropZoneForAction(); renderActionControls(); });
+  // initial sync in case action default changes
+  updateDropZoneForAction();
+
+  // The drop zone hint + the file input's accept attribute switch depending on
+  // whether the action wants a single video (default) or a folder of images
+  // (fromFrames). Without this the user gets the wrong file picker on click.
+  function updateDropZoneForAction() {
+    const isFrames = $('action').value === 'fromFrames';
+    $('dzTitle').textContent = isFrames ? '📂 拖入序列帧 (可多选 / 文件夹)' : '📂 拖入视频';
+    $('dzHint').innerHTML = isFrames
+      ? 'PNG / JPG / WebP — 按文件名自然排序<br/>所有处理在浏览器本地完成'
+      : 'MP4 / WebM / MOV<br/>所有处理在浏览器本地完成';
+    const fi = $('fileInput');
+    if (isFrames) { fi.accept = 'image/*'; fi.multiple = true; }
+    else { fi.accept = 'video/*'; fi.multiple = false; }
+  }
 
   async function handleFiles(files) {
     if (!files.length) return;
-    const f = files[0];
-    if (!f.type.startsWith('video/')) { log.err('请拖入视频文件'); return; }
+    const f0 = files[0];
+    // Auto-route: a bunch of images → switch to fromFrames; a single video →
+    // current path. This lets the user just drop whatever and the tool figures
+    // out the intent, instead of forcing them to set the action dropdown first.
+    const looksLikeImage = (f) =>
+      (f.type && f.type.startsWith('image/')) ||
+      /\.(png|jpe?g|webp|bmp|avif)$/i.test(f.name);
+    if (looksLikeImage(f0)) {
+      if ($('action').value !== 'fromFrames') {
+        $('action').value = 'fromFrames';
+        updateDropZoneForAction();
+      }
+      await handleFramesInput(files.filter(looksLikeImage));
+      renderActionControls();
+      return;
+    }
+    if (!f0.type.startsWith('video/')) {
+      log.err('请拖入视频文件,或者拖入一组图片(会自动切到「帧合成视频」)');
+      return;
+    }
+    const f = f0;
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     if (srcUrl) URL.revokeObjectURL(srcUrl);
@@ -247,14 +284,89 @@ Toolkit.injectTopbar('video-toolkit');
     renderActionControls();
   }
 
+  // Load a sequence of image files as frames for the fromFrames action.
+  // Files are sorted by natural name (so walk_001.png comes before walk_010.png).
+  // Bitmaps are kept in memory — for 100+ frames this can use a lot of RAM, but
+  // that's the cost of being a no-server browser tool.
+  async function handleFramesInput(files) {
+    if (!files.length) { log.err('没有图片文件'); return; }
+    const sorted = naturalSort(files);
+    log.clear();
+    log.dim(`加载 ${sorted.length} 张图片...`);
+    // clear video state so the apply path doesn't get confused
+    if (srcUrl) { URL.revokeObjectURL(srcUrl); srcUrl = null; }
+    srcVideo = null; srcMeta = null;
+    // dispose any old bitmaps
+    for (const f of srcFrames) f.bitmap?.close?.();
+    srcFrames = [];
+    for (let i = 0; i < sorted.length; i++) {
+      try {
+        const bm = await createImageBitmap(sorted[i]);
+        srcFrames.push({ bitmap: bm, w: bm.width, h: bm.height, name: sorted[i].name });
+      } catch (e) {
+        log.warn(`跳过 ${sorted[i].name}: ${e.message}`);
+      }
+      if (i % 10 === 0) progress.set(i / sorted.length);
+    }
+    progress.hide();
+    if (!srcFrames.length) { log.err('全部图片加载失败'); $('applyBtn').disabled = true; return; }
+    const f0 = srcFrames[0];
+    // preview first frame in the source box
+    $('srcBox').innerHTML = '';
+    const preview = newCanvas(f0.w, f0.h);
+    preview.getContext('2d').drawImage(f0.bitmap, 0, 0);
+    preview.style.maxWidth = '100%'; preview.style.maxHeight = '100%';
+    $('srcBox').appendChild(preview);
+    $('stats').innerHTML = `<strong>${srcFrames.length}</strong> 帧 · <strong>${f0.w}×${f0.h}</strong> · 首帧 <strong>${f0.name}</strong>`;
+    $('applyBtn').disabled = false;
+    log.ok(`加载完成 ${srcFrames.length} 帧`);
+  }
+
   // remember the original bitrate so leaving "一键压缩" can restore it
   const DEFAULT_BITRATE = $('bitrate').value;
   let lastAction = null;
 
   function renderActionControls() {
-    if (!srcMeta) return;
     const action = $('action').value;
     const c = $('actionControls');
+    // fromFrames has its own input flow (image sequence, no srcMeta) — render
+    // even when no video is loaded, since the controls are useful before drop.
+    if (action === 'fromFrames') {
+      const f0 = srcFrames[0] || null;
+      const dW = f0 ? f0.w : 1280;
+      const dH = f0 ? f0.h : 720;
+      c.innerHTML = `
+        <div class="field">
+          <label>输出 FPS</label>
+          <input type="number" id="ffFps" value="30" min="1" max="60" />
+        </div>
+        <div class="row-fields">
+          <div class="field">
+            <label>输出宽 (px, 偶数)</label>
+            <input type="number" id="ffOutW" value="${dW}" min="2" step="2" />
+          </div>
+          <div class="field">
+            <label>输出高 (px, 偶数)</label>
+            <input type="number" id="ffOutH" value="${dH}" min="2" step="2" />
+          </div>
+        </div>
+        <div class="info">默认沿用首帧尺寸 · 所有帧会被等比缩放到这个尺寸 · 强烈建议偶数(H.264 要求)</div>
+        <div class="info" id="ffEstimate" style="color: var(--jade); margin-top:4px"></div>
+      `;
+      const updateEst = () => {
+        const fps = parseInt($('ffFps').value, 10) || 30;
+        const n = srcFrames.length;
+        const dur = n / fps;
+        $('ffEstimate').textContent = n
+          ? `${n} 帧 @ ${fps} FPS = ${dur.toFixed(2)} 秒`
+          : `先拖入序列帧再来,这里会显示预估时长`;
+      };
+      updateEst();
+      $('ffFps').addEventListener('input', updateEst);
+      lastAction = action;
+      return;
+    }
+    if (!srcMeta) return;
     const { w, h, duration } = srcMeta;
 
     // if user is leaving the compress action, restore bitrate / format to defaults
@@ -601,13 +713,20 @@ Toolkit.injectTopbar('video-toolkit');
   }
 
   $('applyBtn').addEventListener('click', async () => {
-    if (!srcVideo) return;
     const action = $('action').value;
+    // Source-presence gate differs per action: fromFrames needs srcFrames,
+    // everything else needs srcVideo. Reject early with a helpful message.
+    if (action === 'fromFrames') {
+      if (!srcFrames.length) { log.err('请先拖入序列帧'); return; }
+    } else {
+      if (!srcVideo) { log.err('请先拖入视频'); return; }
+    }
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.dim(`应用 ${action}...`);
     try {
-      if (action === 'frames') await doExtractFrames();
+      if (action === 'fromFrames') await doFramesToVideo();
+      else if (action === 'frames') await doExtractFrames();
       else if (action === 'toGif') await doToGif();
       else if (action === 'chromaKey') await doChromaKey();
       else if (action === 'changeFps' && /^optical/.test($('cfpsMode')?.value || '')) await doChangeFpsOptical();
@@ -984,6 +1103,104 @@ Toolkit.injectTopbar('video-toolkit');
     showOutput();
     const dt = ((performance.now() - t0) / 1000).toFixed(1);
     log.ok(`光流补帧完成 (${backend.name}) · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`);
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  //   Frames → Video (the reverse of doExtractFrames)
+  //   Mirror of the MP4 / WebM encoder paths in doReencodeWebm, but the
+  //   per-frame source is srcFrames[i].bitmap rather than seeking srcVideo.
+  // ──────────────────────────────────────────────────────────────────
+  async function doFramesToVideo() {
+    const fps = parseInt($('ffFps').value, 10) || 30;
+    let outW = parseInt($('ffOutW').value, 10) || srcFrames[0].w;
+    let outH = parseInt($('ffOutH').value, 10) || srcFrames[0].h;
+    // H.264 requires even dimensions — silently round down rather than error
+    outW = outW & ~1;
+    outH = outH & ~1;
+    const fmt = $('outFormat').value;
+    const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
+    const cv = newCanvas(outW, outH);
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+
+    if (fmt === 'mp4') {
+      if (!('VideoEncoder' in window)) {
+        log.warn('当前浏览器不支持 WebCodecs MP4, 回退到 WebM (VP9)');
+        return doFramesToVideoWebm(cv, ctx, outW, outH, fps, bitrate, 'webm-vp9');
+      }
+      log.dim('加载 mp4-muxer (首次联网)...');
+      const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: 'avc', width: outW, height: outH },
+        fastStart: 'in-memory'
+      });
+      let encErr = null;
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => { encErr = e; log.err('encoder: ' + e.message); }
+      });
+      encoder.configure({
+        codec: h264Codec(),
+        width: outW, height: outH,
+        bitrate, framerate: fps
+      });
+      log.dim(`MP4 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`);
+      const t0 = performance.now();
+      for (let i = 0; i < srcFrames.length; i++) {
+        const f = srcFrames[i];
+        ctx.clearRect(0, 0, outW, outH);
+        ctx.drawImage(f.bitmap, 0, 0, outW, outH);
+        const vf = new VideoFrame(cv, { timestamp: Math.round(i / fps * 1e6) });
+        encoder.encode(vf, { keyFrame: i % 30 === 0 });
+        vf.close();
+        progress.set((i + 1) / srcFrames.length);
+      }
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      if (encErr) throw new Error('视频编码失败: ' + encErr.message);
+      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+      outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+      outExt = 'mp4';
+      const dt = ((performance.now() - t0) / 1000).toFixed(1);
+      showOutput();
+      log.ok(`生成 MP4 ${fmtBytes(outBlob.size)} · ${dt}s`);
+      return;
+    }
+    return doFramesToVideoWebm(cv, ctx, outW, outH, fps, bitrate, fmt);
+  }
+
+  async function doFramesToVideoWebm(cv, ctx, outW, outH, fps, bitrate, fmt) {
+    const stream = cv.captureStream(0);
+    const track = stream.getVideoTracks()[0];
+    const mimeType = fmt === 'webm-vp8' ? 'video/webm;codecs=vp8' : 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+    const chunks = [];
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(res => { recorder.onstop = res; });
+    recorder.start();
+    log.dim(`WebM 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`);
+    const t0 = performance.now();
+    const frameMs = 1000 / fps;
+    for (let i = 0; i < srcFrames.length; i++) {
+      const f = srcFrames[i];
+      ctx.clearRect(0, 0, outW, outH);
+      ctx.drawImage(f.bitmap, 0, 0, outW, outH);
+      // MediaRecorder samples at real-time pacing, so pace the canvas writes
+      // to land each frame at its intended FPS.
+      track.requestFrame?.();
+      await new Promise(r => setTimeout(r, frameMs));
+      progress.set((i + 1) / srcFrames.length);
+    }
+    recorder.stop();
+    await done;
+    outBlob = new Blob(chunks, { type: 'video/webm' });
+    outExt = 'webm';
+    const dt = ((performance.now() - t0) / 1000).toFixed(1);
+    showOutput();
+    log.ok(`生成 WebM ${fmtBytes(outBlob.size)} · ${dt}s`);
   }
 
   async function doExtractFrames() {

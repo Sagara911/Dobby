@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v3",
+      "date": "2026-05-22",
+      "title": "Video Toolkit 新增「帧合成视频」",
+      "items": [
+        "video-toolkit 新动作「🎬 帧合成视频 (Frames → MP4)」—— 拖一组序列帧 (PNG/JPG/WebP) 进去,设 FPS 和输出尺寸,直接编码出 MP4 / WebM",
+        "拖入图片时会自动切到这个动作,首帧尺寸作为默认输出尺寸 (可改)",
+        "用 WebCodecs + mp4-muxer (Chrome/Edge 113+),不支持时回退 WebM"
+      ]
+    },
+    {
       "version": "dobby-v2",
       "date": "2026-05-22",
       "title": "抠图更干净 · APNG 全流程 · 推送链路修复",
