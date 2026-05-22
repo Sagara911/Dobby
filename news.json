@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "v33",
+      "date": "2026-05-21",
+      "title": "高质量压缩引擎 (mozjpeg + oxipng)",
+      "items": [
+        "image-optimizer / playable-slim 新增「压缩引擎」选项",
+        "mozjpeg JPEG 编码: 同等质量下体积 -10%~-25%",
+        "oxipng PNG 无损优化: 体积 -5%~-30%",
+        "首次使用按需下载 WASM (~250 KB-700 KB), 浏览器原生路径默认仍可用"
+      ]
+    },
+    {
       "version": "v21",
       "date": "2026-05-21",
       "title": "改 FPS 改为显式抽帧/补帧切换",

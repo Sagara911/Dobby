@@ -126,6 +126,16 @@
       <label>质量 (JPEG / WebP) <span id="qualityVal" class="mono">85</span></label>
       <input type="range" id="quality" min="1" max="100" value="85" />
     </div>
+    <div class="field">
+      <label>压缩引擎</label>
+      <select id="engine">
+        <option value="native" selected>浏览器原生 (快, 零下载)</option>
+        <option value="mozjpeg">mozjpeg (JPEG -10%~-25%, 首次 ~700 KB)</option>
+        <option value="oxipng">oxipng (PNG 无损 -5%~-30%, 首次 ~250 KB)</option>
+        <option value="webp-hq">webp 高质 (method=6, 首次 ~600 KB)</option>
+      </select>
+      <div class="info" style="margin-top:4px">mozjpeg 仅对 JPEG 输出生效; oxipng 仅对 PNG 输出生效; webp 高质仅对 WebP 输出生效</div>
+    </div>
 
     <h2>缩放</h2>
     <div class="field">
@@ -194,6 +204,7 @@
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/codecs.js"></script>
 <script>
 Toolkit.injectTopbar('image-optimizer');
 
@@ -287,13 +298,14 @@ Toolkit.injectTopbar('image-optimizer');
     const maxDim = parseInt($('maxDim').value, 10) || 1024;
     const scaleFactor = parseInt($('scale').value, 10) / 100;
     const bitDepth = parseInt($('bitDepth').value, 10);
+    const engine = $('engine').value;
 
     log.dim('处理中...');
     $('processBtn').disabled = true;
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       try {
-        const result = await processOne(it, { fmt, quality, resizeMode, maxDim, scaleFactor, bitDepth });
+        const result = await processOne(it, { fmt, quality, resizeMode, maxDim, scaleFactor, bitDepth, engine });
         it.optimizedBlob = result.blob;
         it.optimizedW = result.w;
         it.optimizedH = result.h;
@@ -312,7 +324,7 @@ Toolkit.injectTopbar('image-optimizer');
   });
 
   async function processOne(it, opts) {
-    let { fmt, quality, resizeMode, maxDim, scaleFactor, bitDepth } = opts;
+    let { fmt, quality, resizeMode, maxDim, scaleFactor, bitDepth, engine } = opts;
     let { width: w, height: h } = it.bitmap;
 
     if (resizeMode === 'maxDim') {
@@ -337,7 +349,31 @@ Toolkit.injectTopbar('image-optimizer');
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(outType)) outType = 'image/png';
     // PNG ignores quality; JPEG/WebP use it
     const useQuality = (outType === 'image/jpeg' || outType === 'image/webp') ? quality : undefined;
-    const blob = await canvasToBlob(cv, outType, useQuality);
+    let blob;
+    // High-quality engine routing — only kicks in when the engine selector
+    // matches the output format; otherwise fall through to canvas.toBlob.
+    const wantMozjpeg = engine === 'mozjpeg' && outType === 'image/jpeg' && window.Codecs;
+    const wantOxipng  = engine === 'oxipng'  && outType === 'image/png'  && window.Codecs;
+    const wantWebpHQ  = engine === 'webp-hq' && outType === 'image/webp' && window.Codecs;
+    if (wantMozjpeg) {
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const bytes = await Codecs.encodeJpeg(imageData, { quality });
+      blob = new Blob([bytes], { type: 'image/jpeg' });
+    } else if (wantOxipng) {
+      // canvas → PNG (browser) → oxipng → smaller PNG. Two-step but oxipng
+      // is purely re-deflating + optimizing chunk structure, no quality loss.
+      const nativePng = await canvasToBlob(cv, 'image/png');
+      if (!nativePng) throw new Error('canvas.toBlob 返回空');
+      const inputBytes = new Uint8Array(await nativePng.arrayBuffer());
+      const optimised = await Codecs.optimizePng(inputBytes, { level: 4 });
+      blob = new Blob([optimised], { type: 'image/png' });
+    } else if (wantWebpHQ) {
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const bytes = await Codecs.encodeWebp(imageData, { quality });
+      blob = new Blob([bytes], { type: 'image/webp' });
+    } else {
+      blob = await canvasToBlob(cv, outType, useQuality);
+    }
     if (!blob || blob.size < 64) throw new Error(`${outType} 编码失败 (浏览器返回空 blob)`);
     // Round-trip decode check: the re-encoded blob must read back at the
     // dimensions we wrote, otherwise canvas.toBlob produced a corrupt result

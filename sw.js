@@ -4,7 +4,7 @@
 //   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
 
-const CACHE = 'toolkit-v32';
+const CACHE = 'toolkit-v33';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
@@ -18,6 +18,7 @@ const CORE = [
   './assets/anim-encoders.js',
   './assets/rife.js',
   './assets/farneback.js',
+  './assets/codecs.js',
   './assets/png-crusher.worker.js',
   './assets/code-minify.worker.js',
   './tools/sprite-packer.html',

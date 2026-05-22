@@ -141,6 +141,15 @@
       <label class="checkbox"><input type="checkbox" id="autoDoVideos" checked /><span>压缩视频 (MP4 / WebM) — 慢</span></label>
       <label class="checkbox"><input type="checkbox" id="autoDoAudios" /><span>压缩音频 (WAV) — 中等</span></label>
 
+      <h2>图片压缩引擎</h2>
+      <div class="field">
+        <select id="autoImageEngine">
+          <option value="native" selected>浏览器原生 (快, 零下载)</option>
+          <option value="hq">mozjpeg + oxipng (体积 -10%~-25%, 首次联网 ~1 MB)</option>
+        </select>
+        <div class="info" style="margin-top:4px">"hq" 用 WASM 极致编码器,质量等价但体积更小;视频/音频不受此影响</div>
+      </div>
+
       <h2>导出</h2>
       <div class="field">
         <label>输出 HTML 文件名</label>
@@ -216,6 +225,7 @@
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/codecs.js"></script>
 <script>
 Toolkit.injectTopbar('playable-slim');
 
@@ -721,6 +731,7 @@ Toolkit.injectTopbar('playable-slim');
     $('autoStartBtn').disabled = true;
     $('autoClearBtn').disabled = true;
     const quality = $('autoQuality').value;
+    const imageEngine = $('autoImageEngine')?.value || 'native';
     const doImages = $('autoDoImages').checked;
     const doVideos = $('autoDoVideos').checked;
     const doAudios = $('autoDoAudios').checked;
@@ -741,7 +752,7 @@ Toolkit.injectTopbar('playable-slim');
         const bin = base64ToBytes(r._base64);
         let result = null;
         try {
-          if (cat === 'image' && doImages) result = await compressImage(bin, r.mime, quality);
+          if (cat === 'image' && doImages) result = await compressImage(bin, r.mime, quality, imageEngine);
           else if (cat === 'video' && doVideos) result = await compressVideo(bin, r.mime, quality);
           else if (cat === 'audio' && doAudios) result = await compressAudio(bin, r.mime, quality);
         } catch (err) {
@@ -802,8 +813,8 @@ Toolkit.injectTopbar('playable-slim');
     }
   });
 
-  // ---------- image compression via canvas.toBlob ----------
-  async function compressImage(bytes, mime, quality) {
+  // ---------- image compression via canvas.toBlob (or WASM via Codecs) ----------
+  async function compressImage(bytes, mime, quality, engine = 'native') {
     if (mime === 'image/gif' || mime === 'image/svg+xml' || mime === 'image/x-icon') return null;
     const blob = new Blob([bytes], { type: mime });
     let bmp;
@@ -836,7 +847,35 @@ Toolkit.injectTopbar('playable-slim');
       return null;
     }
 
-    const outBlob = await new Promise(r => c.toBlob(r, outMime, outQ));
+    // High-quality engine routing (mozjpeg / oxipng). Only used when the
+    // user opted in AND the output format has a matching WASM codec.
+    let outBlob = null;
+    if (engine === 'hq' && window.Codecs) {
+      try {
+        if (outMime === 'image/jpeg') {
+          const imageData = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+          const bytes = await Codecs.encodeJpeg(imageData, { quality: outQ });
+          outBlob = new Blob([bytes], { type: 'image/jpeg' });
+        } else if (outMime === 'image/png') {
+          const nativePng = await new Promise(r => c.toBlob(r, 'image/png'));
+          if (nativePng) {
+            const inBytes = new Uint8Array(await nativePng.arrayBuffer());
+            const optimised = await Codecs.optimizePng(inBytes, { level: 4 });
+            outBlob = new Blob([optimised], { type: 'image/png' });
+          }
+        }
+        // image/webp falls back to canvas.toBlob below — Codecs.encodeWebp
+        // exists but in practice canvas.toBlob's WebP is already close to optimal
+        // and faster; can be added later if useful.
+      } catch (e) {
+        // codec failure (network, OOM, malformed input) — fall through to
+        // the native path below so we still attempt compression
+        console.warn('[hq] codec failed, falling back to native:', e);
+      }
+    }
+    if (!outBlob) {
+      outBlob = await new Promise(r => c.toBlob(r, outMime, outQ));
+    }
     if (!outBlob || outBlob.size < 64) return null;
     // Verify the re-encoded blob actually decodes back to the same dimensions.
     // Without this guard, certain images (esp. very large or with unusual
