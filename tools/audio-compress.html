@@ -367,6 +367,19 @@ Toolkit.injectTopbar('audio-compress');
         blob = await encodeWebmOpus(rendered);
         outExt = 'webm';
       }
+      // Sanity-check the produced blob before exposing it. Silent failures
+      // here used to ship a 0-byte file to the user; now we throw loudly so
+      // the log shows what went wrong instead of an empty download.
+      if (!blob || blob.size === 0) throw new Error('编码输出为空 (可能是音轨为静音或浏览器拒绝录制)');
+      const headBuf = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+      if (outExt === 'wav') {
+        const okRiff = headBuf[0]===0x52 && headBuf[1]===0x49 && headBuf[2]===0x46 && headBuf[3]===0x46;
+        const okWave = headBuf[8]===0x57 && headBuf[9]===0x41 && headBuf[10]===0x56 && headBuf[11]===0x45;
+        if (!okRiff || !okWave || blob.size < 64) throw new Error('输出 WAV 校验失败 — header 不正确');
+      } else if (outExt === 'webm') {
+        const okEbml = headBuf[0]===0x1A && headBuf[1]===0x45 && headBuf[2]===0xDF && headBuf[3]===0xA3;
+        if (!okEbml || blob.size < 512) throw new Error('输出 WebM 校验失败 — 录制可能为空');
+      }
       outBlob = blob;
       $('outStat').textContent = fmtBytes(blob.size);
       const orig = srcFile.size, opt = blob.size;

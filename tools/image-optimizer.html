@@ -338,6 +338,18 @@ Toolkit.injectTopbar('image-optimizer');
     // PNG ignores quality; JPEG/WebP use it
     const useQuality = (outType === 'image/jpeg' || outType === 'image/webp') ? quality : undefined;
     const blob = await canvasToBlob(cv, outType, useQuality);
+    if (!blob || blob.size < 64) throw new Error(`${outType} 编码失败 (浏览器返回空 blob)`);
+    // Round-trip decode check: the re-encoded blob must read back at the
+    // dimensions we wrote, otherwise canvas.toBlob produced a corrupt result
+    // (rare but happens for unusual color profiles / huge sizes).
+    try {
+      const bmp = await createImageBitmap(blob);
+      const ok = bmp.width === w && bmp.height === h;
+      bmp.close?.();
+      if (!ok) throw new Error('解码后尺寸与目标不符');
+    } catch (e) {
+      throw new Error(`输出校验失败: ${e.message}`);
+    }
 
     const ext = outType === 'image/jpeg' ? '.jpg' : outType === 'image/webp' ? '.webp' : '.png';
     const baseName = it.file.name.replace(/\.[^.]+$/, '');

@@ -683,9 +683,10 @@ Toolkit.injectTopbar('video-toolkit');
         video: { codec: 'avc', width: outW, height: outH },
         fastStart: 'in-memory'
       });
+      let encoderError = null;
       const encoder = new VideoEncoder({
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: e => log.err('encoder: ' + e.message)
+        error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
       // pick H.264 profile based on resolution
       encoder.configure({
@@ -745,6 +746,8 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
+      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
+      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
       outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
       outExt = 'mp4';
       showOutput();
@@ -914,9 +917,10 @@ Toolkit.injectTopbar('video-toolkit');
       video: { codec: 'avc', width: outW, height: outH },
       fastStart: 'in-memory'
     });
+    let encoderError = null;
     const encoder = new VideoEncoder({
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-      error: e => log.err('encoder: ' + e.message)
+      error: e => { encoderError = e; log.err('encoder: ' + e.message); }
     });
     encoder.configure({
       codec: 'avc1.42001f',
@@ -963,6 +967,8 @@ Toolkit.injectTopbar('video-toolkit');
     await encoder.flush();
     encoder.close();
     muxer.finalize();
+    if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
+    if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
     outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
     outExt = 'mp4';
     progress.set(1);
@@ -1126,9 +1132,10 @@ Toolkit.injectTopbar('video-toolkit');
         video: { codec: 'avc', width: w, height: h },
         fastStart: 'in-memory'
       });
+      let encoderError = null;
       const encoder = new VideoEncoder({
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: e => log.err('encoder: ' + e.message)
+        error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
       encoder.configure({
         codec: 'avc1.42001f',
@@ -1139,6 +1146,7 @@ Toolkit.injectTopbar('video-toolkit');
       const cv = newCanvas(w, h);
       const ctx = cv.getContext('2d');
       for (let i = 0; i < frameBitmaps.length; i++) {
+        if (encoderError) break;
         // fill background color first
         ctx.fillStyle = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
         ctx.fillRect(0, 0, w, h);
@@ -1152,6 +1160,8 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
+      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
+      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
       outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
       outExt = 'mp4';
       showOutput();
@@ -1164,9 +1174,10 @@ Toolkit.injectTopbar('video-toolkit');
         target: new ArrayBufferTarget(),
         video: { codec: 'V_VP9', width: w, height: h, alpha: true },
       });
+      let encoderError = null;
       const encoder = new VideoEncoder({
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: e => log.err('encoder: ' + e.message)
+        error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
       try {
         encoder.configure({
@@ -1180,6 +1191,7 @@ Toolkit.injectTopbar('video-toolkit');
         throw new Error('VP9 alpha 编码不支持 (Chrome 113+): ' + e.message);
       }
       for (let i = 0; i < frameBitmaps.length; i++) {
+        if (encoderError) break;
         const vf = new VideoFrame(frameBitmaps[i].bitmap, { timestamp: Math.round(i * 1e6 / fps), alpha: 'keep' });
         encoder.encode(vf, { keyFrame: i % 30 === 0 });
         vf.close();
@@ -1188,6 +1200,8 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
+      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
+      if (!validateWebmBuffer(muxer.target.buffer)) throw new Error('输出 WebM 校验失败 — 编码可能未完成或损坏');
       outBlob = new Blob([muxer.target.buffer], { type: 'video/webm' });
       outExt = 'webm';
       showOutput();
@@ -1363,10 +1377,30 @@ Toolkit.injectTopbar('video-toolkit');
 
   function seekVideo(video, t) {
     return new Promise((resolve) => {
+      // Skip the round-trip when we're already at the target time, otherwise
+      // `seeked` won't fire and the promise hangs — that hang silently
+      // truncates encoded output (same class as the playable-slim bug).
+      if (Math.abs(video.currentTime - t) < 1e-4) { resolve(); return; }
       const onSeek = () => { video.removeEventListener('seeked', onSeek); resolve(); };
       video.addEventListener('seeked', onSeek);
       video.currentTime = t;
     });
+  }
+
+  // Quick MP4 sanity check — must be at least 1KB AND have the "ftyp" box
+  // signature at offset 4 (bytes 0x66 0x74 0x79 0x70). Used right after
+  // muxer.finalize() to refuse to hand back a corrupt buffer.
+  function validateMp4Buffer(buf) {
+    if (!buf || buf.byteLength < 1024) return false;
+    const u = new Uint8Array(buf, 0, 12);
+    return u[4] === 0x66 && u[5] === 0x74 && u[6] === 0x79 && u[7] === 0x70;
+  }
+  // Same idea for WebM — first 4 bytes must be the EBML header (0x1A 0x45
+  // 0xDF 0xA3) and the file must be plausibly long.
+  function validateWebmBuffer(buf) {
+    if (!buf || buf.byteLength < 1024) return false;
+    const u = new Uint8Array(buf, 0, 4);
+    return u[0] === 0x1A && u[1] === 0x45 && u[2] === 0xDF && u[3] === 0xA3;
   }
 
   $('downloadBtn').addEventListener('click', () => {

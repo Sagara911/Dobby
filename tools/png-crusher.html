@@ -270,6 +270,14 @@ Toolkit.injectTopbar('png-crusher');
       };
       worker.onerror = (e) => {
         console.error('worker error', e);
+        // Reject any in-flight jobs so the UI surfaces the failure instead
+        // of silently hanging on promises that will never resolve.
+        for (const [id, job] of workerJobs) {
+          try { job.reject(new Error('worker 崩溃: ' + (e.message || 'unknown error'))); } catch (_) {}
+        }
+        workerJobs.clear();
+        // Drop the bad worker; next crushInWorker call will spawn a fresh one.
+        worker = null;
       };
     }
     return worker;
@@ -456,6 +464,13 @@ Toolkit.injectTopbar('png-crusher');
         const buf = await crushInWorker(it.imageData, { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh },
           (pct, status) => progress.set(((i + pct) / items.length))
         );
+        // PNG magic check — worker should always emit a valid PNG, but if it
+        // returned a partial/empty buffer we'd silently ship a broken image.
+        if (!buf || buf.length < 16 ||
+            buf[0]!==0x89 || buf[1]!==0x50 || buf[2]!==0x4E || buf[3]!==0x47 ||
+            buf[4]!==0x0D || buf[5]!==0x0A || buf[6]!==0x1A || buf[7]!==0x0A) {
+          throw new Error('worker 输出不是合法 PNG (header 错误)');
+        }
         it.crushedBlob = new Blob([buf], { type: 'image/png' });
         renderRowResult(i);
       } catch (e) {
