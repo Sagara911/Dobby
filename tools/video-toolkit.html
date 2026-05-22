@@ -145,6 +145,15 @@
       </select>
     </div>
     <div class="field">
+      <label>H.264 profile (仅 MP4 输出)</label>
+      <select id="h264Profile">
+        <option value="baseline" selected>Baseline (兼容老设备, 体积稍大)</option>
+        <option value="main">Main (主流, 体积 -5%~-10%)</option>
+        <option value="high">High (推荐现代设备, 体积 -10%~-20%)</option>
+      </select>
+      <div class="info" style="margin-top:4px">所有主流浏览器和 ≥2014 年的设备都支持 High profile;选 High 比特率不变但视觉质量更好</div>
+    </div>
+    <div class="field">
       <label>比特率 (Kbps)</label>
       <input type="number" id="bitrate" value="3000" min="200" max="20000" />
     </div>
@@ -690,7 +699,7 @@ Toolkit.injectTopbar('video-toolkit');
       });
       // pick H.264 profile based on resolution
       encoder.configure({
-        codec: 'avc1.42001f', // H.264 Baseline, level 3.1 (most compatible)
+        codec: h264Codec(),
         width: outW, height: outH,
         bitrate,
         framerate: fpsNum
@@ -923,7 +932,7 @@ Toolkit.injectTopbar('video-toolkit');
       error: e => { encoderError = e; log.err('encoder: ' + e.message); }
     });
     encoder.configure({
-      codec: 'avc1.42001f',
+      codec: h264Codec(),
       width: outW, height: outH,
       bitrate,
       framerate: target,
@@ -1138,7 +1147,7 @@ Toolkit.injectTopbar('video-toolkit');
         error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
       encoder.configure({
-        codec: 'avc1.42001f',
+        codec: h264Codec(),
         width: w, height: h,
         bitrate: 3_000_000,
         framerate: fps
@@ -1385,6 +1394,17 @@ Toolkit.injectTopbar('video-toolkit');
       video.addEventListener('seeked', onSeek);
       video.currentTime = t;
     });
+  }
+
+  // H.264 codec string from the profile selector. Baseline is the default
+  // for older-device compatibility; Main and High give 5-20% better
+  // compression at the same bitrate but every modern browser and ≥2014-ish
+  // hardware decoder supports both. Affects all three MP4 encoder paths.
+  function h264Codec() {
+    const p = document.getElementById('h264Profile')?.value || 'baseline';
+    if (p === 'high') return 'avc1.640028';  // High @ Level 4.0
+    if (p === 'main') return 'avc1.4D4028';  // Main @ Level 4.0
+    return 'avc1.42001f';                     // Baseline @ Level 3.1
   }
 
   // Quick MP4 sanity check — must be at least 1KB AND have the "ftyp" box

@@ -141,6 +141,12 @@
           <option value="apng">APNG (画质好,支持 8-bit alpha)</option>
         </select>
       </div>
+      <div class="field" id="makeApngHint" style="display:none">
+        <div class="info" style="padding:7px 10px; background:rgba(255,180,60,0.10); border-left:2px solid #ffb43c; border-radius:6px; line-height:1.5; color:#ffd998">
+          ⚠ APNG 是动画图片,但 <strong>Windows 图片查看器 / Mac 预览只显示第一帧</strong>。要看动画,把文件拖入 Chrome/Firefox/Edge 浏览器,或嵌到网页 <code>&lt;img&gt;</code> 标签里。<br/>
+          需要更兼容的动图 → 选 GIF。
+        </div>
+      </div>
       <div class="field" id="makePaletteField">
         <label>调色板算法 (仅 GIF)</label>
         <select id="makePalette">
@@ -307,7 +313,9 @@ Toolkit.injectTopbar('gif-tools');
   attachDropZone($('makeDropZone'), $('makeFileInput'), handleMakeFiles);
 
   $('makeFormat').addEventListener('change', e => {
-    $('makePaletteField').style.display = e.target.value === 'gif' ? '' : 'none';
+    const isGif = e.target.value === 'gif';
+    $('makePaletteField').style.display = isGif ? '' : 'none';
+    $('makeApngHint').style.display = isGif ? 'none' : '';
   });
 
   async function handleMakeFiles(files) {
@@ -382,7 +390,10 @@ Toolkit.injectTopbar('gif-tools');
         makeLastExt = 'gif';
       } else {
         blob = await AnimEncoders.buildApng(makeFrames, encoderOpts);
-        makeLastExt = 'png';
+        // Use .apng so file managers / browsers route it through APNG-aware
+        // viewers. Byte content is identical to .png (acTL/fcTL chunks make
+        // it an APNG); the extension just signals intent.
+        makeLastExt = 'apng';
       }
       makeLastBlob = blob;
       const t1 = performance.now();

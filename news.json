@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "v34",
+      "date": "2026-05-21",
+      "title": "更多压缩选项 + APNG 提示",
+      "items": [
+        "video-toolkit 新增 H.264 profile 选择 (Baseline/Main/High),High 同比特率下质量更好",
+        "gif-tools APNG 输出加扩展名 .apng + 看图器提示 (Windows Photos 只显示第一帧,用浏览器看动画)",
+        "GIF/APNG 选项切换时自动展开/收起对应的 hint 与参数"
+      ]
+    },
+    {
       "version": "v33",
       "date": "2026-05-21",
       "title": "高质量压缩引擎 (mozjpeg + oxipng)",
