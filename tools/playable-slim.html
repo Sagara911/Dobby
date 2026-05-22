@@ -900,9 +900,13 @@ Toolkit.injectTopbar('playable-slim');
       video: { codec: 'avc', width: outW, height: outH },
       fastStart: 'in-memory'
     });
+    // Track encoder errors instead of just logging — silent failure here
+    // used to leak through and produce empty/corrupt MP4s that still
+    // passed the 2%-savings gate, replacing working videos with junk.
+    let encoderError = null;
     const encoder = new VideoEncoder({
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-      error: e => console.error('encoder', e)
+      error: e => { encoderError = e; console.error('encoder', e); }
     });
     encoder.configure({
       codec: 'avc1.42001f',
@@ -917,27 +921,47 @@ Toolkit.injectTopbar('playable-slim');
     const interval = 1 / p.fps;
     let frameIdx = 0;
     let t = 0;
+    // seekTo: force a measurable change in currentTime each call so the
+    // seeked event always fires. Without this, calling currentTime=N twice
+    // (e.g. first frame already at 0, or two frames rounding to the same
+    // duration-clamped value near the end) leaves the promise hanging
+    // forever and the output is truncated at that point.
     function seekTo(time) {
       return new Promise(resolve => {
+        const target = Math.min(time, duration - 0.001);
+        if (Math.abs(video.currentTime - target) < 1e-4) { resolve(); return; }
         const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
         video.addEventListener('seeked', onSeeked);
-        video.currentTime = Math.min(time, duration - 0.001);
+        video.currentTime = target;
       });
     }
-    while (t < duration) {
-      await seekTo(t);
-      ctx.drawImage(video, 0, 0, outW, outH);
-      const vf = new VideoFrame(cv, { timestamp: Math.round((frameIdx / p.fps) * 1e6) });
-      encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
-      vf.close();
-      frameIdx++;
-      t += interval;
+    try {
+      while (t < duration) {
+        if (encoderError) break;
+        await seekTo(t);
+        ctx.drawImage(video, 0, 0, outW, outH);
+        const vf = new VideoFrame(cv, { timestamp: Math.round((frameIdx / p.fps) * 1e6) });
+        encoder.encode(vf, { keyFrame: frameIdx % 30 === 0 });
+        vf.close();
+        frameIdx++;
+        t += interval;
+      }
+      await encoder.flush();
+    } catch (e) {
+      encoderError = encoderError || e;
+    } finally {
+      try { encoder.close(); } catch (_) {}
+      URL.revokeObjectURL(url);
     }
-    await encoder.flush();
-    encoder.close();
     muxer.finalize();
-    URL.revokeObjectURL(url);
-    return { bytes: new Uint8Array(muxer.target.buffer), mime: 'video/mp4' };
+    const outBytes = new Uint8Array(muxer.target.buffer);
+    // Verify the output is a real MP4 (has the ftyp box at offset 4) and is
+    // big enough to plausibly contain frames. Otherwise return null so the
+    // caller keeps the original.
+    if (encoderError) return null;
+    if (outBytes.length < 1024) return null;
+    if (outBytes[4] !== 0x66 || outBytes[5] !== 0x74 || outBytes[6] !== 0x79 || outBytes[7] !== 0x70) return null;
+    return { bytes: outBytes, mime: 'video/mp4' };
   }
 
   // ---------- audio compression: WAV resample + mono ----------
@@ -964,8 +988,16 @@ Toolkit.injectTopbar('playable-slim');
     src.buffer = buf;
     src.connect(offline.destination);
     src.start();
-    const resampled = await offline.startRendering();
-    return { bytes: encodeWav16(resampled), mime: 'audio/wav' };
+    let resampled;
+    try { resampled = await offline.startRendering(); } catch (_) { return null; }
+    if (!resampled || resampled.length === 0) return null;
+    const wavBytes = encodeWav16(resampled);
+    // Sanity-check: WAV must start with "RIFF" + some size + "WAVE".
+    // Anything shorter than a minimal header+sample is garbage.
+    if (wavBytes.length < 64) return null;
+    if (wavBytes[0] !== 0x52 || wavBytes[1] !== 0x49 || wavBytes[2] !== 0x46 || wavBytes[3] !== 0x46) return null;
+    if (wavBytes[8] !== 0x57 || wavBytes[9] !== 0x41 || wavBytes[10] !== 0x56 || wavBytes[11] !== 0x45) return null;
+    return { bytes: wavBytes, mime: 'audio/wav' };
   }
 
   function encodeWav16(audioBuffer) {
