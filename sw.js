@@ -1,10 +1,12 @@
-﻿// Dobby service worker — offline-first cache for the whole site.
+﻿// Dobby service worker — online-first with offline fallback.
 // Strategy:
-//   HTML same-origin → network-first (always try fresh; fall back to cache offline)
-//   Assets same-origin → stale-while-revalidate (serve cache instantly, update in background)
+//   Same-origin (HTML + assets) → network-first (always try fresh, fall back to cache offline)
 //   Cross-origin (esm.sh / fonts / huggingface CDNs) → pass through, never cached here
+// Rationale: SWR for assets used to bite users on every deploy (copy/UI changes only
+// showed after a SECOND refresh). Network-first costs one extra round-trip per request
+// online but matches "push = next refresh shows it" behavior of a normal website.
 
-const CACHE = 'dobby-v3';
+const CACHE = 'dobby-v4';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
@@ -77,41 +79,20 @@ self.addEventListener('fetch', (e) => {
                  || /\.html?$/i.test(url.pathname)
                  || url.pathname.endsWith('/');
 
-  if (isHtml) {
-    // network-first for HTML — always try fresh, fall back to cache offline.
-    e.respondWith(
-      fetch(req).then(resp => {
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(req, clone));
-        } else if (resp.status === 404) {
-          // file deleted from server — purge any stale cached copy so future loads stop serving it
-          caches.open(CACHE).then(c => c.delete(req));
-        }
-        return resp;
-      }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
-    );
-    return;
-  }
-
-  // stale-while-revalidate for assets:
-  //  - serve cache immediately so the page loads instantly
-  //  - simultaneously fetch a fresh copy in the background and replace the cache
-  //  - the NEXT page load gets the updated asset
+  // Network-first for ALL same-origin requests. Online: always fresh. Offline:
+  // fall back to whatever's cached (HTML navigations fall back to index.html
+  // so the SPA shell still loads).
   e.respondWith(
-    caches.match(req).then(cached => {
-      const networkFetch = fetch(req).then(resp => {
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(req, clone));
-        } else if (resp.status === 404) {
-          // server says gone — drop any stale cached copy so the next visit doesn't resurrect it
-          caches.open(CACHE).then(c => c.delete(req));
-        }
-        return resp;
-      }).catch(() => null);
-      return cached || networkFetch;
-    })
+    fetch(req).then(resp => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(req, clone));
+      } else if (resp.status === 404) {
+        // server says gone — drop any stale cached copy so the next visit doesn't resurrect it
+        caches.open(CACHE).then(c => c.delete(req));
+      }
+      return resp;
+    }).catch(() => caches.match(req).then(c => c || (isHtml ? caches.match('./index.html') : undefined)))
   );
 });
 
