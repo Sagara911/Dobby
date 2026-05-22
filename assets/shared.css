@@ -1642,12 +1642,14 @@ button.danger:hover { background: linear-gradient(180deg, #ff7575, var(--danger)
   }
   .topbar { padding: 10px 14px; gap: 8px; flex-wrap: nowrap; border-radius: 18px; }
   .topbar nav { gap: 2px; }
-  /* hide the "反馈" label on narrow widths — the icon alone still works */
+  /* Below 900 px: every "name" string in the topbar drops out and only
+     icons remain. The 5 nav-cat dropdowns shrink to icon-only buttons
+     (the title attribute carries the name for tooltip). 反馈 label
+     hides, brand text hides — same pattern across the bar. */
+  .topbar .nav-cat .nav-cat-name { display: none; }
+  .topbar .nav-cat { padding: 5px 8px; gap: 3px; }
+  .topbar .nav-cat .caret { font-size: 8px; opacity: 0.4; }
   .topbar-pill-btn span:not(.emoji) { display: none; }
   .topbar-pill-btn { padding: 0 10px; }
-  /* once we have 5 nav categories + 2 right-side buttons, the brand
-     text "Playable Toolkit" starts crashing into the nav. Hide it
-     and keep only the 🧰 logo (matches "if cramped, drop the text"
-     pattern used for the 反馈 label and the meta block). */
   .topbar .brand span:last-child { display: none; }
 }

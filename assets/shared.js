@@ -193,8 +193,8 @@
           const isActive = currentCat === c.id;
           return `
             <div class="nav-group ${isActive ? 'active' : ''}">
-              <a href="${prefix}index.html#cat-${c.id}" class="nav-cat">
-                <span class="cat-icon">${c.icon}</span>${c.name}
+              <a href="${prefix}index.html#cat-${c.id}" class="nav-cat" title="${c.name}">
+                <span class="cat-icon">${c.icon}</span><span class="nav-cat-name">${c.name}</span>
                 <span class="caret">▾</span>
               </a>
               <div class="nav-dropdown">
