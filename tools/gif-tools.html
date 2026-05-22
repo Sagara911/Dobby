@@ -173,7 +173,7 @@
       <div class="drop-zone" id="editDropZone">
         <p>📂 拖入 GIF 或 APNG</p>
         <p class="hint">加载后选择一种操作<br/>想叠加多种操作?导出后再拖入</p>
-        <input type="file" id="editFileInput" accept="image/gif,image/png,.gif,.png" style="display:none" />
+        <input type="file" id="editFileInput" accept="image/gif,image/png,image/apng,.gif,.png,.apng" style="display:none" />
       </div>
       <div class="progress" id="editProgress"><div class="progress-bar"></div></div>
 
@@ -197,11 +197,18 @@
 
       <h2>输出</h2>
       <div class="field">
+        <label>输出格式</label>
+        <select id="editOutFormat">
+          <option value="gif">GIF (256 色, 兼容性最好)</option>
+          <option value="apng">APNG (真透明, 不减色)</option>
+        </select>
+      </div>
+      <div class="field">
         <label>文件名</label>
         <input type="text" id="editFilename" value="edited" />
       </div>
-      <div class="field">
-        <label>调色板算法</label>
+      <div class="field" id="editPaletteField">
+        <label>调色板算法 (仅 GIF)</label>
         <select id="editPalette">
           <option value="median">中位切分 256 色 (慢, 质量好)</option>
           <option value="uniform">均匀 6×6×6 (快)</option>
@@ -475,15 +482,24 @@ Toolkit.injectTopbar('gif-tools');
   let editSrcWidth = 0, editSrcHeight = 0, editSrcFps = 12;
   let editSrcSize = 0;
   let editLastBlob = null;
+  let editLastFormat = 'gif';
+
+  function syncEditFormatUI() {
+    const fmt = $('editOutFormat')?.value;
+    const paletteField = $('editPaletteField');
+    if (paletteField) paletteField.style.display = (fmt === 'apng') ? 'none' : '';
+  }
 
   attachDropZone($('editDropZone'), $('editFileInput'), handleEditFiles);
   $('editAction').addEventListener('change', renderEditActionControls);
+  $('editOutFormat').addEventListener('change', syncEditFormatUI);
+  syncEditFormatUI();
 
   async function handleEditFiles(files) {
     if (!files.length) return;
     const f = files[0];
     const isGif = /\.gif$/i.test(f.name) || f.type === 'image/gif';
-    const isPng = /\.png$/i.test(f.name) || f.type === 'image/png';
+    const isPng = /\.(png|apng)$/i.test(f.name) || f.type === 'image/png' || f.type === 'image/apng';
     if (!isGif && !isPng) {
       log.err('请拖入 GIF 或 APNG 文件');
       return;
@@ -492,6 +508,10 @@ Toolkit.injectTopbar('gif-tools');
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {
       const frames = await AnimEncoders.decodeAnim(f, isGif ? 'image/gif' : 'image/png');
+      // Default output format to match the input — preserves alpha when user drops an APNG.
+      const fmtSel = $('editOutFormat');
+      if (fmtSel) fmtSel.value = isGif ? 'gif' : 'apng';
+      syncEditFormatUI();
       loadEditFrames(frames, f);
     } catch (e) {
       log.err(e.message);
@@ -729,15 +749,24 @@ Toolkit.injectTopbar('gif-tools');
 
     try {
       const result = editTransform(action);
-      const blob = await AnimEncoders.buildGif(result.frames, {
-        fps: result.fps,
-        loop: 0,
-        paletteMode: $('editPalette').value,
-        onProgress: pct => editProg.set(pct),
-        onStatus: msg => log.dim('  ' + msg)
-      });
+      const outFmt = $('editOutFormat').value;
+      const blob = outFmt === 'apng'
+        ? await AnimEncoders.buildApng(result.frames, {
+            fps: result.fps,
+            loop: 0,
+            onProgress: pct => editProg.set(pct),
+            onStatus: msg => log.dim('  ' + msg)
+          })
+        : await AnimEncoders.buildGif(result.frames, {
+            fps: result.fps,
+            loop: 0,
+            paletteMode: $('editPalette').value,
+            onProgress: pct => editProg.set(pct),
+            onStatus: msg => log.dim('  ' + msg)
+          });
       editLastBlob = blob;
-      log.ok(`生成完成 ${fmtBytes(blob.size)}`);
+      editLastFormat = outFmt;
+      log.ok(`生成完成 ${fmtBytes(blob.size)} (${outFmt.toUpperCase()})`);
       if (editSrcSize > 0) {
         const pct = Math.round((1 - blob.size / editSrcSize) * 100);
         const arrow = pct >= 0 ? '↓' : '↑';
@@ -752,7 +781,9 @@ Toolkit.injectTopbar('gif-tools');
       $('editOutBox').appendChild(img);
       $('editDownloadBtn').disabled = false;
       $('editUseAsSourceBtn').disabled = false;
-      handoff?.setBlob(blob, ($('editFilename').value || 'edited') + '.gif');
+      const outExt = outFmt === 'apng' ? '.apng' : '.gif';
+      const outMime = outFmt === 'apng' ? 'image/png' : 'image/gif';
+      handoff?.setBlob(blob, ($('editFilename').value || 'edited') + outExt, outMime);
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -893,15 +924,18 @@ Toolkit.injectTopbar('gif-tools');
   $('editDownloadBtn').addEventListener('click', () => {
     if (!editLastBlob) return;
     const name = ($('editFilename').value || 'edited').replace(/[^\w-]/g, '_');
-    download(editLastBlob, name + '.gif');
+    const ext = editLastFormat === 'apng' ? '.apng' : '.gif';
+    download(editLastBlob, name + ext);
   });
 
   $('editUseAsSourceBtn').addEventListener('click', async () => {
     if (!editLastBlob) return;
     log.dim('解码上一步输出作为新输入...');
     try {
-      const frames = await AnimEncoders.decodeGif(editLastBlob);
-      loadEditFrames(frames, editLastBlob, ($('editFilename').value || 'edited') + '.gif');
+      const mimeHint = editLastFormat === 'apng' ? 'image/png' : 'image/gif';
+      const frames = await AnimEncoders.decodeAnim(editLastBlob, mimeHint);
+      const ext = editLastFormat === 'apng' ? '.apng' : '.gif';
+      loadEditFrames(frames, editLastBlob, ($('editFilename').value || 'edited') + ext);
       $('editOutBox').innerHTML = '<div class="preview-empty">应用下一个操作</div>';
       $('editUseAsSourceBtn').disabled = true;
       $('editDownloadBtn').disabled = true;
