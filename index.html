@@ -623,10 +623,10 @@
       <button class="clear" id="searchClear" type="button" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
-    <div class="hero-stats">
-      <span class="stat"><strong>23</strong> 个工具</span>
+    <div class="hero-stats" id="heroStats">
+      <span class="stat"><strong id="statToolCount">—</strong> 个工具</span>
       <span class="sep"></span>
-      <span class="stat"><strong>5</strong> 大类</span>
+      <span class="stat"><strong id="statCatCount">—</strong> 大类</span>
       <span class="sep"></span>
       <span class="stat">⚡ 零构建</span>
       <span class="sep"></span>
@@ -696,6 +696,11 @@
 
   // Build card list from shared TOOLS data
   const CARDS = Toolkit.TOOLS.filter(t => t.id !== 'home');
+
+  // Fill in the hero stats from the source-of-truth TOOLS / CATEGORIES
+  // arrays — no more hard-coded counts that go stale when tools are added.
+  document.getElementById('statToolCount').textContent = CARDS.length;
+  document.getElementById('statCatCount').textContent  = CATEGORIES.length;
 
   // Hero category chips — colored quick-jump buttons that double as a visual
   // anchor for the hero section.
