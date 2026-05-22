@@ -340,10 +340,10 @@
       panel.className = 'feedback-popover';
       panel.innerHTML = `
         <div class="fp-head">
-          <span>🚧 测试阶段</span>
+          <span>🧦 Dobby 还在学本事</span>
           <button type="button" class="fp-close" aria-label="关闭">×</button>
         </div>
-        <div class="fp-body">网站还在测试中, 欢迎邮件反馈使用问题或建议:</div>
+        <div class="fp-body">主人发现 Dobby 做错了或者想学新本事? 邮件告诉主人:</div>
         <a class="fp-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
       `;
       document.body.appendChild(panel);
@@ -437,7 +437,7 @@
       ? `<div class="news-toast-more">还有 ${moreCount} 条历史更新…</div>` : '';
     t.innerHTML = `
       <div class="news-toast-head">
-        <span class="news-toast-tag">✨ 新版</span>
+        <span class="news-toast-tag">🧦 Dobby 学了新本事</span>
         <span class="news-toast-title">${escapeHtml(head.title || head.version)}</span>
         <button type="button" class="news-toast-x" title="知道了">×</button>
       </div>
@@ -495,7 +495,7 @@
     const pill = document.createElement('a');
     pill.className = 'handoff-back-pill';
     pill.href = info.url;
-    pill.innerHTML = `<span class="arr">⏪</span><span>回到 ${info.toolName}</span><button class="dismiss" type="button" title="不再显示">×</button>`;
+    pill.innerHTML = `<span class="arr">⏪</span><span>Dobby 带你回 ${info.toolName}</span><button class="dismiss" type="button" title="不再显示">×</button>`;
     pill.addEventListener('click', (e) => {
       if (e.target.classList.contains('dismiss')) {
         e.preventDefault();
@@ -679,7 +679,7 @@
     box.className = 'instructions';
     box.open = opts.collapsed ? false : true;
     box.innerHTML = `
-      <summary>📖 使用步骤</summary>
+      <summary>📖 Dobby 怎么干这活</summary>
       <ol>
         ${steps.map(s => `<li>${s}</li>`).join('')}
       </ol>
@@ -773,7 +773,7 @@
           const expanded = await unzipBlob(f);
           if (expanded && expanded.length) {
             out.push(...expanded);
-            toast(`✨ ZIP "${f.name}" 已自动解压 ${expanded.length} 个文件`, 'ok', 3500);
+            toast(`🧦 Dobby 帮你拆开了 ZIP "${f.name}" · ${expanded.length} 个文件`, 'ok', 3500);
             continue;
           }
         } catch (err) {
@@ -932,11 +932,11 @@
   function installErrorBoundary() {
     window.addEventListener('error', (e) => {
       console.error('[uncaught]', e.error || e.message);
-      toast('未捕获错误: ' + (e.error?.message || e.message), 'err', 6000);
+      toast('Bad Dobby! 这步搞砸了: ' + (e.error?.message || e.message), 'err', 6000);
     });
     window.addEventListener('unhandledrejection', (e) => {
       console.error('[unhandled rejection]', e.reason);
-      toast('Promise 错误: ' + (e.reason?.message || String(e.reason)), 'err', 6000);
+      toast('Bad Dobby! Promise 出错了: ' + (e.reason?.message || String(e.reason)), 'err', 6000);
     });
   }
 
@@ -1094,13 +1094,13 @@
             const extracted = await unzipBlob(incoming);
             if (extracted.length) {
               toDeliver = extracted;
-              toast(`✨ 收到 ZIP,自动解压 ${extracted.length} 个文件`, 'ok', 4500);
+              toast(`🧦 Dobby 顺手拆了 ZIP · ${extracted.length} 个文件`, 'ok', 4500);
             }
           } catch (e) {
             toast('ZIP 解压失败,尝试整体处理: ' + e.message, 'warn', 4500);
           }
         } else {
-          toast(`✨ 从上一个工具收到 ${incoming.name}`, 'ok', 4500);
+          toast(`🧦 Dobby 把 ${incoming.name} 带过来了`, 'ok', 4500);
         }
         const handler = opts.onIncoming || ((filesOrFile) => {
           // Look for the well-known #dropZone first; if a tool uses a custom id,
@@ -1127,7 +1127,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'handoff-wrap';
     wrap.innerHTML = `
-      <button class="handoff-btn secondary" id="__handoffBtn__" disabled>📤 发送到下一个工具 ▾</button>
+      <button class="handoff-btn secondary" id="__handoffBtn__" disabled>📤 让 Dobby 送到下一个工具 ▾</button>
       <div class="handoff-menu" id="__handoffMenu__"></div>
     `;
     sidebar.appendChild(wrap);
@@ -1242,7 +1242,7 @@
     btn.innerHTML = '🎨';
     btn.addEventListener('click', async () => {
       if (!('EyeDropper' in window)) {
-        toast('浏览器不支持 EyeDropper,请用 Chrome 95+ / Edge 95+', 'warn', 4500);
+        toast('Bad Dobby! 这个浏览器不让 Dobby 吸色,请用 Chrome 95+ / Edge 95+', 'warn', 4500);
         return;
       }
       try {
@@ -1252,7 +1252,7 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
         updateSwatch();
-        toast(`已吸取 ${r.sRGBHex}`, 'ok', 2500);
+        toast(`🧦 Dobby 吸到了 ${r.sRGBHex}`, 'ok', 2500);
       } catch (e) {
         // user cancelled / Esc — silent
       }

@@ -310,7 +310,7 @@ Toolkit.injectTopbar('audio-compress');
   $('processBtn').addEventListener('click', async () => {
     if (!srcBuffer) return;
     $('processBtn').disabled = true;
-    log.dim('处理中...');
+    log.dim('🧦 Dobby 干活中...');
     try {
       const targetRate = parseInt($('sampleRate').value, 10) || srcBuffer.sampleRate;
       const targetCh = parseInt($('channels').value, 10) || srcBuffer.numberOfChannels;
