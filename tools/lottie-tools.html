@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>Lottie 工具 · Playable Toolkit</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .lottie-preview {
+    background: var(--checker), #1a1a1a;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lottie-preview > div { max-width: 100%; max-height: 480px; }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .metric-card .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+  }
+  .metric-card .value {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 18px;
+    color: var(--jade);
+    font-weight: 600;
+  }
+  .metric-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎭 Lottie 工具</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 Lottie JSON</p>
+      <p class="hint">单文件 · 通常是 .json (After Effects + Bodymovin 导出)</p>
+      <input type="file" id="fileInput" accept=".json,application/json" style="display:none" />
+    </div>
+
+    <h2>优化</h2>
+    <div class="field">
+      <label>小数精度 <span id="precVal" class="mono">2</span></label>
+      <input type="range" id="precision" min="0" max="5" value="2" />
+      <div class="info" style="margin-top:2px">Lottie 数值常带 10+ 位小数。精度=2 视觉无差,体积可降 50%~80%</div>
+    </div>
+    <label class="checkbox"><input type="checkbox" id="optStripMeta" checked /><span>移除 meta / nm / mn 等编辑器元数据</span></label>
+    <label class="checkbox"><input type="checkbox" id="optStripHidden" checked /><span>移除隐藏图层 (hd: true)</span></label>
+    <button id="optimizeBtn" disabled>✨ 优化并预览</button>
+    <button id="downloadJsonBtn" class="secondary" disabled>💾 下载优化 JSON</button>
+
+    <h2>导出为动图</h2>
+    <div class="field">
+      <label>导出 FPS</label>
+      <input type="number" id="exportFps" value="30" min="1" max="60" />
+    </div>
+    <div class="field">
+      <label>导出尺寸最大边 (px)</label>
+      <input type="number" id="exportMaxDim" value="512" min="64" max="2048" />
+    </div>
+    <button id="exportApngBtn" class="secondary" disabled>🎬 转 APNG (高质动图)</button>
+    <button id="exportGifBtn" class="secondary" disabled>🎞 转 GIF (兼容性最好)</button>
+
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">未加载</div>
+    <div class="lottie-preview" id="previewBox">
+      <div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 Lottie JSON 后这里播放预览</div>
+    </div>
+    <div class="metric-grid" id="metrics" style="display:none">
+      <div class="metric-card">
+        <div class="label">体积</div>
+        <div class="value" id="mSize">—</div>
+        <div class="sub" id="mSizeSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">尺寸 / 时长</div>
+        <div class="value" id="mDim">—</div>
+        <div class="sub" id="mDimSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">帧数 / 源 FPS</div>
+        <div class="value" id="mFrames">—</div>
+        <div class="sub" id="mFramesSub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">图层数</div>
+        <div class="value" id="mLayers">—</div>
+        <div class="sub" id="mLayersSub">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
+<script>
+Toolkit.injectTopbar('lottie-tools');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('lottie-tools', { outputType: 'application/json' });
+
+  let lottieMod = null;
+  let sourceJson = null;        // original parsed object
+  let sourceText = '';          // original raw text (for size)
+  let optimizedJson = null;     // optimized parsed object
+  let optimizedText = '';
+  let anim = null;              // lottie-web instance for preview
+
+  attachDropZone($('dropZone'), $('fileInput'), files => loadFile(files[0]));
+  $('precision').addEventListener('input', e => $('precVal').textContent = e.target.value);
+
+  async function ensureLottie() {
+    if (lottieMod) return lottieMod;
+    log.dim('加载 lottie-web (首次联网 ~150 KB)...');
+    const mod = await import('https://esm.sh/lottie-web@5.12.2');
+    lottieMod = mod.default || mod;
+    log.ok('lottie-web 就绪');
+    return lottieMod;
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
+      log.err('请拖入 .json 文件');
+      return;
+    }
+    log.clear();
+    log.dim(`加载 ${file.name} (${fmtBytes(file.size)})...`);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      // basic Lottie shape check: must have layers + frame range
+      if (!Array.isArray(json.layers) || typeof json.fr !== 'number') {
+        throw new Error('不是合法 Lottie JSON (缺 layers / fr 字段)');
+      }
+      sourceJson = json;
+      sourceText = text;
+      optimizedJson = null;
+      optimizedText = '';
+      $('optimizeBtn').disabled = false;
+      $('downloadJsonBtn').disabled = true;
+      $('exportApngBtn').disabled = false;
+      $('exportGifBtn').disabled = false;
+      log.ok(`Lottie 加载完成`);
+      await renderPreview(json);
+      updateMetrics();
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    }
+  }
+
+  async function renderPreview(jsonData) {
+    const mod = await ensureLottie();
+    const host = $('previewBox');
+    host.innerHTML = '';
+    const div = document.createElement('div');
+    div.style.width = '100%';
+    host.appendChild(div);
+    if (anim) { try { anim.destroy(); } catch (_) {} anim = null; }
+    anim = mod.loadAnimation({
+      container: div,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      animationData: JSON.parse(JSON.stringify(jsonData)),  // lottie mutates the input
+    });
+  }
+
+  function countLayers(node) {
+    let n = 0;
+    if (Array.isArray(node)) { for (const x of node) n += countLayers(x); }
+    else if (node && typeof node === 'object') {
+      if ('ty' in node && 'nm' in node) n++;
+      for (const k in node) n += countLayers(node[k]);
+    }
+    return n;
+  }
+
+  function updateMetrics() {
+    if (!sourceJson) return;
+    const beforeBytes = sourceText.length;
+    const afterBytes = optimizedText ? optimizedText.length : null;
+    $('mSize').textContent = afterBytes !== null
+      ? `${fmtBytes(beforeBytes)} → ${fmtBytes(afterBytes)}`
+      : fmtBytes(beforeBytes);
+    $('mSizeSub').textContent = afterBytes !== null
+      ? `节省 ${((1 - afterBytes / beforeBytes) * 100).toFixed(1)}%`
+      : '未优化';
+    const w = sourceJson.w || 0, h = sourceJson.h || 0;
+    const totalFrames = (sourceJson.op || 0) - (sourceJson.ip || 0);
+    const fr = sourceJson.fr || 30;
+    const duration = totalFrames / fr;
+    $('mDim').textContent = `${w}×${h}`;
+    $('mDimSub').textContent = `${duration.toFixed(2)}s`;
+    $('mFrames').textContent = totalFrames;
+    $('mFramesSub').textContent = `源 ${fr} FPS`;
+    const layerCount = countLayers(sourceJson.layers);
+    $('mLayers').textContent = layerCount;
+    $('mLayersSub').textContent = '含嵌套';
+    $('metrics').style.display = '';
+    $('stats').innerHTML = `<strong>${sourceJson.nm || sourceJson.fileName || '(unnamed)'}</strong> · ${w}×${h} · ${totalFrames} 帧 @ ${fr} FPS · ${fmtBytes(beforeBytes)}`;
+  }
+
+  function reducePrecision(obj, decimals) {
+    if (typeof obj === 'number') {
+      if (!isFinite(obj) || Number.isInteger(obj)) return obj;
+      const f = parseFloat(obj.toFixed(decimals));
+      return f;
+    }
+    if (Array.isArray(obj)) return obj.map(x => reducePrecision(x, decimals));
+    if (obj && typeof obj === 'object') {
+      const out = {};
+      for (const k in obj) out[k] = reducePrecision(obj[k], decimals);
+      return out;
+    }
+    return obj;
+  }
+
+  // Strip editor metadata + hidden layers from a parsed Lottie JSON in-place.
+  function stripMeta(obj, opts) {
+    if (Array.isArray(obj)) {
+      for (let i = obj.length - 1; i >= 0; i--) {
+        if (opts.stripHidden && obj[i] && obj[i].hd === true) {
+          obj.splice(i, 1);
+          continue;
+        }
+        stripMeta(obj[i], opts);
+      }
+    } else if (obj && typeof obj === 'object') {
+      if (opts.stripMeta) {
+        // common editor-only fields
+        delete obj.nm;     // name (display)
+        delete obj.mn;     // matchName (editor)
+        delete obj.meta;   // top-level metadata
+      }
+      for (const k in obj) stripMeta(obj[k], opts);
+    }
+  }
+
+  $('optimizeBtn').addEventListener('click', async () => {
+    if (!sourceJson) return;
+    $('optimizeBtn').disabled = true;
+    try {
+      const decimals = parseInt($('precision').value, 10);
+      const stripMetaFlag = $('optStripMeta').checked;
+      const stripHidden = $('optStripHidden').checked;
+      log.dim(`优化中: 精度=${decimals}, 元数据=${stripMetaFlag}, 隐藏图层=${stripHidden}...`);
+      // Deep clone first so the source stays pristine for re-runs
+      const cloned = JSON.parse(JSON.stringify(sourceJson));
+      stripMeta(cloned, { stripMeta: stripMetaFlag, stripHidden });
+      const reduced = reducePrecision(cloned, decimals);
+      const text = JSON.stringify(reduced);
+      // Sanity: the optimized JSON must still parse + render
+      const reparsed = JSON.parse(text);
+      if (!Array.isArray(reparsed.layers)) throw new Error('优化后 JSON 损坏 (layers 丢失)');
+      optimizedJson = reparsed;
+      optimizedText = text;
+      $('downloadJsonBtn').disabled = false;
+      log.ok(`优化完成 · ${fmtBytes(sourceText.length)} → ${fmtBytes(text.length)} (节省 ${((1 - text.length / sourceText.length) * 100).toFixed(1)}%)`);
+      await renderPreview(reparsed);
+      updateMetrics();
+      // Hand off optimized JSON
+      if (handoff) {
+        const fname = 'lottie-optimized.json';
+        handoff.setBlob(new Blob([text], { type: 'application/json' }), fname, 'application/json');
+      }
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('optimizeBtn').disabled = false;
+    }
+  });
+
+  $('downloadJsonBtn').addEventListener('click', () => {
+    if (!optimizedText) return;
+    download(new Blob([optimizedText], { type: 'application/json' }), 'lottie-optimized.json');
+  });
+
+  // Render Lottie frames to bitmaps then encode via AnimEncoders.
+  async function renderFrames(targetFps, maxDim) {
+    const mod = await ensureLottie();
+    const data = optimizedJson || sourceJson;
+    const baseW = data.w || 512, baseH = data.h || 512;
+    const s = Math.min(1, maxDim / Math.max(baseW, baseH));
+    const outW = Math.max(1, Math.round(baseW * s));
+    const outH = Math.max(1, Math.round(baseH * s));
+    const totalFrames = (data.op || 0) - (data.ip || 0);
+    const srcFps = data.fr || 30;
+    const duration = totalFrames / srcFps;
+    const exportTotal = Math.max(1, Math.round(duration * targetFps));
+
+    // Hidden host for Lottie canvas rendering
+    const host = document.createElement('div');
+    host.style.position = 'fixed';
+    host.style.left = '-10000px';
+    host.style.width = outW + 'px';
+    host.style.height = outH + 'px';
+    document.body.appendChild(host);
+    const tempAnim = mod.loadAnimation({
+      container: host,
+      renderer: 'canvas',
+      loop: false,
+      autoplay: false,
+      animationData: JSON.parse(JSON.stringify(data)),
+      rendererSettings: {
+        clearCanvas: true,
+        preserveAspectRatio: 'xMidYMid meet',
+      },
+    });
+    // wait until lottie has built its DOM
+    await new Promise(r => setTimeout(r, 100));
+    const frames = [];
+    for (let i = 0; i < exportTotal; i++) {
+      const t = (i / exportTotal) * duration;
+      const srcFrame = (data.ip || 0) + t * srcFps;
+      tempAnim.goToAndStop(srcFrame, true);
+      await new Promise(r => requestAnimationFrame(r));
+      const cv = host.querySelector('canvas');
+      if (!cv) throw new Error('Lottie canvas 渲染器未生成 canvas');
+      const copy = document.createElement('canvas');
+      copy.width = outW; copy.height = outH;
+      copy.getContext('2d').drawImage(cv, 0, 0, outW, outH);
+      frames.push({ bitmap: copy, w: outW, h: outH });
+      if (i % 5 === 0) log.dim(`  渲染帧 ${i + 1}/${exportTotal}...`);
+    }
+    try { tempAnim.destroy(); } catch (_) {}
+    host.remove();
+    return { frames, outW, outH, exportTotal };
+  }
+
+  $('exportApngBtn').addEventListener('click', async () => {
+    if (!sourceJson) return;
+    $('exportApngBtn').disabled = true;
+    try {
+      const fps = parseInt($('exportFps').value, 10) || 30;
+      const maxDim = parseInt($('exportMaxDim').value, 10) || 512;
+      log.dim(`渲染 Lottie → APNG (FPS=${fps}, max=${maxDim})...`);
+      const { frames } = await renderFrames(fps, maxDim);
+      log.dim(`编码 APNG (${frames.length} 帧)...`);
+      const blob = await AnimEncoders.buildApng(frames, { fps, loop: 0 });
+      log.ok(`APNG 完成 ${fmtBytes(blob.size)}`);
+      download(blob, 'lottie-anim.apng');
+      handoff?.setBlob(blob, 'lottie-anim.apng', 'image/png');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('exportApngBtn').disabled = false;
+    }
+  });
+
+  $('exportGifBtn').addEventListener('click', async () => {
+    if (!sourceJson) return;
+    $('exportGifBtn').disabled = true;
+    try {
+      const fps = parseInt($('exportFps').value, 10) || 30;
+      const maxDim = parseInt($('exportMaxDim').value, 10) || 512;
+      log.dim(`渲染 Lottie → GIF (FPS=${fps}, max=${maxDim})...`);
+      const { frames } = await renderFrames(fps, maxDim);
+      log.dim(`编码 GIF (${frames.length} 帧)...`);
+      const blob = await AnimEncoders.buildGif(frames, { fps, loop: 0, paletteMode: 'median' });
+      log.ok(`GIF 完成 ${fmtBytes(blob.size)}`);
+      download(blob, 'lottie-anim.gif');
+      handoff?.setBlob(blob, 'lottie-anim.gif', 'image/gif');
+    } catch (e) {
+      log.err(e.message);
+      console.error(e);
+    } finally {
+      $('exportGifBtn').disabled = false;
+    }
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    sourceJson = null; sourceText = '';
+    optimizedJson = null; optimizedText = '';
+    if (anim) { try { anim.destroy(); } catch (_) {} anim = null; }
+    $('previewBox').innerHTML = '<div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 Lottie JSON 后这里播放预览</div>';
+    $('metrics').style.display = 'none';
+    $('stats').textContent = '未加载';
+    $('optimizeBtn').disabled = true;
+    $('downloadJsonBtn').disabled = true;
+    $('exportApngBtn').disabled = true;
+    $('exportGifBtn').disabled = true;
+    $('fileInput').value = '';
+    log.clear();
+  });
+})();
+</script>
+
+</body>
+</html>

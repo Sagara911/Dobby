@@ -18,6 +18,7 @@
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
     { id: 'gif-tools',      cat: 'anim',  name: 'GIF 工具',       en: 'GIF Tools',       icon: '🎞️', href: 'tools/gif-tools.html',      desc: '制作 (序列帧→GIF/APNG) + 编辑 (缩放/裁剪/调速/反向/减帧/优化/滤镜)' },
+    { id: 'lottie-tools',   cat: 'anim',  name: 'Lottie 工具',    en: 'Lottie Tools',    icon: '🎭', href: 'tools/lottie-tools.html',   desc: 'Lottie JSON 预览 + 精度优化 (体积 -50%~-80%) + 转 APNG/GIF' },
     // 音视频
     { id: 'video-toolkit',  cat: 'av',    name: '视频处理',       en: 'Video Toolkit',   icon: '🎬', href: 'tools/video-toolkit.html',  desc: '视频裁剪 / 抽帧 / 转 GIF / 转 WebM' },
     { id: 'audio-compress', cat: 'av',    name: '音频压缩',       en: 'Audio Compressor',icon: '🔊', href: 'tools/audio-compress.html', desc: '降采样 / 单声道 / 裁剪 / fade / WAV/Opus 输出' },
@@ -138,6 +139,11 @@
       '拖入 .svg 文件 (可多选)',
       '模式选 "优化" → SVGO 多 pass + 精度调整,导出更小的 .svg',
       '模式选 "转 PNG" → 选 1× / 2× / 3× / 4× 或自定义最大边,批量栅格化导出 PNG'
+    ],
+    'lottie-tools': [
+      '拖入 Lottie JSON 文件 (After Effects + Bodymovin 导出)',
+      '右上预览自动播放 · "优化" 降低浮点精度+去元数据,体积通常砍 -50%~-80%',
+      '可导出优化的 JSON,或栅格化为 APNG / GIF 给不支持 Lottie 的平台用'
     ],
     'audio-compress': [
       '拖入音频文件,会自动解码并显示波形',
@@ -1003,6 +1009,7 @@
     'image-optimizer': ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'png-crusher':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'gif-tools':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
+    'lottie-tools':    ['application/json'],
     'image-editor':    ['image/png','image/jpeg','image/webp','image/gif'],
     'color-tools':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'ai-cutout':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],

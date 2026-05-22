@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "v38",
+      "date": "2026-05-21",
+      "title": "进阶三套: AVIF · SVG · Lottie",
+      "items": [
+        "image-optimizer 新增 AVIF 输出 (比 JPEG -50%~-70%, 需现代浏览器, 首次 ~1.5 MB)",
+        "新工具「📐 SVG 工具」: SVGO 多 pass 优化 + 转 PNG (1×/2×/3×/4×)",
+        "新工具「🎭 Lottie 工具」: 预览 + 精度优化 (体积 -50%~-80%) + 转 APNG/GIF",
+        "所有三套都按需懒加载 WASM, 不影响默认浏览器原生路径"
+      ]
+    },
+    {
       "version": "v34",
       "date": "2026-05-21",
       "title": "更多压缩选项 + APNG 提示",
