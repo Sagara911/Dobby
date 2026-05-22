@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v2",
+      "date": "2026-05-22",
+      "title": "抠图更干净 · APNG 全流程 · 推送链路修复",
+      "items": [
+        "AI 抠图新增「边缘精修 (Guided Filter)」和「去色溢」两项后处理 (默认开) —— 头发/毛发等细节边缘明显更锐利,绿底/红底图的原背景色残留也会被擦掉",
+        "GIF 工具「编辑」标签现在接受拖入 .apng,新增「输出格式」下拉 (GIF / APNG) —— APNG 进 APNG 出,不再被强转 GIF 丢 alpha",
+        "Service Worker 改成 network-first —— 以后推上去,用户下次刷新立刻看到 (以前要刷两次)",
+        "修复:首页更新弹窗和工具页推送 toast 不再互相打架 (关一次就到处都关);切到 ☀️ 主题刷新也不再被擦回 dark"
+      ]
+    },
+    {
       "version": "dobby-v1",
       "date": "2026-05-21",
       "title": "Dobby is free! 站点正式更名",
