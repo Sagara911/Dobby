@@ -21,6 +21,7 @@
   const MOZJPEG_URL = 'https://esm.sh/@jsquash/jpeg';
   const OXIPNG_URL  = 'https://esm.sh/@jsquash/oxipng';
   const WEBP_URL    = 'https://esm.sh/@jsquash/webp';
+  const AVIF_URL    = 'https://esm.sh/@jsquash/avif';
 
   const cache = new Map(); // name → module promise
   const ready = new Set(); // names that have resolved at least once
@@ -37,6 +38,7 @@
   function prepareJpeg()   { return loadOnce('jpeg',   MOZJPEG_URL); }
   function prepareOxipng() { return loadOnce('oxipng', OXIPNG_URL); }
   function prepareWebp()   { return loadOnce('webp',   WEBP_URL); }
+  function prepareAvif()   { return loadOnce('avif',   AVIF_URL); }
 
   async function encodeJpeg(imageData, opts = {}) {
     const mod = await prepareJpeg();
@@ -92,11 +94,32 @@
     return out instanceof Uint8Array ? out : new Uint8Array(out);
   }
 
+  async function encodeAvif(imageData, opts = {}) {
+    const mod = await prepareAvif();
+    const quality = Math.max(1, Math.min(100, Math.round((opts.quality || 0.5) * 100)));
+    // AVIF "speed" parameter (jSquash): 0 = slowest/best, 10 = fastest/worst.
+    // Default 6 is a balance — encode finishes in seconds for typical sizes.
+    const speed = Math.max(0, Math.min(10, opts.speed ?? 6));
+    const out = await mod.encode(imageData, { quality, speed });
+    if (!out || out.byteLength < 64) {
+      throw new Error('avif 输出过短');
+    }
+    // AVIF is wrapped in an ISOBMFF container — offset 4-7 is "ftyp",
+    // offset 8-11 is a brand string starting with "avif" / "avis" / "mif1".
+    const u = new Uint8Array(out, 0, 12);
+    const isFtyp = u[4]===0x66 && u[5]===0x74 && u[6]===0x79 && u[7]===0x70;
+    const brand = String.fromCharCode(u[8], u[9], u[10], u[11]);
+    if (!isFtyp || !(brand === 'avif' || brand === 'avis' || brand === 'mif1')) {
+      throw new Error('avif 输出 magic bytes 错误');
+    }
+    return out instanceof Uint8Array ? out : new Uint8Array(out);
+  }
+
   function isReady(name) { return ready.has(name); }
 
   window.Codecs = {
-    prepareJpeg, prepareOxipng, prepareWebp,
-    encodeJpeg, optimizePng, encodeWebp,
+    prepareJpeg, prepareOxipng, prepareWebp, prepareAvif,
+    encodeJpeg, optimizePng, encodeWebp, encodeAvif,
     isReady,
   };
 })();

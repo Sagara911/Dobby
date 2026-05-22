@@ -119,7 +119,8 @@
         <option value="keep">保持原格式</option>
         <option value="image/png">PNG (无损)</option>
         <option value="image/jpeg">JPEG (有损, 体积小)</option>
-        <option value="image/webp">WebP (有损, 体积最小)</option>
+        <option value="image/webp">WebP (有损, 体积更小)</option>
+        <option value="image/avif">AVIF (有损, 新一代, 体积最小, 需现代浏览器)</option>
       </select>
     </div>
     <div class="field">
@@ -133,8 +134,9 @@
         <option value="mozjpeg">mozjpeg (JPEG -10%~-25%, 首次 ~700 KB)</option>
         <option value="oxipng">oxipng (PNG 无损 -5%~-30%, 首次 ~250 KB)</option>
         <option value="webp-hq">webp 高质 (method=6, 首次 ~600 KB)</option>
+        <option value="avif">AVIF (新一代, 比 JPEG -50%~-70%, 首次 ~1.5 MB, 慢)</option>
       </select>
-      <div class="info" style="margin-top:4px">mozjpeg 仅对 JPEG 输出生效; oxipng 仅对 PNG 输出生效; webp 高质仅对 WebP 输出生效</div>
+      <div class="info" style="margin-top:4px">引擎仅在输出格式匹配时生效 (mozjpeg→JPEG, oxipng→PNG, webp 高质/AVIF→对应格式)</div>
     </div>
 
     <h2>缩放</h2>
@@ -344,18 +346,26 @@ Toolkit.injectTopbar('image-optimizer');
       quantizeColors(ctx, w, h, bitDepth);
     }
 
-    // determine output type
+    // determine output type — AVIF only routes through WASM since browsers
+    // don't reliably encode AVIF via canvas.toBlob yet.
     let outType = fmt === 'keep' ? (it.file.type || 'image/png') : fmt;
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(outType)) outType = 'image/png';
-    // PNG ignores quality; JPEG/WebP use it
-    const useQuality = (outType === 'image/jpeg' || outType === 'image/webp') ? quality : undefined;
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(outType)) outType = 'image/png';
+    // PNG ignores quality; JPEG/WebP/AVIF use it
+    const useQuality = (outType === 'image/jpeg' || outType === 'image/webp' || outType === 'image/avif') ? quality : undefined;
     let blob;
     // High-quality engine routing — only kicks in when the engine selector
     // matches the output format; otherwise fall through to canvas.toBlob.
     const wantMozjpeg = engine === 'mozjpeg' && outType === 'image/jpeg' && window.Codecs;
     const wantOxipng  = engine === 'oxipng'  && outType === 'image/png'  && window.Codecs;
     const wantWebpHQ  = engine === 'webp-hq' && outType === 'image/webp' && window.Codecs;
-    if (wantMozjpeg) {
+    // AVIF *must* go through WASM since canvas.toBlob('image/avif') is
+    // unreliable across browsers. Always route AVIF through Codecs.
+    const wantAvif    = outType === 'image/avif' && window.Codecs;
+    if (wantAvif) {
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const bytes = await Codecs.encodeAvif(imageData, { quality, speed: 6 });
+      blob = new Blob([bytes], { type: 'image/avif' });
+    } else if (wantMozjpeg) {
       const imageData = ctx.getImageData(0, 0, w, h);
       const bytes = await Codecs.encodeJpeg(imageData, { quality });
       blob = new Blob([bytes], { type: 'image/jpeg' });
@@ -375,19 +385,24 @@ Toolkit.injectTopbar('image-optimizer');
       blob = await canvasToBlob(cv, outType, useQuality);
     }
     if (!blob || blob.size < 64) throw new Error(`${outType} 编码失败 (浏览器返回空 blob)`);
-    // Round-trip decode check: the re-encoded blob must read back at the
-    // dimensions we wrote, otherwise canvas.toBlob produced a corrupt result
-    // (rare but happens for unusual color profiles / huge sizes).
-    try {
-      const bmp = await createImageBitmap(blob);
-      const ok = bmp.width === w && bmp.height === h;
-      bmp.close?.();
-      if (!ok) throw new Error('解码后尺寸与目标不符');
-    } catch (e) {
-      throw new Error(`输出校验失败: ${e.message}`);
+    // Round-trip decode check — skip for AVIF since older browsers can encode
+    // (via our WASM) but not decode it. The Codecs.encodeAvif path already
+    // validates magic bytes inside, so we trust it for AVIF.
+    if (outType !== 'image/avif') {
+      try {
+        const bmp = await createImageBitmap(blob);
+        const ok = bmp.width === w && bmp.height === h;
+        bmp.close?.();
+        if (!ok) throw new Error('解码后尺寸与目标不符');
+      } catch (e) {
+        throw new Error(`输出校验失败: ${e.message}`);
+      }
     }
 
-    const ext = outType === 'image/jpeg' ? '.jpg' : outType === 'image/webp' ? '.webp' : '.png';
+    const ext = outType === 'image/jpeg' ? '.jpg'
+              : outType === 'image/webp' ? '.webp'
+              : outType === 'image/avif' ? '.avif'
+              : '.png';
     const baseName = it.file.name.replace(/\.[^.]+$/, '');
     return { blob, w, h, name: baseName + ext };
   }
