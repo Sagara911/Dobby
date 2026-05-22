@@ -273,7 +273,7 @@
     installErrorBoundary();
     watchForColorInputs();
     setupPWA(prefix);
-    applySavedSettings();
+    startThemeCycle();
     maybeShowBackPill();
     maybeShowNewsToast(prefix);
     setupHomeScrollMemory();
@@ -572,65 +572,12 @@
     requestAnimationFrame(tick);
   }
 
-  function applyCursor(dataUrl) {
-    let style = document.getElementById('__toolkit_cursor_style__');
-    if (!dataUrl) {
-      if (style) style.remove();
-      return;
-    }
-    if (!style) {
-      style = document.createElement('style');
-      style.id = '__toolkit_cursor_style__';
-      document.head.appendChild(style);
-    }
-    // hot-spot anchored top-left (0,0); shape the PNG so the tip lands there
-    style.textContent = `html, body, * { cursor: url("${dataUrl}") 0 0, auto !important; }`;
-  }
-
-  async function tryLoadCursorFromAssets() {
-    const prefix = window.location.pathname.includes('/tools/') ? '../' : '';
-    const candidates = ['cursor.png', 'cursor.svg', 'cursor.webp', 'cursor.gif'];
-    // unique query per page load — guarantees SW cache miss so we get the
-    // real server response (and never resurrect a long-deleted cursor file).
-    const bust = '?v=' + Date.now();
-    for (const name of candidates) {
-      try {
-        const resp = await fetch(prefix + 'assets/' + name + bust, { cache: 'no-store' });
-        if (!resp.ok) continue;
-        // sanity check the content type so a 200 HTML error page can't fake an image
-        const ct = resp.headers.get('content-type') || '';
-        if (!/^image\//i.test(ct)) continue;
-        const blob = await resp.blob();
-        const dataUrl = await new Promise((res, rej) => {
-          const fr = new FileReader();
-          fr.onload = () => res(fr.result);
-          fr.onerror = rej;
-          fr.readAsDataURL(blob);
-        });
-        applyCursor(dataUrl);
-        return;
-      } catch (_) { /* try next candidate */ }
-    }
-    // no cursor file present → leave system default
-  }
-
-  function applySavedSettings() {
-    // 1. wipe any localStorage left behind by the removed settings modal.
-    //    Without this, an old browser tab that previously set a custom cursor
-    //    would still be applying it via cached state.
-    try {
-      localStorage.removeItem('toolkit-theme');
-      localStorage.removeItem('toolkit-cursor');
-    } catch (_) {}
-    // 2. drop any cursor style tag injected by an older version of this script.
-    const stale = document.getElementById('__toolkit_cursor_style__');
-    if (stale) stale.remove();
-    // 3. drop any data-theme attribute set by old code.
-    document.documentElement.removeAttribute('data-theme');
-    // 4. install the live theme cycle + try to load a cursor from assets/.
-    startThemeCycle();
-    tryLoadCursorFromAssets();
-  }
+  // The auto-cycling color theme. Legacy state (cursor file probes, old
+  // 'toolkit-cursor' localStorage key, stale data-theme attribute, the
+  // unused 'toolkit-theme' wipe that was clobbering the new theme toggle
+  // every page load) was removed — the KILLSWITCH in each HTML handles
+  // one-shot legacy cleanup, and setupThemeToggle owns the live theme
+  // preference now.
 
   // ---------- PWA: inject manifest link + register service worker ----------
   function setupPWA(prefix) {
