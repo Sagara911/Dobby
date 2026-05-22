@@ -1,6 +1,15 @@
 {
   "entries": [
     {
+      "version": "dobby-v6",
+      "date": "2026-05-22",
+      "title": "Video Toolkit — 1080p / 4K 视频不再被 Baseline 卡死",
+      "items": [
+        "修复 H.264 编码碰到 1080p / 4K 视频报「AVC level (0x1F)... must either specify a lower resolution or higher AVC level」+ 「Cannot call 'encode' on a closed codec」的崩溃 —— 之前 AVC level 写死 3.1(最多 720p30),现在按实际分辨率×帧率自动挑 level (Annex A.3 Table A-1):720p30 → 3.1,1080p30 → 4.0,4K30 → 5.1,以此类推",
+        "覆盖所有 MP4 编码路径:一键压缩 / Trim / Crop / 缩放 / 调速 / 反向 / 改 FPS / 帧合成视频,任何动作的 H.264 输出都会自动用合适的 level"
+      ]
+    },
+    {
       "version": "dobby-v5",
       "date": "2026-05-22",
       "title": "GIF / APNG 编码器扛大帧数 — 100+ 帧不再 'Invalid array length'",

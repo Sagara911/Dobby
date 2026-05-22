@@ -816,9 +816,8 @@ Toolkit.injectTopbar('video-toolkit');
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
         error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
-      // pick H.264 profile based on resolution
       encoder.configure({
-        codec: h264Codec(),
+        codec: h264Codec(outW, outH, fpsNum),
         width: outW, height: outH,
         bitrate,
         framerate: fpsNum
@@ -1051,7 +1050,7 @@ Toolkit.injectTopbar('video-toolkit');
       error: e => { encoderError = e; log.err('encoder: ' + e.message); }
     });
     encoder.configure({
-      codec: h264Codec(),
+      codec: h264Codec(outW, outH, target),
       width: outW, height: outH,
       bitrate,
       framerate: target,
@@ -1141,7 +1140,7 @@ Toolkit.injectTopbar('video-toolkit');
         error: e => { encErr = e; log.err('encoder: ' + e.message); }
       });
       encoder.configure({
-        codec: h264Codec(),
+        codec: h264Codec(outW, outH, fps),
         width: outW, height: outH,
         bitrate, framerate: fps
       });
@@ -1364,7 +1363,7 @@ Toolkit.injectTopbar('video-toolkit');
         error: e => { encoderError = e; log.err('encoder: ' + e.message); }
       });
       encoder.configure({
-        codec: h264Codec(),
+        codec: h264Codec(w, h, fps),
         width: w, height: h,
         bitrate: 3_000_000,
         framerate: fps
@@ -1617,11 +1616,50 @@ Toolkit.injectTopbar('video-toolkit');
   // for older-device compatibility; Main and High give 5-20% better
   // compression at the same bitrate but every modern browser and ≥2014-ish
   // hardware decoder supports both. Affects all three MP4 encoder paths.
-  function h264Codec() {
+  // Build the WebCodecs codec string `avc1.PPCCLL` for the selected H.264
+  // profile, picking the AVC level dynamically from the (width, height, fps)
+  // requested so the encoder doesn't reject content larger than the level's
+  // ceiling. (Old code hardcoded Baseline @ Level 3.1 — max 1280×720 @ 30 —
+  // so any 1080p+ video at Baseline blew up at encoder.configure() with
+  // "AVC level (0x1F) indicated by the codec string. You must either specify
+  // a lower resolution or higher AVC level." then every subsequent encode()
+  // hit "Cannot call 'encode' on a closed codec.")
+  function h264Codec(w, h, fps) {
     const p = document.getElementById('h264Profile')?.value || 'baseline';
-    if (p === 'high') return 'avc1.640028';  // High @ Level 4.0
-    if (p === 'main') return 'avc1.4D4028';  // Main @ Level 4.0
-    return 'avc1.42001f';                     // Baseline @ Level 3.1
+    const pp = p === 'high' ? '64' : p === 'main' ? '4D' : '42';
+    // Constraint flag byte preserves the previous behavior per profile
+    // (CC=40 for Main; CC=00 for Baseline / High).
+    const cc = p === 'main' ? '40' : '00';
+    const ll = pickAvcLevelHex(w, h, fps);
+    return `avc1.${pp}${cc}${ll}`;
+  }
+
+  // Map (frame size, framerate) → the lowest AVC level that can encode it.
+  // Reference: ITU-T H.264 Annex A.3.1 Table A-1 (MaxFrameSize / MaxMBPS).
+  // 1 macroblock = 16×16 pixels. Returns level_idc as a 2-char uppercase
+  // hex string for splicing into the avc1.PPCCLL codec string.
+  function pickAvcLevelHex(w, h, fps) {
+    const mbs = Math.ceil((w || 1) / 16) * Math.ceil((h || 1) / 16);
+    const mbPerSec = mbs * (fps || 30);
+    const levels = [
+      [0x1F,   3600,   108000],  // 3.1: 1280×720 @ 30
+      [0x20,   5120,   216000],  // 3.2: 1280×720 @ 60
+      [0x28,   8192,   245760],  // 4.0: 1920×1080 @ 30
+      [0x29,   8192,   245760],  // 4.1: 1920×1080 @ 30 (higher bitrate cap)
+      [0x2A,   8704,   522240],  // 4.2: 1920×1080 @ 60
+      [0x32,  22080,   589824],  // 5.0: 2560×1440 @ 30
+      [0x33,  36864,   983040],  // 5.1: 4096×2160 @ 30
+      [0x34,  36864,  2073600],  // 5.2: 4096×2160 @ 60
+      [0x3C, 139264,  4177920],  // 6.0: 8192×4320 @ 30
+      [0x3D, 139264,  8355840],  // 6.1: 8192×4320 @ 60
+      [0x3E, 139264, 16711680]   // 6.2: 8192×4320 @ 120
+    ];
+    for (const [lv, maxMbs, maxMbPerSec] of levels) {
+      if (mbs <= maxMbs && mbPerSec <= maxMbPerSec) {
+        return lv.toString(16).toUpperCase().padStart(2, '0');
+      }
+    }
+    return '3E';  // saturate at 6.2
   }
 
   // Quick MP4 sanity check — must be at least 1KB AND have the "ftyp" box
