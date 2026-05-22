@@ -652,32 +652,8 @@
       <h2 id="newsTitle">Dobby 最近学的新本事</h2>
       <button type="button" class="news-close" id="newsClose" aria-label="关闭">×</button>
     </div>
-    <ul class="news-list" id="newsList">
-      <li>
-        <span class="news-icon">🩻</span>
-        <div><strong>Playable 瘦身</strong> — 拖入大体积 HTML,一键拆素材 → 自动压缩(图/视频/音频)→ 重组,150 MB 级 playable 可压到 10-30 MB。</div>
-      </li>
-      <li>
-        <span class="news-icon">🎬</span>
-        <div><strong>GIF 工具二合一</strong> — 制作和编辑合并为一个工具,两个 tab 切换,做完一键送到编辑继续调整。</div>
-      </li>
-      <li>
-        <span class="news-icon">🗜️</span>
-        <div><strong>视频一键压缩</strong> — Video Toolkit 新增预设动作,3 档体积/质量,自动配比特率和分辨率。</div>
-      </li>
-      <li>
-        <span class="news-icon">📦</span>
-        <div><strong>ZIP 打包</strong> — 多文件 / 文件夹拖入,deflate level 0-9 滑块,默认最强压缩。</div>
-      </li>
-      <li>
-        <span class="news-icon">🎨</span>
-        <div><strong>HSV 色盘</strong> — 所有 hex 颜色输入框旁的色块点击弹出 HSV 色盘(SV 方阵 + 色相条 + RGB)。</div>
-      </li>
-      <li>
-        <span class="news-icon">🖌️</span>
-        <div><strong>抠图笔刷修补</strong> — 调色工具新增笔刷模式,在输出画布上直接涂"擦除"或"保留",修补 AI 抠不干净的边缘。</div>
-      </li>
-    </ul>
+    <ul class="news-list" id="newsList"><!-- populated at runtime from news.json --></ul>
+    <div class="news-more" id="newsMore" style="display:none; font-size:11px; color:var(--muted); padding:4px 14px 8px; font-family:ui-monospace,Consolas,monospace"></div>
     <div class="news-actions">
       <button type="button" class="news-primary" id="newsOk">Dobby 加油!</button>
     </div>
@@ -835,22 +811,62 @@
   window.scrollTo(0, 0);
 
   // ============ news modal ============
-  // Bump NEWS_VERSION whenever there's something worth showing again.
-  // Users who have seen this exact version will skip the modal.
-  const NEWS_VERSION = '2026-05-21-v1';
+  // Both the homepage modal and the tool-page toast use the same news.json
+  // as the source of truth and the same localStorage key 'toolkit-news-seen'
+  // for "last entry version the user acknowledged". This unification matters:
+  // an earlier version of the modal stored a separate hardcoded NEWS_VERSION
+  // under the same key, which made the toast think "nothing's seen yet" the
+  // moment the user dismissed the modal (and vice versa) — every dismissal
+  // resurrected the other surface.
   const NEWS_KEY = 'toolkit-news-seen';
+
+  function escapeHtmlLocal(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+
+  let pendingDismissVersion = null;
 
   function dismissNews() {
     document.getElementById('newsModal').style.display = 'none';
-    try { localStorage.setItem(NEWS_KEY, NEWS_VERSION); } catch (_) {}
+    if (pendingDismissVersion) {
+      try { localStorage.setItem(NEWS_KEY, pendingDismissVersion); } catch (_) {}
+    }
     document.removeEventListener('keydown', onNewsKey);
   }
   function onNewsKey(e) { if (e.key === 'Escape') dismissNews(); }
 
-  function maybeShowNews() {
-    let seen = null;
-    try { seen = localStorage.getItem(NEWS_KEY); } catch (_) {}
-    if (seen === NEWS_VERSION) return;
+  async function maybeShowNews() {
+    let news;
+    try {
+      // cache-bust so SW / browser caches never hide a fresh entry
+      const r = await fetch('news.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      news = await r.json();
+    } catch (_) { return; }
+    if (!news?.entries?.length) return;
+    let seen = '';
+    try { seen = localStorage.getItem(NEWS_KEY) || ''; } catch (_) {}
+    const fresh = [];
+    for (const e of news.entries) {
+      if (e.version === seen) break;  // entries are newest-first; stop at first seen
+      fresh.push(e);
+    }
+    if (!fresh.length) return;
+    const head = fresh[0];
+    pendingDismissVersion = head.version;
+    document.getElementById('newsTitle').textContent = head.title || 'Dobby 最近学的新本事';
+    document.getElementById('newsList').innerHTML = (head.items || []).map(i =>
+      `<li><span class="news-icon">🧦</span><div>${escapeHtmlLocal(i)}</div></li>`
+    ).join('');
+    const moreEl = document.getElementById('newsMore');
+    if (fresh.length > 1) {
+      moreEl.textContent = `还有 ${fresh.length - 1} 条历史更新 (在工具页查看)…`;
+      moreEl.style.display = '';
+    } else {
+      moreEl.style.display = 'none';
+    }
     const modal = document.getElementById('newsModal');
     modal.style.display = 'flex';
     document.getElementById('newsClose').addEventListener('click', dismissNews);
