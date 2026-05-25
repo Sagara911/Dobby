@@ -427,6 +427,14 @@ Toolkit.injectTopbar('sprite-packer');
     $('stats').innerHTML = `<strong>${n}</strong> 帧 · 网格 <strong>${cols}×${rows}</strong> · 输出 <strong>${finalW}×${finalH}</strong>` +
       (uniformSize ? ` · 单帧 <strong>${frameW}×${frameH}</strong>` : '');
     $('exportBtn').disabled = false;
+    // Enable the handoff dropdown the moment the sheet is packed — no need
+    // to make the user click "Export PNG" first just to be able to send it
+    // to the next tool. Re-runs (after changing options) re-blob it.
+    try {
+      const fname = (($('filename').value || 'spritesheet').replace(/[^\w-]/g, '_')) + '.png';
+      const previewBlob = await canvasToBlob(out, 'image/png');
+      handoff?.setBlob(previewBlob, fname);
+    } catch (_) { /* non-fatal — user can still export via the button */ }
     log.ok(`打包完成 ${finalW}×${finalH}, ${cols}×${rows} 网格`);
   }
 
