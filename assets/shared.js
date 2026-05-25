@@ -399,6 +399,7 @@
     installErrorBoundary();
     watchForColorInputs();
     setupPWA(prefix);
+    setupCloudflareAnalytics();
     startThemeCycle();
     maybeShowBackPill();
     maybeShowNewsToast(prefix);
@@ -739,6 +740,26 @@
   // preference now.
 
   // ---------- PWA: inject manifest link + register service worker ----------
+  // ============================================================
+  //   Cloudflare Web Analytics — privacy-first page-view + visit
+  //   counting (no cookies, no individual tracking, no IP storage).
+  //   The token is the per-site identifier from
+  //   https://dash.cloudflare.com → Web Analytics → dobby-aih.pages.dev.
+  //   The beacon script lives on Cloudflare's CDN; we just inject the
+  //   <script> tag once per page load. Skipped on localhost so dev
+  //   sessions don't pollute the live counters.
+  // ============================================================
+  function setupCloudflareAnalytics() {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.endsWith('.local')) return;
+    if (document.querySelector('script[data-cf-beacon]')) return;
+    const s = document.createElement('script');
+    s.defer = true;
+    s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    s.setAttribute('data-cf-beacon', JSON.stringify({ token: 'c81891e50c424973a7e2b07279d031c3' }));
+    document.head.appendChild(s);
+  }
+
   function setupPWA(prefix) {
     // 1. inject manifest link
     if (!document.querySelector('link[rel="manifest"]')) {
