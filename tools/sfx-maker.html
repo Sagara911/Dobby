@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>8-bit SFX 生成器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .sfx-stage {
+    flex: 1;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 460px;
+  }
+  .sfx-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  .sfx-preset {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.12s, background 0.12s, border-color 0.12s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+  }
+  .sfx-preset:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-2px);
+  }
+  .sfx-preset.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .sfx-preset .icon { font-size: 28px; }
+  .sfx-preset .name { font-size: 10px; opacity: 0.85; }
+
+  .sfx-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sfx-actions button {
+    background: rgba(var(--jade-rgb), 0.10);
+    border: 1px solid rgba(var(--jade-rgb), 0.4);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .sfx-actions button:hover { background: rgba(var(--jade-rgb), 0.20); }
+  .sfx-actions button.secondary {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .sfx-actions button.secondary:hover { background: rgba(255,255,255,0.10); }
+  .sfx-actions button.huge {
+    flex: 1;
+    padding: 16px 0;
+    font-size: 18px;
+  }
+
+  .sfx-waveform {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    flex: 1;
+    min-height: 120px;
+    position: relative;
+  }
+  .sfx-waveform canvas { display: block; width: 100%; height: 100%; }
+  .sfx-waveform .info {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .sfx-params {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+  }
+  .sfx-params .field { margin: 0; }
+  .sfx-params label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .sfx-params label .val {
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  h2 { font-size: 11px; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔊 8-bit SFX 生成器</h1>
+
+    <h2>预设</h2>
+    <div class="sfx-preset-grid" id="presetGrid">
+      <!-- populated at runtime -->
+    </div>
+
+    <h2>波形</h2>
+    <select id="wave" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="square">⬜ 方波 (Square) — 经典 8-bit</option>
+      <option value="sawtooth">📐 锯齿 (Saw) — 尖锐</option>
+      <option value="sine">∿ 正弦 (Sine) — 柔和</option>
+      <option value="triangle">▲ 三角 (Triangle) — 圆润</option>
+      <option value="noise">📻 噪声 (Noise) — 爆炸/打击</option>
+    </select>
+
+    <h2>包络 (Envelope)</h2>
+    <div class="sfx-params">
+      <div class="field">
+        <label>起音 (Attack) <span class="val" id="attackVal">0</span></label>
+        <input type="range" id="attack" min="0" max="500" value="0" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>维持 (Sustain) <span class="val" id="sustainVal">100</span></label>
+        <input type="range" id="sustain" min="10" max="2000" value="100" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>衰减 (Decay) <span class="val" id="decayVal">200</span></label>
+        <input type="range" id="decay" min="10" max="2000" value="200" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>音量 (Volume) <span class="val" id="volumeVal">0.5</span></label>
+        <input type="range" id="volume" min="0" max="100" value="50" style="width:100%" />
+      </div>
+    </div>
+
+    <h2>音高 (Pitch)</h2>
+    <div class="sfx-params">
+      <div class="field">
+        <label>起始频率 <span class="val" id="freqStartVal">440 Hz</span></label>
+        <input type="range" id="freqStart" min="40" max="2000" value="440" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>结束频率 <span class="val" id="freqEndVal">440 Hz</span></label>
+        <input type="range" id="freqEnd" min="40" max="2000" value="440" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>颤音深度 <span class="val" id="vibratoDepthVal">0</span></label>
+        <input type="range" id="vibratoDepth" min="0" max="100" value="0" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>颤音速度 <span class="val" id="vibratoSpeedVal">10 Hz</span></label>
+        <input type="range" id="vibratoSpeed" min="0" max="40" value="10" style="width:100%" />
+      </div>
+    </div>
+
+    <h2>滤波</h2>
+    <div class="sfx-params">
+      <div class="field">
+        <label>低通 (Lowpass) <span class="val" id="lowpassVal">关</span></label>
+        <input type="range" id="lowpass" min="0" max="20000" value="20000" step="100" style="width:100%" />
+      </div>
+      <div class="field">
+        <label>高通 (Highpass) <span class="val" id="highpassVal">关</span></label>
+        <input type="range" id="highpass" min="0" max="2000" value="0" step="10" style="width:100%" />
+      </div>
+    </div>
+
+    <h2>文件名前缀</h2>
+    <input type="text" id="filename" value="sfx" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" />
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">挑个预设点 ▶ 试听 · 满意了导出 WAV</div>
+
+    <div class="sfx-stage">
+      <div class="sfx-actions">
+        <button id="playBtn" class="huge">▶ 播放</button>
+        <button id="randomBtn" class="secondary">🎲 随机变异</button>
+      </div>
+
+      <div class="sfx-waveform">
+        <canvas id="waveCv"></canvas>
+        <div class="info" id="waveInfo">—</div>
+      </div>
+
+      <h2 style="margin-top:8px; color:var(--muted)">导出</h2>
+      <div class="sfx-actions">
+        <button id="exportWav">💾 导出 WAV</button>
+        <button id="exportOpus" class="secondary">💾 导出 Opus (WebM)</button>
+        <button id="exportMp3" class="secondary" style="display:none">💾 导出 MP3</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('sfx-maker');
+
+(() => {
+  const { $, makeLogger, download } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   Presets — jsfxr-style classic 8-bit categories
+  // ============================================================
+  const PRESETS = [
+    { id: 'jump',     icon: '🦘', name: '跳跃',  wave: 'square',  attack: 5,   sustain: 80,  decay: 200, freqStart: 350, freqEnd: 800, vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 20000, highpass: 0, volume: 50 },
+    { id: 'pickup',   icon: '💰', name: '拾取',  wave: 'triangle',attack: 5,   sustain: 60,  decay: 150, freqStart: 600, freqEnd: 1200,vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 20000, highpass: 0, volume: 45 },
+    { id: 'laser',    icon: '🔫', name: '激光',  wave: 'sawtooth',attack: 2,   sustain: 30,  decay: 150, freqStart: 1500,freqEnd: 200, vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 20000, highpass: 0, volume: 40 },
+    { id: 'hit',      icon: '💥', name: '打击',  wave: 'noise',   attack: 0,   sustain: 30,  decay: 80,  freqStart: 200, freqEnd: 80,  vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 2000,  highpass: 0, volume: 50 },
+    { id: 'explosion',icon: '💢', name: '爆炸',  wave: 'noise',   attack: 0,   sustain: 80,  decay: 600, freqStart: 400, freqEnd: 60,  vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 1500,  highpass: 0, volume: 55 },
+    { id: 'coin',     icon: '🪙', name: '金币',  wave: 'square',  attack: 0,   sustain: 50,  decay: 200, freqStart: 800, freqEnd: 1300,vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 20000, highpass: 0, volume: 45 },
+    { id: 'powerup',  icon: '⚡', name: '能量',  wave: 'sawtooth',attack: 8,   sustain: 120, decay: 400, freqStart: 300, freqEnd: 1200,vibratoDepth: 25, vibratoSpeed: 18, lowpass: 20000, highpass: 0, volume: 45 }
+  ];
+
+  // ============================================================
+  //   State
+  // ============================================================
+  let params = { ...PRESETS[0] };
+  let activePresetId = 'jump';
+  let audioCtx = null;
+  let currentSource = null;
+  let lastRenderedBuffer = null;
+
+  // ============================================================
+  //   UI: preset buttons
+  // ============================================================
+  const presetGrid = $('presetGrid');
+  PRESETS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'sfx-preset' + (p.id === activePresetId ? ' active' : '');
+    b.dataset.id = p.id;
+    b.innerHTML = `<span class="icon">${p.icon}</span><span class="name">${p.name}</span>`;
+    b.addEventListener('click', () => loadPreset(p.id));
+    presetGrid.appendChild(b);
+  });
+
+  function loadPreset(id) {
+    const p = PRESETS.find(x => x.id === id);
+    if (!p) return;
+    activePresetId = id;
+    params = { ...p };
+    document.querySelectorAll('.sfx-preset').forEach(b =>
+      b.classList.toggle('active', b.dataset.id === id));
+    syncSliders();
+    render();
+    play();
+  }
+
+  // ============================================================
+  //   Slider <-> params sync
+  // ============================================================
+  function syncSliders() {
+    $('wave').value = params.wave;
+    [['attack','attack',v=>v+' ms'],
+     ['sustain','sustain',v=>v+' ms'],
+     ['decay','decay',v=>v+' ms'],
+     ['volume','volume',v=>(v/100).toFixed(2)],
+     ['freqStart','freqStart',v=>v+' Hz'],
+     ['freqEnd','freqEnd',v=>v+' Hz'],
+     ['vibratoDepth','vibratoDepth',v=>v],
+     ['vibratoSpeed','vibratoSpeed',v=>v+' Hz'],
+     ['lowpass','lowpass',v=>v>=20000?'关':v+' Hz'],
+     ['highpass','highpass',v=>v<=0?'关':v+' Hz']
+    ].forEach(([id, key, fmt]) => {
+      const el = $(id);
+      el.value = params[key];
+      $(id + 'Val').textContent = fmt(params[key]);
+    });
+  }
+  $('wave').addEventListener('change', e => { params.wave = e.target.value; render(); });
+  function bindSlider(id, key, scale = 1) {
+    $(id).addEventListener('input', e => {
+      params[key] = parseFloat(e.target.value) * scale;
+      syncSliders();
+      render();
+    });
+  }
+  bindSlider('attack', 'attack');
+  bindSlider('sustain', 'sustain');
+  bindSlider('decay', 'decay');
+  bindSlider('volume', 'volume');
+  bindSlider('freqStart', 'freqStart');
+  bindSlider('freqEnd', 'freqEnd');
+  bindSlider('vibratoDepth', 'vibratoDepth');
+  bindSlider('vibratoSpeed', 'vibratoSpeed');
+  bindSlider('lowpass', 'lowpass');
+  bindSlider('highpass', 'highpass');
+
+  // ============================================================
+  //   Synth core — render to AudioBuffer
+  //
+  // Simple but covers everything the presets need: oscillator with
+  // pitch envelope, ADSR amplitude envelope, optional vibrato LFO,
+  // biquad-style highpass/lowpass via single-pole IIR (cheap, OK for
+  // 8-bit-ish sound). Noise is generated separately.
+  // ============================================================
+  function ensureCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function renderBuffer() {
+    const ctx = ensureCtx();
+    const sampleRate = ctx.sampleRate;
+    const totalMs = params.attack + params.sustain + params.decay;
+    const totalSamples = Math.ceil(sampleRate * totalMs / 1000);
+    if (totalSamples <= 0) return null;
+    const buf = ctx.createBuffer(1, totalSamples, sampleRate);
+    const data = buf.getChannelData(0);
+
+    const aSamples = Math.ceil(sampleRate * params.attack / 1000);
+    const sSamples = Math.ceil(sampleRate * params.sustain / 1000);
+    const dSamples = Math.ceil(sampleRate * params.decay / 1000);
+    const vol = params.volume / 100;
+    const vibratoDepth = params.vibratoDepth / 100;
+    const vibratoOmega = 2 * Math.PI * params.vibratoSpeed;
+
+    let phase = 0;
+    // single-pole IIR filter state
+    let lpY = 0, hpY = 0, hpX = 0;
+    const lpAlpha = params.lowpass >= 20000 ? 1 : (2 * Math.PI * params.lowpass) / (sampleRate + 2 * Math.PI * params.lowpass);
+    const hpAlpha = params.highpass <= 0 ? 1 : sampleRate / (sampleRate + 2 * Math.PI * params.highpass);
+
+    for (let i = 0; i < totalSamples; i++) {
+      // ADSR envelope (no separate release — sustain holds at full, then decays)
+      let env;
+      if (i < aSamples) env = aSamples ? i / aSamples : 1;
+      else if (i < aSamples + sSamples) env = 1;
+      else env = dSamples ? 1 - (i - aSamples - sSamples) / dSamples : 0;
+      if (env < 0) env = 0;
+      // pitch envelope — linear interp from start → end across whole duration
+      const t = i / totalSamples;
+      let freq = params.freqStart + (params.freqEnd - params.freqStart) * t;
+      // vibrato — depth scales as a fraction of current freq
+      if (vibratoDepth > 0) {
+        freq *= 1 + vibratoDepth * Math.sin(vibratoOmega * i / sampleRate);
+      }
+      phase += 2 * Math.PI * freq / sampleRate;
+      if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
+      // waveform
+      let s;
+      if (params.wave === 'sine') s = Math.sin(phase);
+      else if (params.wave === 'square') s = Math.sin(phase) > 0 ? 1 : -1;
+      else if (params.wave === 'sawtooth') s = (phase / Math.PI) - 1;
+      else if (params.wave === 'triangle') s = Math.asin(Math.sin(phase)) * (2/Math.PI);
+      else /* noise */ s = Math.random() * 2 - 1;
+
+      // lowpass (single-pole)
+      lpY = lpY + lpAlpha * (s - lpY);
+      // highpass (single-pole)
+      const x = lpY;
+      hpY = hpAlpha * (hpY + x - hpX);
+      hpX = x;
+      const filtered = hpY;
+
+      data[i] = filtered * env * vol;
+    }
+    return buf;
+  }
+
+  // ============================================================
+  //   Waveform visualization
+  // ============================================================
+  function drawWaveform(buffer) {
+    const cv = $('waveCv');
+    const dpr = window.devicePixelRatio || 1;
+    cv.width  = cv.clientWidth  * dpr;
+    cv.height = cv.clientHeight * dpr;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (!buffer) return;
+    const data = buffer.getChannelData(0);
+    const step = Math.ceil(data.length / cv.width);
+    const mid = cv.height / 2;
+    // baseline
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    ctx.moveTo(0, mid);
+    ctx.lineTo(cv.width, mid);
+    ctx.stroke();
+    // waveform fill
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#31f59c';
+    ctx.fillStyle = accent + '33';
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = dpr;
+    ctx.beginPath();
+    for (let x = 0; x < cv.width; x++) {
+      const i = x * step;
+      const sample = data[Math.min(i, data.length - 1)];
+      const y = mid - sample * mid * 0.9;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.lineTo(cv.width, mid);
+    ctx.lineTo(0, mid);
+    ctx.closePath();
+    ctx.fill();
+
+    const totalMs = params.attack + params.sustain + params.decay;
+    $('waveInfo').textContent = `${totalMs} ms · ${buffer.sampleRate} Hz · ${data.length} samples`;
+  }
+
+  // ============================================================
+  //   Play / stop
+  // ============================================================
+  function play() {
+    if (!lastRenderedBuffer) return;
+    const ctx = ensureCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    if (currentSource) {
+      try { currentSource.stop(); } catch (_) {}
+      currentSource = null;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = lastRenderedBuffer;
+    src.connect(ctx.destination);
+    src.start();
+    currentSource = src;
+    src.onended = () => { if (currentSource === src) currentSource = null; };
+  }
+  $('playBtn').addEventListener('click', play);
+
+  // ============================================================
+  //   Render dispatch (called whenever params change)
+  //
+  // Debounced via microtask, not rAF: slider drags fire input events
+  // many times per task — a Promise.resolve() callback runs exactly
+  // once at end of the current task, which is the perfect coalescing
+  // boundary AND it still fires in hidden tabs (rAF doesn't).
+  // ============================================================
+  let renderQueued = false;
+  function render() {
+    if (renderQueued) return;
+    renderQueued = true;
+    Promise.resolve().then(() => {
+      renderQueued = false;
+      lastRenderedBuffer = renderBuffer();
+      drawWaveform(lastRenderedBuffer);
+    });
+  }
+
+  // ============================================================
+  //   Random variation
+  // ============================================================
+  $('randomBtn').addEventListener('click', () => {
+    const jitter = (v, range) => Math.max(0, v + (Math.random() - 0.5) * range);
+    params.attack = Math.round(jitter(params.attack, 50));
+    params.sustain = Math.round(Math.max(20, jitter(params.sustain, 100)));
+    params.decay = Math.round(Math.max(20, jitter(params.decay, 200)));
+    params.freqStart = Math.round(Math.max(40, jitter(params.freqStart, 400)));
+    params.freqEnd = Math.round(Math.max(40, jitter(params.freqEnd, 400)));
+    params.vibratoDepth = Math.round(Math.max(0, Math.min(100, jitter(params.vibratoDepth, 30))));
+    params.vibratoSpeed = Math.round(Math.max(0, Math.min(40, jitter(params.vibratoSpeed, 15))));
+    syncSliders();
+    render();
+    play();
+  });
+
+  // ============================================================
+  //   Export WAV (16-bit PCM)
+  // ============================================================
+  function bufferToWav(buffer) {
+    const numCh = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const len = buffer.length;
+    const bytesPerSample = 2;
+    const dataSize = len * numCh * bytesPerSample;
+    const fileSize = 36 + dataSize;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const dv = new DataView(ab);
+    let p = 0;
+    const writeStr = (s) => { for (let i = 0; i < s.length; i++) dv.setUint8(p++, s.charCodeAt(i)); };
+    writeStr('RIFF');
+    dv.setUint32(p, fileSize, true); p += 4;
+    writeStr('WAVE');
+    writeStr('fmt ');
+    dv.setUint32(p, 16, true); p += 4;          // chunk size
+    dv.setUint16(p, 1, true);  p += 2;          // PCM
+    dv.setUint16(p, numCh, true); p += 2;
+    dv.setUint32(p, sampleRate, true); p += 4;
+    dv.setUint32(p, sampleRate * numCh * bytesPerSample, true); p += 4;
+    dv.setUint16(p, numCh * bytesPerSample, true); p += 2;
+    dv.setUint16(p, 8 * bytesPerSample, true);  p += 2;
+    writeStr('data');
+    dv.setUint32(p, dataSize, true); p += 4;
+    // interleaved samples
+    for (let i = 0; i < len; i++) {
+      for (let ch = 0; ch < numCh; ch++) {
+        let s = buffer.getChannelData(ch)[i];
+        s = Math.max(-1, Math.min(1, s));
+        dv.setInt16(p, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        p += 2;
+      }
+    }
+    return new Blob([ab], { type: 'audio/wav' });
+  }
+
+  $('exportWav').addEventListener('click', () => {
+    if (!lastRenderedBuffer) { log.err('没有声音'); return; }
+    const blob = bufferToWav(lastRenderedBuffer);
+    const name = ($('filename').value || 'sfx').replace(/[^\w-]/g, '_');
+    const ts = Date.now();
+    download(blob, `${name}_${activePresetId}_${ts}.wav`);
+    log.ok(`导出 ${(blob.size / 1024).toFixed(1)} KB WAV`);
+  });
+
+  // ============================================================
+  //   Export Opus (via MediaRecorder webm/opus)
+  // ============================================================
+  $('exportOpus').addEventListener('click', async () => {
+    if (!lastRenderedBuffer) { log.err('没有声音'); return; }
+    log.dim('编码 Opus...');
+    try {
+      const ctx = ensureCtx();
+      const dest = ctx.createMediaStreamDestination();
+      const src = ctx.createBufferSource();
+      src.buffer = lastRenderedBuffer;
+      src.connect(dest);
+
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 96000 });
+      const chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const done = new Promise(res => { rec.onstop = res; });
+      rec.start();
+      src.start();
+      src.onended = () => setTimeout(() => rec.stop(), 100);
+      await done;
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const name = ($('filename').value || 'sfx').replace(/[^\w-]/g, '_');
+      const ts = Date.now();
+      download(blob, `${name}_${activePresetId}_${ts}.webm`);
+      log.ok(`导出 ${(blob.size / 1024).toFixed(1)} KB Opus (WebM 容器)`);
+    } catch (e) {
+      log.err('Opus 编码失败: ' + e.message);
+    }
+  });
+
+  // ============================================================
+  //   Init
+  // ============================================================
+  syncSliders();
+  loadPreset('jump');   // also calls render() + play(), but play() needs user gesture
+  // First render only — don't autoplay (user gesture required for AudioContext)
+  setTimeout(() => render(), 0);
+})();
+</script>
+</body>
+</html>

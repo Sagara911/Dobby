@@ -133,6 +133,7 @@
     // 音视频
     { id: 'video-toolkit',  cat: 'av',    name: '视频处理',       en: 'Video Toolkit',   icon: '🎬', href: 'tools/video-toolkit.html',  desc: '视频裁剪 / 抽帧 / 转 GIF / 转 WebM' },
     { id: 'audio-compress', cat: 'av',    name: '音频压缩',       en: 'Audio Compressor',icon: '🔊', href: 'tools/audio-compress.html', desc: '降采样 / 单声道 / 裁剪 / fade / WAV/Opus 输出' },
+    { id: 'sfx-maker',      cat: 'av',    name: '8-bit 音效',     en: 'SFX Maker',       icon: '🎮', href: 'tools/sfx-maker.html',      desc: '8-bit 游戏音效生成器,7 个经典预设 + 可调波形 / 包络 / 滤波,导出 WAV/Opus' },
     // 代码 / 打包
     { id: 'html-inliner',   cat: 'code',  name: '单文件打包',     en: 'HTML Inliner',    icon: '📄', href: 'tools/html-inliner.html',   desc: '把外部 JS/CSS/图片内联为单 HTML' },
     { id: 'code-minify',    cat: 'code',  name: '代码压缩',       en: 'Code Minify',     icon: '🗜️', href: 'tools/code-minify.html',    desc: 'JS / CSS / HTML 压缩,JS 用 terser' },
