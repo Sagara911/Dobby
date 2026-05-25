@@ -262,7 +262,7 @@
     </div>
     <button id="applyBtn" disabled>应用 (当前图)</button>
     <button id="batchPreviewBtn" class="secondary" disabled style="display:none">👁 预览所有调色结果</button>
-    <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用 (生成 ZIP)</button>
+    <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用全部 N 张 (生成 ZIP 送下一个工具)</button>
     <button id="batchDownloadZipBtn" class="secondary" disabled style="display:none">💾 下载批量 ZIP</button>
     <button id="downloadBtn" class="secondary" disabled>下载图片</button>
     <button id="downloadPaletteBtn" class="secondary" disabled>下载调色板</button>
@@ -403,19 +403,26 @@ Toolkit.injectTopbar('color-tools');
     const btn = $('batchApplyBtn');
     const previewBtn = $('batchPreviewBtn');
     const dlBtn = $('batchDownloadZipBtn');
+    const applyBtn = $('applyBtn');
     const action = $('action')?.value;
-    const eligible = batchFiles.length > 1 && BATCH_ACTIONS.has(action);
-    btn.style.display = batchFiles.length > 1 ? '' : 'none';
+    const isBatch = batchFiles.length > 1;
+    const eligible = isBatch && BATCH_ACTIONS.has(action);
+    btn.style.display = isBatch ? '' : 'none';
     btn.disabled = !eligible;
     btn.textContent = eligible
-      ? `📦 批量应用 ${batchFiles.length} 张 (生成 ZIP)`
+      ? `📦 批量应用全部 ${batchFiles.length} 张 (生成 ZIP 送下一个工具)`
       : `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`;
-    previewBtn.style.display = batchFiles.length > 1 ? '' : 'none';
+    // Make it crystal clear that the single-apply button only handles the
+    // currently-previewed image in batch mode — users were clicking it
+    // expecting it to "accumulate" and the handoff was only carrying the
+    // last image. Now the label literally says "仅当前图".
+    if (applyBtn) applyBtn.textContent = isBatch ? '应用 (仅当前图,不批量)' : '应用 (当前图)';
+    previewBtn.style.display = isBatch ? '' : 'none';
     previewBtn.disabled = !eligible;
-    dlBtn.style.display = batchFiles.length > 1 ? '' : 'none';
+    dlBtn.style.display = isBatch ? '' : 'none';
     // dlBtn stays disabled until batch produces an outBlob
     // hide preview area when leaving batch mode
-    if (batchFiles.length <= 1) $('batchPreviewArea').style.display = 'none';
+    if (!isBatch) $('batchPreviewArea').style.display = 'none';
   }
 
   function attachCanvasPicker() {
@@ -783,6 +790,12 @@ Toolkit.injectTopbar('color-tools');
   $('applyBtn').addEventListener('click', async () => {
     if (!srcBitmap) return;
     const action = $('action').value;
+    // If user has multiple images loaded but clicked the single-image apply,
+    // remind them that the batch button exists. handoff would only carry the
+    // last single-applied image otherwise — that confused at least one user.
+    if (batchFiles.length > 1 && BATCH_ACTIONS.has(action)) {
+      log.warn(`提示: 加载了 ${batchFiles.length} 张图。点上面绿色的「📦 批量应用全部 ${batchFiles.length} 张」按钮把全部处理 + 打 ZIP 一起送下一个工具,这个「应用 (仅当前图)」只处理当前预览的一张`);
+    }
     log.dim(`应用 ${action}...`);
     $('paletteOut').style.display = 'none';
     $('downloadPaletteBtn').disabled = true;
