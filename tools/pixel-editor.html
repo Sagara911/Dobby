@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>像素画板 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  /* ── canvas stage ── */
+  .px-stage {
+    flex: 1;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    min-height: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .px-canvas-wrap {
+    position: relative;
+    /* the checker is shown UNDER the canvas via this background */
+    background:
+      linear-gradient(45deg, #1a1a1f 25%, transparent 25%),
+      linear-gradient(-45deg, #1a1a1f 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #1a1a1f 75%),
+      linear-gradient(-45deg, transparent 75%, #1a1a1f 75%);
+    background-color: #2a2a2e;
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 16px 40px rgba(0,0,0,0.5);
+  }
+  .px-canvas-wrap canvas.layer {
+    display: block;
+    position: absolute;
+    inset: 0;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    pointer-events: none;
+  }
+  .px-canvas-wrap canvas.draw {
+    position: relative;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    cursor: crosshair;
+    display: block;
+  }
+  .px-canvas-wrap canvas.grid {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .px-canvas-wrap canvas.preview {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .px-info {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.65);
+    color: var(--text-soft);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    pointer-events: none;
+    border: 1px solid var(--border);
+  }
+  .px-info .coord { color: var(--accent); }
+
+  /* ── sidebar UI ── */
+  .px-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .px-tool-btn {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-soft);
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    padding: 0;
+  }
+  .px-tool-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .px-tool-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .px-color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .px-color-swatch {
+    width: 38px; height: 38px;
+    border-radius: var(--radius-sm);
+    border: 2px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: transform 0.12s;
+    background: var(--checker), #0a0a0c;
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .px-color-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--c);
+  }
+  .px-color-swatch:hover { transform: scale(1.05); }
+  .px-color-swatch.fg { width: 44px; height: 44px; }
+  .px-color-input {
+    flex: 1;
+    padding: 6px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    min-width: 0;
+  }
+
+  /* palette swatch strip */
+  .px-palette-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .px-palette-meta select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .px-palette {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+  }
+  .px-palette button {
+    aspect-ratio: 1;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
+    transition: transform 0.12s;
+  }
+  .px-palette button:hover { transform: scale(1.15); z-index: 1; }
+  .px-palette button.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .px-size-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .px-size-row input {
+    padding: 6px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .px-mirror-row { display: flex; gap: 4px; }
+  .px-mirror-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .px-mirror-btn:hover { background: rgba(255,255,255,0.08); }
+  .px-mirror-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .px-action-row { display: flex; gap: 4px; }
+  .px-action-row button {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .px-action-row button:hover { background: rgba(255,255,255,0.10); }
+
+  .px-export-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .px-export-grid button {
+    background: rgba(var(--jade-rgb), 0.10);
+    border: 1px solid rgba(var(--jade-rgb), 0.4);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 7px 0;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .px-export-grid button:hover { background: rgba(var(--jade-rgb), 0.20); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+  .px-help {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .px-help kbd {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎨 像素画板</h1>
+
+    <h2>画布大小</h2>
+    <div class="px-size-row">
+      <input type="number" id="canvasW" value="32" min="2" max="512" />
+      <input type="number" id="canvasH" value="32" min="2" max="512" />
+    </div>
+    <div class="px-action-row" style="margin-top:4px">
+      <button id="preset16">16²</button>
+      <button id="preset32">32²</button>
+      <button id="preset64">64²</button>
+      <button id="preset128">128²</button>
+    </div>
+    <button id="newCanvasBtn" class="secondary" style="margin-top:8px">🆕 新建画布</button>
+
+    <h2>工具 <span class="px-help">(<kbd>P</kbd>铅 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>L</kbd>线 <kbd>R</kbd>框 <kbd>I</kbd>吸)</span></h2>
+    <div class="px-tool-grid">
+      <button class="px-tool-btn active" data-tool="pencil"  title="铅笔 (P)">✏️</button>
+      <button class="px-tool-btn"        data-tool="eraser"  title="橡皮 (E)">🩹</button>
+      <button class="px-tool-btn"        data-tool="fill"    title="填充 (F)">🪣</button>
+      <button class="px-tool-btn"        data-tool="line"    title="直线 (L)">📏</button>
+      <button class="px-tool-btn"        data-tool="rect"    title="矩形框 (R)">▢</button>
+      <button class="px-tool-btn"        data-tool="rectFill" title="实心矩形">▣</button>
+      <button class="px-tool-btn"        data-tool="picker"   title="吸色 (I)">💧</button>
+      <button class="px-tool-btn"        data-tool="move"     title="移动 (M)">✋</button>
+    </div>
+
+    <h2>笔刷大小 <span id="brushSizeVal" class="mono" style="float:right">1</span> px</h2>
+    <input type="range" id="brushSize" min="1" max="16" value="1" style="width:100%" />
+
+    <h2>对称镜像</h2>
+    <div class="px-mirror-row">
+      <button class="px-mirror-btn" id="mirrorH" title="左右对称">⇋ 水平</button>
+      <button class="px-mirror-btn" id="mirrorV" title="上下对称">⇵ 垂直</button>
+    </div>
+
+    <h2>颜色</h2>
+    <div class="px-color-row">
+      <div class="px-color-swatch fg" id="fgSwatch" style="--c:#31f59c"></div>
+      <input type="text" class="px-color-input" id="fgHex" value="#31f59c" maxlength="9" />
+    </div>
+
+    <div class="px-palette-meta" style="margin-top:10px">
+      <span style="font-size:11px; color:var(--muted)">调色板</span>
+      <select id="paletteSelect">
+        <option value="pico8">PICO-8 (16 色)</option>
+        <option value="gameboy">GameBoy (4 色)</option>
+        <option value="nes">NES 风 (32 色)</option>
+        <option value="cga">CGA (16 色)</option>
+        <option value="endesga32">Endesga 32</option>
+      </select>
+    </div>
+    <div class="px-palette" id="paletteGrid"></div>
+
+    <h2>历史</h2>
+    <div class="px-action-row">
+      <button id="undoBtn">↶ 撤销</button>
+      <button id="redoBtn">↷ 重做</button>
+      <button id="clearBtn">🗑️ 清空</button>
+    </div>
+
+    <h2>视图</h2>
+    <div class="px-action-row">
+      <button id="zoomIn">🔍+</button>
+      <button id="zoomOut">🔍−</button>
+      <button id="zoomFit">⤢ 适配</button>
+      <button id="gridToggle">▦ 网格</button>
+    </div>
+    <div class="px-help" style="margin-top:6px">
+      <kbd>滚轮</kbd> 缩放 · <kbd>Space</kbd>+拖动 平移 · <kbd>Alt</kbd>+点 吸色 · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> 撤销/重做
+    </div>
+
+    <h2>导出 PNG</h2>
+    <div class="px-export-grid">
+      <button data-scale="1">1×</button>
+      <button data-scale="2">2×</button>
+      <button data-scale="4">4×</button>
+      <button data-scale="8">8×</button>
+    </div>
+    <input type="text" id="filename" value="pixel" style="margin-top:6px; width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" placeholder="文件名" />
+
+    <h2>导入</h2>
+    <button id="importBtn" class="secondary" style="width:100%">📂 拖入 PNG / JPG 作为初始画布</button>
+    <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    <div class="px-help">拖入的图片会按当前画布大小缩放(像素邻近,保留硬边)</div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">像素画板 · 拖入图或直接画</div>
+    <div class="px-stage" id="stage">
+      <div class="px-canvas-wrap" id="canvasWrap">
+        <canvas class="draw" id="drawCv"></canvas>
+        <canvas class="layer preview" id="previewCv"></canvas>
+        <canvas class="layer grid" id="gridCv"></canvas>
+      </div>
+      <div class="px-info">
+        <span class="coord" id="coord">—</span>
+        &nbsp;·&nbsp;
+        <span id="zoomLabel">×16</span>
+        &nbsp;·&nbsp;
+        <span id="canvasInfo">32×32</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('pixel-editor');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ===========================================================
+  //   8-bit palette presets
+  // ===========================================================
+  const PALETTES = {
+    'pico8': [
+      '#000000','#1D2B53','#7E2553','#008751','#AB5236','#5F574F','#C2C3C7','#FFF1E8',
+      '#FF004D','#FFA300','#FFEC27','#00E436','#29ADFF','#83769C','#FF77A8','#FFCCAA'
+    ],
+    'gameboy': ['#0F380F','#306230','#8BAC0F','#9BBC0F'],
+    'nes': [
+      '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400',
+      '#503000','#007800','#006800','#005800','#004058','#000000','#BCBCBC','#0078F8',
+      '#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800',
+      '#00A800','#00A844','#008888','#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8'
+    ],
+    'cga': [
+      '#000000','#0000AA','#00AA00','#00AAAA','#AA0000','#AA00AA','#AA5500','#AAAAAA',
+      '#555555','#5555FF','#55FF55','#55FFFF','#FF5555','#FF55FF','#FFFF55','#FFFFFF'
+    ],
+    'endesga32': [
+      '#be4a2f','#d77643','#ead4aa','#e4a672','#b86f50','#733e39','#3e2731','#a22633',
+      '#e43b44','#f77622','#feae34','#fee761','#63c74d','#3e8948','#265c42','#193c3e',
+      '#124e89','#0099db','#2ce8f5','#ffffff','#c0cbdc','#8b9bb4','#5a6988','#3a4466',
+      '#262b44','#181425','#ff0044','#68386c','#b55088','#f6757a','#e8b796','#c28569'
+    ]
+  };
+
+  // ===========================================================
+  //   Canvas state
+  // ===========================================================
+  let CW = 32, CH = 32;
+  let pixels = new Uint8ClampedArray(CW * CH * 4);
+  let zoom = 16;
+  let panX = 0, panY = 0;
+  let showGrid = true;
+
+  // tool state
+  let tool = 'pencil';
+  let brushSize = 1;
+  let mirrorH = false;
+  let mirrorV = false;
+  let fgColor = [49, 245, 156, 255];
+
+  // drawing state
+  let drawing = false;
+  let lastX = -1, lastY = -1;
+  let shapeStart = null;  // {x, y} for line / rect tools
+  let snapshot = null;    // pre-shape snapshot for live preview
+
+  // history
+  const undoStack = [];
+  let redoStack = [];
+  const UNDO_CAP = 50;
+
+  // pan state
+  let spaceHeld = false;
+  let panning = false;
+  let panStart = null;
+
+  // ===========================================================
+  //   Canvases
+  // ===========================================================
+  const drawCv = $('drawCv');
+  const previewCv = $('previewCv');
+  const gridCv = $('gridCv');
+  const drawCtx = drawCv.getContext('2d');
+  const previewCtx = previewCv.getContext('2d');
+  const gridCtx = gridCv.getContext('2d');
+  const wrap = $('canvasWrap');
+
+  function resizeCanvases() {
+    [drawCv, previewCv, gridCv].forEach(c => {
+      c.width = CW;
+      c.height = CH;
+      c.style.width = (CW * zoom) + 'px';
+      c.style.height = (CH * zoom) + 'px';
+    });
+    wrap.style.width = (CW * zoom) + 'px';
+    wrap.style.height = (CH * zoom) + 'px';
+    [drawCtx, previewCtx, gridCtx].forEach(ctx => ctx.imageSmoothingEnabled = false);
+    renderDraw();
+    renderGrid();
+    $('canvasInfo').textContent = `${CW}×${CH}`;
+    $('zoomLabel').textContent = '×' + zoom;
+  }
+
+  function renderDraw() {
+    const img = new ImageData(pixels.slice(), CW, CH);
+    drawCtx.clearRect(0, 0, CW, CH);
+    drawCtx.putImageData(img, 0, 0);
+  }
+
+  function renderGrid() {
+    gridCtx.clearRect(0, 0, CW, CH);
+    if (!showGrid || zoom < 4) return;
+    // 1-pixel-wide grid is invisible at logical-canvas size; the grid
+    // overlay canvas is scaled up by CSS so we just paint 1-logical-unit
+    // grid lines and let the upscale make them visible.
+    gridCtx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+    for (let x = 1; x < CW; x++) gridCtx.fillRect(x, 0, 1/zoom, CH);
+    for (let y = 1; y < CH; y++) gridCtx.fillRect(0, y, CW, 1/zoom);
+  }
+
+  // ===========================================================
+  //   Pixel operations
+  // ===========================================================
+  function getPx(x, y) {
+    if (x < 0 || x >= CW || y < 0 || y >= CH) return [0,0,0,0];
+    const i = (y * CW + x) * 4;
+    return [pixels[i], pixels[i+1], pixels[i+2], pixels[i+3]];
+  }
+  function setPx(x, y, c) {
+    if (x < 0 || x >= CW || y < 0 || y >= CH) return;
+    const i = (y * CW + x) * 4;
+    pixels[i] = c[0]; pixels[i+1] = c[1]; pixels[i+2] = c[2]; pixels[i+3] = c[3];
+  }
+  // stamp brush at (x, y), honoring mirrorH / mirrorV / brushSize
+  function stamp(x, y, c) {
+    const r = Math.floor(brushSize / 2);
+    for (let dy = -r; dy < brushSize - r; dy++) {
+      for (let dx = -r; dx < brushSize - r; dx++) {
+        const px = x + dx, py = y + dy;
+        setPx(px, py, c);
+        if (mirrorH) setPx(CW - 1 - px, py, c);
+        if (mirrorV) setPx(px, CH - 1 - py, c);
+        if (mirrorH && mirrorV) setPx(CW - 1 - px, CH - 1 - py, c);
+      }
+    }
+  }
+  // Bresenham — fills the gap between consecutive mouse-move samples so a
+  // fast drag doesn't leave gaps in the stroke.
+  function lineCb(x0, y0, x1, y1, cb) {
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      cb(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = err * 2;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx)  { err += dx; y0 += sy; }
+    }
+  }
+  function floodFill(sx, sy, c) {
+    const tgt = getPx(sx, sy);
+    if (tgt[0] === c[0] && tgt[1] === c[1] && tgt[2] === c[2] && tgt[3] === c[3]) return;
+    const stack = [[sx, sy]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= CW || y < 0 || y >= CH) continue;
+      const cur = getPx(x, y);
+      if (cur[0] !== tgt[0] || cur[1] !== tgt[1] || cur[2] !== tgt[2] || cur[3] !== tgt[3]) continue;
+      setPx(x, y, c);
+      stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+    }
+  }
+  function drawRect(x0, y0, x1, y1, c, filled) {
+    const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+    const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+    if (filled) {
+      for (let y = minY; y <= maxY; y++)
+        for (let x = minX; x <= maxX; x++) setPx(x, y, c);
+    } else {
+      for (let x = minX; x <= maxX; x++) { setPx(x, minY, c); setPx(x, maxY, c); }
+      for (let y = minY; y <= maxY; y++) { setPx(minX, y, c); setPx(maxX, y, c); }
+    }
+  }
+
+  // ===========================================================
+  //   History
+  // ===========================================================
+  function pushUndo() {
+    undoStack.push(new Uint8ClampedArray(pixels));
+    if (undoStack.length > UNDO_CAP) undoStack.shift();
+    redoStack = [];
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(new Uint8ClampedArray(pixels));
+    pixels = undoStack.pop();
+    renderDraw();
+  }
+  function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(new Uint8ClampedArray(pixels));
+    pixels = redoStack.pop();
+    renderDraw();
+  }
+
+  // ===========================================================
+  //   Mouse → canvas coords
+  // ===========================================================
+  function eventToPx(e) {
+    const r = drawCv.getBoundingClientRect();
+    return {
+      x: Math.floor((e.clientX - r.left) * (CW / r.width)),
+      y: Math.floor((e.clientY - r.top)  * (CH / r.height))
+    };
+  }
+
+  // ===========================================================
+  //   Tool actions
+  // ===========================================================
+  function applyToolDown(x, y, e) {
+    if (tool === 'picker' || e.altKey) {
+      pickColor(x, y);
+      return;
+    }
+    if (tool === 'fill') {
+      pushUndo();
+      floodFill(x, y, fgColor);
+      renderDraw();
+      return;
+    }
+    if (tool === 'eraser') {
+      pushUndo();
+      stamp(x, y, [0, 0, 0, 0]);
+      renderDraw();
+      return;
+    }
+    if (tool === 'pencil') {
+      pushUndo();
+      stamp(x, y, fgColor);
+      renderDraw();
+      return;
+    }
+    if (tool === 'line' || tool === 'rect' || tool === 'rectFill') {
+      shapeStart = { x, y };
+      snapshot = new Uint8ClampedArray(pixels);
+      return;
+    }
+  }
+  function applyToolMove(x, y, e) {
+    if (tool === 'pencil' && drawing && (x !== lastX || y !== lastY)) {
+      // bresenham fill between last and current
+      lineCb(lastX, lastY, x, y, (px, py) => stamp(px, py, fgColor));
+      renderDraw();
+    } else if (tool === 'eraser' && drawing && (x !== lastX || y !== lastY)) {
+      lineCb(lastX, lastY, x, y, (px, py) => stamp(px, py, [0,0,0,0]));
+      renderDraw();
+    } else if (shapeStart && (tool === 'line' || tool === 'rect' || tool === 'rectFill')) {
+      // live preview — restore snapshot then draw shape on top
+      pixels.set(snapshot);
+      if (tool === 'line') {
+        lineCb(shapeStart.x, shapeStart.y, x, y, (px, py) => stamp(px, py, fgColor));
+      } else {
+        drawRect(shapeStart.x, shapeStart.y, x, y, fgColor, tool === 'rectFill');
+      }
+      renderDraw();
+    }
+  }
+  function applyToolUp(x, y) {
+    if (shapeStart && (tool === 'line' || tool === 'rect' || tool === 'rectFill')) {
+      // commit: snapshot was the pre-shape state; current pixels is the result
+      // — we need an undo entry to revert to snapshot
+      undoStack.push(snapshot);
+      if (undoStack.length > UNDO_CAP) undoStack.shift();
+      redoStack = [];
+      shapeStart = null;
+      snapshot = null;
+    }
+  }
+
+  function pickColor(x, y) {
+    const c = getPx(x, y);
+    if (c[3] === 0) { log.dim('该位置透明,没颜色'); return; }
+    setFgColor([c[0], c[1], c[2], 255]);
+  }
+
+  // ===========================================================
+  //   Mouse / touch events
+  // ===========================================================
+  drawCv.addEventListener('pointerdown', e => {
+    if (e.button === 1 || spaceHeld) { startPan(e); return; }
+    const { x, y } = eventToPx(e);
+    drawing = true;
+    lastX = x; lastY = y;
+    applyToolDown(x, y, e);
+    drawCv.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  drawCv.addEventListener('pointermove', e => {
+    if (panning) { doPan(e); return; }
+    const { x, y } = eventToPx(e);
+    $('coord').textContent = `${x},${y}`;
+    if (!drawing && !shapeStart) return;
+    applyToolMove(x, y, e);
+    lastX = x; lastY = y;
+  });
+  drawCv.addEventListener('pointerup', e => {
+    if (panning) { endPan(); return; }
+    const { x, y } = eventToPx(e);
+    applyToolUp(x, y);
+    drawing = false;
+    try { drawCv.releasePointerCapture(e.pointerId); } catch {}
+  });
+  drawCv.addEventListener('pointerleave', () => { $('coord').textContent = '—'; });
+
+  function startPan(e) {
+    panning = true;
+    panStart = { sx: e.clientX, sy: e.clientY, px: panX, py: panY };
+    drawCv.style.cursor = 'grabbing';
+  }
+  function doPan(e) {
+    panX = panStart.px + (e.clientX - panStart.sx);
+    panY = panStart.py + (e.clientY - panStart.sy);
+    wrap.style.transform = `translate(${panX}px, ${panY}px)`;
+  }
+  function endPan() {
+    panning = false;
+    drawCv.style.cursor = '';
+  }
+
+  // ===========================================================
+  //   Wheel zoom
+  // ===========================================================
+  $('stage').addEventListener('wheel', e => {
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? 1.25 : 1/1.25;
+    const newZoom = Math.max(1, Math.min(64, Math.round(zoom * dir)));
+    if (newZoom !== zoom) { zoom = newZoom; resizeCanvases(); }
+  }, { passive: false });
+
+  // ===========================================================
+  //   Keyboard
+  // ===========================================================
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+    if (e.code === 'Space' && !spaceHeld) {
+      spaceHeld = true;
+      drawCv.style.cursor = 'grab';
+      return;
+    }
+    const map = { p: 'pencil', e: 'eraser', f: 'fill', l: 'line', r: 'rect', i: 'picker', m: 'move' };
+    const tk = map[e.key.toLowerCase()];
+    if (tk) setTool(tk);
+    if (e.key === '[') { brushSize = Math.max(1, brushSize - 1); $('brushSize').value = brushSize; $('brushSizeVal').textContent = brushSize; }
+    if (e.key === ']') { brushSize = Math.min(16, brushSize + 1); $('brushSize').value = brushSize; $('brushSizeVal').textContent = brushSize; }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.code === 'Space') { spaceHeld = false; drawCv.style.cursor = ''; }
+  });
+
+  // ===========================================================
+  //   UI controls
+  // ===========================================================
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('.px-tool-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tool === t));
+  }
+  document.querySelectorAll('.px-tool-btn').forEach(b =>
+    b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+  $('brushSize').addEventListener('input', e => {
+    brushSize = parseInt(e.target.value, 10) || 1;
+    $('brushSizeVal').textContent = brushSize;
+  });
+
+  function toggleMirror(axis) {
+    if (axis === 'h') mirrorH = !mirrorH;
+    else mirrorV = !mirrorV;
+    $('mirrorH').classList.toggle('active', mirrorH);
+    $('mirrorV').classList.toggle('active', mirrorV);
+  }
+  $('mirrorH').addEventListener('click', () => toggleMirror('h'));
+  $('mirrorV').addEventListener('click', () => toggleMirror('v'));
+
+  // color management
+  function hexToRgba(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+    if (hex.length === 6) hex += 'ff';
+    if (hex.length !== 8) return null;
+    return [
+      parseInt(hex.slice(0,2), 16),
+      parseInt(hex.slice(2,4), 16),
+      parseInt(hex.slice(4,6), 16),
+      parseInt(hex.slice(6,8), 16)
+    ];
+  }
+  function rgbaToHex(c) {
+    const h = n => n.toString(16).padStart(2, '0');
+    if (c[3] === 255) return '#' + h(c[0]) + h(c[1]) + h(c[2]);
+    return '#' + h(c[0]) + h(c[1]) + h(c[2]) + h(c[3]);
+  }
+  function setFgColor(c) {
+    fgColor = c;
+    $('fgSwatch').style.setProperty('--c', `rgba(${c[0]},${c[1]},${c[2]},${c[3]/255})`);
+    $('fgHex').value = rgbaToHex(c);
+    document.querySelectorAll('.px-palette button').forEach(b => {
+      const bc = b.dataset.c;
+      b.classList.toggle('active', bc && bc.toLowerCase() === rgbaToHex(c).toLowerCase());
+    });
+  }
+  $('fgHex').addEventListener('change', e => {
+    const c = hexToRgba(e.target.value.trim());
+    if (c) setFgColor(c);
+    else { e.target.value = rgbaToHex(fgColor); log.err('hex 颜色格式不对'); }
+  });
+
+  // palette
+  function renderPalette(key) {
+    const grid = $('paletteGrid');
+    grid.innerHTML = '';
+    const colors = PALETTES[key] || PALETTES.pico8;
+    for (const hex of colors) {
+      const b = document.createElement('button');
+      b.style.background = hex;
+      b.dataset.c = hex;
+      b.title = hex;
+      b.addEventListener('click', () => {
+        const c = hexToRgba(hex);
+        if (c) setFgColor(c);
+      });
+      grid.appendChild(b);
+    }
+  }
+  $('paletteSelect').addEventListener('change', e => renderPalette(e.target.value));
+
+  // canvas size presets
+  function applySize(w, h) {
+    if (w === CW && h === CH) return;
+    if (!confirm(`新建画布 ${w}×${h},当前画面会清空,继续?`)) return;
+    CW = w; CH = h;
+    pixels = new Uint8ClampedArray(CW * CH * 4);
+    undoStack.length = 0; redoStack = [];
+    $('canvasW').value = w; $('canvasH').value = h;
+    resizeCanvases();
+  }
+  $('preset16').addEventListener('click', () => applySize(16, 16));
+  $('preset32').addEventListener('click', () => applySize(32, 32));
+  $('preset64').addEventListener('click', () => applySize(64, 64));
+  $('preset128').addEventListener('click', () => applySize(128, 128));
+  $('newCanvasBtn').addEventListener('click', () => {
+    const w = Math.max(2, Math.min(512, parseInt($('canvasW').value, 10) || 32));
+    const h = Math.max(2, Math.min(512, parseInt($('canvasH').value, 10) || 32));
+    applySize(w, h);
+  });
+
+  // history buttons
+  $('undoBtn').addEventListener('click', undo);
+  $('redoBtn').addEventListener('click', redo);
+  $('clearBtn').addEventListener('click', () => {
+    if (!confirm('清空当前画布?')) return;
+    pushUndo();
+    pixels.fill(0);
+    renderDraw();
+  });
+
+  // zoom
+  $('zoomIn').addEventListener('click', () => { zoom = Math.min(64, Math.round(zoom * 1.25)); resizeCanvases(); });
+  $('zoomOut').addEventListener('click', () => { zoom = Math.max(1, Math.round(zoom / 1.25)); resizeCanvases(); });
+  $('zoomFit').addEventListener('click', () => {
+    const stage = $('stage');
+    const sw = stage.clientWidth - 40;
+    const sh = stage.clientHeight - 40;
+    const z = Math.max(1, Math.floor(Math.min(sw / CW, sh / CH)));
+    zoom = z;
+    panX = panY = 0;
+    wrap.style.transform = '';
+    resizeCanvases();
+  });
+  $('gridToggle').addEventListener('click', () => {
+    showGrid = !showGrid;
+    renderGrid();
+  });
+
+  // export
+  document.querySelectorAll('.px-export-grid button').forEach(b => {
+    b.addEventListener('click', async () => {
+      const scale = parseInt(b.dataset.scale, 10);
+      const cv = newCanvas(CW * scale, CH * scale);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      if (scale === 1) {
+        ctx.putImageData(new ImageData(pixels.slice(), CW, CH), 0, 0);
+      } else {
+        const src = newCanvas(CW, CH);
+        src.getContext('2d').putImageData(new ImageData(pixels.slice(), CW, CH), 0, 0);
+        ctx.drawImage(src, 0, 0, CW * scale, CH * scale);
+      }
+      const blob = await canvasToBlob(cv, 'image/png');
+      const name = ($('filename').value || 'pixel').replace(/[^\w-]/g, '_');
+      download(blob, `${name}_${CW}x${CH}@${scale}x.png`);
+      log.ok(`导出 ${CW * scale}×${CH * scale} PNG`);
+    });
+  });
+
+  // import
+  $('importBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', e => {
+    if (e.target.files.length) loadImageFile(e.target.files[0]);
+  });
+  attachDropZone($('stage'), $('fileInput'), files => files[0] && loadImageFile(files[0]));
+  async function loadImageFile(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const cv = newCanvas(CW, CH);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;  // nearest-neighbor downscale for pixel-art feel
+      ctx.drawImage(bmp, 0, 0, CW, CH);
+      const id = ctx.getImageData(0, 0, CW, CH);
+      pushUndo();
+      pixels.set(id.data);
+      renderDraw();
+      log.ok(`导入 ${bmp.width}×${bmp.height} → ${CW}×${CH}`);
+    } catch (err) {
+      log.err('导入失败: ' + err.message);
+    }
+  }
+
+  // handoff — let users send the result to other tools (gif-tools, etc.)
+  const handoff = Toolkit.setupHandoff('pixel-editor', { outputType: 'image/png' });
+
+  // ============================================================
+  //   Init
+  // ============================================================
+  resizeCanvases();
+  renderPalette('pico8');
+  setFgColor(fgColor);
+  log.ok('画板准备好,挑个工具开画');
+})();
+</script>
+</body>
+</html>
