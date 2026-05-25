@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>Tilemap 编辑器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tm-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .tm-panel {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tm-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tm-tileset-stage,
+  .tm-map-stage {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: auto;
+    position: relative;
+    min-height: 200px;
+  }
+  .tm-tileset-stage { max-height: 220px; }
+  .tm-map-stage { flex: 1; min-height: 320px; }
+  .tm-canvas-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .tm-canvas-wrap canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+  .tm-canvas-wrap canvas.overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+  .tm-canvas-wrap canvas.tiles {
+    cursor: crosshair;
+  }
+  .tm-info {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.7);
+    color: var(--text-soft);
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    pointer-events: none;
+    border: 1px solid var(--border);
+  }
+
+  .tm-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .tm-tool-btn {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-soft);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .tm-tool-btn:hover { background: rgba(255,255,255,0.08); }
+  .tm-tool-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .tm-size-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .tm-size-row input {
+    padding: 6px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    text-align: center;
+  }
+  .tm-action-row { display: flex; gap: 4px; }
+  .tm-action-row button {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .tm-action-row button:hover { background: rgba(255,255,255,0.10); }
+  .tm-export-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  .tm-export-grid button {
+    background: rgba(var(--jade-rgb), 0.10);
+    border: 1px solid rgba(var(--jade-rgb), 0.4);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 7px 0;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tm-export-grid button:hover { background: rgba(var(--jade-rgb), 0.20); }
+
+  .tm-selected-tile {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .tm-selected-tile canvas {
+    image-rendering: pixelated;
+    background: var(--checker), #0a0a0c;
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    border: 1px solid var(--border);
+  }
+
+  h2 { font-size: 11px; margin-top: 12px; }
+  .tm-help {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .tm-help kbd {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🗺️ Tilemap 编辑器</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 tileset PNG</p>
+      <p class="hint">先拖入 tileset 才能开画地图</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    </div>
+
+    <h2>Tile 尺寸</h2>
+    <div class="tm-size-row">
+      <input type="number" id="tileW" value="16" min="4" max="128" placeholder="W" />
+      <input type="number" id="tileH" value="16" min="4" max="128" placeholder="H" />
+    </div>
+    <div class="tm-action-row" style="margin-top:4px">
+      <button id="ts8">8</button>
+      <button id="ts16">16</button>
+      <button id="ts24">24</button>
+      <button id="ts32">32</button>
+    </div>
+
+    <h2>地图尺寸 (tile)</h2>
+    <div class="tm-size-row">
+      <input type="number" id="mapW" value="20" min="1" max="256" />
+      <input type="number" id="mapH" value="15" min="1" max="256" />
+    </div>
+    <button id="resizeMapBtn" class="secondary" style="margin-top:4px">🔄 应用地图尺寸</button>
+
+    <h2>当前 tile</h2>
+    <div class="tm-selected-tile">
+      <canvas id="selectedTileCv" width="32" height="32" style="width:32px; height:32px"></canvas>
+      <div>
+        <div id="selectedTileIdx" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">— 未选</div>
+        <div class="tm-help" style="margin:0">点上方 tileset 选 tile</div>
+      </div>
+    </div>
+
+    <h2>工具 <span class="tm-help">(<kbd>B</kbd>笔 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>R</kbd>矩)</span></h2>
+    <div class="tm-tool-grid">
+      <button class="tm-tool-btn active" data-tool="pencil" title="铅笔 (B)">✏️</button>
+      <button class="tm-tool-btn"        data-tool="eraser" title="橡皮 (E)">🩹</button>
+      <button class="tm-tool-btn"        data-tool="fill"   title="填充 (F)">🪣</button>
+      <button class="tm-tool-btn"        data-tool="rect"   title="矩形填充 (R)">▣</button>
+    </div>
+
+    <h2>历史</h2>
+    <div class="tm-action-row">
+      <button id="undoBtn">↶ 撤销</button>
+      <button id="redoBtn">↷ 重做</button>
+      <button id="clearMapBtn">🗑️ 清空</button>
+    </div>
+
+    <h2>视图</h2>
+    <div class="tm-action-row">
+      <button id="zoomIn">🔍+</button>
+      <button id="zoomOut">🔍−</button>
+      <button id="gridToggle">▦ 网格</button>
+    </div>
+
+    <h2>导出</h2>
+    <div class="tm-export-grid">
+      <button id="exportJson">📄 JSON (Tiled)</button>
+      <button id="exportPng">🖼️ 平摊 PNG</button>
+    </div>
+    <input type="text" id="filename" value="tilemap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名" />
+    <div class="tm-help" style="margin-top:6px">
+      JSON 格式: <code>{width, height, tilewidth, tileheight, data: [N×W*H]}</code><br/>
+      data 数组里 0 = 空,1+ = tileset 行优先索引 (Tiled 兼容)
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">先拖入 tileset PNG · 然后选 tile 在地图上画</div>
+
+    <div class="tm-main">
+      <!-- TILESET PANEL -->
+      <div class="tm-panel">
+        <div class="tm-panel-head">
+          <span>Tileset(点选 tile)</span>
+          <span id="tilesetMeta" class="mono" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">未加载</span>
+        </div>
+        <div class="tm-tileset-stage" id="tilesetStage">
+          <div class="tm-canvas-wrap" id="tilesetWrap" style="display:none">
+            <canvas id="tilesetCv"></canvas>
+            <canvas class="overlay" id="tilesetGridCv"></canvas>
+            <canvas class="overlay" id="tilesetSelCv"></canvas>
+          </div>
+          <div id="tilesetEmpty" style="padding:60px; text-align:center; color:var(--muted); font-size:13px">
+            🗺️ 拖入 tileset PNG 开始
+          </div>
+        </div>
+      </div>
+
+      <!-- MAP PANEL -->
+      <div class="tm-panel" style="flex:1; min-height:0; display:flex; flex-direction:column">
+        <div class="tm-panel-head">
+          <span>地图</span>
+          <span id="mapMeta" class="mono" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">20×15 tiles</span>
+        </div>
+        <div class="tm-map-stage" id="mapStage" style="flex:1">
+          <div class="tm-canvas-wrap" id="mapWrap">
+            <canvas id="mapCv" class="tiles"></canvas>
+            <canvas class="overlay" id="mapGridCv"></canvas>
+          </div>
+          <div class="tm-info" id="mapInfo">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('tilemap');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, downloadJson, newCanvas, canvasToBlob } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   State
+  // ============================================================
+  let tileW = 16, tileH = 16;
+  let mapW = 20, mapH = 15;
+  let mapData = new Int32Array(mapW * mapH);  // 0 = empty, 1+ = tile index + 1
+
+  let tilesetBitmap = null;
+  let tilesetCols = 0, tilesetRows = 0;
+  let tilesetTileCount = 0;
+
+  let selectedTile = -1;   // -1 = no selection
+  let tool = 'pencil';
+  let tilesetZoom = 2;
+  let mapZoom = 2;
+  let showGrid = true;
+
+  // history
+  const undoStack = [];
+  let redoStack = [];
+  const UNDO_CAP = 50;
+  // drawing
+  let drawing = false;
+  let lastCellX = -1, lastCellY = -1;
+  let rectStart = null;
+  let rectSnapshot = null;
+
+  // ============================================================
+  //   Canvases
+  // ============================================================
+  const tilesetCv = $('tilesetCv');
+  const tilesetGridCv = $('tilesetGridCv');
+  const tilesetSelCv = $('tilesetSelCv');
+  const mapCv = $('mapCv');
+  const mapGridCv = $('mapGridCv');
+
+  function fitTilesetCanvas() {
+    if (!tilesetBitmap) return;
+    const pxW = tilesetCols * tileW;
+    const pxH = tilesetRows * tileH;
+    [tilesetCv, tilesetGridCv, tilesetSelCv].forEach(c => {
+      c.width = pxW;
+      c.height = pxH;
+      c.style.width = (pxW * tilesetZoom) + 'px';
+      c.style.height = (pxH * tilesetZoom) + 'px';
+      c.getContext('2d').imageSmoothingEnabled = false;
+    });
+    renderTileset();
+    renderTilesetGrid();
+    renderTilesetSelection();
+  }
+  function renderTileset() {
+    if (!tilesetBitmap) return;
+    const ctx = tilesetCv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, tilesetCv.width, tilesetCv.height);
+    ctx.drawImage(tilesetBitmap, 0, 0);
+  }
+  function renderTilesetGrid() {
+    const ctx = tilesetGridCv.getContext('2d');
+    ctx.clearRect(0, 0, tilesetGridCv.width, tilesetGridCv.height);
+    if (!showGrid || tilesetZoom < 2) return;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1 / tilesetZoom;
+    for (let c = 1; c < tilesetCols; c++) {
+      ctx.beginPath();
+      ctx.moveTo(c * tileW, 0);
+      ctx.lineTo(c * tileW, tilesetGridCv.height);
+      ctx.stroke();
+    }
+    for (let r = 1; r < tilesetRows; r++) {
+      ctx.beginPath();
+      ctx.moveTo(0, r * tileH);
+      ctx.lineTo(tilesetGridCv.width, r * tileH);
+      ctx.stroke();
+    }
+  }
+  function renderTilesetSelection() {
+    const ctx = tilesetSelCv.getContext('2d');
+    ctx.clearRect(0, 0, tilesetSelCv.width, tilesetSelCv.height);
+    if (selectedTile < 0) return;
+    const tx = selectedTile % tilesetCols;
+    const ty = Math.floor(selectedTile / tilesetCols);
+    ctx.strokeStyle = '#31f59c';
+    ctx.lineWidth = 2 / tilesetZoom;
+    ctx.strokeRect(tx * tileW + 0.5, ty * tileH + 0.5, tileW - 1, tileH - 1);
+    // outer dim shadow for contrast
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 1 / tilesetZoom;
+    ctx.strokeRect(tx * tileW - 1, ty * tileH - 1, tileW + 2, tileH + 2);
+  }
+
+  function fitMapCanvas() {
+    const pxW = mapW * tileW;
+    const pxH = mapH * tileH;
+    [mapCv, mapGridCv].forEach(c => {
+      c.width = pxW;
+      c.height = pxH;
+      c.style.width = (pxW * mapZoom) + 'px';
+      c.style.height = (pxH * mapZoom) + 'px';
+      c.getContext('2d').imageSmoothingEnabled = false;
+    });
+    renderMap();
+    renderMapGrid();
+    $('mapMeta').textContent = `${mapW}×${mapH} tiles · ${pxW}×${pxH} px`;
+  }
+  function renderMap() {
+    const ctx = mapCv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, mapCv.width, mapCv.height);
+    if (!tilesetBitmap) return;
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const idx = mapData[y * mapW + x];
+        if (idx === 0) continue;
+        const tIdx = idx - 1;
+        const tx = (tIdx % tilesetCols) * tileW;
+        const ty = Math.floor(tIdx / tilesetCols) * tileH;
+        ctx.drawImage(tilesetBitmap, tx, ty, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+      }
+    }
+  }
+  function renderMapGrid() {
+    const ctx = mapGridCv.getContext('2d');
+    ctx.clearRect(0, 0, mapGridCv.width, mapGridCv.height);
+    if (!showGrid || mapZoom < 2) return;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+    ctx.lineWidth = 1 / mapZoom;
+    for (let x = 1; x < mapW; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * tileW, 0);
+      ctx.lineTo(x * tileW, mapGridCv.height);
+      ctx.stroke();
+    }
+    for (let y = 1; y < mapH; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * tileH);
+      ctx.lineTo(mapGridCv.width, y * tileH);
+      ctx.stroke();
+    }
+  }
+
+  // ============================================================
+  //   Tileset selection
+  // ============================================================
+  tilesetCv.addEventListener('click', e => {
+    if (!tilesetBitmap) return;
+    const r = tilesetCv.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * tilesetCv.width);
+    const y = Math.floor((e.clientY - r.top) / r.height * tilesetCv.height);
+    const tx = Math.floor(x / tileW);
+    const ty = Math.floor(y / tileH);
+    if (tx < 0 || tx >= tilesetCols || ty < 0 || ty >= tilesetRows) return;
+    selectedTile = ty * tilesetCols + tx;
+    renderTilesetSelection();
+    renderSelectedThumb();
+  });
+  function renderSelectedThumb() {
+    const cv = $('selectedTileCv');
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (selectedTile < 0 || !tilesetBitmap) {
+      $('selectedTileIdx').textContent = '— 未选';
+      return;
+    }
+    const tx = (selectedTile % tilesetCols) * tileW;
+    const ty = Math.floor(selectedTile / tilesetCols) * tileH;
+    ctx.drawImage(tilesetBitmap, tx, ty, tileW, tileH, 0, 0, cv.width, cv.height);
+    $('selectedTileIdx').textContent = `#${selectedTile} (${selectedTile % tilesetCols}, ${Math.floor(selectedTile / tilesetCols)})`;
+  }
+
+  // ============================================================
+  //   Map drawing
+  // ============================================================
+  function eventToCell(e) {
+    const r = mapCv.getBoundingClientRect();
+    return {
+      x: Math.floor((e.clientX - r.left) / r.width * mapW),
+      y: Math.floor((e.clientY - r.top)  / r.height * mapH)
+    };
+  }
+  function setCell(x, y, idx) {
+    if (x < 0 || x >= mapW || y < 0 || y >= mapH) return;
+    mapData[y * mapW + x] = idx;
+  }
+  function getCell(x, y) {
+    if (x < 0 || x >= mapW || y < 0 || y >= mapH) return -1;
+    return mapData[y * mapW + x];
+  }
+  function pushUndo() {
+    undoStack.push(new Int32Array(mapData));
+    if (undoStack.length > UNDO_CAP) undoStack.shift();
+    redoStack = [];
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(new Int32Array(mapData));
+    mapData = undoStack.pop();
+    renderMap();
+  }
+  function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(new Int32Array(mapData));
+    mapData = redoStack.pop();
+    renderMap();
+  }
+  function bresenhamLine(x0, y0, x1, y1, cb) {
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      cb(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = err * 2;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx)  { err += dx; y0 += sy; }
+    }
+  }
+  function floodFillMap(sx, sy, targetIdx, newIdx) {
+    if (targetIdx === newIdx) return;
+    const stack = [[sx, sy]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= mapW || y < 0 || y >= mapH) continue;
+      if (mapData[y * mapW + x] !== targetIdx) continue;
+      mapData[y * mapW + x] = newIdx;
+      stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+    }
+  }
+  function fillRect(x0, y0, x1, y1, idx) {
+    const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+    const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+    for (let y = minY; y <= maxY; y++)
+      for (let x = minX; x <= maxX; x++) setCell(x, y, idx);
+  }
+
+  function applyToolDown(cx, cy) {
+    const idx = tool === 'eraser' ? 0 : (selectedTile + 1);
+    if (selectedTile < 0 && tool !== 'eraser') {
+      log.dim('先在上面 tileset 里选一个 tile');
+      return;
+    }
+    if (tool === 'fill') {
+      pushUndo();
+      floodFillMap(cx, cy, getCell(cx, cy), idx);
+      renderMap();
+      return;
+    }
+    if (tool === 'rect') {
+      rectStart = { x: cx, y: cy };
+      rectSnapshot = new Int32Array(mapData);
+      return;
+    }
+    pushUndo();
+    setCell(cx, cy, idx);
+    renderMap();
+  }
+  function applyToolMove(cx, cy) {
+    const idx = tool === 'eraser' ? 0 : (selectedTile + 1);
+    if (tool === 'pencil' || tool === 'eraser') {
+      if (cx === lastCellX && cy === lastCellY) return;
+      // bresenham between cells so a fast drag doesn't leave gaps
+      bresenhamLine(lastCellX, lastCellY, cx, cy, (x, y) => setCell(x, y, idx));
+      renderMap();
+    } else if (tool === 'rect' && rectStart) {
+      mapData.set(rectSnapshot);
+      fillRect(rectStart.x, rectStart.y, cx, cy, idx);
+      renderMap();
+    }
+  }
+  function applyToolUp(cx, cy) {
+    if (tool === 'rect' && rectStart) {
+      // commit: snapshot was pre-rect, mapData is post-rect — push snapshot as undo
+      undoStack.push(rectSnapshot);
+      if (undoStack.length > UNDO_CAP) undoStack.shift();
+      redoStack = [];
+      rectStart = null;
+      rectSnapshot = null;
+    }
+  }
+
+  mapCv.addEventListener('pointerdown', e => {
+    if (!tilesetBitmap) { log.dim('先拖入 tileset'); return; }
+    const { x, y } = eventToCell(e);
+    drawing = true;
+    lastCellX = x; lastCellY = y;
+    applyToolDown(x, y);
+    mapCv.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  mapCv.addEventListener('pointermove', e => {
+    if (!tilesetBitmap) return;
+    const { x, y } = eventToCell(e);
+    $('mapInfo').textContent = `(${x},${y})`;
+    if (!drawing && !rectStart) return;
+    applyToolMove(x, y);
+    lastCellX = x; lastCellY = y;
+  });
+  mapCv.addEventListener('pointerup', e => {
+    if (!drawing && !rectStart) return;
+    const { x, y } = eventToCell(e);
+    applyToolUp(x, y);
+    drawing = false;
+    try { mapCv.releasePointerCapture(e.pointerId); } catch {}
+  });
+  mapCv.addEventListener('pointerleave', () => { $('mapInfo').textContent = '—'; });
+
+  // ============================================================
+  //   Tool / control bindings
+  // ============================================================
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('.tm-tool-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tool === t));
+  }
+  document.querySelectorAll('.tm-tool-btn').forEach(b =>
+    b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    const map = { b: 'pencil', e: 'eraser', f: 'fill', r: 'rect' };
+    if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
+  });
+
+  $('undoBtn').addEventListener('click', undo);
+  $('redoBtn').addEventListener('click', redo);
+  $('clearMapBtn').addEventListener('click', () => {
+    if (!confirm('清空整个地图?')) return;
+    pushUndo();
+    mapData.fill(0);
+    renderMap();
+  });
+
+  $('zoomIn').addEventListener('click', () => {
+    mapZoom = Math.min(8, mapZoom + 1);
+    fitMapCanvas();
+  });
+  $('zoomOut').addEventListener('click', () => {
+    mapZoom = Math.max(1, mapZoom - 1);
+    fitMapCanvas();
+  });
+  $('gridToggle').addEventListener('click', () => {
+    showGrid = !showGrid;
+    renderTilesetGrid();
+    renderMapGrid();
+  });
+
+  // tile size presets
+  function setTileSize(w, h) {
+    if (!confirm(`Tile 尺寸改 ${w}×${h}? 当前 tileset 会按新尺寸重新切分,地图会清空`)) return;
+    tileW = w; tileH = h;
+    $('tileW').value = w; $('tileH').value = h;
+    if (tilesetBitmap) {
+      tilesetCols = Math.floor(tilesetBitmap.width / tileW);
+      tilesetRows = Math.floor(tilesetBitmap.height / tileH);
+      tilesetTileCount = tilesetCols * tilesetRows;
+      $('tilesetMeta').textContent = `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个)`;
+    }
+    selectedTile = -1;
+    mapData = new Int32Array(mapW * mapH);
+    undoStack.length = 0; redoStack = [];
+    fitTilesetCanvas();
+    fitMapCanvas();
+    renderSelectedThumb();
+  }
+  $('ts8').addEventListener('click', () => setTileSize(8, 8));
+  $('ts16').addEventListener('click', () => setTileSize(16, 16));
+  $('ts24').addEventListener('click', () => setTileSize(24, 24));
+  $('ts32').addEventListener('click', () => setTileSize(32, 32));
+  $('tileW').addEventListener('change', e => setTileSize(parseInt(e.target.value, 10) || 16, tileH));
+  $('tileH').addEventListener('change', e => setTileSize(tileW, parseInt(e.target.value, 10) || 16));
+
+  // map size
+  $('resizeMapBtn').addEventListener('click', () => {
+    const w = Math.max(1, Math.min(256, parseInt($('mapW').value, 10) || 20));
+    const h = Math.max(1, Math.min(256, parseInt($('mapH').value, 10) || 15));
+    if (w === mapW && h === mapH) return;
+    if (!confirm(`地图改成 ${w}×${h} tiles? 越界的格子会被裁掉,扩出来的格子是空的`)) return;
+    pushUndo();
+    const newData = new Int32Array(w * h);
+    for (let y = 0; y < Math.min(h, mapH); y++)
+      for (let x = 0; x < Math.min(w, mapW); x++)
+        newData[y * w + x] = mapData[y * mapW + x];
+    mapW = w; mapH = h;
+    mapData = newData;
+    fitMapCanvas();
+  });
+
+  // ============================================================
+  //   Tileset loading
+  // ============================================================
+  async function loadTileset(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      tilesetBitmap = bmp;
+      tilesetCols = Math.floor(bmp.width / tileW);
+      tilesetRows = Math.floor(bmp.height / tileH);
+      tilesetTileCount = tilesetCols * tilesetRows;
+      $('tilesetMeta').textContent = `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个) · 源图 ${bmp.width}×${bmp.height}`;
+      $('tilesetEmpty').style.display = 'none';
+      $('tilesetWrap').style.display = '';
+      fitTilesetCanvas();
+      log.ok(`tileset 已加载 · ${tilesetCols}×${tilesetRows} = ${tilesetTileCount} 个 tile`);
+      // auto-select first tile
+      selectedTile = 0;
+      renderTilesetSelection();
+      renderSelectedThumb();
+    } catch (e) {
+      log.err('tileset 加载失败: ' + e.message);
+    }
+  }
+  attachDropZone($('dropZone'), $('fileInput'), files => files[0] && loadTileset(files[0]));
+
+  // ============================================================
+  //   Export
+  // ============================================================
+  $('exportJson').addEventListener('click', () => {
+    // Tiled-compatible JSON
+    const out = {
+      width: mapW,
+      height: mapH,
+      tilewidth: tileW,
+      tileheight: tileH,
+      data: Array.from(mapData),
+      type: 'map',
+      orientation: 'orthogonal',
+      renderorder: 'right-down',
+      version: '1.10',
+      tiledversion: 'dobby-tilemap-1.0',
+      // tileset reference (Tiled format)
+      tilesets: tilesetBitmap ? [{
+        firstgid: 1,
+        name: 'tileset',
+        tilewidth: tileW,
+        tileheight: tileH,
+        tilecount: tilesetTileCount,
+        columns: tilesetCols,
+        image: 'tileset.png',
+        imagewidth: tilesetBitmap.width,
+        imageheight: tilesetBitmap.height
+      }] : []
+    };
+    const name = ($('filename').value || 'tilemap').replace(/[^\w-]/g, '_');
+    downloadJson(out, name + '.json');
+    log.ok(`导出 ${mapW}×${mapH} JSON (Tiled 兼容)`);
+  });
+  $('exportPng').addEventListener('click', async () => {
+    if (!tilesetBitmap) { log.err('先拖入 tileset'); return; }
+    const cv = newCanvas(mapW * tileW, mapH * tileH);
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const idx = mapData[y * mapW + x];
+        if (idx === 0) continue;
+        const tIdx = idx - 1;
+        const tx = (tIdx % tilesetCols) * tileW;
+        const ty = Math.floor(tIdx / tilesetCols) * tileH;
+        ctx.drawImage(tilesetBitmap, tx, ty, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+      }
+    }
+    const blob = await canvasToBlob(cv, 'image/png');
+    const name = ($('filename').value || 'tilemap').replace(/[^\w-]/g, '_');
+    download(blob, name + `_${mapW * tileW}x${mapH * tileH}.png`);
+    log.ok(`导出 ${cv.width}×${cv.height} 平摊 PNG`);
+  });
+
+  // handoff — let users send the tilemap PNG to other tools
+  const handoff = Toolkit.setupHandoff('tilemap', { outputType: 'image/png' });
+
+  // ============================================================
+  //   Init
+  // ============================================================
+  fitMapCanvas();
+  log.ok('准备好,拖入 tileset 开始画地图');
+})();
+</script>
+</body>
+</html>
