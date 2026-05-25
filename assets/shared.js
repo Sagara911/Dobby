@@ -1716,8 +1716,8 @@
     t.className = 'handoff-undo-toast';
     t.innerHTML = `
       <div class="hut-row">
-        <span class="hut-msg">📥 即将从 <strong>${sourceLabel}</strong> 接收</span>
-        <button type="button" class="hut-cancel">撤回</button>
+        <span class="hut-msg">${T('handoff.incoming.msg', { tool: `<strong>${sourceLabel}</strong>` }, `📦 Dobby 正在从 <strong>${sourceLabel}</strong> 搬运素材`)}</span>
+        <button type="button" class="hut-cancel">${T('handoff.incoming.cancel', '撤回')}</button>
       </div>
       <div class="hut-bar"><div class="hut-bar-fill"></div></div>
     `;

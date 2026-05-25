@@ -67,6 +67,7 @@ window.I18N_STRINGS = {
     'handoff.backPill': 'Dobby 带你回 {tool}',
     'handoff.backPill.dismiss': '不再显示',
     'handoff.incoming.cancel': '撤回',
+    'handoff.incoming.msg': '📦 Dobby 正在从 {tool} 搬运素材',
     // Toasts emitted by shared.js
     'toast.zipExtracted': '🧦 Dobby 帮你拆开了 ZIP "{name}" · {n} 个文件',
     'toast.handoffZip': '🧦 Dobby 顺手拆了 ZIP · {n} 个文件',
@@ -199,6 +200,7 @@ window.I18N_STRINGS = {
     'handoff.backPill': 'Dobby take you back to {tool}',
     'handoff.backPill.dismiss': 'Hide this',
     'handoff.incoming.cancel': 'Undo',
+    'handoff.incoming.msg': '📦 Dobby is bringing the asset over from {tool}',
     'toast.zipExtracted': '🧦 Dobby unzipped "{name}" · {n} files',
     'toast.handoffZip': '🧦 Dobby unzipped it too · {n} files',
     'toast.handoffReceived': '🧦 Dobby brought {name} over',
