@@ -90,7 +90,7 @@
     </label>
     <label class="checkbox">
       <input type="checkbox" id="squareSheet" />
-      <span>整张精灵图正方形 (自动重算列数,残余短边补透明)</span>
+      <span>整张精灵图正方形 (cols × cols 网格,末尾留空格代替补边)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="powerOfTwo" />
@@ -350,34 +350,24 @@ Toolkit.injectTopbar('sprite-packer');
       return { sw, sh, side: Math.max(sw, sh) };
     }
     if (squareSheet) {
-      // Brute force the column count and then bias the pick toward layouts
-      // where the natural sheet is at least as wide as it is tall. Reason:
-      // for n that isn't a perfect square the minimum square output side is
-      // achievable by either a "tall" layout (e.g. 5 cols × 6 rows for n=30)
-      // OR a "wide" one (6 × 5) — both end up at virtually the same final
-      // side, but the tall layout pads the SIDES with empty strips (which
-      // looks like the content is off-center), while the wide layout pads
-      // the BOTTOM (one trailing strip that reads as "spare row"). The wide
-      // version always looks cleaner. We only accept the wide candidate if
-      // its overall side is within 10% of the absolute minimum — beyond
-      // that the size penalty starts to dominate and we fall back to the
-      // tightest layout regardless.
-      const candidates = [];
-      const maxTry = Math.min(n, Math.max(8, Math.ceil(Math.sqrt(n) * 2) + 2));
-      for (let c = 1; c <= maxTry; c++) {
-        const dims = _sheetDims(c);
-        candidates.push({ c, ...dims });
-      }
-      candidates.sort((a, b) => a.side - b.side);
-      const minSide = candidates[0].side;
-      const wide = candidates.filter(x => x.sw >= x.sh && x.side <= minSide * 1.10);
-      cols = (wide.length ? wide[0] : candidates[0]).c;
+      // Force a square GRID (cols × cols) rather than a tightly-packed
+      // rectangle that we then pad with transparent strips. The strip
+      // padding looked like off-center / floating content even after we
+      // moved it from sides to top+bottom — the user explicitly said
+      // they want all four sides equal (which is geometrically impossible
+      // when n isn't a perfect square AND you require zero internal grid
+      // gaps). Forcing rows = cols = ceil(√n) trades a few empty grid
+      // SLOTS at the bottom-right for elimination of the outer padding
+      // strips on all four sides. For uniform-square frames the sheet
+      // ends up naturally exactly square; for non-uniform frames the
+      // existing pad-to-square step further down handles the residual.
+      cols = Math.max(1, Math.ceil(Math.sqrt(n)));
     } else if (cols <= 0) {
       const avgW = uniformSize ? frameW : avg(processed.map(p => p.bounds.w));
       const avgH = uniformSize ? frameH : avg(processed.map(p => p.bounds.h));
       cols = Math.max(1, Math.round(Math.sqrt(n * avgH / avgW)));
     }
-    const rows = Math.ceil(n / cols);
+    const rows = squareSheet ? cols : Math.ceil(n / cols);
 
     let colWidths, rowHeights;
     if (uniformSize) {
