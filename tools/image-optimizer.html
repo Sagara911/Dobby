@@ -184,104 +184,104 @@
     <h1>📦 Image Optimizer</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片</p>
+      <p data-i18n="io.drop.title">📂 拖入图片</p>
       <p class="hint">
-        多选 PNG / JPG / WebP<br/>
-        在浏览器内压缩、缩放、转码
+        <span data-i18n="io.drop.hint1">多选 PNG / JPG / WebP</span><br/>
+        <span data-i18n="io.drop.hint2">在浏览器内压缩、缩放、转码</span>
       </p>
       <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
     </div>
 
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
 
-    <h2>输出格式</h2>
+    <h2 data-i18n="io.format.h">输出格式</h2>
     <div class="field">
       <select id="format">
-        <option value="keep">保持原格式</option>
-        <option value="image/png">PNG (无损)</option>
-        <option value="image/jpeg">JPEG (有损, 体积小)</option>
-        <option value="image/webp">WebP (有损, 体积更小)</option>
-        <option value="image/avif">AVIF (有损, 新一代, 体积最小, 需现代浏览器)</option>
+        <option value="keep" data-i18n="io.format.keep">保持原格式</option>
+        <option value="image/png" data-i18n="io.format.png">PNG (无损)</option>
+        <option value="image/jpeg" data-i18n="io.format.jpeg">JPEG (有损, 体积小)</option>
+        <option value="image/webp" data-i18n="io.format.webp">WebP (有损, 体积更小)</option>
+        <option value="image/avif" data-i18n="io.format.avif">AVIF (有损, 新一代, 体积最小, 需现代浏览器)</option>
       </select>
     </div>
     <div class="field">
-      <label>质量 (JPEG / WebP) <span id="qualityVal" class="mono">85</span></label>
+      <label><span data-i18n="io.quality.label">质量 (JPEG / WebP)</span> <span id="qualityVal" class="mono">85</span></label>
       <input type="range" id="quality" min="1" max="100" value="85" />
     </div>
     <div class="field">
-      <label>压缩引擎</label>
+      <label data-i18n="io.engine.label">压缩引擎</label>
       <select id="engine">
-        <option value="native" selected>浏览器原生 (快, 零下载)</option>
-        <option value="mozjpeg">mozjpeg (JPEG -10%~-25%, 首次 ~700 KB)</option>
-        <option value="oxipng">oxipng (PNG 无损 -5%~-30%, 首次 ~250 KB)</option>
-        <option value="webp-hq">webp 高质 (method=6, 首次 ~600 KB)</option>
-        <option value="avif">AVIF (新一代, 比 JPEG -50%~-70%, 首次 ~1.5 MB, 慢)</option>
+        <option value="native" selected data-i18n="io.engine.native">浏览器原生 (快, 零下载)</option>
+        <option value="mozjpeg" data-i18n="io.engine.mozjpeg">mozjpeg (JPEG -10%~-25%, 首次 ~700 KB)</option>
+        <option value="oxipng" data-i18n="io.engine.oxipng">oxipng (PNG 无损 -5%~-30%, 首次 ~250 KB)</option>
+        <option value="webp-hq" data-i18n="io.engine.webphq">webp 高质 (method=6, 首次 ~600 KB)</option>
+        <option value="avif" data-i18n="io.engine.avif">AVIF (新一代, 比 JPEG -50%~-70%, 首次 ~1.5 MB, 慢)</option>
       </select>
-      <div class="info" style="margin-top:4px">引擎仅在输出格式匹配时生效 (mozjpeg→JPEG, oxipng→PNG, webp 高质/AVIF→对应格式)</div>
+      <div class="info" style="margin-top:4px" data-i18n="io.engine.note">引擎仅在输出格式匹配时生效 (mozjpeg→JPEG, oxipng→PNG, webp 高质/AVIF→对应格式)</div>
     </div>
 
-    <h2>缩放</h2>
+    <h2 data-i18n="io.resize.h">缩放</h2>
     <div class="field">
       <select id="resizeMode">
-        <option value="none">不缩放</option>
-        <option value="maxDim">限制最大边</option>
-        <option value="scale">按比例缩放</option>
+        <option value="none" data-i18n="io.resize.none">不缩放</option>
+        <option value="maxDim" data-i18n="io.resize.maxDim">限制最大边</option>
+        <option value="scale" data-i18n="io.resize.scale">按比例缩放</option>
       </select>
     </div>
     <div class="field" id="maxDimField" style="display:none">
-      <label>最大宽 / 高 (px)</label>
+      <label data-i18n="io.resize.maxDimLabel">最大宽 / 高 (px)</label>
       <input type="number" id="maxDim" value="1024" min="1" />
     </div>
     <div class="field" id="scaleField" style="display:none">
-      <label>缩放比例 <span id="scaleVal" class="mono">50%</span></label>
+      <label><span data-i18n="io.resize.scaleLabel">缩放比例</span> <span id="scaleVal" class="mono">50%</span></label>
       <input type="range" id="scale" min="10" max="200" value="50" />
     </div>
 
-    <h2>颜色</h2>
+    <h2 data-i18n="io.color.h">颜色</h2>
     <div class="field">
-      <label>位深 (每通道)</label>
+      <label data-i18n="io.color.bitDepth">位深 (每通道)</label>
       <select id="bitDepth">
-        <option value="8">8 bit (原始, 1670 万色)</option>
-        <option value="6">6 bit (~26 万色)</option>
-        <option value="5">5 bit (~3.3 万色)</option>
-        <option value="4">4 bit (4096 色)</option>
-        <option value="3">3 bit (512 色)</option>
+        <option value="8" data-i18n="io.color.8">8 bit (原始, 1670 万色)</option>
+        <option value="6" data-i18n="io.color.6">6 bit (~26 万色)</option>
+        <option value="5" data-i18n="io.color.5">5 bit (~3.3 万色)</option>
+        <option value="4" data-i18n="io.color.4">4 bit (4096 色)</option>
+        <option value="3" data-i18n="io.color.3">3 bit (512 色)</option>
       </select>
     </div>
 
-    <button id="processBtn" disabled>开始处理</button>
-    <button id="exportZipBtn" class="secondary" disabled>下载全部 (ZIP)</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="processBtn" disabled data-i18n="io.btn.process">开始处理</button>
+    <button id="exportZipBtn" class="secondary" disabled data-i18n="io.btn.zip">下载全部 (ZIP)</button>
+    <button id="clearBtn" class="secondary" data-i18n="io.btn.clear">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="io.stats.ready">Dobby 待命</div>
     <div class="results" id="results">
       <table>
         <thead>
           <tr>
             <th></th>
-            <th>文件名</th>
-            <th>原尺寸</th>
-            <th>输出尺寸</th>
-            <th>原体积</th>
-            <th>输出体积</th>
-            <th>压缩</th>
+            <th data-i18n="io.tbl.filename">文件名</th>
+            <th data-i18n="io.tbl.srcSize">原尺寸</th>
+            <th data-i18n="io.tbl.outSize">输出尺寸</th>
+            <th data-i18n="io.tbl.srcBytes">原体积</th>
+            <th data-i18n="io.tbl.outBytes">输出体积</th>
+            <th data-i18n="io.tbl.compress">压缩</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="resultsBody">
-          <tr><td colspan="8" style="text-align:center; color:var(--muted); padding:40px">你丢图进来,Dobby 处理结果对比写在这里</td></tr>
+          <tr><td colspan="8" style="text-align:center; color:var(--muted); padding:40px" data-i18n="io.tbl.empty">你丢图进来,Dobby 处理结果对比写在这里</td></tr>
         </tbody>
       </table>
     </div>
     <div class="summary" id="summary" style="display:none">
-      <span>共 <strong id="sumCount">0</strong> 张</span>
-      <span>原体积 <strong id="sumOriginal">0</strong></span>
-      <span>输出体积 <strong id="sumOptimized">0</strong></span>
-      <span>节省 <strong id="sumSavings">0</strong></span>
+      <span><span data-i18n="io.sum.count">共</span> <strong id="sumCount">0</strong> <span data-i18n="io.sum.images">张</span></span>
+      <span><span data-i18n="io.sum.srcBytes">原体积</span> <strong id="sumOriginal">0</strong></span>
+      <span><span data-i18n="io.sum.outBytes">输出体积</span> <strong id="sumOptimized">0</strong></span>
+      <span><span data-i18n="io.sum.savings">节省</span> <strong id="sumSavings">0</strong></span>
     </div>
   </div>
 </div>
