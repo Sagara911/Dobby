@@ -6,13 +6,14 @@
 // showed after a SECOND refresh). Network-first costs one extra round-trip per request
 // online but matches "push = next refresh shows it" behavior of a normal website.
 
-const CACHE = 'dobby-v29';
+const CACHE = 'dobby-v30';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
 const CORE = [
   './',
   './index.html',
   './404.html',
+  './messages.html',
   './manifest.json',
   './assets/shared.css',
   './assets/shared.js',

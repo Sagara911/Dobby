@@ -498,6 +498,9 @@
       if (panel) { close(); return; }
       panel = document.createElement('div');
       panel.className = 'feedback-popover';
+      // Resolve home-relative prefix so the link works whether we're on the
+      // root page, in /tools/foo.html, or in some other subfolder.
+      const prefix = location.pathname.includes('/tools/') ? '../' : './';
       panel.innerHTML = `
         <div class="fp-head">
           <span>${T('feedback.head', '🧦 Dobby 还在学本事')}</span>
@@ -505,6 +508,14 @@
         </div>
         <div class="fp-body">${T('feedback.body', '你发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:')}</div>
         <a class="fp-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
+        <div class="fp-divider"></div>
+        <a class="fp-board" href="${prefix}messages.html">
+          <span class="fp-board-icon">💬</span>
+          <span class="fp-board-text">
+            <span class="fp-board-title">${T('feedback.board.title', '公开留言板 →')}</span>
+            <span class="fp-board-sub">${T('feedback.board.sub', '所有人都能看到 · 需要 GitHub 账号')}</span>
+          </span>
+        </a>
       `;
       document.body.appendChild(panel);
       // Anchor below the button, right-aligned to it.

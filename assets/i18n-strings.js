@@ -54,6 +54,11 @@ window.I18N_STRINGS = {
     // Feedback popover
     'feedback.head': '🧦 Dobby 还在学本事',
     'feedback.body': '发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:',
+    'feedback.board.title': '公开留言板 →',
+    'feedback.board.sub': '所有人都能看到 · 需要 GitHub 账号',
+    'messages.title': '留言板 · Dobby',
+    'messages.h1': '💬 Dobby 的留言板',
+    'messages.sub': '用 GitHub 账号登录后留言 · 公开可见,所有人都能看到 · 想私聊找 Dobby 还是用上面 topbar 的 💬 反馈',
     // News toast (tool pages, right-bottom corner)
     'newsToast.tag': '🧦 Dobby 学了新本事',
     'newsToast.more': '还有 {n} 条历史更新…',
@@ -190,6 +195,11 @@ window.I18N_STRINGS = {
     'topbar.lang.toggle': 'Switch language / 切换语言',
     'feedback.head': '🧦 Dobby is still learning',
     'feedback.body': 'Found a bug or want Dobby to learn a new trick? Email Dobby:',
+    'feedback.board.title': 'Public message board →',
+    'feedback.board.sub': 'Everyone can see it · GitHub account required',
+    'messages.title': 'Message Board · Dobby',
+    'messages.h1': "💬 Dobby's Message Board",
+    'messages.sub': 'Sign in with GitHub to post · public — everyone can see it · for private feedback to Dobby use the 💬 chip in the topbar above',
     'newsToast.tag': '🧦 Dobby learned new tricks',
     'newsToast.more': '{n} more older updates…',
     'newsToast.refresh': '🔄 Reload page',

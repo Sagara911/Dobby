@@ -807,6 +807,48 @@ a:hover { color: var(--jade); }
   transition: background 0.12s;
 }
 .feedback-popover .fp-email:hover { background: rgba(var(--jade-rgb), 0.22); }
+.feedback-popover .fp-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px -14px;
+}
+.feedback-popover .fp-board {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+}
+.feedback-popover .fp-board:hover {
+  background: rgba(var(--jade-rgb), 0.10);
+  border-color: rgba(var(--jade-rgb), 0.5);
+  transform: translateX(2px);
+}
+.feedback-popover .fp-board-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.feedback-popover .fp-board-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.feedback-popover .fp-board-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.feedback-popover .fp-board-sub {
+  font-size: 10px;
+  color: var(--muted);
+}
 
 /* =========================================================================
    Tool page layout — sidebar + main

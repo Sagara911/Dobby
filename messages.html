@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+/* one-shot legacy cleanup — keeps in sync with other pages */
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title data-i18n="messages.title">留言板 · Dobby</title>
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  .msg-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 24px 80px;
+  }
+  .msg-page h1 {
+    font-size: 36px;
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, var(--accent), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .msg-page .sub {
+    color: var(--muted-2);
+    font-size: 13px;
+    margin: 0 0 28px 0;
+    line-height: 1.6;
+  }
+  .msg-page .sub a { color: var(--accent); }
+  .msg-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 24px;
+  }
+  .msg-setup-note {
+    border-left: 3px solid var(--accent);
+    padding-left: 14px;
+    margin: 0;
+  }
+  .msg-setup-note h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .msg-setup-note ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .msg-setup-note code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  /* Giscus iframe needs a min-height so its loading skeleton doesn't collapse */
+  .giscus, .giscus-frame { min-height: 200px; }
+  .giscus-frame { width: 100% !important; border: 0; color-scheme: normal; }
+</style>
+</head>
+<body>
+
+<div class="msg-page">
+  <h1 data-i18n="messages.h1">💬 Dobby 的留言板</h1>
+  <p class="sub" data-i18n="messages.sub">
+    用 GitHub 账号登录后留言 · 公开可见,所有人都能看到 · 想私聊找 Dobby 还是用上面 topbar 的 💬 反馈
+  </p>
+
+  <!-- 维护者一次性配置说明 — 留言板没初始化前显示在用户看不到的位置. -->
+  <noscript>
+    <div class="msg-card msg-setup-note">
+      <p>留言板需要 JavaScript。请开启后刷新。</p>
+    </div>
+  </noscript>
+  <div class="msg-card msg-setup-note" id="setupNote" style="display:none">
+    <h3>🔧 Dobby 还没初始化留言板</h3>
+    <ol>
+      <li>去 GitHub 仓库 <code>Sagara911/Dobby</code> → Settings → Features → 勾选 <code>Discussions</code></li>
+      <li>装一下 Giscus app: <a href="https://github.com/apps/giscus" target="_blank" rel="noopener">https://github.com/apps/giscus</a> → 只授权 <code>Sagara911/Dobby</code> 这一个仓库</li>
+      <li>访问 <a href="https://giscus.app/zh-CN" target="_blank" rel="noopener">giscus.app/zh-CN</a> → 填仓库名 → 复制出来的 <code>data-repo-id</code> 和 <code>data-category-id</code> 两个值,填到 <code>messages.html</code> 里 <code>GISCUS_REPO_ID</code> / <code>GISCUS_CATEGORY_ID</code> 占位符上,推一下就好</li>
+    </ol>
+  </div>
+
+  <!--
+    Giscus embed — TWO placeholder values below MUST be filled in once
+    Discussions is enabled and the Giscus app is installed:
+
+      data-repo-id      ← from giscus.app config tool, looks like R_kgDOXXXXXXX
+      data-category-id  ← also from giscus.app, looks like DIC_kwDOXXXXXXX
+
+    Until those are real values, the embed fails silently and the
+    #setupNote block above gets shown by the script at the bottom of
+    this file. Once both IDs are real, the note hides and the comments
+    UI appears in its place.
+  -->
+  <div class="msg-card" id="giscusContainer">
+    <script src="https://giscus.app/client.js"
+            data-repo="Sagara911/Dobby"
+            data-repo-id="GISCUS_REPO_ID"
+            data-category="General"
+            data-category-id="GISCUS_CATEGORY_ID"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="top"
+            data-theme="dark_dimmed"
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+    </script>
+  </div>
+</div>
+
+<script src="assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('messages');
+
+// If the embed hasn't been configured yet (placeholders still in place),
+// Giscus silently fails. Detect that and surface the setup instructions
+// in the card instead of leaving the page looking empty.
+(() => {
+  const repoId = document.querySelector('script[data-repo-id]')?.getAttribute('data-repo-id');
+  const catId  = document.querySelector('script[data-category-id]')?.getAttribute('data-category-id');
+  const needsSetup = !repoId || !catId
+    || repoId.startsWith('GISCUS_') || catId.startsWith('GISCUS_');
+  if (needsSetup) {
+    document.getElementById('setupNote').style.display = '';
+    document.getElementById('giscusContainer').style.display = 'none';
+  }
+  // Re-set theme/lang on language switch so Giscus matches the rest of the UI.
+  document.addEventListener('langchange', () => {
+    const frame = document.querySelector('iframe.giscus-frame');
+    if (!frame) return;
+    const lang = Toolkit.getLang() === 'en' ? 'en' : 'zh-CN';
+    frame.contentWindow.postMessage({ giscus: { setConfig: { lang } } }, 'https://giscus.app');
+  });
+})();
+</script>
+</body>
+</html>
