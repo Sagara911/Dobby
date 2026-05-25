@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (sessionStorage.getItem(KEY)) return;
+  sessionStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title data-i18n="skill.title">装 Dobby Skill · 给 AI 助手</title>
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  .skill-page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+  .skill-page h1 {
+    font-size: 38px;
+    margin: 0 0 10px 0;
+    background: linear-gradient(135deg, var(--accent), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.2;
+  }
+  .skill-page .lede {
+    color: var(--text-soft);
+    font-size: 14px;
+    margin: 0 0 8px 0;
+    line-height: 1.7;
+  }
+  .skill-page .lede strong { color: var(--accent); }
+  .skill-page .deck {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
+  }
+
+  /* the hero / recommended path */
+  .hero-card {
+    background: linear-gradient(135deg,
+      rgba(var(--jade-rgb), 0.06),
+      rgba(var(--jade-rgb), 0.02) 50%,
+      rgba(0,0,0,0.2));
+    border: 1px solid rgba(var(--jade-rgb), 0.35);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    margin-bottom: 24px;
+  }
+  .hero-card .badge {
+    display: inline-block;
+    background: rgba(var(--jade-rgb), 0.18);
+    color: var(--accent);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .hero-card h2 {
+    font-size: 22px;
+    margin: 0 0 8px 0;
+    color: var(--text);
+  }
+  .hero-card .sub {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 0 0 18px 0;
+    line-height: 1.6;
+  }
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0 0 18px 0;
+  }
+  .step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(var(--jade-rgb), 0.18);
+    color: var(--accent);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .step-body {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.55;
+    padding-top: 2px;
+  }
+  .step-body code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .copy-block {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 14px 14px 16px;
+    margin: 8px 0 0 0;
+    position: relative;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .copy-block pre {
+    margin: 0;
+    padding-right: 80px;
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    appearance: none;
+    background: rgba(var(--jade-rgb), 0.15);
+    border: 1px solid rgba(var(--jade-rgb), 0.45);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: background 0.12s, transform 0.12s;
+  }
+  .copy-btn:hover {
+    background: rgba(var(--jade-rgb), 0.25);
+  }
+  .copy-btn.copied {
+    background: var(--accent);
+    color: #0a1a14;
+  }
+
+  /* other methods (smaller cards below hero) */
+  .alt-section h3 {
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 32px 0 12px 0;
+    font-weight: 600;
+  }
+  .alt-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .alt-tabs button {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    padding: 8px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .alt-tabs button:hover { color: var(--text-soft); }
+  .alt-tabs button.active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .alt-pane { display: none; }
+  .alt-pane.active { display: block; }
+  .alt-pane p {
+    font-size: 12px;
+    color: var(--muted-2);
+    line-height: 1.6;
+    margin: 8px 0;
+  }
+  .alt-pane a.download-link {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid rgba(var(--jade-rgb), 0.45);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 12px;
+    transition: background 0.12s;
+  }
+  .alt-pane a.download-link:hover { background: rgba(var(--jade-rgb), 0.12); }
+
+  .verify-card {
+    margin-top: 36px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+  }
+  .verify-card h2 {
+    font-size: 16px;
+    margin: 0 0 8px 0;
+    color: var(--text);
+  }
+  .verify-card p {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.65;
+    margin: 6px 0;
+  }
+  .verify-card .test-quote {
+    background: rgba(255,255,255,0.04);
+    border-left: 2px solid var(--accent);
+    padding: 8px 12px;
+    margin: 8px 0 12px 0;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text);
+    font-size: 12.5px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="skill-page">
+  <h1 data-i18n="skill.h1">🤖 给 AI 助手装 Dobby 装备包</h1>
+  <p class="lede" data-i18n="skill.lede">
+    装上之后,你跟 <strong>Claude Code</strong>(或 Cursor 等 AI 编码助手)说「这图能不能压一下」「想做个 GIF」「字体太大」这种话,它会自动告诉你打开哪个 Dobby 工具、按哪个按钮,而不是干瞪眼或瞎给你写脚本。
+  </p>
+  <p class="deck" data-i18n="skill.deck">
+    本质就是一份给 AI 读的工具说明书。不用 AI 也可以直接当文档看 → <a href="SKILL.md" style="color:var(--accent)">SKILL.md</a>
+  </p>
+
+  <!-- 推荐方法: AI 自己装 -->
+  <div class="hero-card">
+    <span class="badge" data-i18n="skill.recommended">推荐</span>
+    <h2 data-i18n="skill.hero.h2">让 AI 帮你装 — 完全不用碰终端</h2>
+    <p class="sub" data-i18n="skill.hero.sub">最简单的路。你只需要复制下面这段话,粘贴到 Claude Code 让它自己干。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body" data-i18n="skill.step1">点下面绿色按钮复制安装指令</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body" data-i18n="skill.step2">打开 Claude Code(或 Cursor 等支持 skill / rules 的 AI 编码助手)</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body" data-i18n="skill.step3">粘贴进去发送,AI 会自己下载文件并放到正确位置(<code>~/.claude/skills/dobby/SKILL.md</code>),给你一个完成确认</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body" data-i18n="skill.step4">开一个新会话就生效(老会话需要重启 Claude Code)</div>
+      </div>
+    </div>
+
+    <div class="copy-block">
+      <button type="button" class="copy-btn" data-target="aiPrompt"><span data-i18n="skill.copy">📋 复制</span></button>
+      <pre id="aiPrompt">请帮我安装 Dobby skill。从 https://dobby-aih.pages.dev/SKILL.md 下载这个文件,保存到 ~/.claude/skills/dobby/SKILL.md(如果目录不存在请先创建)。安装完确认一下文件路径,告诉我下次新会话生效。</pre>
+    </div>
+  </div>
+
+  <!-- 其它方法 -->
+  <div class="alt-section">
+    <h3 data-i18n="skill.alt.h">其它装法</h3>
+    <div class="alt-tabs">
+      <button data-tab="mac" class="active" data-i18n="skill.alt.mac">⌨️ macOS / Linux 终端</button>
+      <button data-tab="win" data-i18n="skill.alt.win">🪟 Windows PowerShell</button>
+      <button data-tab="manual" data-i18n="skill.alt.manual">📥 手动下载</button>
+    </div>
+
+    <div class="alt-pane active" data-pane="mac">
+      <p data-i18n="skill.mac.intro">熟悉终端的话,一条命令搞定:</p>
+      <div class="copy-block">
+        <button type="button" class="copy-btn" data-target="macCmd"><span data-i18n="skill.copy">📋 复制</span></button>
+        <pre id="macCmd">mkdir -p ~/.claude/skills/dobby && curl -fsSL https://dobby-aih.pages.dev/SKILL.md > ~/.claude/skills/dobby/SKILL.md</pre>
+      </div>
+    </div>
+
+    <div class="alt-pane" data-pane="win">
+      <p data-i18n="skill.win.intro">右键开 PowerShell(不用管理员权限),粘贴跑:</p>
+      <div class="copy-block">
+        <button type="button" class="copy-btn" data-target="winCmd"><span data-i18n="skill.copy">📋 复制</span></button>
+        <pre id="winCmd">$dir = "$env:USERPROFILE\.claude\skills\dobby"
+New-Item -ItemType Directory -Path $dir -Force | Out-Null
+Invoke-WebRequest -Uri https://dobby-aih.pages.dev/SKILL.md -OutFile "$dir\SKILL.md"</pre>
+      </div>
+    </div>
+
+    <div class="alt-pane" data-pane="manual">
+      <p data-i18n="skill.manual.intro">下载文件后,放到 Claude Code 的 skills 目录:</p>
+      <p data-i18n="skill.manual.paths">
+        • macOS / Linux: <code>~/.claude/skills/dobby/SKILL.md</code><br>
+        • Windows: <code>C:\Users\&lt;你的用户名&gt;\.claude\skills\dobby\SKILL.md</code>
+      </p>
+      <a class="download-link" href="SKILL.md" download="SKILL.md" data-i18n="skill.manual.download">📥 下载 SKILL.md</a>
+      <p data-i18n="skill.manual.note" style="margin-top:12px">没有 <code>.claude/skills/dobby/</code> 目录的话,自己手动建一下 — Claude Code 默认不预建这个目录。</p>
+    </div>
+  </div>
+
+  <!-- 验证 -->
+  <div class="verify-card">
+    <h2 data-i18n="skill.verify.h">装好后怎么验证</h2>
+    <p data-i18n="skill.verify.intro">开一个新会话,随便发一句:</p>
+    <div class="test-quote" data-i18n="skill.verify.example">我有张 4MB 的 PNG,能压一下吗</div>
+    <p data-i18n="skill.verify.expect">如果 AI 给你的回答里出现「png-crusher」「https://dobby-aih.pages.dev/tools/png-crusher.html」之类的字眼,就装对了。</p>
+    <p data-i18n="skill.verify.notWorking">如果它装作没看到 Dobby,可能是:1) 没重启 Claude Code 2) 文件没放对位置 3) skill 的 description 字段没匹配到你的话(改个说法再试)。</p>
+  </div>
+</div>
+
+<script src="assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('skill');
+
+(() => {
+  // copy buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const targetId = btn.dataset.target;
+      const text = document.getElementById(targetId)?.textContent || '';
+      try {
+        await navigator.clipboard.writeText(text.trim());
+        const label = btn.querySelector('span');
+        const originalText = label?.textContent;
+        btn.classList.add('copied');
+        if (label) label.textContent = '✓ 已复制';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          if (label && originalText) label.textContent = originalText;
+        }, 1600);
+      } catch (e) {
+        alert('复制失败,请手动选中复制:\n\n' + text);
+      }
+    });
+  });
+  // tabs
+  document.querySelectorAll('.alt-tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      const tab = b.dataset.tab;
+      document.querySelectorAll('.alt-tabs button').forEach(x => x.classList.toggle('active', x === b));
+      document.querySelectorAll('.alt-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === tab));
+    });
+  });
+})();
+</script>
+</body>
+</html>

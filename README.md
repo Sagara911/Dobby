@@ -83,13 +83,13 @@ gh repo create my-toolkit --public --source=. --push  # 需要 gh CLI
 
 如果你日常用 [Claude Code](https://claude.com/claude-code) 这种 AI 编码助手,可以让它在你提到「这图太大了」「想做 GIF」「想去水印」之类的话时,主动推荐 Dobby 对应的工具,而不是干瞪眼。
 
-**装法**(一行命令):
+**最简单的装法**(零终端):
 
-```bash
-# 假设你 Claude Code 配置目录在 ~/.claude
-mkdir -p ~/.claude/skills/dobby
-curl -fsSL https://dobby-aih.pages.dev/SKILL.md > ~/.claude/skills/dobby/SKILL.md
-```
+👉 **访问 https://dobby-aih.pages.dev/skill.html**
+
+页面上一个绿色按钮复制安装 prompt → 粘贴到 Claude Code → AI 自己干完。不用碰命令行,不用懂目录结构。
+
+也支持 macOS/Linux 终端、Windows PowerShell、手动下载三种备选装法 — 页面上都有,选一个顺手的。
 
 下次开新会话,AI 助手就会知道 Dobby 的 26 个工具各干什么、在什么场景该推荐、什么场景不该推荐(比如批量 CLI 脚本它会让你用 `sharp` / `imagemagick`,不强推 Dobby)。
 

@@ -1,12 +1,23 @@
 {
   "entries": [
     {
+      "version": "dobby-v24",
+      "date": "2026-05-25",
+      "title": "Skill 安装现在零终端 — 复制 → 粘贴到 AI 助手 → 它自己装",
+      "items": [
+        "Sagara 说之前那个 curl 一行命令对不懂终端的用户太劝退 — 完全有道理。新建了一个友好安装页 https://dobby-aih.pages.dev/skill.html",
+        "页面上一个大绿色按钮:点一下复制安装 prompt → 粘贴到 Claude Code → 它自己下载文件保存到正确位置。整个过程不用碰任何命令行",
+        "终端党也照顾到了 — 同一个页面 Tab 切换里有 macOS/Linux 单行命令、Windows PowerShell 三行命令、和「手动下载文件丢进目录」三种备选",
+        "页面最下面还有「装好怎么验证」环节 — 直接给一句测试话术「我有张 4MB 的 PNG,能压一下吗」,如果 AI 回的不带 Dobby 链接说明没装上,排查清单也列好了",
+        "留言板 / 反馈按钮 / README 都加了入口链过去,新用户能找到"
+      ]
+    },
+    {
       "version": "dobby-v23",
       "date": "2026-05-25",
-      "title": "给 AI 编码助手用的 Dobby 装备包 — 一行命令装上,AI 自动推荐工具",
+      "title": "给 AI 编码助手用的 Dobby 装备包 — 让 AI 自动推荐工具",
       "items": [
         "如果你用 Claude Code、Cursor 这类 AI 编码助手,现在可以让它认识 Dobby — 你说「这图能不能压一压」「想做个 GIF」「字体太大」之类的话,它就会主动告诉你打开哪个 Dobby 工具、按哪个按钮、什么坑要注意",
-        "装法一行命令:打开终端 `curl -fsSL https://dobby-aih.pages.dev/SKILL.md > ~/.claude/skills/dobby/SKILL.md`,下次新会话生效",
         "AI 也知道 Dobby 不适合干什么 — 比如你说「批量压几千张图」,它会让你用 sharp 或 imagemagick CLI 脚本,而不是傻推 Dobby。Dobby 是浏览器交互工具,自动化批处理不是它的强项",
         "不用 AI 助手也行,SKILL.md 本身就是一份给人看的工具索引,直接打开当 cheatsheet 用也行",
         "顺手谈一下:MCP / API 暂时不接 — 详细理由 Dobby 跟 Sagara 单独说了。简单讲就是 Dobby 是个让人对着结果调的交互工具,自动化不是核心价值,接 MCP 投入产出比低"
