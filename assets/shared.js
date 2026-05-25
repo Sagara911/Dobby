@@ -392,7 +392,7 @@
         wrap.insertBefore(back, bar);
       }
       const steps = INSTRUCTIONS[tool.id];
-      if (steps && steps.length) injectInstructions(steps);
+      if (steps && steps.length) injectInstructions(steps, {}, tool.id);
       // mark this tool as recently used
       Prefs.touchRecent(tool.id);
     }
@@ -777,17 +777,29 @@
 
   // Inject a collapsible "how to use" block at the top of the sidebar.
   // Call in tool pages after Toolkit.injectTopbar(). Pass an array of steps (strings or HTML).
-  function injectInstructions(steps, opts = {}) {
+  function injectInstructions(steps, opts = {}, toolId) {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
+    // Remove any pre-existing instructions block (idempotent on langchange
+    // re-render — without this every language switch would prepend another
+    // block above the previous one).
+    sidebar.querySelectorAll('.instructions').forEach(el => el.remove());
     const h1 = sidebar.querySelector('h1');
     const box = document.createElement('details');
     box.className = 'instructions';
     box.open = opts.collapsed ? false : true;
+    // Each step gets its own data-i18n key (`instructions.<toolId>.<index>`)
+    // with the Chinese literal as fallback. applyTranslations swaps to the
+    // English text after the dict loads.
+    const stepsHtml = steps.map((s, i) => {
+      const key = toolId ? `instructions.${toolId}.${i}` : null;
+      const text = key ? T(key, s) : s;
+      return key ? `<li data-i18n="${key}">${text}</li>` : `<li>${text}</li>`;
+    }).join('');
     box.innerHTML = `
       <summary data-i18n="sidebar.howTo">${T('sidebar.howTo', '📖 Dobby 怎么干这活')}</summary>
       <ol>
-        ${steps.map(s => `<li>${s}</li>`).join('')}
+        ${stepsHtml}
       </ol>
       ${opts.note ? `<div class="instructions-note">${opts.note}</div>` : ''}
     `;
