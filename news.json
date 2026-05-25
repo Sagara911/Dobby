@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v28",
+      "date": "2026-05-25",
+      "title": "像素游戏工具链补完 — SFX 生成器 + Tilemap 编辑器 + 像素画板加帧动画",
+      "items": [
+        "Dobby 一口气补完了像素游戏开发的剩余三个工具,从画图到打包到出渠道一站全完",
+        "🔊 8-bit SFX 生成器: jump / pickup / laser / hit / explosion / coin / powerup 七个经典预设,可调波形 / 包络 / 滤波 / 颤音 / 频率扫描,🎲 一键随机变异,导出 WAV 或 Opus(WebM)",
+        "🗺️ Tilemap 编辑器: 拖入 tileset PNG 自动按 tile 尺寸切分,在地图上点格子选 tile + 铅笔/橡皮/填充/矩形画地图,撤销 50 步,导出 Tiled 兼容 JSON 或平摊 PNG。Phaser / Pixi / Godot 都能直接读这种 JSON",
+        "💫 像素画板升级: 加了底部时间轴 + 帧管理,每帧独立画 + 独立撤销栈,🧅 洋葱皮半透明叠加上下帧,▶ 播放循环预览,🎞️ 一键导出 GIF / APNG。`,` `.` 切上下帧,「📋 复制帧」复制当前帧到下一格",
+        "完整流水线现在能跑通: 像素画板画 sprite/tileset → SFX 生成器配音 → Tilemap 编辑器拼地图 → 现有 png-crusher / html-inliner / channel-check 工具链打包成 playable",
+        "实测验证: SFX 生成器导出合法 16-bit WAV / Tilemap 导出合法 Tiled JSON / 像素画板 2 帧 GIF 导出验证 GIF89a 签名 + 尺寸正确 + 帧间像素独立"
+      ]
+    },
+    {
       "version": "dobby-v27",
       "date": "2026-05-25",
       "title": "新工具: 像素画板 — 终于可以在 Dobby 里从零画像素图了",

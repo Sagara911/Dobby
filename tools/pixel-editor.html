@@ -258,6 +258,142 @@
   }
   .px-export-grid button:hover { background: rgba(var(--jade-rgb), 0.20); }
 
+  /* ── frame animation timeline ── */
+  .px-timeline {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .px-timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .px-timeline-controls button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .px-timeline-controls button:hover { background: rgba(255,255,255,0.10); }
+  .px-timeline-controls button.primary {
+    background: rgba(var(--jade-rgb), 0.15);
+    border-color: rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+  }
+  .px-timeline-controls button.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .px-timeline-controls .gap { flex: 1; }
+  .px-timeline-controls .fps-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .px-timeline-controls .fps-row input {
+    width: 80px;
+  }
+  .px-timeline-controls .fps-row .val {
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--text);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  .px-timeline-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .px-frame {
+    position: relative;
+    width: 64px; height: 64px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    cursor: pointer;
+    background: var(--checker), #0a0a0c;
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    overflow: hidden;
+    transition: border-color 0.12s, transform 0.12s;
+  }
+  .px-frame:hover { border-color: rgba(var(--jade-rgb), 0.5); transform: translateY(-2px); }
+  .px-frame.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .px-frame canvas {
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .px-frame .idx {
+    position: absolute;
+    bottom: 2px; left: 2px;
+    background: rgba(0,0,0,0.7);
+    color: var(--text);
+    padding: 0 4px;
+    border-radius: 2px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 9px;
+    border: 1px solid var(--border);
+  }
+  .px-frame .del-btn {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 16px; height: 16px;
+    background: rgba(245, 91, 91, 0.9);
+    color: #fff;
+    border: 0;
+    border-radius: 50%;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    padding: 0;
+  }
+  .px-frame:hover .del-btn { display: block; }
+  .px-frame-add {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,0.04);
+    border: 2px dashed var(--border);
+    color: var(--muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .px-frame-add:hover {
+    background: rgba(var(--jade-rgb), 0.08);
+    border-color: rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+  }
+  /* onion-skin overlays */
+  .px-canvas-wrap canvas.onion {
+    pointer-events: none;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+  }
+
   h2 { font-size: 11px; margin-top: 14px; }
   .px-help {
     font-size: 10px;
@@ -351,13 +487,20 @@
       <kbd>滚轮</kbd> 缩放 · <kbd>Space</kbd>+拖动 平移 · <kbd>Alt</kbd>+点 吸色 · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> 撤销/重做
     </div>
 
-    <h2>导出 PNG</h2>
+    <h2>导出 PNG <span class="px-help">(当前帧)</span></h2>
     <div class="px-export-grid">
       <button data-scale="1">1×</button>
       <button data-scale="2">2×</button>
       <button data-scale="4">4×</button>
       <button data-scale="8">8×</button>
     </div>
+
+    <h2>导出动画 <span class="px-help">(所有帧)</span></h2>
+    <div class="px-action-row">
+      <button id="exportGifBtn" style="background:rgba(var(--jade-rgb),0.10); border-color:rgba(var(--jade-rgb),0.4); color:var(--accent)">🎞️ GIF</button>
+      <button id="exportApngBtn" style="background:rgba(var(--jade-rgb),0.10); border-color:rgba(var(--jade-rgb),0.4); color:var(--accent)">🎞️ APNG</button>
+    </div>
+
     <input type="text" id="filename" value="pixel" style="margin-top:6px; width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" placeholder="文件名" />
 
     <h2>导入</h2>
@@ -370,8 +513,10 @@
 
   <div class="main">
     <div class="stats" id="stats">像素画板 · 拖入图或直接画</div>
-    <div class="px-stage" id="stage">
+    <div class="px-stage" id="stage" style="flex:0 0 auto">
       <div class="px-canvas-wrap" id="canvasWrap">
+        <canvas class="onion" id="onionPrevCv"></canvas>
+        <canvas class="onion" id="onionNextCv"></canvas>
         <canvas class="draw" id="drawCv"></canvas>
         <canvas class="layer preview" id="previewCv"></canvas>
         <canvas class="layer grid" id="gridCv"></canvas>
@@ -384,10 +529,31 @@
         <span id="canvasInfo">32×32</span>
       </div>
     </div>
+
+    <!-- frame animation timeline -->
+    <div class="px-timeline" id="timeline">
+      <div class="px-timeline-controls">
+        <button id="playBtn" class="primary" title="播放 / 暂停">▶ 播放</button>
+        <div class="fps-row">
+          <span>FPS</span>
+          <input type="range" id="fps" min="1" max="30" value="8" />
+          <span class="val" id="fpsVal">8</span>
+        </div>
+        <button id="onionBtn" title="洋葱皮 — 半透明叠加前一帧和下一帧">🧅 洋葱皮</button>
+        <button id="dupFrameBtn" title="复制当前帧到末尾">📋 复制帧</button>
+        <div class="gap"></div>
+        <span id="frameInfo" style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted)">第 1 / 共 1 帧</span>
+      </div>
+      <div class="px-timeline-strip" id="frameStrip">
+        <!-- frames populated at runtime -->
+        <button class="px-frame-add" id="addFrameBtn" title="加新帧(空白)">+</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
 <script>
 Toolkit.injectTopbar('pixel-editor');
 
@@ -424,9 +590,21 @@ Toolkit.injectTopbar('pixel-editor');
 
   // ===========================================================
   //   Canvas state
+  //
+  // Now multi-frame: `frames` is the source of truth, each entry
+  // owns its own undo / redo stack. `pixels` is a live ref pointing
+  // at frames[currentFrame].pixels — reassigned on frame switch.
+  // Drawing code keeps writing to `pixels` unchanged.
   // ===========================================================
   let CW = 32, CH = 32;
-  let pixels = new Uint8ClampedArray(CW * CH * 4);
+  function makeFrame() {
+    return { pixels: new Uint8ClampedArray(CW * CH * 4), undoStack: [], redoStack: [] };
+  }
+  let frames = [makeFrame()];
+  let currentFrame = 0;
+  let pixels = frames[currentFrame].pixels;
+  const UNDO_CAP = 50;
+
   let zoom = 16;
   let panX = 0, panY = 0;
   let showGrid = true;
@@ -444,10 +622,10 @@ Toolkit.injectTopbar('pixel-editor');
   let shapeStart = null;  // {x, y} for line / rect tools
   let snapshot = null;    // pre-shape snapshot for live preview
 
-  // history
-  const undoStack = [];
-  let redoStack = [];
-  const UNDO_CAP = 50;
+  // playback / onion-skin state
+  let playing = false;
+  let playTimer = null;
+  let onionSkin = false;
 
   // pan state
   let spaceHeld = false;
@@ -565,24 +743,30 @@ Toolkit.injectTopbar('pixel-editor');
   }
 
   // ===========================================================
-  //   History
+  //   History — per-frame stacks; undo/redo overwrite `pixels` in
+  //   place via .set() so the frames[i].pixels reference stays valid.
   // ===========================================================
   function pushUndo() {
-    undoStack.push(new Uint8ClampedArray(pixels));
-    if (undoStack.length > UNDO_CAP) undoStack.shift();
-    redoStack = [];
+    const f = frames[currentFrame];
+    f.undoStack.push(new Uint8ClampedArray(pixels));
+    if (f.undoStack.length > UNDO_CAP) f.undoStack.shift();
+    f.redoStack = [];
   }
   function undo() {
-    if (!undoStack.length) return;
-    redoStack.push(new Uint8ClampedArray(pixels));
-    pixels = undoStack.pop();
+    const f = frames[currentFrame];
+    if (!f.undoStack.length) return;
+    f.redoStack.push(new Uint8ClampedArray(pixels));
+    pixels.set(f.undoStack.pop());
     renderDraw();
+    refreshFrameThumb(currentFrame);
   }
   function redo() {
-    if (!redoStack.length) return;
-    undoStack.push(new Uint8ClampedArray(pixels));
-    pixels = redoStack.pop();
+    const f = frames[currentFrame];
+    if (!f.redoStack.length) return;
+    f.undoStack.push(new Uint8ClampedArray(pixels));
+    pixels.set(f.redoStack.pop());
     renderDraw();
+    refreshFrameThumb(currentFrame);
   }
 
   // ===========================================================
@@ -608,6 +792,7 @@ Toolkit.injectTopbar('pixel-editor');
       pushUndo();
       floodFill(x, y, fgColor);
       renderDraw();
+      refreshFrameThumb(currentFrame);
       return;
     }
     if (tool === 'eraser') {
@@ -650,12 +835,13 @@ Toolkit.injectTopbar('pixel-editor');
   function applyToolUp(x, y) {
     if (shapeStart && (tool === 'line' || tool === 'rect' || tool === 'rectFill')) {
       // commit: snapshot was the pre-shape state; current pixels is the result
-      // — we need an undo entry to revert to snapshot
-      undoStack.push(snapshot);
-      if (undoStack.length > UNDO_CAP) undoStack.shift();
-      redoStack = [];
+      const f = frames[currentFrame];
+      f.undoStack.push(snapshot);
+      if (f.undoStack.length > UNDO_CAP) f.undoStack.shift();
+      f.redoStack = [];
       shapeStart = null;
       snapshot = null;
+      refreshFrameThumb(currentFrame);
     }
   }
 
@@ -689,6 +875,7 @@ Toolkit.injectTopbar('pixel-editor');
     if (panning) { endPan(); return; }
     const { x, y } = eventToPx(e);
     applyToolUp(x, y);
+    if (drawing) refreshFrameThumb(currentFrame);
     drawing = false;
     try { drawCv.releasePointerCapture(e.pointerId); } catch {}
   });
@@ -825,12 +1012,15 @@ Toolkit.injectTopbar('pixel-editor');
   // canvas size presets
   function applySize(w, h) {
     if (w === CW && h === CH) return;
-    if (!confirm(`新建画布 ${w}×${h},当前画面会清空,继续?`)) return;
+    if (!confirm(`新建画布 ${w}×${h},当前所有帧会清空,继续?`)) return;
     CW = w; CH = h;
-    pixels = new Uint8ClampedArray(CW * CH * 4);
-    undoStack.length = 0; redoStack = [];
+    // wipe all frames + start fresh with one empty frame
+    frames = [makeFrame()];
+    currentFrame = 0;
+    pixels = frames[0].pixels;
     $('canvasW').value = w; $('canvasH').value = h;
     resizeCanvases();
+    renderTimeline();
   }
   $('preset16').addEventListener('click', () => applySize(16, 16));
   $('preset32').addEventListener('click', () => applySize(32, 32));
@@ -846,10 +1036,11 @@ Toolkit.injectTopbar('pixel-editor');
   $('undoBtn').addEventListener('click', undo);
   $('redoBtn').addEventListener('click', redo);
   $('clearBtn').addEventListener('click', () => {
-    if (!confirm('清空当前画布?')) return;
+    if (!confirm('清空当前帧?')) return;
     pushUndo();
     pixels.fill(0);
     renderDraw();
+    refreshFrameThumb(currentFrame);
   });
 
   // zoom
@@ -908,11 +1099,203 @@ Toolkit.injectTopbar('pixel-editor');
       pushUndo();
       pixels.set(id.data);
       renderDraw();
+      refreshFrameThumb(currentFrame);
       log.ok(`导入 ${bmp.width}×${bmp.height} → ${CW}×${CH}`);
     } catch (err) {
       log.err('导入失败: ' + err.message);
     }
   }
+
+  // ============================================================
+  //   Frame management — timeline strip, add / dup / delete frames,
+  //   onion-skin overlays, playback loop, GIF / APNG export.
+  // ============================================================
+  function renderTimeline() {
+    const strip = $('frameStrip');
+    // remove all existing frame buttons (keep the trailing + button)
+    [...strip.querySelectorAll('.px-frame')].forEach(n => n.remove());
+    const addBtn = $('addFrameBtn');
+    frames.forEach((_, i) => {
+      const btn = document.createElement('div');
+      btn.className = 'px-frame' + (i === currentFrame ? ' active' : '');
+      btn.dataset.idx = i;
+      const cv = document.createElement('canvas');
+      cv.width = CW; cv.height = CH;
+      btn.appendChild(cv);
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = (i + 1);
+      btn.appendChild(idx);
+      if (frames.length > 1) {
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '×';
+        del.title = '删除帧';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          deleteFrame(i);
+        });
+        btn.appendChild(del);
+      }
+      btn.addEventListener('click', () => switchFrame(i));
+      strip.insertBefore(btn, addBtn);
+      refreshFrameThumb(i);
+    });
+    $('frameInfo').textContent = `第 ${currentFrame + 1} / 共 ${frames.length} 帧`;
+  }
+
+  function refreshFrameThumb(i) {
+    const btn = document.querySelector(`.px-frame[data-idx="${i}"]`);
+    if (!btn) return;
+    const cv = btn.querySelector('canvas');
+    if (!cv) return;
+    // resize if canvas mismatch (e.g. after applySize on a different W/H)
+    if (cv.width !== CW || cv.height !== CH) { cv.width = CW; cv.height = CH; }
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const img = new ImageData(frames[i].pixels.slice(), CW, CH);
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function switchFrame(i) {
+    if (i < 0 || i >= frames.length) return;
+    currentFrame = i;
+    pixels = frames[currentFrame].pixels;
+    renderDraw();
+    renderOnionSkin();
+    document.querySelectorAll('.px-frame').forEach(b =>
+      b.classList.toggle('active', parseInt(b.dataset.idx, 10) === i));
+    $('frameInfo').textContent = `第 ${currentFrame + 1} / 共 ${frames.length} 帧`;
+  }
+
+  function addFrame(copyCurrent = false) {
+    const f = makeFrame();
+    if (copyCurrent) f.pixels.set(frames[currentFrame].pixels);
+    frames.splice(currentFrame + 1, 0, f);
+    switchFrame(currentFrame + 1);
+    renderTimeline();
+  }
+
+  function deleteFrame(i) {
+    if (frames.length <= 1) return;
+    frames.splice(i, 1);
+    if (currentFrame >= frames.length) currentFrame = frames.length - 1;
+    pixels = frames[currentFrame].pixels;
+    renderDraw();
+    renderOnionSkin();
+    renderTimeline();
+  }
+
+  function renderOnionSkin() {
+    const prev = $('onionPrevCv');
+    const next = $('onionNextCv');
+    [prev, next].forEach(c => {
+      c.width = CW; c.height = CH;
+      c.style.width = (CW * zoom) + 'px';
+      c.style.height = (CH * zoom) + 'px';
+    });
+    if (!onionSkin || frames.length < 2) {
+      prev.getContext('2d').clearRect(0, 0, CW, CH);
+      next.getContext('2d').clearRect(0, 0, CW, CH);
+      prev.style.display = 'none';
+      next.style.display = 'none';
+      return;
+    }
+    prev.style.display = '';
+    next.style.display = '';
+    const prevIdx = (currentFrame - 1 + frames.length) % frames.length;
+    const nextIdx = (currentFrame + 1) % frames.length;
+    // previous frame tinted cyan
+    const pCtx = prev.getContext('2d');
+    pCtx.clearRect(0, 0, CW, CH);
+    const pImg = new ImageData(new Uint8ClampedArray(frames[prevIdx].pixels), CW, CH);
+    for (let i = 0; i < pImg.data.length; i += 4) {
+      if (pImg.data[i + 3] === 0) continue;
+      pImg.data[i]     = pImg.data[i]     * 0.4;
+      pImg.data[i + 1] = pImg.data[i + 1] * 0.7 + 60;
+      pImg.data[i + 2] = pImg.data[i + 2] * 0.7 + 80;
+    }
+    pCtx.putImageData(pImg, 0, 0);
+    // next frame tinted red
+    const nCtx = next.getContext('2d');
+    nCtx.clearRect(0, 0, CW, CH);
+    const nImg = new ImageData(new Uint8ClampedArray(frames[nextIdx].pixels), CW, CH);
+    for (let i = 0; i < nImg.data.length; i += 4) {
+      if (nImg.data[i + 3] === 0) continue;
+      nImg.data[i]     = nImg.data[i]     * 0.7 + 80;
+      nImg.data[i + 1] = nImg.data[i + 1] * 0.4;
+      nImg.data[i + 2] = nImg.data[i + 2] * 0.4;
+    }
+    nCtx.putImageData(nImg, 0, 0);
+  }
+
+  function startPlayback() {
+    if (playing) return;
+    if (frames.length < 2) { log.dim('只有一帧没法播放,先 + 加几帧'); return; }
+    playing = true;
+    $('playBtn').textContent = '⏸ 暂停';
+    const fps = parseInt($('fps').value, 10) || 8;
+    const interval = 1000 / fps;
+    playTimer = setInterval(() => {
+      switchFrame((currentFrame + 1) % frames.length);
+    }, interval);
+  }
+  function stopPlayback() {
+    if (!playing) return;
+    playing = false;
+    clearInterval(playTimer);
+    playTimer = null;
+    $('playBtn').textContent = '▶ 播放';
+  }
+
+  $('playBtn').addEventListener('click', () => playing ? stopPlayback() : startPlayback());
+  $('addFrameBtn').addEventListener('click', () => addFrame(false));
+  $('dupFrameBtn').addEventListener('click', () => addFrame(true));
+  $('onionBtn').addEventListener('click', () => {
+    onionSkin = !onionSkin;
+    $('onionBtn').classList.toggle('active', onionSkin);
+    renderOnionSkin();
+  });
+  $('fps').addEventListener('input', e => {
+    $('fpsVal').textContent = e.target.value;
+    if (playing) { stopPlayback(); startPlayback(); }
+  });
+
+  // GIF / APNG export
+  async function exportAnimation(format) {
+    if (frames.length < 1) return;
+    const fps = parseInt($('fps').value, 10) || 8;
+    log.dim(`生成 ${format.toUpperCase()}...`);
+    try {
+      // build the frame array shape AnimEncoders expects: each entry has w/h and a bitmap-like canvas
+      const animFrames = frames.map(f => {
+        const cv = newCanvas(CW, CH);
+        cv.getContext('2d').putImageData(new ImageData(f.pixels.slice(), CW, CH), 0, 0);
+        return { canvas: cv, bitmap: cv, w: CW, h: CH };
+      });
+      const opts = { fps, loop: 0, onStatus: m => log.dim('  ' + m) };
+      const blob = format === 'gif'
+        ? await AnimEncoders.buildGif(animFrames, { ...opts, paletteMode: 'median' })
+        : await AnimEncoders.buildApng(animFrames, opts);
+      const name = ($('filename').value || 'pixel').replace(/[^\w-]/g, '_');
+      const ext = format === 'gif' ? 'gif' : 'png';
+      const finalName = `${name}_${CW}x${CH}_${frames.length}f.${ext}`;
+      download(blob, finalName);
+      log.ok(`导出 ${frames.length} 帧 ${format.toUpperCase()} · ${(blob.size / 1024).toFixed(1)} KB`);
+    } catch (e) {
+      log.err(`${format.toUpperCase()} 导出失败: ` + e.message);
+      console.error(e);
+    }
+  }
+  $('exportGifBtn').addEventListener('click', () => exportAnimation('gif'));
+  $('exportApngBtn').addEventListener('click', () => exportAnimation('apng'));
+
+  // keyboard shortcuts for frames
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ',') switchFrame((currentFrame - 1 + frames.length) % frames.length);
+    if (e.key === '.') switchFrame((currentFrame + 1) % frames.length);
+  });
 
   // handoff — let users send the result to other tools (gif-tools, etc.)
   const handoff = Toolkit.setupHandoff('pixel-editor', { outputType: 'image/png' });
@@ -923,7 +1306,8 @@ Toolkit.injectTopbar('pixel-editor');
   resizeCanvases();
   renderPalette('pico8');
   setFgColor(fgColor);
-  log.ok('画板准备好,挑个工具开画');
+  renderTimeline();
+  log.ok('画板准备好,挑个工具开画。多帧动画? 点底部时间轴的 + 加帧');
 })();
 </script>
 </body>
