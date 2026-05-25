@@ -106,6 +106,12 @@ window.I18N_STRINGS = {
     // ARIA labels used in topbar / news modal / homepage
     'home.search.clear': '清空',
     'news.close': '关闭',
+    // Image Optimizer — compare-modal button + labels
+    'imageOpt.compare': '👁️ 对比',
+    'imageOpt.download': '下载',
+    'imageOpt.loading': '🧦 Dobby 加载预览中...',
+    'imageOpt.compareLeft': '原图',
+    'imageOpt.compareRight': '压缩后',
     // 404 page
     '404.title': '404 — Dobby',
     '404.heading': 'Bad Dobby! Bad Dobby!',
@@ -199,6 +205,12 @@ window.I18N_STRINGS = {
     // ARIA labels
     'home.search.clear': 'Clear',
     'news.close': 'Close',
+    // Image Optimizer — compare-modal button + labels
+    'imageOpt.compare': '👁️ Compare',
+    'imageOpt.download': 'Download',
+    'imageOpt.loading': '🧦 Dobby is loading the preview...',
+    'imageOpt.compareLeft': 'Original',
+    'imageOpt.compareRight': 'Compressed',
     // Sidebar instructions — per-tool "how Dobby does it" steps shown when the
     // 📖 details block is opened. Indexed by tool id + zero-based step number.
     // (zh versions remain as fallback literals in shared.js INSTRUCTIONS.)

@@ -94,6 +94,53 @@
   .range-row { display: flex; align-items: center; gap: 8px; }
   .range-row input[type=range] { flex: 1; }
   .range-row .value { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text); min-width: 30px; text-align: right; }
+
+  /* ── before/after compare modal ────────────────────────────────── */
+  .cmp-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .cmp-card {
+    background: linear-gradient(180deg, #14141a 0%, #0c0c10 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 18px 20px 16px;
+    width: 100%; max-width: 920px;
+    max-height: 92vh;
+    overflow: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+  }
+  .cmp-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .cmp-title {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: var(--text); flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cmp-close {
+    background: transparent; border: none;
+    color: var(--muted); font-size: 24px;
+    cursor: pointer; padding: 0 4px;
+    box-shadow: none;
+  }
+  .cmp-close:hover { color: var(--text); transform: none; }
+  .cmp-meta {
+    margin-top: 12px; padding: 8px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted-2);
+    text-align: center;
+  }
+  .cmp-meta strong { color: var(--jade); }
 </style>
 </head>
 <body>
@@ -202,6 +249,18 @@
       <span>输出体积 <strong id="sumOptimized">0</strong></span>
       <span>节省 <strong id="sumSavings">0</strong></span>
     </div>
+  </div>
+</div>
+
+<!-- ── before/after compare modal ── -->
+<div id="cmpModal" class="cmp-modal" style="display:none" role="dialog" aria-modal="true">
+  <div class="cmp-card" role="document">
+    <div class="cmp-head">
+      <span class="cmp-title" id="cmpTitle"></span>
+      <button type="button" class="cmp-close" id="cmpClose" aria-label="关闭">×</button>
+    </div>
+    <div class="cmp-body" id="cmpBody"></div>
+    <div class="cmp-meta" id="cmpMeta"></div>
   </div>
 </div>
 
@@ -432,11 +491,81 @@ Toolkit.injectTopbar('image-optimizer');
     $('savings_' + i).innerHTML = `<span class="savings ${cls}">${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%</span>`;
     const actions = $('actions_' + i);
     actions.innerHTML = '';
+    // 👁️ compare — opens a before/after slide-compare modal so the user can
+    // visually inspect whether the compression introduced artifacts. Pure
+    // download-only used to leave this guess-and-check.
+    const cmpBtn = document.createElement('button');
+    cmpBtn.className = 'secondary';
+    cmpBtn.dataset.i18n = 'imageOpt.compare';
+    cmpBtn.textContent = (window.Toolkit && Toolkit.T) ? Toolkit.T('imageOpt.compare', '👁️ 对比') : '👁️ 对比';
+    cmpBtn.addEventListener('click', () => openCompareModal(i));
+    actions.appendChild(cmpBtn);
     const btn = document.createElement('button');
-    btn.textContent = '下载';
+    btn.dataset.i18n = 'imageOpt.download';
+    btn.textContent = (window.Toolkit && Toolkit.T) ? Toolkit.T('imageOpt.download', '下载') : '下载';
     btn.addEventListener('click', () => download(it.optimizedBlob, it.optimizedName));
     actions.appendChild(btn);
   }
+
+  // ── compare modal ──
+  // Decodes the original and the optimized blob to <img> elements and feeds
+  // them into Toolkit.makeCompareSlider for a before/after slider. We never
+  // store decoded bitmaps long-term; everything is released after the modal
+  // closes (URL.revokeObjectURL + innerHTML clearing).
+  let _cmpUrls = [];
+  async function openCompareModal(i) {
+    const it = items[i];
+    if (!it.optimizedBlob) return;
+    const modal = $('cmpModal');
+    const body = $('cmpBody');
+    const T = (window.Toolkit && Toolkit.T) ? Toolkit.T : (k, fb) => fb || k;
+    $('cmpTitle').textContent = it.file.name;
+    body.innerHTML = `<div style="color:var(--muted); text-align:center; padding:40px">${T('imageOpt.loading', '🧦 Dobby 加载预览中...')}</div>`;
+    modal.style.display = 'flex';
+    document.addEventListener('keydown', onCmpKey);
+    // load both as <img> in parallel — both go through createObjectURL so we
+    // can revoke them on close.
+    for (const u of _cmpUrls) URL.revokeObjectURL(u);
+    _cmpUrls = [];
+    const origUrl = URL.createObjectURL(it.file);
+    const optUrl = URL.createObjectURL(it.optimizedBlob);
+    _cmpUrls = [origUrl, optUrl];
+    // Use onload promises rather than img.decode() — decode() can hang on
+    // certain browsers / preview shells for object-URL-backed images.
+    const loadImg = (url) => new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => rej(new Error('image decode failed'));
+      im.src = url;
+    });
+    let origImg, optImg;
+    try {
+      [origImg, optImg] = await Promise.all([loadImg(origUrl), loadImg(optUrl)]);
+    } catch (e) {
+      body.innerHTML = `<div style="color:var(--danger); text-align:center; padding:40px">Bad Dobby! ${e.message}</div>`;
+      return;
+    }
+    body.innerHTML = '';
+    Toolkit.makeCompareSlider(body, origImg, optImg, {
+      leftLabel: T('imageOpt.compareLeft', '原图'),
+      rightLabel: T('imageOpt.compareRight', '压缩后')
+    });
+    const orig = it.file.size, opt = it.optimizedBlob.size;
+    const pct = ((orig - opt) / orig * 100);
+    const sign = pct >= 0 ? '-' : '+';
+    $('cmpMeta').innerHTML =
+      `${it.bitmap.width}×${it.bitmap.height} · ${fmtBytes(orig)}` +
+      ` → ${it.optimizedW}×${it.optimizedH} · ${fmtBytes(opt)}` +
+      ` · <strong>${sign}${Math.abs(pct).toFixed(1)}%</strong>`;
+  }
+  function closeCmpModal() {
+    $('cmpModal').style.display = 'none';
+    $('cmpBody').innerHTML = '';
+    for (const u of _cmpUrls) URL.revokeObjectURL(u);
+    _cmpUrls = [];
+    document.removeEventListener('keydown', onCmpKey);
+  }
+  function onCmpKey(e) { if (e.key === 'Escape') closeCmpModal(); }
 
   $('exportZipBtn').addEventListener('click', async () => {
     const processed = items.filter(it => it.optimizedBlob);
@@ -463,6 +592,10 @@ Toolkit.injectTopbar('image-optimizer');
     log.clear();
     $('fileInput').value = '';
   });
+
+  // compare-modal close handlers
+  $('cmpClose').addEventListener('click', closeCmpModal);
+  $('cmpModal').addEventListener('click', (e) => { if (e.target === $('cmpModal')) closeCmpModal(); });
 
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 })();
