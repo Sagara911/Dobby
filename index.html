@@ -30,7 +30,7 @@
   })();
 })();
 </script>
-<title>Dobby — 你的本地素材精灵</title>
+<title data-i18n="home.title">Dobby — 你的本地素材精灵</title>
 <link rel="stylesheet" href="assets/shared.css" />
 <style>
   body { overflow-x: hidden; }
@@ -614,23 +614,23 @@
 
 <main>
   <section class="hero">
-    <div class="eyebrow">🧦 Dobby 还在学本事 · 想找 Dobby 聊聊?写信 <a href="mailto:huobingli0924@gmail.com" class="eyebrow-email">huobingli0924@gmail.com</a></div>
-    <h1>叫我 <span class="accent">Dobby</span>。<br/>你的本地素材精灵。</h1>
-    <p>图像 / 动画 / 音视频 / 代码 / 诊断 — 26 件家务 Dobby 全替你扛了 · 文件不上传 · Dobby 不偷看 · Dobby is free!</p>
+    <div class="eyebrow"><span data-i18n="home.eyebrow">🧦 Dobby 还在学本事 · 想找 Dobby 聊聊?写信 </span><a href="mailto:huobingli0924@gmail.com" class="eyebrow-email">huobingli0924@gmail.com</a></div>
+    <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span>。<br/>你的本地素材精灵。</h1>
+    <p data-i18n="home.hero.subtitle">图像 / 动画 / 音视频 / 代码 / 诊断 — 26 件家务 Dobby 全替你扛了 · 文件不上传 · Dobby 不偷看 · Dobby is free!</p>
     <div class="search-wrap" id="searchWrap">
       <span class="icon">🔍</span>
-      <input type="text" id="search" placeholder="告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)" autocomplete="off" />
+      <input type="text" id="search" data-i18n-attr="placeholder:home.search.placeholder" placeholder="告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)" autocomplete="off" />
       <button class="clear" id="searchClear" type="button" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
     <div class="hero-stats" id="heroStats">
-      <span class="stat"><strong id="statToolCount">—</strong> 件家务</span>
+      <span class="stat"><strong id="statToolCount">—</strong> <span data-i18n="home.stats.tools">件家务</span></span>
       <span class="sep"></span>
-      <span class="stat"><strong id="statCatCount">—</strong> 大类</span>
+      <span class="stat"><strong id="statCatCount">—</strong> <span data-i18n="home.stats.cats">大类</span></span>
       <span class="sep"></span>
-      <span class="stat">⚡ Dobby 不收费</span>
+      <span class="stat" data-i18n="home.stats.free">⚡ Dobby 不收费</span>
       <span class="sep"></span>
-      <span class="stat">🧦 Dobby 不偷看</span>
+      <span class="stat" data-i18n="home.stats.private">🧦 Dobby 不偷看</span>
     </div>
   </section>
 
@@ -639,8 +639,8 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <span class="tag"><span class="dot"></span>所有家务在你本机做完 · Dobby 不上传 · Dobby 不偷看</span>
-    <span>2026 · 🧦 Dobby is free!</span>
+    <span class="tag"><span class="dot"></span><span data-i18n="home.footer.tag">所有家务在你本机做完 · Dobby 不上传 · Dobby 不偷看</span></span>
+    <span data-i18n="home.footer.brand">2026 · 🧦 Dobby is free!</span>
   </div>
 </footer>
 
@@ -649,25 +649,33 @@
   <div class="news-card" role="document">
     <div class="news-head">
       <span class="news-badge">NEW</span>
-      <h2 id="newsTitle">Dobby 最近学的新本事</h2>
+      <h2 id="newsTitle" data-i18n="news.modalTitle.fallback">Dobby 最近学的新本事</h2>
       <button type="button" class="news-close" id="newsClose" aria-label="关闭">×</button>
     </div>
     <ul class="news-list" id="newsList"><!-- populated at runtime from news.json --></ul>
     <div class="news-more" id="newsMore" style="display:none; font-size:11px; color:var(--muted); padding:4px 14px 8px; font-family:ui-monospace,Consolas,monospace"></div>
     <div class="news-actions">
-      <button type="button" class="news-primary" id="newsOk">Dobby 加油!</button>
+      <button type="button" class="news-primary" id="newsOk" data-i18n="news.modalOk">Dobby 加油!</button>
     </div>
   </div>
 </div>
 
 <script src="assets/shared.js"></script>
 <script>
+  // Shortcut for translation lookups (Toolkit.T is set up by shared.js)
+  const T = (k, vars, fb) => (window.Toolkit && Toolkit.T) ? Toolkit.T(k, vars, fb) : (fb || k);
+  // For tool display: pick name based on language; descriptions go through T()
+  // with the original Chinese as the fallback so the site looks right even
+  // before i18n-strings.js loads.
+  const toolName = (c) => (Toolkit.getLang && Toolkit.getLang() === 'en' && c.en) ? c.en : c.name;
+  const toolDesc = (c) => T('tool.' + c.id + '.desc', c.desc);
+
   const CATEGORIES = [
-    { id: 'image', icon: '🖼️', name: '图像处理',         en: 'Image Tools' },
-    { id: 'anim',  icon: '🎬', name: '动画 / 精灵图',     en: 'Animation' },
-    { id: 'av',    icon: '🔊', name: '音视频',           en: 'Audio / Video' },
-    { id: 'code',  icon: '🗜️', name: '代码 / 打包',       en: 'Code & Bundle' },
-    { id: 'audit', icon: '📊', name: '分析 / 诊断',       en: 'Analyze & Audit' }
+    { id: 'image', icon: '🖼️', key: 'cat.image', keyEn: 'cat.image.en', name: '图像处理',         en: 'Image Tools' },
+    { id: 'anim',  icon: '🎬', key: 'cat.anim',  keyEn: 'cat.anim.en',  name: '动画 / 精灵图',     en: 'Animation' },
+    { id: 'av',    icon: '🔊', key: 'cat.av',    keyEn: 'cat.av.en',    name: '音视频',           en: 'Audio / Video' },
+    { id: 'code',  icon: '🗜️', key: 'cat.code',  keyEn: 'cat.code.en',  name: '代码 / 打包',       en: 'Code & Bundle' },
+    { id: 'audit', icon: '📊', key: 'cat.audit', keyEn: 'cat.audit.en', name: '分析 / 诊断',       en: 'Analyze & Audit' }
   ];
 
   // Build card list from shared TOOLS data
@@ -686,7 +694,7 @@
     host.innerHTML = CATEGORIES.map(cat => {
       const count = CARDS.filter(c => c.cat === cat.id).length;
       return `<a href="#cat-${cat.id}" data-cat="${cat.id}">
-        <span class="chip-icon">${cat.icon}</span>${cat.name}<span class="chip-count">${count}</span>
+        <span class="chip-icon">${cat.icon}</span><span data-i18n="${cat.key}">${cat.name}</span><span class="chip-count">${count}</span>
       </a>`;
     }).join('');
   })();
@@ -701,10 +709,14 @@
     a.href = c.href;
     a.dataset.cat = c.cat;
     a.dataset.name = (c.name + ' ' + c.en + ' ' + c.desc).toLowerCase();
+    // In en mode the primary name is already English, so the .card-sub label
+    // (always c.en) would duplicate it — drop the sub label in that case.
+    const isEn = Toolkit.getLang && Toolkit.getLang() === 'en';
+    const subHtml = isEn ? '' : `<span class="card-sub">${c.en}</span>`;
     a.innerHTML = `
       <div class="icon">${c.icon}</div>
-      <h3>${c.name} <span class="card-sub">${c.en}</span></h3>
-      <p>${c.desc}</p>
+      <h3>${toolName(c)} ${subHtml}</h3>
+      <p>${toolDesc(c)}</p>
     `;
     a.addEventListener('mousemove', (e) => {
       const r = a.getBoundingClientRect();
@@ -727,7 +739,7 @@
         <div class="cat-header">
           <div class="cat-icon">⭐</div>
           <div class="cat-info">
-            <span class="cat-name">Dobby 最近帮你做过</span>
+            <span class="cat-name" data-i18n="home.recent.name">Dobby 最近帮你做过</span>
             <span class="cat-en">Recent</span>
           </div>
           <span class="cat-count">${recent.length}</span>
@@ -742,19 +754,30 @@
     // Categorized rendering
     let anyMatch = false;
     for (const cat of CATEGORIES) {
-      const items = CARDS.filter(c => c.cat === cat.id && (!q || c.name.toLowerCase().includes(q) || c.en.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)));
+      // search matches against zh name, en name, zh desc, en desc — all four
+      const enDesc = T('tool.' + cat.id + '.desc', '');  // not used; per-tool query happens below
+      const items = CARDS.filter(c => {
+        if (c.cat !== cat.id) return false;
+        if (!q) return true;
+        const haystack = (c.name + ' ' + c.en + ' ' + c.desc + ' ' + T('tool.' + c.id + '.desc', '')).toLowerCase();
+        return haystack.includes(q);
+      });
       if (!items.length) continue;
       anyMatch = true;
       const div = document.createElement('div');
       div.id = `cat-${cat.id}`;
       div.className = 'cat-anchor';
       div.dataset.cat = cat.id;
+      // Same dedup: in en mode the primary cat name is already English, so
+      // the secondary EN label would duplicate it.
+      const isEnCat = Toolkit.getLang && Toolkit.getLang() === 'en';
+      const catSubHtml = isEnCat ? '' : `<span class="cat-en" data-i18n="${cat.keyEn}">${cat.en}</span>`;
       div.innerHTML = `
         <div class="cat-header">
           <div class="cat-icon">${cat.icon}</div>
           <div class="cat-info">
-            <span class="cat-name">${cat.name}</span>
-            <span class="cat-en">${cat.en}</span>
+            <span class="cat-name" data-i18n="${cat.key}">${cat.name}</span>
+            ${catSubHtml}
           </div>
           <span class="cat-count">${items.length} / ${CARDS.filter(c => c.cat === cat.id).length}</span>
         </div>
@@ -765,9 +788,12 @@
       section.appendChild(div);
     }
     if (!anyMatch) {
-      section.innerHTML = `<div class="empty-search">🧦 Dobby 还没学过 "${query}" 这个本事... 换个词试试?</div>`;
+      section.innerHTML = `<div class="empty-search">${T('home.search.empty', { q: query }, `🧦 Dobby 还没学过 "${query}" 这个本事... 换个词试试?`)}</div>`;
     }
   }
+
+  // Re-render the tools section on language change (tool desc / cat names change).
+  document.addEventListener('langchange', () => render(searchInput.value));
 
   searchInput.addEventListener('input', (e) => {
     const v = e.target.value;
@@ -856,13 +882,16 @@
     if (!fresh.length) return;
     const head = fresh[0];
     pendingDismissVersion = head.version;
-    document.getElementById('newsTitle').textContent = head.title || 'Dobby 最近学的新本事';
+    // news.json itself is Chinese-only (entries pre-date i18n); the modal
+    // chrome (title-when-no-entry-title, "more updates" line, dismiss button)
+    // does translate via T() so en users get a partially-localized experience.
+    document.getElementById('newsTitle').textContent = head.title || T('news.modalTitle.fallback', 'Dobby 最近学的新本事');
     document.getElementById('newsList').innerHTML = (head.items || []).map(i =>
       `<li><span class="news-icon">🧦</span><div>${escapeHtmlLocal(i)}</div></li>`
     ).join('');
     const moreEl = document.getElementById('newsMore');
     if (fresh.length > 1) {
-      moreEl.textContent = `还有 ${fresh.length - 1} 条历史更新 (在工具页查看)…`;
+      moreEl.textContent = T('news.modalMore', { n: fresh.length - 1 }, `还有 ${fresh.length - 1} 条历史更新 (在工具页查看)…`);
       moreEl.style.display = '';
     } else {
       moreEl.style.display = 'none';

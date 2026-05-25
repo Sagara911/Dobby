@@ -2,6 +2,116 @@
 // inject the top navigation bar and expose helpers on window.Toolkit
 
 (function () {
+  // ============================================================
+  //   i18n — Dobby's bilingual support (zh default, en optional)
+  //
+  //   Language selection order:
+  //     1. localStorage['toolkit-lang']
+  //     2. navigator.language — starts with 'zh' → 'zh', else → 'en'
+  //   Default Chinese strings are inline in shared.js / HTML, so the
+  //   site works perfectly even before the strings dict loads. Strings
+  //   for the active language are looked up via T(key, vars, fallback);
+  //   the fallback is the Chinese literal that would have been there
+  //   without i18n. The dict (assets/i18n-strings.js) is loaded async
+  //   on boot and a re-render is triggered when it lands.
+  // ============================================================
+  const LANG_KEY = 'toolkit-lang';
+  const SUPPORTED_LANGS = ['zh', 'en'];
+
+  function detectInitialLang() {
+    try {
+      const stored = localStorage.getItem(LANG_KEY);
+      if (SUPPORTED_LANGS.includes(stored)) return stored;
+    } catch (_) {}
+    const nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    if (nav.startsWith('zh')) return 'zh';
+    return 'en';
+  }
+
+  let currentLang = detectInitialLang();
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+
+  function _interp(str, vars) {
+    if (!vars) return str;
+    for (const k in vars) str = str.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
+    return str;
+  }
+
+  // T(key, varsOrFallback, fallback)
+  //   T('home.title') — pure lookup, returns key if missing
+  //   T('home.title', 'fallback') — lookup, fallback if missing
+  //   T('toast.foo', { name: 'x' }, 'fallback') — interpolate vars, fallback if missing
+  function T(key, varsOrFallback, fallback) {
+    let vars = null;
+    if (typeof varsOrFallback === 'string') { fallback = varsOrFallback; }
+    else { vars = varsOrFallback; }
+    const dict = (window.I18N_STRINGS && window.I18N_STRINGS[currentLang]) || null;
+    const fbDict = (window.I18N_STRINGS && window.I18N_STRINGS.zh) || null;
+    // Use loose equality so `null` (which the `dict && dict[key]` short-circuit
+    // produces when dict is itself null) is treated like undefined and falls
+    // through to the fallback path. Without this, T() returned literal null
+    // before i18n-strings.js had loaded, which template-literal-interpolated
+    // as the string "null" in tool card descriptions.
+    let str = dict ? dict[key] : undefined;
+    if (str == null && fbDict) str = fbDict[key];
+    if (str == null) {
+      if (fallback !== undefined) return _interp(fallback, vars);
+      return key;
+    }
+    return _interp(str, vars);
+  }
+
+  function applyTranslations(root) {
+    root = root || document;
+    root.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      const v = T(key);
+      if (v !== key) el.textContent = v;
+    });
+    root.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.dataset.i18nHtml;
+      const v = T(key);
+      if (v !== key) el.innerHTML = v;
+    });
+    root.querySelectorAll('[data-i18n-attr]').forEach(el => {
+      el.dataset.i18nAttr.split(';').forEach(pair => {
+        const idx = pair.indexOf(':');
+        if (idx < 0) return;
+        const attr = pair.slice(0, idx).trim();
+        const key = pair.slice(idx + 1).trim();
+        const v = T(key);
+        if (v !== key) el.setAttribute(attr, v);
+      });
+    });
+  }
+
+  function setLang(lang) {
+    if (!SUPPORTED_LANGS.includes(lang) || lang === currentLang) return;
+    currentLang = lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    applyTranslations();
+    // Trigger a full re-render of dynamic UI bits (topbar, sidebar, etc.)
+    document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
+  }
+
+  function getLang() { return currentLang; }
+
+  // Load the strings dict asynchronously. Sites work with Chinese defaults
+  // before this lands; once it loads, applyTranslations swaps to the
+  // active language.
+  function loadStringsDict() {
+    if (window.I18N_STRINGS) { applyTranslations(); return; }
+    const inSubdir = window.location.pathname.includes('/tools/');
+    const prefix = inSubdir ? '../' : '';
+    const s = document.createElement('script');
+    s.src = prefix + 'assets/i18n-strings.js';
+    s.onload = () => { applyTranslations(); };
+    s.onerror = () => { console.warn('[i18n] failed to load strings dict'); };
+    document.head.appendChild(s);
+  }
+  loadStringsDict();
+
   const TOOLS = [
     { id: 'home',           cat: 'home',  name: '首页',           en: 'Home',            icon: '🏠', href: 'index.html' },
     // 图像处理
@@ -186,17 +296,24 @@
     const currentTool = TOOLS.find(t => t.id === activeId);
     const currentCat = currentTool?.cat;
 
-    // 5 top-level categories instead of listing every tool
+    // 5 top-level categories. Each has its own i18n key (cat.<id> for the
+    // dropdown's primary label, cat.<id>.en for the secondary EN label that
+    // shows on each dropdown item).
     const cats = [
-      { id: 'image', name: '图像处理', icon: '🖼️' },
-      { id: 'anim',  name: '动画 / 精灵图', icon: '🎬' },
-      { id: 'av',    name: '音视频', icon: '🔊' },
-      { id: 'code',  name: '代码 / 打包', icon: '🗜️' },
-      { id: 'audit', name: '分析 / 诊断', icon: '📊' }
+      { id: 'image', key: 'cat.image', defaultName: '图像处理',     icon: '🖼️' },
+      { id: 'anim',  key: 'cat.anim',  defaultName: '动画 / 精灵图', icon: '🎬' },
+      { id: 'av',    key: 'cat.av',    defaultName: '音视频',       icon: '🔊' },
+      { id: 'code',  key: 'cat.code',  defaultName: '代码 / 打包',   icon: '🗜️' },
+      { id: 'audit', key: 'cat.audit', defaultName: '分析 / 诊断',   icon: '📊' }
     ];
 
+    // For each tool, pick its display name based on language:
+    //  zh → t.name (the original Chinese name)
+    //  en → t.en (the existing English column in the TOOLS table)
+    const toolName = (t) => (getLang() === 'en' && t.en) ? t.en : t.name;
+
     bar.innerHTML = `
-      <a href="${prefix}index.html" class="brand" title="Dobby is free!">
+      <a href="${prefix}index.html" class="brand" data-i18n-attr="title:topbar.brand.title" title="Dobby is free!">
         <span class="logo">🧦</span>
         <span>Dobby</span>
       </a>
@@ -204,17 +321,18 @@
         ${cats.map(c => {
           const tools = TOOLS.filter(t => t.cat === c.id);
           const isActive = currentCat === c.id;
+          const catName = T(c.key, c.defaultName);
           return `
             <div class="nav-group ${isActive ? 'active' : ''}">
-              <a href="${prefix}index.html#cat-${c.id}" class="nav-cat" title="${c.name}">
-                <span class="cat-icon">${c.icon}</span><span class="nav-cat-name">${c.name}</span>
+              <a href="${prefix}index.html#cat-${c.id}" class="nav-cat" title="${catName}">
+                <span class="cat-icon">${c.icon}</span><span class="nav-cat-name" data-i18n="${c.key}">${c.defaultName}</span>
                 <span class="caret">▾</span>
               </a>
               <div class="nav-dropdown">
                 ${tools.map(t => `
                   <a href="${prefix}${t.href}" class="${t.id === activeId ? 'active' : ''}">
                     <span>${t.icon}</span>
-                    <span class="dd-name">${t.name}</span>
+                    <span class="dd-name">${toolName(t)}</span>
                     <span class="dd-en">${t.en}</span>
                   </a>
                 `).join('')}
@@ -223,8 +341,9 @@
           `;
         }).join('')}
       </nav>
-      <button type="button" class="topbar-icon-btn theme-toggle" id="__themeToggle__" title="切换亮/深主题" aria-label="切换主题">🌓</button>
-      <button type="button" class="topbar-pill-btn" id="__feedbackBtn__" title="反馈 / 联系作者"><span class="emoji">💬</span><span>反馈</span></button>
+      <button type="button" class="topbar-icon-btn lang-toggle" id="__langToggle__" data-i18n-attr="title:topbar.lang.toggle;aria-label:topbar.lang.toggle" title="切换语言 / Switch language">${getLang() === 'en' ? '中' : 'EN'}</button>
+      <button type="button" class="topbar-icon-btn theme-toggle" id="__themeToggle__" data-i18n-attr="title:topbar.theme.toggle;aria-label:topbar.theme.toggle" title="${T('topbar.theme.toggle', '切换亮/深主题')}" aria-label="${T('topbar.theme.toggle', '切换亮/深主题')}">🌓</button>
+      <button type="button" class="topbar-pill-btn" id="__feedbackBtn__" data-i18n-attr="title:topbar.feedback.title" title="${T('topbar.feedback.title', '反馈 / 联系作者')}"><span class="emoji">💬</span><span data-i18n="topbar.feedback">${T('topbar.feedback', '反馈')}</span></button>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
@@ -256,14 +375,20 @@
     if (tool && tool.id !== 'home') {
       const h1 = document.querySelector('.sidebar h1');
       if (h1) {
-        h1.innerHTML = `${tool.icon} ${tool.name} <span class="h1-sub">${tool.en}</span>`;
+        // i18n: tool name picks zh or en per current language; English column
+        // already exists in TOOLS so no extra dict entry needed. In en mode
+        // the sub label is the same string, so drop it to avoid duplication.
+        const isEn = getLang() === 'en';
+        const displayName = (isEn && tool.en) ? tool.en : tool.name;
+        const subHtml = isEn ? '' : `<span class="h1-sub">${tool.en}</span>`;
+        h1.innerHTML = `${tool.icon} ${displayName} ${subHtml}`;
       }
       // add a standalone "← 全部工具" pill as a sibling of the topbar (tool pages only)
       if (!wrap.querySelector('.topbar-back')) {
         const back = document.createElement('a');
         back.className = 'topbar-back';
         back.href = prefix + 'index.html';
-        back.innerHTML = '<span class="arr">←</span><span>全部工具</span>';
+        back.innerHTML = `<span class="arr">←</span><span data-i18n="topbar.backAll">${T('topbar.backAll', '全部工具')}</span>`;
         wrap.insertBefore(back, bar);
       }
       const steps = INSTRUCTIONS[tool.id];
@@ -280,7 +405,40 @@
     setupHomeScrollMemory();
     setupFeedbackChip();
     setupThemeToggle();
+    setupLangToggle();
   }
+
+  // ============================================================
+  //   Language toggle (中 ↔ EN) — small icon button next to theme
+  //   toggle. Click flips the language, persists in localStorage,
+  //   walks the DOM applying translations, and triggers a 'langchange'
+  //   event so the topbar re-renders cat / tool names that aren't
+  //   simple data-i18n targets.
+  // ============================================================
+  function setupLangToggle() {
+    const btn = document.getElementById('__langToggle__');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const next = getLang() === 'en' ? 'zh' : 'en';
+      setLang(next);
+      btn.textContent = next === 'en' ? '中' : 'EN';
+    });
+  }
+
+  // Re-render the topbar when language changes — the dropdown tool names
+  // and active class need to be recomputed.
+  document.addEventListener('langchange', () => {
+    const wrap = document.querySelector('.topbar-wrap');
+    if (!wrap) return;
+    const active = wrap.querySelector('.nav-dropdown a.active');
+    let activeId = 'home';
+    if (active) {
+      const tool = TOOLS.find(t => active.href.endsWith(t.href));
+      if (tool) activeId = tool.id;
+    }
+    wrap.remove();
+    injectTopbar(activeId);
+  });
 
   // ============================================================
   //   Light / dark theme toggle
@@ -341,10 +499,10 @@
       panel.className = 'feedback-popover';
       panel.innerHTML = `
         <div class="fp-head">
-          <span>🧦 Dobby 还在学本事</span>
-          <button type="button" class="fp-close" aria-label="关闭">×</button>
+          <span>${T('feedback.head', '🧦 Dobby 还在学本事')}</span>
+          <button type="button" class="fp-close" aria-label="${T('topbar.feedback.close', '关闭')}">×</button>
         </div>
-        <div class="fp-body">你发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:</div>
+        <div class="fp-body">${T('feedback.body', '你发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:')}</div>
         <a class="fp-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
       `;
       document.body.appendChild(panel);
@@ -438,15 +596,15 @@
       ? `<div class="news-toast-more">还有 ${moreCount} 条历史更新…</div>` : '';
     t.innerHTML = `
       <div class="news-toast-head">
-        <span class="news-toast-tag">🧦 Dobby 学了新本事</span>
+        <span class="news-toast-tag">${T('newsToast.tag', '🧦 Dobby 学了新本事')}</span>
         <span class="news-toast-title">${escapeHtml(head.title || head.version)}</span>
-        <button type="button" class="news-toast-x" title="知道了">×</button>
+        <button type="button" class="news-toast-x" title="${T('newsToast.close', '知道了')}">×</button>
       </div>
       <ul class="news-toast-items">${itemsHtml}</ul>
       ${moreHtml}
       <div class="news-toast-actions">
-        <button type="button" class="news-toast-refresh">🔄 刷新页面</button>
-        <button type="button" class="news-toast-dismiss">稍后</button>
+        <button type="button" class="news-toast-refresh">${T('newsToast.refresh', '🔄 刷新页面')}</button>
+        <button type="button" class="news-toast-dismiss">${T('newsToast.dismiss', '稍后')}</button>
       </div>
     `;
     document.body.appendChild(t);
@@ -496,7 +654,7 @@
     const pill = document.createElement('a');
     pill.className = 'handoff-back-pill';
     pill.href = info.url;
-    pill.innerHTML = `<span class="arr">⏪</span><span>Dobby 带你回 ${info.toolName}</span><button class="dismiss" type="button" title="不再显示">×</button>`;
+    pill.innerHTML = `<span class="arr">⏪</span><span>${T('handoff.backPill', { tool: info.toolName }, 'Dobby 带你回 ' + info.toolName)}</span><button class="dismiss" type="button" title="${T('handoff.backPill.dismiss', '不再显示')}">×</button>`;
     pill.addEventListener('click', (e) => {
       if (e.target.classList.contains('dismiss')) {
         e.preventDefault();
@@ -627,7 +785,7 @@
     box.className = 'instructions';
     box.open = opts.collapsed ? false : true;
     box.innerHTML = `
-      <summary>📖 Dobby 怎么干这活</summary>
+      <summary data-i18n="sidebar.howTo">${T('sidebar.howTo', '📖 Dobby 怎么干这活')}</summary>
       <ol>
         ${steps.map(s => `<li>${s}</li>`).join('')}
       </ol>
@@ -721,7 +879,7 @@
           const expanded = await unzipBlob(f);
           if (expanded && expanded.length) {
             out.push(...expanded);
-            toast(`🧦 Dobby 帮你拆开了 ZIP "${f.name}" · ${expanded.length} 个文件`, 'ok', 3500);
+            toast(T('toast.zipExtracted', { name: f.name, n: expanded.length }, `🧦 Dobby 帮你拆开了 ZIP "${f.name}" · ${expanded.length} 个文件`), 'ok', 3500);
             continue;
           }
         } catch (err) {
@@ -880,11 +1038,11 @@
   function installErrorBoundary() {
     window.addEventListener('error', (e) => {
       console.error('[uncaught]', e.error || e.message);
-      toast('Bad Dobby! 这步搞砸了: ' + (e.error?.message || e.message), 'err', 6000);
+      toast(T('toast.unhandledError', { msg: e.error?.message || e.message }, 'Bad Dobby! 这步搞砸了: ' + (e.error?.message || e.message)), 'err', 6000);
     });
     window.addEventListener('unhandledrejection', (e) => {
       console.error('[unhandled rejection]', e.reason);
-      toast('Bad Dobby! Promise 出错了: ' + (e.reason?.message || String(e.reason)), 'err', 6000);
+      toast(T('toast.promiseError', { msg: e.reason?.message || String(e.reason) }, 'Bad Dobby! Promise 出错了: ' + (e.reason?.message || String(e.reason))), 'err', 6000);
     });
   }
 
@@ -1042,13 +1200,13 @@
             const extracted = await unzipBlob(incoming);
             if (extracted.length) {
               toDeliver = extracted;
-              toast(`🧦 Dobby 顺手拆了 ZIP · ${extracted.length} 个文件`, 'ok', 4500);
+              toast(T('toast.handoffZip', { n: extracted.length }, `🧦 Dobby 顺手拆了 ZIP · ${extracted.length} 个文件`), 'ok', 4500);
             }
           } catch (e) {
             toast('ZIP 解压失败,尝试整体处理: ' + e.message, 'warn', 4500);
           }
         } else {
-          toast(`🧦 Dobby 把 ${incoming.name} 带过来了`, 'ok', 4500);
+          toast(T('toast.handoffReceived', { name: incoming.name }, `🧦 Dobby 把 ${incoming.name} 带过来了`), 'ok', 4500);
         }
         const handler = opts.onIncoming || ((filesOrFile) => {
           // Look for the well-known #dropZone first; if a tool uses a custom id,
@@ -1075,7 +1233,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'handoff-wrap';
     wrap.innerHTML = `
-      <button class="handoff-btn secondary" id="__handoffBtn__" disabled>📤 让 Dobby 送到下一个工具 ▾</button>
+      <button class="handoff-btn secondary" id="__handoffBtn__" data-i18n="handoff.btn" disabled>${T('handoff.btn', '📤 让 Dobby 送到下一个工具 ▾')}</button>
       <div class="handoff-menu" id="__handoffMenu__"></div>
     `;
     sidebar.appendChild(wrap);
@@ -1190,7 +1348,7 @@
     btn.innerHTML = '🎨';
     btn.addEventListener('click', async () => {
       if (!('EyeDropper' in window)) {
-        toast('Bad Dobby! 这个浏览器不让 Dobby 吸色,请用 Chrome 95+ / Edge 95+', 'warn', 4500);
+        toast(T('toast.eyedropper.unsupported', 'Bad Dobby! 这个浏览器不让 Dobby 吸色,请用 Chrome 95+ / Edge 95+'), 'warn', 4500);
         return;
       }
       try {
@@ -1200,7 +1358,7 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
         updateSwatch();
-        toast(`🧦 Dobby 吸到了 ${r.sRGBHex}`, 'ok', 2500);
+        toast(T('toast.eyedropper.got', { color: r.sRGBHex }, `🧦 Dobby 吸到了 ${r.sRGBHex}`), 'ok', 2500);
       } catch (e) {
         // user cancelled / Esc — silent
       }
@@ -1815,6 +1973,11 @@
     attachPasteImage,
     demoSpritesheet,
     demoFrames,
-    demoPhotoLike
+    demoPhotoLike,
+    // i18n
+    T,
+    setLang,
+    getLang,
+    applyTranslations
   };
 })();

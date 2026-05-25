@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v7",
+      "date": "2026-05-25",
+      "title": "Dobby 学英语了 — English version available",
+      "items": [
+        "顶栏新增 🌐 EN/中 切换按钮 — 点一下切语言,localStorage 记住选择,非中文浏览器自动默认英文",
+        "首页全文案 + 工具卡片 desc + 顶栏 / 反馈面板 / 弹窗 / toast / sidebar / 错误提示全部翻译为英文。英文版保持 Dobby 人设(第三人称 \"Dobby will...\",\"Bad Dobby!\" 错误前缀,\"Dobby is free!\" 标语)",
+        "本期 Phase 1 翻译范围:首页 + 全站共享 UI。每个工具页内部的具体说明 / 控件 / log 仍是中文(Phase 2 会逐个翻译)",
+        "技术架构:data-i18n 标记 + Toolkit.T() 运行时查找 + 异步字典加载 (assets/i18n-strings.js),已加入 SW 预缓存"
+      ]
+    },
+    {
       "version": "dobby-v6",
       "date": "2026-05-22",
       "title": "Video Toolkit — 1080p / 4K 视频不再被 Baseline 卡死",
