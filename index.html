@@ -388,6 +388,29 @@
     color: var(--muted);
     font-size: 13px;
   }
+  .empty-search .search-suggest-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .empty-search .search-suggest {
+    appearance: none;
+    background: rgba(var(--jade-rgb), 0.08);
+    border: 1px solid rgba(var(--jade-rgb), 0.35);
+    color: var(--accent);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, transform 0.12s, border-color 0.12s;
+  }
+  .empty-search .search-suggest:hover {
+    background: rgba(var(--jade-rgb), 0.18);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
 
   /* footer */
   .site-footer {
@@ -681,6 +704,95 @@
   // Build card list from shared TOOLS data
   const CARDS = Toolkit.TOOLS.filter(t => t.id !== 'home');
 
+  // ============================================================
+  //   Natural-language search terms per tool.
+  //
+  // The official name + en + desc fields are mostly precise jargon
+  // ("palette 编码", "MODNet / RMBG"). Real users type how they feel
+  // ("图太大", "想做 gif", "字体瘦身", "去 logo"). Each tool gets a
+  // searchTerms blob of those plain-language phrasings — used by
+  // the tokenized scorer below so substring-blind queries still
+  // find the right tool.
+  // ============================================================
+  const SEARCH_TERMS = {
+    'image-optimizer':  '压图 压缩图 图太大 图片大 太大了 减体积 减小 转格式 png jpg jpeg webp avif batch optimize 批量 缩放 resize bytes 文件大 优化 image compress shrink',
+    'png-crusher':      '深度压缩 极限压缩 深压 png crush palette 调色板 减色 dither 抖动 索引色 indexed apng 动图压缩 png太大',
+    'image-editor':     '图片编辑 编辑 裁剪 裁图 旋转 加文字 文字水印 像素化 滤镜 hsl crop rotate text overlay edit',
+    'color-tools':      '取色 吸色 吸管 eyedropper 色值 hex 主色 dominant 调色 抠图 color key 减色 quantize 颜色替换 换色 chroma',
+    'ai-cutout':        'AI抠图 扣图 去背景 抠人 抠头像 抠主体 透明背景 modnet rmbg cutout 背景透明 remove background mask 自动抠图',
+    'watermark-remove': '水印 去水印 擦水印 抹水印 watermark 去logo 抹logo lama inpaint 修复 erase logo',
+    'composer':         '拼图 拼接 合成 多图 多张拼 叠加 collage compose montage 加水印 多图水印',
+    'image-diff':       '对比 比较 差异 看差异 diff ab compare psnr ssim heatmap 热图 压缩对比 前后对比',
+    'svg-tools':        'svg svgo 矢量 vector 优化svg 转png rasterize 矢量图',
+    'sprite-packer':    '精灵图 sprite atlas spritesheet 序列帧 合成 帧合成 frames 拼帧 帧打包',
+    'atlas-splitter':   '精灵图拆 atlas split sprite 拆帧 拆图 拆 sprite 分帧 sheet分帧',
+    'gif-tools':        'gif apng 动图 动画 帧动画 制作gif 编辑gif 转gif 优化gif make gif 序列帧转gif animated 调速 反向',
+    'lottie-tools':     'lottie 动画json AE动画 矢量动画 lottie太大 优化lottie 转apng 转gif',
+    'video-toolkit':    '视频 video 转gif 抽帧 截帧 截图 裁视频 剪视频 视频剪辑 trim mp4 webm 视频转gif',
+    'audio-compress':   '音频 音乐 audio mp3 wav opus 降采样 sample 单声道 mono 裁音频 trim fade 静音',
+    'html-inliner':     'html 单文件 inline playable 打包html 内联 资源内联 合并html',
+    'code-minify':      '压缩js 压缩css 压缩html minify terser uglify 代码压缩 js压缩 css压缩',
+    'base64':           'base64 dataurl base64编码 base64解码 encode decode 图转base64 base64转图',
+    'zip-packer':       'zip 打包 压缩文件 deflate archive 文件夹打包 多文件打包',
+    'qr-gen':           'qr 二维码 qrcode 扫码 wifi码 名片码 vcard 短信码',
+    'font-subset':      '字体 字体太大 字体瘦身 font subset 子集化 中文字体 woff ttf otf 字体压缩 playable字体',
+    'batch-rename':     '重命名 改名 批量重命名 批量改名 rename 序号 序号补零 文件名 命名',
+    'bundle-analyzer':  '分析 包体分析 体积分析 大文件 目录扫描 项目大小 analyze 项目分析',
+    'channel-check':    '渠道 facebook google tiktok mintegral applovin 校验 规范 audit 渠道规范 平台规范',
+    'slim-coach':       '瘦身 slim 体积优化 减小体积 建议 包体瘦身 advice coach 优化建议',
+    'playable-slim':    'playable瘦身 playable优化 拆html 拆playable 包体瘦身 体积大 playable太大'
+  };
+
+  // Stop tokens that everyone types but mean nothing to us.
+  const STOPWORDS = new Set([
+    '我','你','的','了','是','在','有','要','吗','一','个','下','张','点','吧','呢','啊','嘛','把','给','和','与','或','也','但',
+    '怎么','可以','能','想','请','帮','把','已经','这个','那个','一下','一些','请问','是不是',
+    'a','an','the','to','of','in','on','at','for','with','my','your','our','please','can','i','it','this','that','some','any',
+    'how','what','why','where','when','do','does','is','are','am','was','were','be','been'
+  ]);
+
+  // Tokenize a query into independent search atoms.
+  //   English: words length ≥ 2 → token
+  //   Chinese: each char + every consecutive bigram from runs of chars
+  // The bigrams are what makes "图太大" match a searchTerm like "图太大".
+  function tokenizeQuery(s) {
+    if (!s) return [];
+    const lower = s.toLowerCase();
+    const out = new Set();
+    (lower.match(/[a-z0-9]{2,}/g) || []).forEach(t => out.add(t));
+    const cnRuns = lower.match(/[一-鿿]+/g) || [];
+    for (const run of cnRuns) {
+      for (let i = 0; i < run.length; i++) {
+        out.add(run[i]);                          // single char
+        if (i + 1 < run.length) out.add(run.slice(i, i + 2));     // bigram
+        if (i + 2 < run.length) out.add(run.slice(i, i + 3));     // trigram
+      }
+    }
+    // strip stopwords so "我图太大" doesn't waste a slot on "我"
+    return [...out].filter(t => !STOPWORDS.has(t));
+  }
+
+  // Score a tool against a list of query tokens. Two dimensions matter:
+  //   * Token length — a 4-char phrase match beats a single-char hit
+  //   * Field weight — matches in the tool's NAME are stronger evidence
+  //     than matches in the desc, which are stronger than matches in
+  //     the looser searchTerms blob. Without this, "字体瘦身" ties
+  //     font-subset against image-optimizer (which has "体" buried in
+  //     "减体积") instead of obviously winning.
+  function scoreTool(c, tokens) {
+    if (!tokens.length) return 0;
+    const name  = (c.name + ' ' + c.en).toLowerCase();
+    const desc  = (c.desc + ' ' + T('tool.' + c.id + '.desc', '')).toLowerCase();
+    const terms = (SEARCH_TERMS[c.id] || '').toLowerCase();
+    let score = 0;
+    for (const t of tokens) {
+      if (name.includes(t))       score += t.length * 3;
+      else if (desc.includes(t))  score += t.length * 2;
+      else if (terms.includes(t)) score += t.length;
+    }
+    return score;
+  }
+
   // Fill in the hero stats from the source-of-truth TOOLS / CATEGORIES
   // arrays — no more hard-coded counts that go stale when tools are added.
   document.getElementById('statToolCount').textContent = CARDS.length;
@@ -751,17 +863,48 @@
       section.appendChild(recentSec);
     }
 
-    // Categorized rendering
+    // Tokenize once for the whole render pass; empty array if no query.
+    const tokens = q ? tokenizeQuery(q) : [];
+
+    // Search mode: flatten everything into one ranked list so the most
+    // relevant tool surfaces at the top regardless of category. The
+    // categorized layout is great for browsing but actively hides the
+    // right answer when the user has a specific intent — e.g. searching
+    // "字体瘦身" used to bury font-subset under image-cat tools that had
+    // weak partial matches just because Image renders first.
+    if (q) {
+      const ranked = CARDS
+        .map(c => ({ c, score: scoreTool(c, tokens) }))
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score);
+      if (ranked.length) {
+        const div = document.createElement('div');
+        div.className = 'cat-anchor';
+        div.dataset.cat = 'search-results';
+        div.innerHTML = `
+          <div class="cat-header">
+            <div class="cat-icon">🔍</div>
+            <div class="cat-info">
+              <span class="cat-name">${T('home.search.results', { q: query }, `${ranked.length} 个匹配 "${query}"`)}</span>
+            </div>
+            <span class="cat-count">${ranked.length}</span>
+          </div>
+          <div class="tools-grid"></div>
+        `;
+        const grid = div.querySelector('.tools-grid');
+        ranked.forEach(x => grid.appendChild(makeCard(x.c)));
+        section.appendChild(div);
+        return;   // skip the categorized layout when actively searching
+      }
+      // No matches: render the nudge with suggested phrasings below.
+      renderEmptyState(query);
+      return;
+    }
+
+    // Browse mode (no query): full categorized layout, every tool shown.
     let anyMatch = false;
     for (const cat of CATEGORIES) {
-      // search matches against zh name, en name, zh desc, en desc — all four
-      const enDesc = T('tool.' + cat.id + '.desc', '');  // not used; per-tool query happens below
-      const items = CARDS.filter(c => {
-        if (c.cat !== cat.id) return false;
-        if (!q) return true;
-        const haystack = (c.name + ' ' + c.en + ' ' + c.desc + ' ' + T('tool.' + c.id + '.desc', '')).toLowerCase();
-        return haystack.includes(q);
-      });
+      let items = CARDS.filter(c => c.cat === cat.id);
       if (!items.length) continue;
       anyMatch = true;
       const div = document.createElement('div');
@@ -787,9 +930,35 @@
       items.forEach(c => grid.appendChild(makeCard(c)));
       section.appendChild(div);
     }
-    if (!anyMatch) {
-      section.innerHTML = `<div class="empty-search">${T('home.search.empty', { q: query }, `🧦 Dobby 还没学过 "${query}" 这个本事... 换个词试试?`)}</div>`;
-    }
+  }
+
+  // Empty-state with click-to-fill phrasing chips. Called from the search
+  // branch in render() when no tool scored above 0.
+  function renderEmptyState(query) {
+    const examples = ['压图', '抠图', '去水印', '想做 gif', '字体太大', 'png 太大', '拼图', '转视频'];
+    const enExamples = ['compress image', 'remove background', 'remove watermark', 'make gif', 'shrink font', 'compare images', 'extract video frames'];
+    const isEn = Toolkit.getLang && Toolkit.getLang() === 'en';
+    const chips = (isEn ? enExamples : examples).map(ex =>
+      `<button type="button" class="search-suggest" data-q="${ex}">${ex}</button>`
+    ).join('');
+    const headlineKey = isEn ? 'home.search.empty.en' : 'home.search.empty';
+    const headlineFb = isEn
+      ? `🧦 Dobby doesn't recognize "${query}" yet. Try one of these phrasings:`
+      : `🧦 Dobby 没听懂 "${query}" — 试试下面这些说法:`;
+    section.innerHTML = `
+      <div class="empty-search">
+        <div style="margin-bottom:14px">${T(headlineKey, { q: query }, headlineFb)}</div>
+        <div class="search-suggest-row">${chips}</div>
+      </div>
+    `;
+    section.querySelectorAll('.search-suggest').forEach(btn => {
+      btn.addEventListener('click', () => {
+        searchInput.value = btn.dataset.q;
+        searchWrap.classList.add('has-value');
+        render(btn.dataset.q);
+        searchInput.focus();
+      });
+    });
   }
 
   // Re-render the tools section on language change (tool desc / cat names change).
