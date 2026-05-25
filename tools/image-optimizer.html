@@ -96,11 +96,12 @@
   .range-row .value { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text); min-width: 30px; text-align: right; }
 
   /* ── before/after compare modal ────────────────────────────────── */
+  /* No backdrop-filter — large images compared through a backdrop blur
+     have been seen rendering as a strange dark vignette on certain GPU
+     drivers / Chrome versions. A plain dark overlay is just as readable. */
   .cmp-modal {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, 0.78);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.85);
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
   }
@@ -545,8 +546,27 @@ Toolkit.injectTopbar('image-optimizer');
       body.innerHTML = `<div style="color:var(--danger); text-align:center; padding:40px">Bad Dobby! ${e.message}</div>`;
       return;
     }
+    // Pre-downscale to at most 1024 px on the long edge for preview. Big
+    // sprite sheets (e.g. 5556 × 5556) keep their full source resolution
+    // inside the modal otherwise, which has been linked to glitchy GPU
+    // rendering (the user reported a dark circular vignette filling the
+    // middle of the slider — disappears once we hand the slider modest-
+    // sized canvases instead of raw <img> elements at native resolution).
+    const downscale = (img) => {
+      const maxEdge = 1024;
+      const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cv = newCanvas(w, h);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+      return cv;
+    };
+    const origCv = downscale(origImg);
+    const optCv = downscale(optImg);
     body.innerHTML = '';
-    Toolkit.makeCompareSlider(body, origImg, optImg, {
+    Toolkit.makeCompareSlider(body, origCv, optCv, {
       leftLabel: T('imageOpt.compareLeft', '原图'),
       rightLabel: T('imageOpt.compareRight', '压缩后')
     });
