@@ -6,8 +6,8 @@
 <script>
 (function () {
   var KEY = 'toolkit-cleaned-v1';
-  if (sessionStorage.getItem(KEY)) return;
-  sessionStorage.setItem(KEY, '1');
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
   (async function () {
     try {
       if ('serviceWorker' in navigator) {

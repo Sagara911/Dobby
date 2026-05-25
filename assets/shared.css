@@ -229,6 +229,30 @@ a:hover { color: var(--jade); }
   80%     { transform: translate(-8vw, -10vh) scale(0.95); opacity: 0.45; }
 }
 
+/* ── Performance / accessibility: respect prefers-reduced-motion ──
+   Users on low-end laptops, mobiles, or with the OS-level "reduce
+   motion" flag set get a static background. The blurred blobs are 5×
+   45vw filter:blur(100px) layers on top of a 200vw conic-gradient
+   with blur(80px) — GPU-expensive on integrated cards even when no
+   animation is running, but we can at least kill the per-frame paint
+   pressure from the keyframes and conic rotation. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-blob,
+  .ambient-stream {
+    animation: none !important;
+  }
+  /* Also drop the conic gradient's blur a bit — it's the single most
+     expensive layer in the ambient stack. */
+  .ambient-stream {
+    filter: blur(40px);
+    opacity: 0.5;
+  }
+  /* Reduce blob blur radius — 100px blur over 50vw is the worst case. */
+  .ambient-blob {
+    filter: blur(60px);
+  }
+}
+
 /* =========================================================================
    Top navigation — glassmorphism pill with hover-following glow
    ========================================================================= */

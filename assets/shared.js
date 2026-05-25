@@ -699,18 +699,67 @@
   function startThemeCycle() {
     const lerp = (x, y, t) => Math.round(x + (y - x) * t);
     const rt = document.documentElement.style;
+    // ── Performance guardrails ──
+    // 1) Respect prefers-reduced-motion — accessibility AND a major perf
+    //    win on low-end laptops where 60fps repaint of 70+ var-bound
+    //    elements was the dominant lag source users reported.
+    // 2) Throttle to ~10fps even when motion is allowed. A full cycle is
+    //    56s; the color delta between adjacent 60fps frames is invisible
+    //    but the repaint cost is the same as if it were a strobe. Going
+    //    from 60→10fps cuts paint pressure ~6× with no visible quality
+    //    drop.
+    // 3) Pause when the tab is hidden — no point burning a background
+    //    tab's CPU rewriting CSS that nobody is looking at.
+    // 4) Skip writes when the integer-rounded color is unchanged from
+    //    last frame (common during slow tweens).
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const PAINT_MS = 100;   // ~10fps
+    let lastPaint = 0;
+    let lastJade = '', lastBg = '', lastText = '', lastSoft = '', lastCham = '';
+
+    function clearOverrides() {
+      ['--jade','--jade-rgb','--jade-soft','--jade-glow','--accent',
+       '--accent-soft','--success','--bg','--text','--text-soft',
+       '--champagne'].forEach(k => rt.removeProperty(k));
+    }
+    // For users who opted into reduced-motion: write the FIRST palette
+    // once and never animate. Site still looks finished, just static.
+    if (reduceMotion) {
+      const a = THEME_CYCLE[0];
+      const jc = `${a.jade[0]}, ${a.jade[1]}, ${a.jade[2]}`;
+      rt.setProperty('--jade', `rgb(${jc})`);
+      rt.setProperty('--jade-rgb', jc);
+      rt.setProperty('--jade-soft', `rgba(${jc}, 0.12)`);
+      rt.setProperty('--jade-glow', `rgba(${jc}, 0.35)`);
+      rt.setProperty('--accent', `rgb(${jc})`);
+      rt.setProperty('--accent-soft', `rgba(${jc}, 0.12)`);
+      rt.setProperty('--success', `rgb(${jc})`);
+      rt.setProperty('--bg', `rgb(${a.bg[0]}, ${a.bg[1]}, ${a.bg[2]})`);
+      rt.setProperty('--text', `rgb(${a.text[0]}, ${a.text[1]}, ${a.text[2]})`);
+      rt.setProperty('--text-soft', `rgb(${a.soft[0]}, ${a.soft[1]}, ${a.soft[2]})`);
+      rt.setProperty('--champagne', `rgb(${a.champagne[0]}, ${a.champagne[1]}, ${a.champagne[2]})`);
+      return;
+    }
+
     function tick(now) {
-      // Skip when the user has opted into the static light theme — otherwise
-      // the rAF would overwrite the [data-theme="light"] palette every frame.
+      // Skip when the user has opted into the static light theme.
       if (document.documentElement.getAttribute('data-theme') === 'light') {
-        // Clear any inline overrides we previously wrote, then re-queue
-        // ourselves so we resume cycling if the user flips back to dark.
-        ['--jade','--jade-rgb','--jade-soft','--jade-glow','--accent',
-         '--accent-soft','--success','--bg','--text','--text-soft',
-         '--champagne'].forEach(k => rt.removeProperty(k));
+        clearOverrides();
         requestAnimationFrame(tick);
         return;
       }
+      // Frequency gate — only repaint every PAINT_MS, regardless of rAF rate.
+      if (now - lastPaint < PAINT_MS) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      // Background-tab gate — document.hidden is true for tabs the user
+      // can't see; pause until they return.
+      if (document.hidden) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      lastPaint = now;
       const tt = (now / 1000 / THEME_SECS_PER_STEP) % THEME_CYCLE.length;
       const i = Math.floor(tt);
       const f = tt - i;
@@ -721,23 +770,31 @@
       const jg = lerp(a.jade[1], b.jade[1], ff);
       const jb = lerp(a.jade[2], b.jade[2], ff);
       const jc = `${jr}, ${jg}, ${jb}`;
-      rt.setProperty('--jade', `rgb(${jc})`);
-      rt.setProperty('--jade-rgb', jc);
-      rt.setProperty('--jade-soft', `rgba(${jc}, 0.12)`);
-      rt.setProperty('--jade-glow', `rgba(${jc}, 0.35)`);
-      rt.setProperty('--accent', `rgb(${jc})`);
-      rt.setProperty('--accent-soft', `rgba(${jc}, 0.12)`);
-      rt.setProperty('--success', `rgb(${jc})`);
-      const rgbProp = (key) => {
+      // No-op when integer-rounded color hasn't changed since last paint.
+      if (jc !== lastJade) {
+        lastJade = jc;
+        rt.setProperty('--jade', `rgb(${jc})`);
+        rt.setProperty('--jade-rgb', jc);
+        rt.setProperty('--jade-soft', `rgba(${jc}, 0.12)`);
+        rt.setProperty('--jade-glow', `rgba(${jc}, 0.35)`);
+        rt.setProperty('--accent', `rgb(${jc})`);
+        rt.setProperty('--accent-soft', `rgba(${jc}, 0.12)`);
+        rt.setProperty('--success', `rgb(${jc})`);
+      }
+      const rgbStr = (key) => {
         const r = lerp(a[key][0], b[key][0], ff);
         const g = lerp(a[key][1], b[key][1], ff);
         const bl = lerp(a[key][2], b[key][2], ff);
-        return `rgb(${r}, ${g}, ${bl})`;
+        return `${r}, ${g}, ${bl}`;
       };
-      rt.setProperty('--bg', rgbProp('bg'));
-      rt.setProperty('--text', rgbProp('text'));
-      rt.setProperty('--text-soft', rgbProp('soft'));
-      rt.setProperty('--champagne', rgbProp('champagne'));
+      const bgS = rgbStr('bg');
+      if (bgS !== lastBg) { lastBg = bgS; rt.setProperty('--bg', `rgb(${bgS})`); }
+      const textS = rgbStr('text');
+      if (textS !== lastText) { lastText = textS; rt.setProperty('--text', `rgb(${textS})`); }
+      const softS = rgbStr('soft');
+      if (softS !== lastSoft) { lastSoft = softS; rt.setProperty('--text-soft', `rgb(${softS})`); }
+      const chamS = rgbStr('champagne');
+      if (chamS !== lastCham) { lastCham = chamS; rt.setProperty('--champagne', `rgb(${chamS})`); }
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
