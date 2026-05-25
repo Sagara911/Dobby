@@ -40,8 +40,8 @@
     <h1>🎬 Sprite Packer</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入文件或点击选择</p>
-      <p class="hint">
+      <p data-i18n="sp.drop.title">📂 拖入文件或点击选择</p>
+      <p class="hint" data-i18n-html="sp.drop.hint">
         序列帧 (多选 PNG / JPG)<br/>
         视频 (MP4 / WebM / MOV)<br/>
         GIF 动图
@@ -52,87 +52,87 @@
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
 
     <div id="videoSettings" style="display:none">
-      <h2>视频抽帧</h2>
+      <h2 data-i18n="sp.video.title">视频抽帧</h2>
       <div class="field">
-        <label>FPS (帧/秒)</label>
+        <label data-i18n="sp.video.fps">FPS (帧/秒)</label>
         <input type="number" id="videoFps" value="12" min="1" max="60" />
       </div>
     </div>
 
-    <h2>布局</h2>
+    <h2 data-i18n="sp.layout.title">布局</h2>
     <div class="field">
-      <label>列数 (0 = 自动接近正方)</label>
+      <label data-i18n="sp.cols">列数 (0 = 自动接近正方)</label>
       <input type="number" id="cols" value="0" min="0" />
     </div>
     <div class="field-row">
       <div class="field">
-        <label>帧间距 (px)</label>
+        <label data-i18n="sp.padding">帧间距 (px)</label>
         <input type="number" id="padding" value="2" min="0" />
       </div>
       <div class="field">
-        <label>外边距 (px)</label>
+        <label data-i18n="sp.margin">外边距 (px)</label>
         <input type="number" id="margin" value="0" min="0" />
       </div>
     </div>
 
-    <h2>处理</h2>
+    <h2 data-i18n="sp.proc.title">处理</h2>
     <label class="checkbox">
       <input type="checkbox" id="trim" checked />
-      <span>自动裁剪透明边</span>
+      <span data-i18n="sp.proc.trim">自动裁剪透明边</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="uniformSize" checked />
-      <span>统一帧尺寸 (取最大包围盒)</span>
+      <span data-i18n="sp.proc.uniformSize">统一帧尺寸 (取最大包围盒)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="forceSquare" />
-      <span>强制方形帧 (长条卡牌→正方,空白透明)</span>
+      <span data-i18n="sp.proc.forceSquare">强制方形帧 (长条卡牌→正方,空白透明)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="squareSheet" />
-      <span>整张精灵图正方形 (cols × cols 网格,末尾留空格代替补边)</span>
+      <span data-i18n="sp.proc.squareSheet">整张精灵图正方形 (cols × cols 网格,末尾留空格代替补边)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="powerOfTwo" />
-      <span>2 的幂次尺寸 (WebGL 友好)</span>
+      <span data-i18n="sp.proc.powerOfTwo">2 的幂次尺寸 (WebGL 友好)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="dropEmpty" />
-      <span>剔除全透明帧</span>
+      <span data-i18n="sp.proc.dropEmpty">剔除全透明帧</span>
     </label>
 
-    <h2>导出</h2>
+    <h2 data-i18n="sp.export.title">导出</h2>
     <div class="field">
-      <label>文件名前缀</label>
+      <label data-i18n="sp.filename">文件名前缀</label>
       <input type="text" id="filename" value="spritesheet" />
     </div>
     <label class="checkbox">
       <input type="checkbox" id="exportJson" checked />
-      <span>同时导出 JSON 元数据</span>
+      <span data-i18n="sp.exportJson">同时导出 JSON 元数据</span>
     </label>
     <div class="field" id="jsonFormatField">
-      <label>JSON 格式</label>
+      <label data-i18n="sp.jsonFormat.label">JSON 格式</label>
       <select id="jsonFormat">
-        <option value="hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
-        <option value="array">TexturePacker JSON Array</option>
-        <option value="simple">简洁数组 (自定义引擎)</option>
+        <option value="hash" data-i18n="sp.jsonFormat.hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
+        <option value="array" data-i18n="sp.jsonFormat.array">TexturePacker JSON Array</option>
+        <option value="simple" data-i18n="sp.jsonFormat.simple">简洁数组 (自定义引擎)</option>
       </select>
-      <div class="info" style="margin-top:4px">取消勾选只下载 PNG —— 适合规则网格 + 自己算帧位置的渲染流程</div>
+      <div class="info" style="margin-top:4px" data-i18n="sp.jsonFormat.info">取消勾选只下载 PNG —— 适合规则网格 + 自己算帧位置的渲染流程</div>
     </div>
 
-    <button id="exportBtn" disabled>导出 PNG + JSON</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="exportBtn" data-i18n="sp.exportBtn.both" disabled>导出 PNG + JSON</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-area" id="previewArea">
-      <div class="preview-empty">你丢帧进来,Dobby 拼好显示在这里</div>
+      <div class="preview-empty" data-i18n="sp.preview.empty">你丢帧进来,Dobby 拼好显示在这里</div>
     </div>
     <div>
-      <h2 style="margin-top:0">原始帧</h2>
+      <h2 style="margin-top:0" data-i18n="sp.framesGrid.title">原始帧</h2>
       <div class="frame-grid" id="frameGrid"></div>
     </div>
   </div>
@@ -463,7 +463,11 @@ Toolkit.injectTopbar('sprite-packer');
   function syncExportJsonUI() {
     const on = $('exportJson').checked;
     $('jsonFormatField').style.display = on ? '' : 'none';
-    $('exportBtn').textContent = on ? '导出 PNG + JSON' : '导出 PNG';
+    const btn = $('exportBtn');
+    // Track which i18n key the button currently represents so applyTranslations
+    // can re-resolve it on language switch.
+    btn.dataset.i18n = on ? 'sp.exportBtn.both' : 'sp.exportBtn.pngOnly';
+    btn.textContent = Toolkit.T(btn.dataset.i18n, on ? '导出 PNG + JSON' : '导出 PNG');
   }
   $('exportJson').addEventListener('change', syncExportJsonUI);
   syncExportJsonUI();
