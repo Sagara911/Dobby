@@ -325,13 +325,54 @@ Toolkit.injectTopbar('sprite-packer');
 
     const n = processed.length;
     const squareSheet = $('squareSheet').checked;
-    // squareSheet implies "re-pack to fit a square shape". Without this
-    // override, an explicit user-set cols would keep its rectangular layout
-    // and squareSheet would just pad the short side, leaving a fat empty
-    // strip on the left+right (or top+bottom) of the actual frames — that's
-    // exactly the bug the user reported. So when squareSheet is on, force
-    // the auto-square cols computation even if cols was set.
-    if (cols <= 0 || squareSheet) {
+    // squareSheet now exhaustively picks cols by minimizing the final square
+    // side (the actual sheet's max(W,H) after laying out N frames in a
+    // cols-wide grid). The earlier `round(sqrt(n * H / W))` was only an
+    // estimate from averages — it didn't account for the per-column /
+    // per-row MAX sizes that the actual layout uses, so it could miss the
+    // tightest packing by a column or two and leave noticeable empty
+    // strips. Brute force is O(sqrt(n) * n) and cheap for any realistic n.
+    function _sheetDims(c) {
+      const r = Math.ceil(n / c);
+      const cw = new Array(c).fill(0);
+      const rh = new Array(r).fill(0);
+      if (uniformSize) {
+        cw.fill(frameW); rh.fill(frameH);
+      } else {
+        processed.forEach((p, i) => {
+          const col = i % c, row = Math.floor(i / c);
+          if (p.bounds.w > cw[col]) cw[col] = p.bounds.w;
+          if (p.bounds.h > rh[row]) rh[row] = p.bounds.h;
+        });
+      }
+      const sw = margin * 2 + cw.reduce((s, w) => s + w, 0) + padding * (c - 1);
+      const sh = margin * 2 + rh.reduce((s, h) => s + h, 0) + padding * (r - 1);
+      return { sw, sh, side: Math.max(sw, sh) };
+    }
+    if (squareSheet) {
+      // Brute force the column count and then bias the pick toward layouts
+      // where the natural sheet is at least as wide as it is tall. Reason:
+      // for n that isn't a perfect square the minimum square output side is
+      // achievable by either a "tall" layout (e.g. 5 cols × 6 rows for n=30)
+      // OR a "wide" one (6 × 5) — both end up at virtually the same final
+      // side, but the tall layout pads the SIDES with empty strips (which
+      // looks like the content is off-center), while the wide layout pads
+      // the BOTTOM (one trailing strip that reads as "spare row"). The wide
+      // version always looks cleaner. We only accept the wide candidate if
+      // its overall side is within 10% of the absolute minimum — beyond
+      // that the size penalty starts to dominate and we fall back to the
+      // tightest layout regardless.
+      const candidates = [];
+      const maxTry = Math.min(n, Math.max(8, Math.ceil(Math.sqrt(n) * 2) + 2));
+      for (let c = 1; c <= maxTry; c++) {
+        const dims = _sheetDims(c);
+        candidates.push({ c, ...dims });
+      }
+      candidates.sort((a, b) => a.side - b.side);
+      const minSide = candidates[0].side;
+      const wide = candidates.filter(x => x.sw >= x.sh && x.side <= minSide * 1.10);
+      cols = (wide.length ? wide[0] : candidates[0]).c;
+    } else if (cols <= 0) {
       const avgW = uniformSize ? frameW : avg(processed.map(p => p.bounds.w));
       const avgH = uniformSize ? frameH : avg(processed.map(p => p.bounds.h));
       cols = Math.max(1, Math.round(Math.sqrt(n * avgH / avgW)));
