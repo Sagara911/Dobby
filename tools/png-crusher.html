@@ -129,84 +129,83 @@
     <h1>💎 PNG Crusher</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 PNG (可多张)</p>
+      <p data-i18n="pc.drop.title">📂 拖入 PNG (可多张)</p>
       <p class="hint">
-        批量深度压缩 PNG<br/>
-        自写 palette 编码器,通常 -60~85%
+        <span data-i18n="pc.drop.hint1">批量深度压缩 PNG</span><br/>
+        <span data-i18n="pc.drop.hint2">自写 palette 编码器,通常 -60~85%</span>
       </p>
       <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
     </div>
 
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
 
-    <h2>压缩参数</h2>
+    <h2 data-i18n="pc.params.h">压缩参数</h2>
     <div class="field">
-      <label>预设</label>
+      <label data-i18n="pc.preset.label">预设</label>
       <select id="preset">
-        <option value="custom">自定义</option>
-        <option value="high">高保真 (256 色 + dither)</option>
-        <option value="balanced" selected>平衡 (128 色 + dither)</option>
-        <option value="strong">激进 (64 色 + dither)</option>
-        <option value="extreme">极限 (32 色 + dither)</option>
+        <option value="custom" data-i18n="pc.preset.custom">自定义</option>
+        <option value="high" data-i18n="pc.preset.high">高保真 (256 色 + dither)</option>
+        <option value="balanced" selected data-i18n="pc.preset.balanced">平衡 (128 色 + dither)</option>
+        <option value="strong" data-i18n="pc.preset.strong">激进 (64 色 + dither)</option>
+        <option value="extreme" data-i18n="pc.preset.extreme">极限 (32 色 + dither)</option>
       </select>
     </div>
     <div class="field">
-      <label>目标色数 <span id="colorsVal" class="mono">128</span></label>
+      <label><span data-i18n="pc.colors.label">目标色数</span> <span id="colorsVal" class="mono">128</span></label>
       <input type="range" id="colors" min="2" max="256" value="128" />
     </div>
     <label class="checkbox">
       <input type="checkbox" id="dither" checked />
-      <span>Floyd-Steinberg dithering (减少色块)</span>
+      <span data-i18n="pc.dither">Floyd-Steinberg dithering (减少色块)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="kmeans" checked />
-      <span>K-means 精炼调色板 (慢一些, 质量更好)</span>
+      <span data-i18n="pc.kmeans">K-means 精炼调色板 (慢一些, 质量更好)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="perceptual" checked />
-      <span>感知加权颜色距离 (更符合人眼)</span>
+      <span data-i18n="pc.perceptual">感知加权颜色距离 (更符合人眼)</span>
     </label>
 
-    <h2>透明度</h2>
+    <h2 data-i18n="pc.alpha.h">透明度</h2>
     <div class="field">
-      <label>处理</label>
+      <label data-i18n="pc.alpha.label">处理</label>
       <select id="alphaMode">
-        <option value="keep">保留 8-bit alpha</option>
-        <option value="threshold">阈值二值化 (0 或 255)</option>
-        <option value="discard">丢弃 alpha (全不透明)</option>
+        <option value="keep" data-i18n="pc.alpha.keep">保留 8-bit alpha</option>
+        <option value="threshold" data-i18n="pc.alpha.threshold">阈值二值化 (0 或 255)</option>
+        <option value="discard" data-i18n="pc.alpha.discard">丢弃 alpha (全不透明)</option>
       </select>
     </div>
     <div class="field" id="alphaThreshField" style="display:none">
-      <label>阈值 <span id="alphaThreshVal" class="mono">128</span></label>
+      <label><span data-i18n="pc.alpha.threshLabel">阈值</span> <span id="alphaThreshVal" class="mono">128</span></label>
       <input type="range" id="alphaThresh" min="0" max="255" value="128" />
     </div>
 
-    <h2>导出</h2>
-    <button id="crushBtn" disabled>开始压缩</button>
-    <button id="zipBtn" class="secondary" disabled>下载全部 (ZIP)</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <h2 data-i18n="pc.export.h">导出</h2>
+    <button id="crushBtn" disabled data-i18n="pc.btn.crush">开始压缩</button>
+    <button id="zipBtn" class="secondary" disabled data-i18n="pc.btn.zip">下载全部 (ZIP)</button>
+    <button id="clearBtn" class="secondary" data-i18n="pc.btn.clear">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats" data-i18n="pc.stats.empty">未加载</div>
     <div class="batch-tip" id="batchTip" style="display:none">
       <span class="batch-tip-icon">💡</span>
       <div class="batch-tip-text">
-        <strong>批量下载提示</strong>
-        多张图片逐张下载会触发 Chrome 的"该网站想要下载多个文件"提示。
-        建议点击左侧 <strong>"下载全部 (ZIP)"</strong> 一次性打包,只触发一次下载。
+        <strong data-i18n="pc.batchTip.title">批量下载提示</strong>
+        <span data-i18n="pc.batchTip.body">多张图片逐张下载会触发 Chrome 的"该网站想要下载多个文件"提示。建议点击左侧 "下载全部 (ZIP)" 一次性打包,只触发一次下载。</span>
       </div>
-      <button class="batch-tip-cta" id="batchTipZipBtn" type="button">下载全部 (ZIP)</button>
+      <button class="batch-tip-cta" id="batchTipZipBtn" type="button" data-i18n="pc.btn.zip">下载全部 (ZIP)</button>
     </div>
     <div class="compare" id="compareArea">
       <div class="compare-col">
-        <div class="label">原图 <span id="origInfo" class="mono small muted"></span></div>
+        <div class="label"><span data-i18n="pc.compare.orig">原图</span> <span id="origInfo" class="mono small muted"></span></div>
         <div class="compare-box" id="origBox"></div>
       </div>
       <div class="compare-col">
-        <div class="label">压缩后 <span id="crushInfo" class="mono small muted"></span></div>
+        <div class="label"><span data-i18n="pc.compare.crushed">压缩后</span> <span id="crushInfo" class="mono small muted"></span></div>
         <div class="compare-box" id="crushBox"></div>
       </div>
     </div>
@@ -215,23 +214,23 @@
         <thead>
           <tr>
             <th></th>
-            <th>文件名</th>
-            <th>尺寸</th>
-            <th>原体积</th>
-            <th>压缩后</th>
-            <th>节省</th>
+            <th data-i18n="pc.tbl.filename">文件名</th>
+            <th data-i18n="pc.tbl.dim">尺寸</th>
+            <th data-i18n="pc.tbl.srcBytes">原体积</th>
+            <th data-i18n="pc.tbl.outBytes">压缩后</th>
+            <th data-i18n="pc.tbl.savings">节省</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="resultsBody">
-          <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:40px">拖入图片后这里显示压缩结果对比</td></tr>
+          <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:40px" data-i18n="pc.tbl.empty">拖入图片后这里显示压缩结果对比</td></tr>
         </tbody>
       </table>
       <div class="summary" id="summary">
-        <span>共 <strong id="sumCount">0</strong> 张</span>
-        <span>原体积 <strong id="sumOrig">0</strong></span>
-        <span>压缩后 <strong id="sumCrush">0</strong></span>
-        <span>节省 <strong id="sumSavings">0</strong></span>
+        <span><span data-i18n="pc.sum.count">共</span> <strong id="sumCount">0</strong> <span data-i18n="pc.sum.images">张</span></span>
+        <span><span data-i18n="pc.sum.srcBytes">原体积</span> <strong id="sumOrig">0</strong></span>
+        <span><span data-i18n="pc.sum.outBytes">压缩后</span> <strong id="sumCrush">0</strong></span>
+        <span><span data-i18n="pc.sum.savings">节省</span> <strong id="sumSavings">0</strong></span>
       </div>
     </div>
   </div>
