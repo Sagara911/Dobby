@@ -2004,18 +2004,20 @@
       overlay = document.createElement('div');
       overlay.className = 'tk-lightbox';
       overlay.innerHTML = `
-        <div class="tk-lb-toolbar">
-          <button type="button" data-bg="checker" title="棋盘格背景 (默认)" aria-label="棋盘格背景">▦</button>
-          <button type="button" data-bg="white" title="白底" aria-label="白底">⬜</button>
-          <button type="button" data-bg="black" title="黑底" aria-label="黑底">⬛</button>
-          <span class="tk-lb-spacer"></span>
-          <span class="tk-lb-zoom">100%</span>
-          <button type="button" data-act="fit" title="适合屏幕" aria-label="适合屏幕">⤢</button>
-          <button type="button" data-act="one" title="1:1 实际像素" aria-label="实际像素">1:1</button>
-          <button type="button" data-act="close" title="关闭 (Esc)" aria-label="关闭">✕</button>
-        </div>
-        <div class="tk-lb-stage">
-          <img class="tk-lb-img" alt="" draggable="false">
+        <div class="tk-lb-card">
+          <div class="tk-lb-toolbar">
+            <button type="button" data-bg="checker" title="棋盘格背景 (默认)" aria-label="棋盘格背景">▦</button>
+            <button type="button" data-bg="white" title="白底" aria-label="白底">⬜</button>
+            <button type="button" data-bg="black" title="黑底" aria-label="黑底">⬛</button>
+            <span class="tk-lb-spacer"></span>
+            <span class="tk-lb-zoom">100%</span>
+            <button type="button" data-act="fit" title="适合屏幕" aria-label="适合屏幕">⤢</button>
+            <button type="button" data-act="one" title="1:1 实际像素" aria-label="实际像素">1:1</button>
+            <button type="button" data-act="close" title="关闭 (Esc)" aria-label="关闭">✕</button>
+          </div>
+          <div class="tk-lb-stage">
+            <img class="tk-lb-img" alt="" draggable="false">
+          </div>
         </div>`;
       document.body.appendChild(overlay);
       stage = overlay.querySelector('.tk-lb-stage');
@@ -2029,9 +2031,9 @@
       overlay.querySelector('[data-act="fit"]').addEventListener('click', fitToScreen);
       overlay.querySelector('[data-act="one"]').addEventListener('click', actualSize);
 
-      // click on empty stage area closes; click on toolbar does not
-      stage.addEventListener('click', e => {
-        if (!dragging && e.target === stage) close();
+      // click on the backdrop (outside the card) closes
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) close();
       });
 
       stage.addEventListener('wheel', onWheel, { passive: false });
