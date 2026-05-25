@@ -90,7 +90,7 @@
     </label>
     <label class="checkbox">
       <input type="checkbox" id="squareSheet" />
-      <span>整张精灵图正方形 (短边补透明)</span>
+      <span>整张精灵图正方形 (自动重算列数,残余短边补透明)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="powerOfTwo" />
@@ -324,7 +324,14 @@ Toolkit.injectTopbar('sprite-packer');
     }
 
     const n = processed.length;
-    if (cols <= 0) {
+    const squareSheet = $('squareSheet').checked;
+    // squareSheet implies "re-pack to fit a square shape". Without this
+    // override, an explicit user-set cols would keep its rectangular layout
+    // and squareSheet would just pad the short side, leaving a fat empty
+    // strip on the left+right (or top+bottom) of the actual frames — that's
+    // exactly the bug the user reported. So when squareSheet is on, force
+    // the auto-square cols computation even if cols was set.
+    if (cols <= 0 || squareSheet) {
       const avgW = uniformSize ? frameW : avg(processed.map(p => p.bounds.w));
       const avgH = uniformSize ? frameH : avg(processed.map(p => p.bounds.h));
       cols = Math.max(1, Math.round(Math.sqrt(n * avgH / avgW)));
@@ -347,9 +354,11 @@ Toolkit.injectTopbar('sprite-packer');
 
     const sheetW = margin * 2 + colWidths.reduce((s, w) => s + w, 0) + padding * (cols - 1);
     const sheetH = margin * 2 + rowHeights.reduce((s, h) => s + h, 0) + padding * (rows - 1);
-    const squareSheet = $('squareSheet').checked;
     let finalW = sheetW, finalH = sheetH;
     if (squareSheet) {
+      // After the cols override above the layout is already as close to square
+      // as a uniform grid can get; this final step just pads the residual
+      // short side so the output canvas is exactly N × N.
       const side = Math.max(finalW, finalH);
       finalW = finalH = side;
     }
