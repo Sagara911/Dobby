@@ -132,6 +132,94 @@
     text-overflow: ellipsis;
     border-top: 1px solid var(--border);
   }
+
+  /* ── 笔刷修正 toolbar (出现在抠图结果上方) ── */
+  .brush-toolbar {
+    display: none;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(20, 20, 26, 0.45);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .brush-toolbar.show { display: flex; }
+  .brush-toolbar .group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .brush-toolbar .mode-btn {
+    appearance: none;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .brush-toolbar .mode-btn:hover { background: rgba(255,255,255,0.10); }
+  .brush-toolbar .mode-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .brush-toolbar label {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .brush-toolbar input[type=range] {
+    width: 90px;
+  }
+  .brush-toolbar .val {
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--text);
+    min-width: 28px;
+    text-align: right;
+    font-size: 11px;
+  }
+  .brush-toolbar .icon-btn {
+    appearance: none;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .brush-toolbar .icon-btn:hover { background: rgba(255,255,255,0.10); }
+  .brush-toolbar .sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  /* circular cursor preview that follows the mouse over the result canvas */
+  #brushCursor {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+    transform: translate(-50%, -50%);
+    display: none;
+    z-index: 9999;
+    transition: border-color 0.12s;
+  }
+  #brushCursor.keep { border-color: rgba(var(--jade-rgb), 1); }
+  #brushCursor.erase { border-color: rgba(245, 91, 91, 1); }
+  /* mark outBox so we can grab the cursor on it */
+  #outBox.brush-armed canvas { cursor: none; }
 </style>
 </head>
 <body>
@@ -209,7 +297,29 @@
         </div>
       </div>
       <div class="preview-col">
-        <div class="label">抠图结果 (透明背景)</div>
+        <div class="label">抠图结果 (透明背景) · 跑完后可用笔刷修正</div>
+        <div class="brush-toolbar" id="brushToolbar">
+          <div class="group">
+            <button type="button" class="mode-btn active" id="brushKeep" title="保留刷 (Q) · 把误删的主体加回来">🖌️ 保留</button>
+            <button type="button" class="mode-btn" id="brushErase" title="擦除刷 (W) · 把多余背景去掉">❌ 擦除</button>
+          </div>
+          <div class="sep"></div>
+          <div class="group">
+            <label>大小</label>
+            <input type="range" id="brushSize" min="6" max="160" value="32" />
+            <span class="val" id="brushSizeVal">32</span>
+          </div>
+          <div class="group">
+            <label>软边</label>
+            <input type="range" id="brushSoft" min="0" max="100" value="50" />
+            <span class="val" id="brushSoftVal">50%</span>
+          </div>
+          <div class="sep"></div>
+          <div class="group">
+            <button type="button" class="icon-btn" id="brushUndo" title="撤销上一笔 (Ctrl+Z)">↶ 撤销</button>
+            <button type="button" class="icon-btn" id="brushReset" title="清除所有笔刷修改,回到 AI 原始抠图">🔄 重置</button>
+          </div>
+        </div>
         <div class="preview-box" id="outBox">
           <div class="preview-empty">点击"开始抠图"后这里显示结果</div>
         </div>
@@ -223,6 +333,8 @@
     </div>
   </div>
 </div>
+
+<div id="brushCursor"></div>
 
 <script src="../assets/shared.js"></script>
 <script>
@@ -332,12 +444,18 @@ Toolkit.injectTopbar('ai-cutout');
     $('srcBox').innerHTML = '';
     $('srcBox').appendChild(cv);
     if (it.outCanvas) {
-      const ocv = newCanvas(it.outCanvas.width, it.outCanvas.height);
-      ocv.getContext('2d').drawImage(it.outCanvas, 0, 0);
+      // Re-use a single live canvas per item so brush strokes update in place.
+      // Build it once, then keep it for the lifetime of the item.
+      if (!it.liveCanvas) {
+        it.liveCanvas = newCanvas(it.outCanvas.width, it.outCanvas.height);
+        it.liveCanvas.getContext('2d').drawImage(it.outCanvas, 0, 0);
+      }
       $('outBox').innerHTML = '';
-      $('outBox').appendChild(ocv);
+      $('outBox').appendChild(it.liveCanvas);
+      Brush.attachToItem(it);
     } else {
       $('outBox').innerHTML = '<div class="preview-empty">还未处理</div>';
+      Brush.detach();
     }
     $('downloadBtn').disabled = !it.outBlob;
     [...$('batchGrid').children].forEach((el, j) => el.classList.toggle('selected', j === i));
@@ -475,7 +593,17 @@ Toolkit.injectTopbar('ai-cutout');
     const maskCanvas = tensorToCanvas(mask);
     const resultCanvas = applyMask(bm, maskCanvas);
     it.outCanvas = resultCanvas;
+    // Capture the AI's final alpha (post refine/decontam/feather) and seed
+    // the user-editable mask. Brush strokes operate on `userAlpha`; `aiAlpha`
+    // is the reset target. Two flat Uint8Arrays — one byte per pixel.
+    const w = resultCanvas.width, h = resultCanvas.height;
+    const rd = resultCanvas.getContext('2d').getImageData(0, 0, w, h).data;
+    it.aiAlpha = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) it.aiAlpha[i] = rd[i*4 + 3];
+    it.userAlpha = new Uint8Array(it.aiAlpha);
+    it.undoStack = [];
     it.outBlob = await canvasToBlob(resultCanvas, 'image/png');
+    it.outDirty = false; // true once the user has brushed — re-encode on demand
   }
 
   function tensorToCanvas(tensor) {
@@ -700,22 +828,262 @@ Toolkit.injectTopbar('ai-cutout');
     return dst;
   }
 
-  $('downloadBtn').addEventListener('click', () => {
-    if (selectedIdx < 0 || !items[selectedIdx]?.outBlob) return;
+  // ===========================================================
+  //   Brush refinement — operates on it.userAlpha (the live alpha
+  //   buffer), re-renders it.liveCanvas in place after each stroke
+  //   segment. AI's original mask is kept in it.aiAlpha for reset.
+  // ===========================================================
+  const Brush = (() => {
+    let activeItem = null;
+    let mode = 'keep';                 // 'keep' | 'erase'
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+    let tempInvertMode = null;          // when right-click drags
+    let pointerHandlers = null;         // {down, move, up, leave, contextmenu, wheel}
+    const cursor = document.getElementById('brushCursor');
+
+    function getSize() { return parseInt(document.getElementById('brushSize').value, 10) || 32; }
+    function getSoft() { return (parseInt(document.getElementById('brushSoft').value, 10) || 0) / 100; }
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('brushKeep').classList.toggle('active', m === 'keep');
+      document.getElementById('brushErase').classList.toggle('active', m === 'erase');
+      updateCursorColor();
+    }
+    function updateCursorColor() {
+      const m = tempInvertMode || mode;
+      cursor.classList.toggle('keep', m === 'keep');
+      cursor.classList.toggle('erase', m === 'erase');
+    }
+
+    function showCursor(clientX, clientY) {
+      const cv = activeItem?.liveCanvas;
+      if (!cv) { cursor.style.display = 'none'; return; }
+      const r = cv.getBoundingClientRect();
+      const cssRadius = getSize() / 2;
+      cursor.style.width  = (cssRadius * 2) + 'px';
+      cursor.style.height = (cssRadius * 2) + 'px';
+      cursor.style.left = clientX + 'px';
+      cursor.style.top  = clientY + 'px';
+      // Hide cursor when pointer is outside the canvas bounds
+      const inside = clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+      cursor.style.display = inside ? 'block' : 'none';
+    }
+    function hideCursor() { cursor.style.display = 'none'; }
+
+    function eventToCanvasCoord(cv, clientX, clientY) {
+      const r = cv.getBoundingClientRect();
+      return {
+        x: (clientX - r.left) * (cv.width / r.width),
+        y: (clientY - r.top)  * (cv.height / r.height),
+        scale: cv.width / r.width   // 1 css px = `scale` canvas px
+      };
+    }
+
+    function stamp(it, cx, cy, radiusPx, softness, m) {
+      const target = m === 'keep' ? 255 : 0;
+      const w = it.liveCanvas.width, h = it.liveCanvas.height;
+      const ua = it.userAlpha;
+      const r = radiusPx;
+      const core = r * (1 - softness);
+      const x0 = Math.max(0, Math.floor(cx - r));
+      const x1 = Math.min(w, Math.ceil(cx + r) + 1);
+      const y0 = Math.max(0, Math.floor(cy - r));
+      const y1 = Math.min(h, Math.ceil(cy + r) + 1);
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const dx = x - cx, dy = y - cy;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d > r) continue;
+          let weight;
+          if (r === core) weight = (d < r) ? 1 : 0;
+          else if (d <= core) weight = 1;
+          else weight = 1 - (d - core) / (r - core);
+          const idx = y * w + x;
+          const cur = ua[idx];
+          ua[idx] = Math.round(cur + (target - cur) * weight);
+        }
+      }
+    }
+
+    function strokeSegment(it, x1, y1, x2, y2, radiusPx, softness, m) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const step = Math.max(1, radiusPx * 0.25);   // 25% of radius for smooth coverage
+      const n = Math.max(1, Math.ceil(dist / step));
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        stamp(it, x1 + dx*t, y1 + dy*t, radiusPx, softness, m);
+      }
+    }
+
+    function rerender(it) {
+      const cv = it.liveCanvas;
+      const ctx = cv.getContext('2d');
+      const w = cv.width, h = cv.height;
+      const img = ctx.getImageData(0, 0, w, h);
+      const d = img.data;
+      const ua = it.userAlpha;
+      // Brush only touches the alpha channel — RGB stays whatever the AI's
+      // composite + decontamination produced. This means brushing in a
+      // previously-fully-transparent area shows source RGB (good), brushing
+      // an edge area keeps the decontaminated RGB (also good — no smudging
+      // from re-running decontam on a slightly different mask).
+      for (let i = 0; i < w * h; i++) d[i*4 + 3] = ua[i];
+      ctx.putImageData(img, 0, 0);
+      it.outDirty = true;
+    }
+
+    function pushUndo(it) {
+      it.undoStack.push(new Uint8Array(it.userAlpha));
+      // cap depth so 4K image brushing doesn't eat 100MB of snapshots
+      if (it.undoStack.length > 20) it.undoStack.shift();
+    }
+    function undo() {
+      if (!activeItem || !activeItem.undoStack.length) return;
+      const snap = activeItem.undoStack.pop();
+      activeItem.userAlpha.set(snap);
+      rerender(activeItem);
+    }
+    function reset() {
+      if (!activeItem) return;
+      pushUndo(activeItem);
+      activeItem.userAlpha.set(activeItem.aiAlpha);
+      rerender(activeItem);
+    }
+
+    function attachToItem(it) {
+      detach(); // make sure no stale handlers from previous item
+      activeItem = it;
+      document.getElementById('brushToolbar').classList.add('show');
+      document.getElementById('outBox').classList.add('brush-armed');
+      // wire pointer handlers on the live canvas
+      const cv = it.liveCanvas;
+      const onDown = (e) => {
+        if (e.button === 2) {
+          tempInvertMode = mode === 'keep' ? 'erase' : 'keep';
+          updateCursorColor();
+        }
+        const { x, y, scale } = eventToCanvasCoord(cv, e.clientX, e.clientY);
+        drawing = true;
+        pushUndo(it);
+        const radius = (getSize() / 2) * scale;
+        const m = tempInvertMode || mode;
+        stamp(it, x, y, radius, getSoft(), m);
+        rerender(it);
+        lastX = x; lastY = y;
+        e.preventDefault();
+      };
+      const onMove = (e) => {
+        showCursor(e.clientX, e.clientY);
+        if (!drawing) return;
+        const { x, y, scale } = eventToCanvasCoord(cv, e.clientX, e.clientY);
+        const radius = (getSize() / 2) * scale;
+        const m = tempInvertMode || mode;
+        strokeSegment(it, lastX, lastY, x, y, radius, getSoft(), m);
+        rerender(it);
+        lastX = x; lastY = y;
+      };
+      const onUp = () => {
+        drawing = false;
+        tempInvertMode = null;
+        updateCursorColor();
+      };
+      const onLeave = () => { hideCursor(); };
+      const onContext = (e) => e.preventDefault();   // right-click drag inverts; never show menu
+      const onWheel = (e) => {
+        if (!e.target || !cv.contains(e.target)) return;
+        e.preventDefault();
+        const sz = document.getElementById('brushSize');
+        const cur = parseInt(sz.value, 10);
+        const next = Math.max(parseInt(sz.min, 10), Math.min(parseInt(sz.max, 10),
+          cur + (e.deltaY < 0 ? 4 : -4)));
+        sz.value = next;
+        document.getElementById('brushSizeVal').textContent = next;
+        showCursor(e.clientX, e.clientY);
+      };
+      cv.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      cv.addEventListener('mouseleave', onLeave);
+      cv.addEventListener('contextmenu', onContext);
+      cv.addEventListener('wheel', onWheel, { passive: false });
+      pointerHandlers = { cv, onDown, onMove, onUp, onLeave, onContext, onWheel };
+      updateCursorColor();
+    }
+    function detach() {
+      hideCursor();
+      document.getElementById('brushToolbar').classList.remove('show');
+      document.getElementById('outBox').classList.remove('brush-armed');
+      activeItem = null;
+      if (pointerHandlers) {
+        const { cv, onDown, onMove, onUp, onLeave, onContext, onWheel } = pointerHandlers;
+        cv.removeEventListener('mousedown', onDown);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        cv.removeEventListener('mouseleave', onLeave);
+        cv.removeEventListener('contextmenu', onContext);
+        cv.removeEventListener('wheel', onWheel);
+        pointerHandlers = null;
+      }
+    }
+
+    // wire toolbar controls (idempotent — controls are static DOM nodes)
+    document.getElementById('brushKeep').addEventListener('click',  () => setMode('keep'));
+    document.getElementById('brushErase').addEventListener('click', () => setMode('erase'));
+    document.getElementById('brushSize').addEventListener('input', (e) => {
+      document.getElementById('brushSizeVal').textContent = e.target.value;
+    });
+    document.getElementById('brushSoft').addEventListener('input', (e) => {
+      document.getElementById('brushSoftVal').textContent = e.target.value + '%';
+    });
+    document.getElementById('brushUndo').addEventListener('click', undo);
+    document.getElementById('brushReset').addEventListener('click', reset);
+    // keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (!activeItem) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+      else if (e.key.toLowerCase() === 'q') setMode('keep');
+      else if (e.key.toLowerCase() === 'w') setMode('erase');
+    });
+
+    return { attachToItem, detach, getActiveItem: () => activeItem };
+  })();
+
+  // Re-encode an item's blob from its liveCanvas if the user has brushed
+  // since the AI run. Returns the blob to download.
+  async function freshBlob(it) {
+    if (!it) return null;
+    if (!it.outDirty && it.outBlob) return it.outBlob;
+    const cv = it.liveCanvas || it.outCanvas;
+    if (!cv) return null;
+    it.outBlob = await canvasToBlob(cv, 'image/png');
+    it.outDirty = false;
+    return it.outBlob;
+  }
+
+  $('downloadBtn').addEventListener('click', async () => {
+    if (selectedIdx < 0) return;
     const it = items[selectedIdx];
+    const blob = await freshBlob(it);
+    if (!blob) return;
     const prefix = ($('filename').value || 'cutout').replace(/[^\w-]/g, '_');
     const baseName = it.file.name.replace(/\.[^.]+$/, '');
-    download(it.outBlob, `${prefix}_${baseName}.png`);
+    download(blob, `${prefix}_${baseName}.png`);
   });
 
   $('downloadZipBtn').addEventListener('click', async () => {
-    const done = items.filter(it => it.outBlob);
+    const done = items.filter(it => it.outBlob || it.liveCanvas);
     if (!done.length) return;
     log.dim(`打包 ZIP (${done.length} 张)...`);
     const prefix = ($('filename').value || 'cutout').replace(/[^\w-]/g, '_');
     const files = [];
     for (const it of done) {
-      const data = new Uint8Array(await it.outBlob.arrayBuffer());
+      const blob = await freshBlob(it);
+      if (!blob) continue;
+      const data = new Uint8Array(await blob.arrayBuffer());
       const baseName = it.file.name.replace(/\.[^.]+$/, '');
       files.push({ name: `${prefix}_${baseName}.png`, data });
     }

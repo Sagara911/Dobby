@@ -1378,7 +1378,11 @@
     btn.type = 'button';
     btn.className = 'eyedropper-btn';
     btn.title = '吸色管(取屏幕任意像素,Chrome 95+)';
-    btn.innerHTML = '🎨';
+    // SVG pipette/dropper icon (Lucide-style). Inherits currentColor so it
+    // tracks the button's text color across light/dark themes. Previously
+    // this was 🎨 (palette emoji), which suggested "open palette" rather than
+    // the screen-pixel eye-dropper this button actually does.
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>';
     btn.addEventListener('click', async () => {
       if (!('EyeDropper' in window)) {
         toast(T('toast.eyedropper.unsupported', 'Bad Dobby! 这个浏览器不让 Dobby 吸色,请用 Chrome 95+ / Edge 95+'), 'warn', 4500);
