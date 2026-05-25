@@ -95,13 +95,16 @@
   .range-row input[type=range] { flex: 1; }
   .range-row .value { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text); min-width: 30px; text-align: right; }
 
-  /* ── before/after compare modal ────────────────────────────────── */
-  /* No backdrop-filter — large images compared through a backdrop blur
-     have been seen rendering as a strange dark vignette on certain GPU
-     drivers / Chrome versions. A plain dark overlay is just as readable. */
+  /* ── before/after compare modal ──
+     Side-by-side rendering rather than a slide-compare overlay. The slide
+     compare was triggering a strange radial dark vignette on the user's
+     Chrome / RTX 3060 even after backdrop-filter removal and source
+     downscaling, almost certainly a clip-path + absolute-positioned-canvas
+     interaction on their stack. Two plain side-by-side canvases dodge
+     every one of the slider's rendering surfaces. */
   .cmp-modal {
-    position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, 0.85);
+    position: fixed; inset: 0; z-index: 99999;  /* above sticky topbar (z 9000) */
+    background: rgba(0, 0, 0, 0.92);
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
   }
@@ -142,6 +145,36 @@
     text-align: center;
   }
   .cmp-meta strong { color: var(--jade); }
+  /* side-by-side compare */
+  .cmp-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .cmp-col {
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 0;  /* let grid track shrink properly */
+  }
+  .cmp-col .cmp-label {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 2px 0;
+  }
+  .cmp-col .cmp-canvas-wrap {
+    background: var(--checker), #0a0a0c;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cmp-col canvas, .cmp-col img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -546,14 +579,12 @@ Toolkit.injectTopbar('image-optimizer');
       body.innerHTML = `<div style="color:var(--danger); text-align:center; padding:40px">Bad Dobby! ${e.message}</div>`;
       return;
     }
-    // Pre-downscale to at most 1024 px on the long edge for preview. Big
-    // sprite sheets (e.g. 5556 × 5556) keep their full source resolution
-    // inside the modal otherwise, which has been linked to glitchy GPU
-    // rendering (the user reported a dark circular vignette filling the
-    // middle of the slider — disappears once we hand the slider modest-
-    // sized canvases instead of raw <img> elements at native resolution).
+    // Pre-downscale to at most 800 px on the long edge for the preview
+    // canvases. Original sprite sheets can be 5000+ pixels; rendering them
+    // at native size has been linked to weird GPU compositing artifacts on
+    // some Chrome installs.
     const downscale = (img) => {
-      const maxEdge = 1024;
+      const maxEdge = 800;
       const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
       const w = Math.max(1, Math.round(img.naturalWidth * scale));
       const h = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -565,11 +596,26 @@ Toolkit.injectTopbar('image-optimizer');
     };
     const origCv = downscale(origImg);
     const optCv = downscale(optImg);
-    body.innerHTML = '';
-    Toolkit.makeCompareSlider(body, origCv, optCv, {
-      leftLabel: T('imageOpt.compareLeft', '原图'),
-      rightLabel: T('imageOpt.compareRight', '压缩后')
-    });
+    // Side-by-side rendering — see CSS comment for why we abandoned the
+    // slide-compare overlay. Each canvas sits in its own column inside a
+    // 2-track grid, both with checker-pattern backgrounds so transparency
+    // shows through identically.
+    const leftLabel = T('imageOpt.compareLeft', '原图');
+    const rightLabel = T('imageOpt.compareRight', '压缩后');
+    body.innerHTML = `
+      <div class="cmp-grid">
+        <div class="cmp-col">
+          <div class="cmp-label">${leftLabel}</div>
+          <div class="cmp-canvas-wrap" id="cmpLeftWrap"></div>
+        </div>
+        <div class="cmp-col">
+          <div class="cmp-label">${rightLabel}</div>
+          <div class="cmp-canvas-wrap" id="cmpRightWrap"></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('cmpLeftWrap').appendChild(origCv);
+    document.getElementById('cmpRightWrap').appendChild(optCv);
     const orig = it.file.size, opt = it.optimizedBlob.size;
     const pct = ((orig - opt) / orig * 100);
     const sign = pct >= 0 ? '-' : '+';
