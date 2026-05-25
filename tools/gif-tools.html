@@ -107,142 +107,148 @@
 
 <div class="tool-layout">
   <div class="sidebar">
-    <h1>🎬 GIF 工具</h1>
+    <h1 data-i18n="gt.h1">🎬 GIF 工具</h1>
 
     <div class="tab-row" id="modeTabs">
-      <button data-mode="make" class="active" type="button">🎬 制作 (帧 → GIF)</button>
-      <button data-mode="edit" type="button">✏️ 编辑 (GIF → GIF)</button>
+      <button data-mode="make" class="active" type="button" data-i18n="gt.tab.make">🎬 制作 (帧 → GIF)</button>
+      <button data-mode="edit" type="button" data-i18n="gt.tab.edit">✏️ 编辑 (GIF → GIF)</button>
     </div>
 
     <!-- ============ make pane ============ -->
     <div id="makePane">
       <div class="drop-zone" id="makeDropZone">
-        <p>📂 拖入序列帧</p>
-        <p class="hint">多选 PNG / JPG<br/>按文件名自然排序</p>
+        <p data-i18n="gt.make.drop.title">📂 拖入序列帧</p>
+        <p class="hint">
+          <span data-i18n="gt.make.drop.hint1">多选 PNG / JPG</span><br/>
+          <span data-i18n="gt.make.drop.hint2">按文件名自然排序</span>
+        </p>
         <input type="file" id="makeFileInput" multiple accept="image/*" style="display:none" />
       </div>
       <div class="progress" id="makeProgress"><div class="progress-bar"></div></div>
 
-      <h2>动画</h2>
+      <h2 data-i18n="gt.anim.h">动画</h2>
       <div class="field">
-        <label>FPS</label>
+        <label data-i18n="gt.fps.label">FPS</label>
         <input type="number" id="makeFps" value="12" min="1" max="60" />
       </div>
       <div class="field">
-        <label>循环次数 (0 = 无限)</label>
+        <label data-i18n="gt.loop.label">循环次数 (0 = 无限)</label>
         <input type="number" id="makeLoop" value="0" min="0" />
       </div>
 
-      <h2>输出</h2>
+      <h2 data-i18n="gt.output.h">输出</h2>
       <div class="field">
-        <label>格式</label>
+        <label data-i18n="gt.format.label">格式</label>
         <select id="makeFormat">
-          <option value="gif">GIF (兼容性最好)</option>
-          <option value="apng">APNG (画质好,支持 8-bit alpha)</option>
+          <option value="gif" data-i18n="gt.format.gif.compat">GIF (兼容性最好)</option>
+          <option value="apng" data-i18n="gt.format.apng.quality">APNG (画质好,支持 8-bit alpha)</option>
         </select>
       </div>
       <div class="field" id="makeApngHint" style="display:none">
         <div class="info" style="padding:8px 11px; background:rgba(var(--jade-rgb),0.08); border-left:2px solid var(--jade); border-radius:6px; line-height:1.55; color:var(--text-soft)">
-          <strong style="color:var(--jade)">💡 APNG 是真动图</strong> — 24-bit 色 + 8-bit alpha (透明边缘平滑),比 GIF 强很多。<br/><br/>
-          <strong>✓ 会动的环境</strong>: 浏览器(拖入或 &lt;img&gt;) · Telegram/Discord · playable runtime · Pixi/Phaser/Cocos<br/>
-          <strong style="color:#ffb43c">✗ 只看第一帧</strong>: Windows 照片 · Mac 预览.app · 资源管理器缩略图<br/><br/>
-          下载后用浏览器或在线工具 <code>ezgif.com</code> 拖入,就能看到动画。要 100% 兼容选 GIF。
+          <strong style="color:var(--jade)" data-i18n="gt.apngHint.title">💡 APNG 是真动图</strong> <span data-i18n="gt.apngHint.body">— 24-bit 色 + 8-bit alpha (透明边缘平滑),比 GIF 强很多。</span><br/><br/>
+          <strong data-i18n="gt.apngHint.worksTitle">✓ 会动的环境</strong><span data-i18n="gt.apngHint.worksList">: 浏览器(拖入或 &lt;img&gt;) · Telegram/Discord · playable runtime · Pixi/Phaser/Cocos</span><br/>
+          <strong style="color:#ffb43c" data-i18n="gt.apngHint.failsTitle">✗ 只看第一帧</strong><span data-i18n="gt.apngHint.failsList">: Windows 照片 · Mac 预览.app · 资源管理器缩略图</span><br/><br/>
+          <span data-i18n="gt.apngHint.footer">下载后用浏览器或在线工具 ezgif.com 拖入,就能看到动画。要 100% 兼容选 GIF。</span>
         </div>
       </div>
       <div class="field" id="makePaletteField">
-        <label>调色板算法 (仅 GIF)</label>
+        <label data-i18n="gt.palette.label">调色板算法 (仅 GIF)</label>
         <select id="makePalette">
-          <option value="median">中位切分 256 色 (慢, 质量好)</option>
-          <option value="uniform">均匀 6×6×6 (快, 质量一般)</option>
+          <option value="median" data-i18n="gt.palette.median">中位切分 256 色 (慢, 质量好)</option>
+          <option value="uniform" data-i18n="gt.palette.uniform">均匀 6×6×6 (快, 质量一般)</option>
         </select>
       </div>
       <div class="field">
-        <label>文件名</label>
+        <label data-i18n="gt.filename.label">文件名</label>
         <input type="text" id="makeFilename" value="animation" />
       </div>
 
-      <button id="makeBuildBtn" disabled>生成</button>
-      <button id="makeDownloadBtn" class="secondary" disabled>💾 下载</button>
-      <button id="makeOpenInTabBtn" class="secondary" disabled>🌐 浏览器新标签打开 (验证动图)</button>
-      <button id="makeUseAsSourceBtn" class="secondary" disabled>把输出送到"编辑"标签</button>
-      <button id="makeClearBtn" class="secondary">清空</button>
+      <button id="makeBuildBtn" disabled data-i18n="gt.make.build">生成</button>
+      <button id="makeDownloadBtn" class="secondary" disabled data-i18n="gt.btn.download">💾 下载</button>
+      <button id="makeOpenInTabBtn" class="secondary" disabled data-i18n="gt.make.openTab">🌐 浏览器新标签打开 (验证动图)</button>
+      <button id="makeUseAsSourceBtn" class="secondary" disabled data-i18n="gt.make.toEdit">把输出送到"编辑"标签</button>
+      <button id="makeClearBtn" class="secondary" data-i18n="gt.btn.clear">清空</button>
     </div>
 
     <!-- ============ edit pane ============ -->
     <div id="editPane" style="display:none">
       <div class="drop-zone" id="editDropZone">
-        <p>📂 拖入 GIF 或 APNG</p>
-        <p class="hint">加载后选择一种操作<br/>想叠加多种操作?导出后再拖入</p>
+        <p data-i18n="gt.edit.drop.title">📂 拖入 GIF 或 APNG</p>
+        <p class="hint">
+          <span data-i18n="gt.edit.drop.hint1">加载后选择一种操作</span><br/>
+          <span data-i18n="gt.edit.drop.hint2">想叠加多种操作?导出后再拖入</span>
+        </p>
         <input type="file" id="editFileInput" accept="image/gif,image/png,image/apng,.gif,.png,.apng" style="display:none" />
       </div>
       <div class="progress" id="editProgress"><div class="progress-bar"></div></div>
 
-      <h2>操作</h2>
+      <h2 data-i18n="gt.edit.action.h">操作</h2>
       <div class="field">
         <select id="editAction">
-          <option value="compress">🗜️ 一键压缩 (缩放+减色+抽帧)</option>
-          <option value="resize">📐 缩放 (Resize)</option>
-          <option value="crop">✂️ 裁剪 (Crop)</option>
-          <option value="speed">⏩ 调速 (Speed)</option>
-          <option value="reverse">⏪ 反向播放 (Reverse)</option>
-          <option value="trim">✄ 删帧 (Trim)</option>
-          <option value="dropFrames">⊘ 抽帧降 FPS</option>
-          <option value="optimize">📦 优化 (仅减色)</option>
-          <option value="watermark">📝 加文字水印</option>
-          <option value="filter">🎚️ 滤镜 / 色相</option>
+          <option value="compress" data-i18n="gt.edit.action.compress">🗜️ 一键压缩 (缩放+减色+抽帧)</option>
+          <option value="resize" data-i18n="gt.edit.action.resize">📐 缩放 (Resize)</option>
+          <option value="crop" data-i18n="gt.edit.action.crop">✂️ 裁剪 (Crop)</option>
+          <option value="speed" data-i18n="gt.edit.action.speed">⏩ 调速 (Speed)</option>
+          <option value="reverse" data-i18n="gt.edit.action.reverse">⏪ 反向播放 (Reverse)</option>
+          <option value="trim" data-i18n="gt.edit.action.trim">✄ 删帧 (Trim)</option>
+          <option value="dropFrames" data-i18n="gt.edit.action.dropFrames">⊘ 抽帧降 FPS</option>
+          <option value="optimize" data-i18n="gt.edit.action.optimize">📦 优化 (仅减色)</option>
+          <option value="watermark" data-i18n="gt.edit.action.watermark">📝 加文字水印</option>
+          <option value="filter" data-i18n="gt.edit.action.filter">🎚️ 滤镜 / 色相</option>
         </select>
       </div>
 
       <div class="action-controls" id="editActionControls"></div>
 
-      <h2>输出</h2>
+      <h2 data-i18n="gt.output.h">输出</h2>
       <div class="field">
-        <label>输出格式</label>
+        <label data-i18n="gt.edit.outFormat.label">输出格式</label>
         <select id="editOutFormat">
-          <option value="gif">GIF (256 色, 兼容性最好)</option>
-          <option value="apng">APNG (真透明, 不减色)</option>
+          <option value="gif" data-i18n="gt.edit.outFormat.gif">GIF (256 色, 兼容性最好)</option>
+          <option value="apng" data-i18n="gt.edit.outFormat.apng">APNG (真透明, 不减色)</option>
         </select>
       </div>
       <div class="field">
-        <label>文件名</label>
+        <label data-i18n="gt.filename.label">文件名</label>
         <input type="text" id="editFilename" value="edited" />
       </div>
       <div class="field" id="editPaletteField">
-        <label>调色板算法 (仅 GIF)</label>
+        <label data-i18n="gt.palette.label">调色板算法 (仅 GIF)</label>
         <select id="editPalette">
-          <option value="median">中位切分 256 色 (慢, 质量好)</option>
-          <option value="uniform">均匀 6×6×6 (快)</option>
+          <option value="median" data-i18n="gt.palette.median">中位切分 256 色 (慢, 质量好)</option>
+          <option value="uniform" data-i18n="gt.palette.uniformFast">均匀 6×6×6 (快)</option>
         </select>
       </div>
-      <button id="editApplyBtn" disabled>应用 + 生成</button>
-      <button id="editDownloadBtn" class="secondary" disabled>💾 下载</button>
-      <button id="editUseAsSourceBtn" class="secondary" disabled>把输出作为新输入</button>
-      <button id="editClearBtn" class="secondary">清空</button>
+      <button id="editApplyBtn" disabled data-i18n="gt.edit.apply">应用 + 生成</button>
+      <button id="editDownloadBtn" class="secondary" disabled data-i18n="gt.btn.download">💾 下载</button>
+      <button id="editUseAsSourceBtn" class="secondary" disabled data-i18n="gt.edit.toInput">把输出作为新输入</button>
+      <button id="editClearBtn" class="secondary" data-i18n="gt.btn.clear">清空</button>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="gt.stats.ready">Dobby 待命</div>
 
     <div id="makeMain">
       <div class="preview-pair">
         <div class="preview-col">
-          <div class="label">序列帧 (第一帧)</div>
+          <div class="label" data-i18n="gt.make.firstFrame.label">序列帧 (第一帧)</div>
           <div class="preview-box" id="makeFirstFrameBox">
-            <div class="preview-empty">你丢序列帧进来,Dobby 这里显示首帧</div>
+            <div class="preview-empty" data-i18n="gt.make.firstFrame.empty">你丢序列帧进来,Dobby 这里显示首帧</div>
           </div>
         </div>
         <div class="preview-col">
-          <div class="label">生成的动画</div>
+          <div class="label" data-i18n="gt.make.result.label">生成的动画</div>
           <div class="preview-box" id="makeResultBox">
-            <div class="preview-empty">生成后这里显示动画预览</div>
+            <div class="preview-empty" data-i18n="gt.make.result.empty">生成后这里显示动画预览</div>
           </div>
         </div>
       </div>
       <div>
-        <h2 style="margin-top:0">所有帧</h2>
+        <h2 style="margin-top:0" data-i18n="gt.frames.h">所有帧</h2>
         <div class="frame-grid" id="makeFrameGrid"></div>
       </div>
     </div>
@@ -250,20 +256,20 @@
     <div id="editMain" style="display:none">
       <div class="preview-pair">
         <div class="preview-col">
-          <div class="label">原 GIF</div>
+          <div class="label" data-i18n="gt.edit.src.label">原 GIF</div>
           <div class="preview-box" id="editSrcBox">
-            <div class="preview-empty">拖入 GIF</div>
+            <div class="preview-empty" data-i18n="gt.edit.src.empty">拖入 GIF</div>
           </div>
         </div>
         <div class="preview-col">
-          <div class="label">输出预览</div>
+          <div class="label" data-i18n="gt.edit.out.label">输出预览</div>
           <div class="preview-box" id="editOutBox">
-            <div class="preview-empty">Dobby 干完显示在这里</div>
+            <div class="preview-empty" data-i18n="gt.edit.out.empty">Dobby 干完显示在这里</div>
           </div>
         </div>
       </div>
       <div>
-        <h2 style="margin-top:0">所有帧</h2>
+        <h2 style="margin-top:0" data-i18n="gt.frames.h">所有帧</h2>
         <div class="frame-grid" id="editFrameGrid"></div>
       </div>
     </div>
