@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v20",
+      "date": "2026-05-25",
+      "title": "深度压缩支持 APNG 多帧 — 实测 -85% 体积,透明 + 帧时延保留",
+      "items": [
+        "你问 APNG 怎么减体积 — Dobby 之前老实交底说不支持(扔进深度压缩静默丢掉除第一帧外的所有帧),今天补上了:扔 .apng / .png 自动嗅探 acTL chunk,识别到多帧后用 ImageDecoder API 拆所有帧",
+        "压缩走「全局调色板」策略 — 从所有帧采样混合,中位切分构建一份共享 PLTE(256/128/64 色按设置),k-means 全局精炼,每帧用同一份调色板映射(可开 FS 抖动)。共享调色板 = 帧间无闪烁 + APNG 容器最优 = 体积压到最小",
+        "编码层重写了 palette APNG 容器: IHDR(色类型 3 索引)+ acTL + PLTE + tRNS(全局透明)+ N×(fcTL + IDAT/fdAT)+ IEND,fdAT 序列号正确递增,帧时延按原始 fcTL 字段毫秒级保留",
+        "本地实测: 6 帧 200ms 渐变 APNG: 10KB → 1.4KB · -85.7%,所有帧 200ms 延迟原样保留 / 8 帧 256×256 旋转梯度 APNG: 325KB → 43KB · -86.9%,acTL/PLTE/tRNS/8×fcTL/1×IDAT/7×fdAT/IEND 全部合法",
+        "Worker 端用之前修过的行流式 FS 抖动跑每帧,大尺寸 APNG 也不会爆 Float32Array;主线程 transfer 每帧 buffer 给 worker,避免 N 张帧数据 clone 一份"
+      ]
+    },
+    {
       "version": "dobby-v19",
       "date": "2026-05-25",
       "title": "色彩工具: 色键抠图后直接接笔刷修补,不用再切模式",

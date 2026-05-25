@@ -6,8 +6,15 @@
 //          + 中间进度:{ id, progress: 0..1, status: '...' }
 
 self.onmessage = async (e) => {
-  const { id, imageData, opts } = e.data;
+  const { id, mode, imageData, frames, opts } = e.data;
   try {
+    if (mode === 'apng') {
+      const png = await crushApng(frames, opts, (pct, status) => {
+        self.postMessage({ id, progress: pct, status });
+      });
+      self.postMessage({ id, ok: true, png }, [png.buffer]);
+      return;
+    }
     const png = await crushPng(imageData, opts, (pct, status) => {
       self.postMessage({ id, progress: pct, status });
     });
@@ -348,4 +355,250 @@ function crc32(data) {
   let crc = 0xFFFFFFFF;
   for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ _crcTable[(crc ^ data[i]) & 0xFF];
   return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ============================================================
+//   APNG multi-frame palette compression
+//
+// frames: [{ data: Uint8ClampedArray (RGBA, w*h*4), w, h, delayMs }, ...]
+// opts:   { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh, loop }
+// All frames must share the same w/h (APNG container constraint we honor).
+//
+// Strategy: build ONE global palette from samples drawn across every frame,
+// map each frame to that palette (with optional FS dither, streaming so
+// memory stays bounded), then emit a single palette-mode APNG sharing PLTE
+// + tRNS for the whole animation.
+// ============================================================
+async function crushApng(frames, opts, onProgress) {
+  const { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh, loop } = opts;
+  if (!frames || !frames.length) throw new Error('APNG: 没有帧');
+  const w = frames[0].w, h = frames[0].h;
+  for (const f of frames) {
+    if (f.w !== w || f.h !== h) throw new Error('APNG: 帧尺寸不一致 (不支持非定尺寸 APNG)');
+  }
+
+  // 1. alpha mode applied in place — same logic as static path
+  for (const f of frames) {
+    const px = f.data;
+    if (alphaMode === 'threshold') {
+      for (let i = 3; i < px.length; i += 4) px[i] = px[i] >= alphaThresh ? 255 : 0;
+    } else if (alphaMode === 'discard') {
+      for (let i = 3; i < px.length; i += 4) px[i] = 255;
+    }
+  }
+
+  const W = perceptual
+    ? { r: 0.299, g: 0.587, b: 0.114, a: 0.5 }
+    : { r: 1, g: 1, b: 1, a: 1 };
+
+  // 2. sample pixels across all frames, target 50k total samples
+  onProgress(0.05, '构建全局调色板...');
+  const samples = sampleFromFrames(frames, 50000);
+  let palette = buildPaletteFromSamples(samples, nColors, W);
+
+  // 3. optional K-means refinement on the same shared samples
+  if (kmeans) {
+    onProgress(0.18, 'K-means 全局精炼...');
+    palette = refinePaletteKMeansFromSamples(samples, palette, 5, W);
+  }
+
+  // 4. map each frame to indices
+  const indicesPerFrame = [];
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    onProgress(0.25 + 0.6 * (i / frames.length),
+      dither ? `映射帧 ${i+1}/${frames.length} (FS dither)` : `映射帧 ${i+1}/${frames.length}`);
+    const idx = dither
+      ? mapWithDither(f.data, w, h, palette, W)
+      : mapNearest(f.data, w, h, palette, W);
+    indicesPerFrame.push(idx);
+    // yield so worker stays responsive
+    if (i % 2 === 1) await new Promise(r => setTimeout(r, 0));
+  }
+
+  // 5. encode the APNG container with shared palette
+  onProgress(0.9, '编码 APNG...');
+  const png = await encodePaletteApng(indicesPerFrame, w, h, palette, frames.map(f => f.delayMs || 0), loop || 0);
+  onProgress(1, '完成');
+  return png;
+}
+
+function sampleFromFrames(frames, target) {
+  const totalPixels = frames.reduce((acc, f) => acc + f.w * f.h, 0);
+  const stride = Math.max(1, Math.floor(totalPixels / target));
+  const samples = [];
+  let counter = 0;
+  for (const f of frames) {
+    const px = f.data;
+    for (let i = 0; i < px.length; i += 4) {
+      if (counter++ % stride === 0) samples.push([px[i], px[i+1], px[i+2], px[i+3]]);
+    }
+  }
+  return samples;
+}
+
+function buildPaletteFromSamples(samples, maxColors, W) {
+  if (!samples.length) return [{ r: 0, g: 0, b: 0, a: 0 }];
+  const boxes = [{ pixels: samples }];
+  const weights = [W.r, W.g, W.b, W.a];
+  while (boxes.length < maxColors) {
+    let bestIdx = -1, bestRange = -1;
+    for (let i = 0; i < boxes.length; i++) {
+      if (boxes[i].pixels.length < 2) continue;
+      const r = boxRange4(boxes[i], weights);
+      if (r.max > bestRange) { bestRange = r.max; bestIdx = i; }
+    }
+    if (bestIdx < 0) break;
+    const { channel } = boxRange4(boxes[bestIdx], weights);
+    boxes[bestIdx].pixels.sort((a, b) => a[channel] - b[channel]);
+    const mid = boxes[bestIdx].pixels.length >> 1;
+    boxes.splice(bestIdx, 1,
+      { pixels: boxes[bestIdx].pixels.slice(0, mid) },
+      { pixels: boxes[bestIdx].pixels.slice(mid) });
+  }
+  return boxes.map(box => {
+    let r = 0, g = 0, b = 0, a = 0;
+    for (const p of box.pixels) { r += p[0]; g += p[1]; b += p[2]; a += p[3]; }
+    const n = box.pixels.length;
+    return { r: Math.round(r/n), g: Math.round(g/n), b: Math.round(b/n), a: Math.round(a/n) };
+  });
+}
+
+function refinePaletteKMeansFromSamples(samples, initialPalette, iterations, W) {
+  if (!samples.length) return initialPalette;
+  let centers = initialPalette.map(p => [p.r, p.g, p.b, p.a]);
+  const pn = centers.length;
+  const assignment = new Int32Array(samples.length);
+  for (let iter = 0; iter < iterations; iter++) {
+    let changed = 0;
+    for (let s = 0; s < samples.length; s++) {
+      const [r, g, b, a] = samples[s];
+      let best = 0, bestD = Infinity;
+      for (let k = 0; k < pn; k++) {
+        const c = centers[k];
+        const dr = (r-c[0]), dg = (g-c[1]), db = (b-c[2]), da = (a-c[3]);
+        const d = W.r*dr*dr + W.g*dg*dg + W.b*db*db + W.a*da*da;
+        if (d < bestD) { bestD = d; best = k; }
+      }
+      if (assignment[s] !== best) { assignment[s] = best; changed++; }
+    }
+    if (changed === 0) break;
+    const sums = Array.from({ length: pn }, () => [0, 0, 0, 0]);
+    const counts = new Int32Array(pn);
+    for (let s = 0; s < samples.length; s++) {
+      const k = assignment[s];
+      const p = samples[s];
+      sums[k][0] += p[0]; sums[k][1] += p[1]; sums[k][2] += p[2]; sums[k][3] += p[3];
+      counts[k]++;
+    }
+    for (let k = 0; k < pn; k++) {
+      if (counts[k] === 0) continue;
+      centers[k][0] = sums[k][0] / counts[k];
+      centers[k][1] = sums[k][1] / counts[k];
+      centers[k][2] = sums[k][2] / counts[k];
+      centers[k][3] = sums[k][3] / counts[k];
+    }
+  }
+  return centers.map(c => ({
+    r: Math.round(c[0]), g: Math.round(c[1]), b: Math.round(c[2]), a: Math.round(c[3])
+  }));
+}
+
+// Compress one frame's index scanlines via zlib. Returns the raw IDAT-style
+// compressed bytes (no filter — we use filter byte 0 = none per scanline).
+async function compressIndexedScanlines(indices, w, h) {
+  const lineLen = w + 1;
+  const scan = new Uint8Array(h * lineLen);
+  for (let y = 0; y < h; y++) {
+    scan[y * lineLen] = 0;
+    scan.set(indices.subarray(y * w, (y + 1) * w), y * lineLen + 1);
+  }
+  const cs = new CompressionStream('deflate');
+  const writer = cs.writable.getWriter();
+  writer.write(scan);
+  writer.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+
+async function encodePaletteApng(framesIndices, w, h, palette, delaysMs, loop) {
+  const chunks = [];
+  let totalLen = 0;
+  const pushArr = (arr) => {
+    const u = arr instanceof Uint8Array ? arr : new Uint8Array(arr);
+    chunks.push(u); totalLen += u.length;
+  };
+
+  // PNG signature
+  pushArr([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+  // IHDR: width, height, bitDepth=8, colorType=3 (indexed), compression=0,
+  //       filter=0, interlace=0
+  const ihdr = new Uint8Array(13);
+  const dv = new DataView(ihdr.buffer);
+  dv.setUint32(0, w, false);
+  dv.setUint32(4, h, false);
+  ihdr[8] = 8; ihdr[9] = 3;
+  pushArr(buildChunk('IHDR', ihdr));
+
+  // acTL: num_frames (4), num_plays (4)  — must come before IDAT for APNG
+  const actl = new Uint8Array(8);
+  const adv = new DataView(actl.buffer);
+  adv.setUint32(0, framesIndices.length, false);
+  adv.setUint32(4, loop, false);   // 0 = loop forever
+  pushArr(buildChunk('acTL', actl));
+
+  // PLTE
+  const plte = new Uint8Array(palette.length * 3);
+  palette.forEach((p, i) => { plte[i*3] = p.r; plte[i*3+1] = p.g; plte[i*3+2] = p.b; });
+  pushArr(buildChunk('PLTE', plte));
+
+  // tRNS — palette alphas, only up through the last non-opaque entry
+  let lastNon255 = -1;
+  for (let i = 0; i < palette.length; i++) if (palette[i].a < 255) lastNon255 = i;
+  if (lastNon255 >= 0) {
+    const trns = new Uint8Array(lastNon255 + 1);
+    for (let i = 0; i <= lastNon255; i++) trns[i] = palette[i].a;
+    pushArr(buildChunk('tRNS', trns));
+  }
+
+  // Frame chunks. Sequence numbers increment across fcTL + fdAT globally.
+  // First frame: fcTL(seq=0), IDAT. Each subsequent frame: fcTL(seqN), fdAT(seqN+1).
+  let seq = 0;
+  for (let i = 0; i < framesIndices.length; i++) {
+    const idat = await compressIndexedScanlines(framesIndices[i], w, h);
+    // fcTL: seq(4), w(4), h(4), x_off(4), y_off(4), delay_num(2), delay_den(2),
+    //       dispose(1)=0 NONE, blend(1)=0 SOURCE — paint each frame as-is
+    const fctl = new Uint8Array(26);
+    const fdv = new DataView(fctl.buffer);
+    fdv.setUint32(0, seq++, false);
+    fdv.setUint32(4, w, false);
+    fdv.setUint32(8, h, false);
+    fdv.setUint32(12, 0, false);
+    fdv.setUint32(16, 0, false);
+    // Express delay as numerator/1000 seconds. Cap numerator at 65535 (uint16).
+    const num = Math.max(1, Math.min(65535, Math.round(delaysMs[i] || 0)));
+    fdv.setUint16(20, num, false);
+    fdv.setUint16(22, 1000, false);
+    fctl[24] = 0;   // dispose: 0 = APNG_DISPOSE_OP_NONE (leave as-is)
+    fctl[25] = 0;   // blend:   0 = APNG_BLEND_OP_SOURCE (overwrite)
+    pushArr(buildChunk('fcTL', fctl));
+
+    if (i === 0) {
+      pushArr(buildChunk('IDAT', idat));
+    } else {
+      // fdAT: seq(4) + same compressed data IDAT would carry
+      const fdat = new Uint8Array(4 + idat.length);
+      const fddv = new DataView(fdat.buffer);
+      fddv.setUint32(0, seq++, false);
+      fdat.set(idat, 4);
+      pushArr(buildChunk('fdAT', fdat));
+    }
+  }
+
+  pushArr(buildChunk('IEND', new Uint8Array(0)));
+
+  const out = new Uint8Array(totalLen);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out;
 }

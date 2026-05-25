@@ -238,6 +238,7 @@
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/anim-encoders.js"></script>
 <script>
 Toolkit.injectTopbar('png-crusher');
 
@@ -294,6 +295,35 @@ Toolkit.injectTopbar('png-crusher');
     });
   }
 
+  // APNG multi-frame compression: send all frame buffers (transferred) plus
+  // the global opts. Worker builds one shared palette across every frame and
+  // emits a palette-mode APNG. opts.loop is the num_plays field (0 = forever).
+  function crushApngInWorker(frames, opts, onProgress) {
+    return new Promise((resolve, reject) => {
+      const id = ++workerJobId;
+      workerJobs.set(id, { resolve, reject, onProgress });
+      const transfer = frames.map(f => f.data.buffer);
+      getWorker().postMessage({ id, mode: 'apng', frames, opts }, transfer);
+    });
+  }
+
+  // Sniff for the APNG `acTL` chunk before IDAT. Returns true only for animated
+  // PNGs — a plain PNG dropped here continues through the single-frame path.
+  function isApngBytes(uint8) {
+    if (!uint8 || uint8.length < 8) return false;
+    if (uint8[0]!==0x89 || uint8[1]!==0x50 || uint8[2]!==0x4E || uint8[3]!==0x47) return false;
+    let p = 8;
+    while (p + 8 < uint8.length) {
+      const len = (uint8[p] << 24) | (uint8[p+1] << 16) | (uint8[p+2] << 8) | uint8[p+3];
+      const type = String.fromCharCode(uint8[p+4], uint8[p+5], uint8[p+6], uint8[p+7]);
+      if (type === 'acTL') return true;
+      if (type === 'IDAT') return false;
+      p += 8 + len + 4;
+      if (len < 0 || p > uint8.length) return false;
+    }
+    return false;
+  }
+
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
 
   // cross-tool handoff
@@ -338,11 +368,45 @@ Toolkit.injectTopbar('png-crusher');
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       try {
-        const bitmap = await createImageBitmap(f);
-        const cv = newCanvas(bitmap.width, bitmap.height);
-        cv.getContext('2d').drawImage(bitmap, 0, 0);
-        const imageData = cv.getContext('2d').getImageData(0, 0, bitmap.width, bitmap.height);
-        items.push({ file: f, bitmap, imageData, crushedBlob: null, crushedSize: null });
+        // Sniff for APNG. createImageBitmap would silently drop all frames
+        // past the first, so for animated PNGs we route through decodeAnim
+        // (ImageDecoder API) to get the full frame list + per-frame delays.
+        const buf = new Uint8Array(await f.arrayBuffer());
+        if (isApngBytes(buf)) {
+          const animFrames = await window.AnimEncoders.decodeAnim(buf, 'image/png');
+          if (!animFrames.length) throw new Error('APNG 解析没拿到帧');
+          // Normalize each frame to a raw RGBA Uint8ClampedArray. decodeAnim
+          // hands us frames with .bitmap (ImageBitmap) + .delay (ms).
+          const w = animFrames[0].w, h = animFrames[0].h;
+          const cv = newCanvas(w, h);
+          const ctx = cv.getContext('2d');
+          const frames = [];
+          for (const fr of animFrames) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(fr.bitmap, 0, 0, w, h);
+            const d = ctx.getImageData(0, 0, w, h);
+            // decodeAnim returns ImageDecoder VideoFrame.duration in microseconds;
+            // convert to ms for the APNG fcTL delay field. Default 100ms if absent.
+            const delayMs = fr.duration ? Math.round(fr.duration / 1000) : 100;
+            frames.push({ data: d.data, w, h, delayMs });
+          }
+          // Render a thumb bitmap from the first frame for the results row.
+          const thumbCv = newCanvas(w, h);
+          thumbCv.getContext('2d').drawImage(animFrames[0].bitmap, 0, 0);
+          const thumbBitmap = await createImageBitmap(thumbCv);
+          items.push({
+            file: f, bitmap: thumbBitmap,
+            isApng: true, frames,
+            crushedBlob: null, crushedSize: null
+          });
+          log.dim(`  ${f.name}: APNG · ${frames.length} 帧 · ${w}×${h}`);
+        } else {
+          const bitmap = await createImageBitmap(f);
+          const cv = newCanvas(bitmap.width, bitmap.height);
+          cv.getContext('2d').drawImage(bitmap, 0, 0);
+          const imageData = cv.getContext('2d').getImageData(0, 0, bitmap.width, bitmap.height);
+          items.push({ file: f, bitmap, imageData, crushedBlob: null, crushedSize: null });
+        }
       } catch (e) {
         log.err(`${f.name}: ${e.message}`);
       }
@@ -362,9 +426,12 @@ Toolkit.injectTopbar('png-crusher');
     items.forEach((it, i) => {
       const tr = document.createElement('tr');
       tr.className = 'row';
+      const apngBadge = it.isApng
+        ? ` <span style="background:rgba(var(--jade-rgb),0.18); color:var(--jade); border:1px solid rgba(var(--jade-rgb),0.5); padding:1px 6px; border-radius:6px; font-size:10px; letter-spacing:0.04em">APNG · ${it.frames.length} 帧</span>`
+        : '';
       tr.innerHTML = `
         <td><div class="thumb"></div></td>
-        <td class="mono">${escapeHtml(it.file.name)}</td>
+        <td class="mono">${escapeHtml(it.file.name)}${apngBadge}</td>
         <td class="mono">${it.bitmap.width}×${it.bitmap.height}</td>
         <td class="mono">${fmtBytes(it.file.size)}</td>
         <td class="mono" id="crushSize_${i}">—</td>
@@ -465,9 +532,12 @@ Toolkit.injectTopbar('png-crusher');
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       try {
-        const buf = await crushInWorker(it.imageData, { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh },
-          (pct, status) => progress.set(((i + pct) / items.length))
-        );
+        const opts = { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh, loop: 0 };
+        const buf = it.isApng
+          ? await crushApngInWorker(it.frames, opts,
+              (pct, status) => progress.set(((i + pct) / items.length)))
+          : await crushInWorker(it.imageData, opts,
+              (pct, status) => progress.set(((i + pct) / items.length)));
         // PNG magic check — worker should always emit a valid PNG, but if it
         // returned a partial/empty buffer we'd silently ship a broken image.
         if (!buf || buf.length < 16 ||
@@ -476,6 +546,10 @@ Toolkit.injectTopbar('png-crusher');
           throw new Error('worker 输出不是合法 PNG (header 错误)');
         }
         it.crushedBlob = new Blob([buf], { type: 'image/png' });
+        // After transferring APNG frame buffers to the worker the originals
+        // are detached — drop the reference so we don't accidentally re-use
+        // them. The compressed blob holds everything we need.
+        if (it.isApng) it.frames = null;
         renderRowResult(i);
       } catch (e) {
         log.err(`${it.file.name}: ${e.message}`);
