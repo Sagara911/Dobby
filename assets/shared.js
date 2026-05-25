@@ -1974,6 +1974,218 @@
     return (crc ^ 0xFFFFFFFF) >>> 0;
   }
 
+  // ============================================================
+  //   Lightbox — click any preview img/canvas to inspect at scale,
+  //   toggle background to see transparency, wheel-zoom + drag-pan
+  // ============================================================
+  const Lightbox = (() => {
+    const LB_SELECTOR = [
+      '.preview-box img', '.preview-box canvas',
+      '.preview-area img', '.preview-area canvas',
+      '.anim-preview img', '.anim-preview canvas',
+      '.lottie-preview img', '.lottie-preview canvas',
+      '.qr-preview img', '.qr-preview canvas',
+      '.preview-mini img', '.preview-mini canvas',
+      '.preview > img', '.preview > canvas',
+      '.results .thumb img', '.results .thumb canvas',
+      '.res-row .thumb img', '.res-row .thumb canvas'
+    ].join(',');
+
+    let overlay, stage, img, zoomLabel;
+    let scale = 1, tx = 0, ty = 0;
+    let natW = 0, natH = 0;
+    let dragging = false, dragLastX = 0, dragLastY = 0;
+    let lastBg = (() => {
+      try { return localStorage.getItem('tk-lb-bg') || 'checker'; } catch { return 'checker'; }
+    })();
+
+    function build() {
+      if (overlay) return;
+      overlay = document.createElement('div');
+      overlay.className = 'tk-lightbox';
+      overlay.innerHTML = `
+        <div class="tk-lb-toolbar">
+          <button type="button" data-bg="checker" title="棋盘格背景 (默认)" aria-label="棋盘格背景">▦</button>
+          <button type="button" data-bg="white" title="白底" aria-label="白底">⬜</button>
+          <button type="button" data-bg="black" title="黑底" aria-label="黑底">⬛</button>
+          <span class="tk-lb-spacer"></span>
+          <span class="tk-lb-zoom">100%</span>
+          <button type="button" data-act="fit" title="适合屏幕" aria-label="适合屏幕">⤢</button>
+          <button type="button" data-act="one" title="1:1 实际像素" aria-label="实际像素">1:1</button>
+          <button type="button" data-act="close" title="关闭 (Esc)" aria-label="关闭">✕</button>
+        </div>
+        <div class="tk-lb-stage">
+          <img class="tk-lb-img" alt="" draggable="false">
+        </div>`;
+      document.body.appendChild(overlay);
+      stage = overlay.querySelector('.tk-lb-stage');
+      img = overlay.querySelector('.tk-lb-img');
+      zoomLabel = overlay.querySelector('.tk-lb-zoom');
+
+      overlay.querySelectorAll('[data-bg]').forEach(b => {
+        b.addEventListener('click', () => setBg(b.dataset.bg));
+      });
+      overlay.querySelector('[data-act="close"]').addEventListener('click', close);
+      overlay.querySelector('[data-act="fit"]').addEventListener('click', fitToScreen);
+      overlay.querySelector('[data-act="one"]').addEventListener('click', actualSize);
+
+      // click on empty stage area closes; click on toolbar does not
+      stage.addEventListener('click', e => {
+        if (!dragging && e.target === stage) close();
+      });
+
+      stage.addEventListener('wheel', onWheel, { passive: false });
+      stage.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      document.addEventListener('keydown', e => {
+        if (!overlay.classList.contains('open')) return;
+        if (e.key === 'Escape') close();
+        else if (e.key === '0') fitToScreen();
+        else if (e.key === '1') actualSize();
+      });
+
+      setBg(lastBg);
+    }
+
+    function setBg(mode) {
+      stage.classList.remove('bg-checker', 'bg-white', 'bg-black');
+      stage.classList.add('bg-' + mode);
+      overlay.querySelectorAll('[data-bg]').forEach(b => {
+        b.classList.toggle('active', b.dataset.bg === mode);
+      });
+      lastBg = mode;
+      try { localStorage.setItem('tk-lb-bg', mode); } catch {}
+    }
+
+    function applyTransform() {
+      img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      zoomLabel.textContent = Math.round(scale * 100) + '%';
+      // crisp pixels when zoomed in past 1:1, smooth when zoomed out
+      overlay.classList.toggle('smooth', scale < 1);
+    }
+
+    function fitToScreen() {
+      if (!natW || !natH) return;
+      const r = stage.getBoundingClientRect();
+      const pad = 40;
+      const sx = (r.width - pad) / natW;
+      const sy = (r.height - pad) / natH;
+      scale = Math.min(sx, sy, 1); // never auto-upscale past 100%
+      tx = (r.width - natW * scale) / 2;
+      ty = (r.height - natH * scale) / 2;
+      applyTransform();
+    }
+
+    function actualSize() {
+      if (!natW || !natH) return;
+      const r = stage.getBoundingClientRect();
+      scale = 1;
+      tx = (r.width - natW) / 2;
+      ty = (r.height - natH) / 2;
+      applyTransform();
+    }
+
+    function onWheel(e) {
+      e.preventDefault();
+      const rect = stage.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const newScale = Math.max(0.05, Math.min(64, scale * factor));
+      const k = newScale / scale;
+      tx = cx - (cx - tx) * k;
+      ty = cy - (cy - ty) * k;
+      scale = newScale;
+      applyTransform();
+    }
+
+    function onMouseDown(e) {
+      if (e.button !== 0) return;
+      if (e.target.closest('.tk-lb-toolbar')) return;
+      dragging = true;
+      dragLastX = e.clientX;
+      dragLastY = e.clientY;
+      stage.classList.add('dragging');
+      e.preventDefault();
+    }
+    function onMouseMove(e) {
+      if (!dragging) return;
+      tx += e.clientX - dragLastX;
+      ty += e.clientY - dragLastY;
+      dragLastX = e.clientX;
+      dragLastY = e.clientY;
+      applyTransform();
+    }
+    function onMouseUp() {
+      if (!dragging) return;
+      dragging = false;
+      stage.classList.remove('dragging');
+    }
+
+    function srcFromElement(el) {
+      if (el.tagName === 'IMG') {
+        return { src: el.currentSrc || el.src, w: el.naturalWidth || el.width, h: el.naturalHeight || el.height };
+      }
+      if (el.tagName === 'CANVAS') {
+        if (!el.width || !el.height) return null;
+        try {
+          return { src: el.toDataURL('image/png'), w: el.width, h: el.height };
+        } catch (e) {
+          // tainted canvas — fall back to nothing
+          return null;
+        }
+      }
+      return null;
+    }
+
+    function open(el) {
+      build();
+      const info = srcFromElement(el);
+      if (!info || !info.src) return;
+      natW = info.w;
+      natH = info.h;
+      // open the overlay BEFORE measuring the stage — display:none yields a
+      // 0×0 rect, which would make fitToScreen compute a negative scale.
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      img.style.width = natW + 'px';
+      img.style.height = natH + 'px';
+      const doFit = () => fitToScreen();
+      if (img.src !== info.src) {
+        img.onload = doFit;
+        img.src = info.src;
+      }
+      if (img.complete && img.naturalWidth) doFit();
+    }
+
+    function close() {
+      if (!overlay) return;
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // delegated click listener — auto-binds across all tools
+    document.addEventListener('click', e => {
+      const el = e.target;
+      if (!el || (el.tagName !== 'IMG' && el.tagName !== 'CANVAS')) return;
+      if (!el.matches(LB_SELECTOR)) return;
+      if (el.closest('[data-no-lightbox]')) return;
+      if (el.hasAttribute('data-no-lightbox')) return;
+      // skip empty/uninitialized previews
+      if (el.tagName === 'IMG' && !el.src) return;
+      if (el.tagName === 'CANVAS' && (!el.width || !el.height)) return;
+      // don't trigger if the parent tile is clickable for selection (frame picker, batch picker)
+      if (el.closest('.frame-tile, .batch-tile')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open(el);
+    }, true);
+
+    return { open, close };
+  })();
+
   window.Toolkit = {
     TOOLS,
     injectTopbar,
@@ -2011,6 +2223,7 @@
     T,
     setLang,
     getLang,
-    applyTranslations
+    applyTranslations,
+    Lightbox
   };
 })();

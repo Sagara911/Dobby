@@ -1653,3 +1653,114 @@ button.danger:hover { background: linear-gradient(180deg, #ff7575, var(--danger)
   .topbar-pill-btn { padding: 0 10px; }
   .topbar .brand span:last-child { display: none; }
 }
+
+/* ============================================================
+   Lightbox — click any preview img/canvas to inspect at scale,
+   toggle background (checker / white / black) to see transparency
+   ============================================================ */
+.preview-box img:not([data-no-lightbox]),
+.preview-box canvas:not([data-no-lightbox]),
+.preview-area img:not([data-no-lightbox]),
+.preview-area canvas:not([data-no-lightbox]),
+.anim-preview img:not([data-no-lightbox]),
+.anim-preview canvas:not([data-no-lightbox]),
+.lottie-preview img:not([data-no-lightbox]),
+.lottie-preview canvas:not([data-no-lightbox]),
+.qr-preview img:not([data-no-lightbox]),
+.qr-preview canvas:not([data-no-lightbox]),
+.preview-mini img:not([data-no-lightbox]),
+.preview-mini canvas:not([data-no-lightbox]),
+.preview > img:not([data-no-lightbox]),
+.preview > canvas:not([data-no-lightbox]),
+.results .thumb img:not([data-no-lightbox]),
+.results .thumb canvas:not([data-no-lightbox]),
+.res-row .thumb img:not([data-no-lightbox]),
+.res-row .thumb canvas:not([data-no-lightbox]) {
+  cursor: zoom-in;
+}
+
+.tk-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(8px);
+  animation: tk-lb-fade 0.18s ease-out;
+}
+.tk-lightbox.open { display: flex; }
+@keyframes tk-lb-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tk-lb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 2;
+}
+.tk-lb-toolbar button {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tk-lb-toolbar button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-strong);
+}
+.tk-lb-toolbar button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tk-lb-spacer { flex: 1; }
+.tk-lb-zoom {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted-2);
+  min-width: 52px;
+  text-align: right;
+  user-select: none;
+}
+.tk-lb-stage {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+}
+.tk-lb-stage.dragging { cursor: grabbing; }
+.tk-lb-stage.bg-checker {
+  background-color: #2a2a2e;
+  background-image: var(--checker);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+.tk-lb-stage.bg-white { background: #ffffff; }
+.tk-lb-stage.bg-black { background: #000000; }
+.tk-lb-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  -webkit-user-drag: none;
+  user-select: none;
+  max-width: none;
+  max-height: none;
+}
+.tk-lightbox.smooth .tk-lb-img { image-rendering: auto; }
