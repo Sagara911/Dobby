@@ -254,7 +254,7 @@ Toolkit.injectTopbar('base64');
 
   function decodeAndDownload(previewOnly) {
     const raw = $('decodeInput').value.trim();
-    if (!raw) { log.err('Dobby 还没拿到 base64 — 主人贴一段?'); return; }
+    if (!raw) { log.err('Dobby 还没拿到 base64 — 你贴一段?'); return; }
     try {
       let b64 = raw, mime = 'application/octet-stream';
       const m = raw.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);

@@ -247,7 +247,7 @@ Toolkit.injectTopbar('html-inliner');
 
   $('processBtn').addEventListener('click', async () => {
     const entryPath = $('entrySelect').value;
-    if (!entryPath) return log.err('Dobby 还不知道从哪个 HTML 开始 — 主人先选个入口文件');
+    if (!entryPath) return log.err('Dobby 还不知道从哪个 HTML 开始 — 你先选个入口文件');
     const file = fileMap.get(entryPath);
     if (!file) return log.err('入口文件不存在: ' + entryPath);
 

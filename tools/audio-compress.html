@@ -246,7 +246,7 @@ Toolkit.injectTopbar('audio-compress');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('audio/')) { log.err('Bad Dobby! 这不是音频文件,主人再丢一次?'); return; }
+    if (!f.type.startsWith('audio/')) { log.err('Bad Dobby! 这不是音频文件,你再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {

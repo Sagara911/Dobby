@@ -344,7 +344,7 @@
           <span>🧦 Dobby 还在学本事</span>
           <button type="button" class="fp-close" aria-label="关闭">×</button>
         </div>
-        <div class="fp-body">主人发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:</div>
+        <div class="fp-body">你发现 Dobby 做错了或者想学新本事? 邮件告诉 Dobby:</div>
         <a class="fp-email" href="mailto:huobingli0924@gmail.com">huobingli0924@gmail.com</a>
       `;
       document.body.appendChild(panel);

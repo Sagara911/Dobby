@@ -255,7 +255,7 @@ Toolkit.injectTopbar('video-toolkit');
       return;
     }
     if (!f0.type.startsWith('video/')) {
-      log.err('Bad Dobby! 没看到视频,主人再丢一次?(或者扔一组图片,Dobby 自动切到「帧合成视频」)');
+      log.err('Bad Dobby! 没看到视频,你再丢一次?(或者扔一组图片,Dobby 自动切到「帧合成视频」)');
       return;
     }
     const f = f0;
@@ -717,9 +717,9 @@ Toolkit.injectTopbar('video-toolkit');
     // Source-presence gate differs per action: fromFrames needs srcFrames,
     // everything else needs srcVideo. Reject early with a helpful message.
     if (action === 'fromFrames') {
-      if (!srcFrames.length) { log.err('Dobby 手里还没序列帧,主人先丢一组?'); return; }
+      if (!srcFrames.length) { log.err('Dobby 手里还没序列帧,你先丢一组?'); return; }
     } else {
-      if (!srcVideo) { log.err('Dobby 手里还没视频,主人先丢一个?'); return; }
+      if (!srcVideo) { log.err('Dobby 手里还没视频,你先丢一个?'); return; }
     }
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;

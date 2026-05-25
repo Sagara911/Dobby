@@ -231,7 +231,7 @@ Toolkit.injectTopbar('watermark-remove');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 没看到图片,主人再丢一次?'); return; }
+    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 没看到图片,你再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {
@@ -348,7 +348,7 @@ Toolkit.injectTopbar('watermark-remove');
         mask[i] = m;
         if (m) maskCount++;
       }
-      if (maskCount === 0) { log.err('Dobby 还不知道擦哪儿 — 主人先用画刷或矩形涂个范围'); return; }
+      if (maskCount === 0) { log.err('Dobby 还不知道擦哪儿 — 你先用画刷或矩形涂个范围'); return; }
       log.dim(`  mask 像素 ${maskCount} / ${w*h} (${(maskCount/(w*h)*100).toFixed(1)}%)`);
 
       let result;

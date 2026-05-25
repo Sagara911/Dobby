@@ -332,7 +332,7 @@ Toolkit.injectTopbar('channel-check');
     if (!files.length) return;
     const f = files[0];
     if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') {
-      log.err('Bad Dobby! 这不是 HTML 文件,主人再丢一次?');
+      log.err('Bad Dobby! 这不是 HTML 文件,你再丢一次?');
       return;
     }
     log.clear();

@@ -218,7 +218,7 @@
     <div>
       <h2 style="margin-top:0">批量队列</h2>
       <div class="batch-grid" id="batchGrid">
-        <div class="preview-empty">主人多扔几张,Dobby 排好队</div>
+        <div class="preview-empty">你多扔几张,Dobby 排好队</div>
       </div>
     </div>
   </div>
@@ -258,7 +258,7 @@ Toolkit.injectTopbar('ai-cutout');
   async function handleFiles(files) {
     if (!files.length) return;
     const imgs = naturalSort(files.filter(f => f.type.startsWith('image/')));
-    if (!imgs.length) { log.err('Bad Dobby! 没看到图片,主人再丢一次?'); return; }
+    if (!imgs.length) { log.err('Bad Dobby! 没看到图片,你再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${imgs.length} 张图片...`);
     items = [];
@@ -292,7 +292,7 @@ Toolkit.injectTopbar('ai-cutout');
   function renderBatchGrid() {
     const grid = $('batchGrid');
     if (!items.length) {
-      grid.innerHTML = '<div class="preview-empty">主人多扔几张,Dobby 排好队</div>';
+      grid.innerHTML = '<div class="preview-empty">你多扔几张,Dobby 排好队</div>';
       return;
     }
     grid.innerHTML = '';
@@ -730,7 +730,7 @@ Toolkit.injectTopbar('ai-cutout');
     srcBitmap = null; outBlob = null; outCanvas = null;
     $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
     $('outBox').innerHTML = '<div class="preview-empty">点击"开始抠图"后这里显示结果</div>';
-    $('batchGrid').innerHTML = '<div class="preview-empty">主人多扔几张,Dobby 排好队</div>';
+    $('batchGrid').innerHTML = '<div class="preview-empty">你多扔几张,Dobby 排好队</div>';
     $('stats').textContent = 'Dobby 待命';
     $('processBtn').disabled = true;
     $('downloadBtn').disabled = true;

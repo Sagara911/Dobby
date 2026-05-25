@@ -150,7 +150,7 @@
     <div class="stats" id="stats">Dobby 手里还没文件</div>
     <div class="info" style="margin-bottom:8px">所有处理本地完成 · 引擎:SVGO (CDN 加载,首次 ~150 KB)</div>
     <div class="file-list" id="fileList">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢 SVG 进来,Dobby 比比瘦身前后</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢 SVG 进来,Dobby 比比瘦身前后</div>
     </div>
   </div>
 </div>
@@ -202,7 +202,7 @@ Toolkit.injectTopbar('svg-tools');
   function renderRows() {
     const host = $('fileList');
     if (!items.length) {
-      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢 SVG 进来,Dobby 比比瘦身前后</div>';
+      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢 SVG 进来,Dobby 比比瘦身前后</div>';
       $('stats').textContent = 'Dobby 手里还没文件';
       return;
     }
