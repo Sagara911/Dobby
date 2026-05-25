@@ -299,11 +299,40 @@ Toolkit.injectTopbar('png-crusher');
   // emits a palette-mode APNG. opts.loop is the num_plays field (0 = forever).
   function crushApngInWorker(frames, opts, onProgress) {
     return new Promise((resolve, reject) => {
+      if (!frames || !frames.length) {
+        reject(new Error('APNG 帧缓冲为空 — 可能已经压缩过一次,再压请重新拖入文件'));
+        return;
+      }
       const id = ++workerJobId;
       workerJobs.set(id, { resolve, reject, onProgress });
       const transfer = frames.map(f => f.data.buffer);
       getWorker().postMessage({ id, mode: 'apng', frames, opts }, transfer);
     });
+  }
+
+  // After APNG frame buffers are transferred to the worker, the originals on
+  // the main thread are detached (byteLength === 0). If the user wants to
+  // re-compress with different settings, we need to decode the source file
+  // again to get fresh, owned buffers. Cheap (a few hundred ms) and the most
+  // robust solution short of cloning every frame every time.
+  async function ensureApngFrames(it) {
+    const fresh = it.frames && it.frames[0] && it.frames[0].data && it.frames[0].data.buffer.byteLength > 0;
+    if (fresh) return;
+    const buf = new Uint8Array(await it.file.arrayBuffer());
+    const animFrames = await window.AnimEncoders.decodeAnim(buf, 'image/png');
+    if (!animFrames || !animFrames.length) throw new Error('APNG 重新解析没拿到帧');
+    const w = animFrames[0].w, h = animFrames[0].h;
+    const cv = newCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    const frames = [];
+    for (const fr of animFrames) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(fr.bitmap, 0, 0, w, h);
+      const d = ctx.getImageData(0, 0, w, h);
+      const delayMs = fr.duration ? Math.round(fr.duration / 1000) : 100;
+      frames.push({ data: d.data, w, h, delayMs });
+    }
+    it.frames = frames;
   }
 
   // Sniff for the APNG `acTL` chunk before IDAT. Returns true only for animated
@@ -532,6 +561,9 @@ Toolkit.injectTopbar('png-crusher');
       const it = items[i];
       try {
         const opts = { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh, loop: 0 };
+        // Re-decode APNG frames if a previous run transferred their buffers.
+        // No-op on the first compression of a freshly-loaded file.
+        if (it.isApng) await ensureApngFrames(it);
         const buf = it.isApng
           ? await crushApngInWorker(it.frames, opts,
               (pct, status) => progress.set(((i + pct) / items.length)))
@@ -545,10 +577,9 @@ Toolkit.injectTopbar('png-crusher');
           throw new Error('worker 输出不是合法 PNG (header 错误)');
         }
         it.crushedBlob = new Blob([buf], { type: 'image/png' });
-        // After transferring APNG frame buffers to the worker the originals
-        // are detached — drop the reference so we don't accidentally re-use
-        // them. The compressed blob holds everything we need.
-        if (it.isApng) it.frames = null;
+        // Frame buffers got transferred — leave it.frames in place (with
+        // detached data). ensureApngFrames() above re-hydrates them on the
+        // next compression run.
         renderRowResult(i);
       } catch (e) {
         log.err(`${it.file.name}: ${e.message}`);
