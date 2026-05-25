@@ -163,7 +163,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未选择目录</div>
+    <div class="stats" id="stats">Dobby 还没拿到目录</div>
     <div>
       <h2 style="margin-top:0">资源处理</h2>
       <div class="file-list" id="fileList">
@@ -247,7 +247,7 @@ Toolkit.injectTopbar('html-inliner');
 
   $('processBtn').addEventListener('click', async () => {
     const entryPath = $('entrySelect').value;
-    if (!entryPath) return log.err('请先选择入口 HTML 文件');
+    if (!entryPath) return log.err('Dobby 还不知道从哪个 HTML 开始 — 主人先选个入口文件');
     const file = fileMap.get(entryPath);
     if (!file) return log.err('入口文件不存在: ' + entryPath);
 
@@ -465,7 +465,7 @@ Toolkit.injectTopbar('html-inliner');
     dirHandle = null; fileMap.clear(); outputBlob = null;
     $('entrySelect').innerHTML = '<option value="">(选择文件夹后填充)</option>';
     $('dirInfo').textContent = '';
-    $('stats').textContent = '未选择目录';
+    $('stats').textContent = 'Dobby 还没拿到目录';
     $('fileList').innerHTML = '<div class="file-list-empty">选择目录并打包后这里会显示资源清单</div>';
     $('outputPreview').textContent = '选择目录并打包后,这里会显示输出 HTML 的前几行预览。';
     $('outputStats').style.display = 'none';

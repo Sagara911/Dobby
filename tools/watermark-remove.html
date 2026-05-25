@@ -168,7 +168,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="canvas-wrap" id="canvasWrap">
       <div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>
     </div>
@@ -177,11 +177,11 @@
       <div class="preview-pair">
         <div class="preview-col">
           <div class="label">原图</div>
-          <div class="preview-box" id="origBox"><div class="preview-empty">未加载</div></div>
+          <div class="preview-box" id="origBox"><div class="preview-empty">Dobby 待命</div></div>
         </div>
         <div class="preview-col">
           <div class="label">去水印后</div>
-          <div class="preview-box" id="outBox"><div class="preview-empty">应用后这里显示结果</div></div>
+          <div class="preview-box" id="outBox"><div class="preview-empty">Dobby 擦完显示在这里</div></div>
         </div>
       </div>
     </div>
@@ -231,7 +231,7 @@ Toolkit.injectTopbar('watermark-remove');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('请拖入图片文件'); return; }
+    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 没看到图片,主人再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {
@@ -348,7 +348,7 @@ Toolkit.injectTopbar('watermark-remove');
         mask[i] = m;
         if (m) maskCount++;
       }
-      if (maskCount === 0) { log.err('请先用画刷或矩形选中水印区域'); return; }
+      if (maskCount === 0) { log.err('Dobby 还不知道擦哪儿 — 主人先用画刷或矩形涂个范围'); return; }
       log.dim(`  mask 像素 ${maskCount} / ${w*h} (${(maskCount/(w*h)*100).toFixed(1)}%)`);
 
       let result;
@@ -466,7 +466,7 @@ Toolkit.injectTopbar('watermark-remove');
   let _aiModel = null, _aiProcessor = null;
   async function aiInpaint(imageData, mask) {
     if (!_aiModel) await loadAiModel();
-    if (!_aiModel) throw new Error('AI 模型未加载,无法处理');
+    if (!_aiModel) throw new Error('AI 模型Dobby 待命,无法处理');
     const { width: w, height: h } = imageData;
     // LaMa expects [1, 3, H, W] image + [1, 1, H, W] mask, typically 512×512.
     // Resize to model input size (use 512 for speed).
@@ -507,7 +507,7 @@ Toolkit.injectTopbar('watermark-remove');
     const { Tensor } = window.transformers || await import('https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.mjs');
     // Use onnxruntime-web's session run
     const ort = window.ort;
-    if (!ort) throw new Error('onnxruntime-web 未加载');
+    if (!ort) throw new Error('onnxruntime-web Dobby 待命');
     const imgTensor = new ort.Tensor('float32', imgF, [1, 3, inSize, inSize]);
     const mskTensor = new ort.Tensor('float32', mskF, [1, 1, inSize, inSize]);
     // LaMa output name varies; try common ones
@@ -583,9 +583,9 @@ Toolkit.injectTopbar('watermark-remove');
   $('clearBtn').addEventListener('click', () => {
     srcBitmap = null; srcCanvas = null; maskCanvas = null; outBlob = null;
     $('canvasWrap').innerHTML = '<div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>';
-    $('origBox').innerHTML = '<div class="preview-empty">未加载</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">应用后这里显示结果</div>';
-    $('stats').textContent = '未加载';
+    $('origBox').innerHTML = '<div class="preview-empty">Dobby 待命</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">Dobby 擦完显示在这里</div>';
+    $('stats').textContent = 'Dobby 待命';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.clear();

@@ -136,7 +136,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="compare-stats">
       <div class="item">
         <div class="label">原文件</div>
@@ -246,7 +246,7 @@ Toolkit.injectTopbar('audio-compress');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('audio/')) { log.err('请拖入音频文件'); return; }
+    if (!f.type.startsWith('audio/')) { log.err('Bad Dobby! 这不是音频文件,主人再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {
@@ -479,7 +479,7 @@ Toolkit.injectTopbar('audio-compress');
   $('clearBtn').addEventListener('click', () => {
     srcBuffer = null; srcFile = null; outBlob = null;
     ['origStat','outStat','savingsStat'].forEach(id => $(id).textContent = '—');
-    $('stats').textContent = '未加载';
+    $('stats').textContent = 'Dobby 待命';
     $('origPlayer').src = ''; $('outPlayer').src = '';
     $('waveform').getContext('2d').clearRect(0, 0, 800, 120);
     $('processBtn').disabled = true;

@@ -224,14 +224,14 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
 
     <div id="makeMain">
       <div class="preview-pair">
         <div class="preview-col">
           <div class="label">序列帧 (第一帧)</div>
           <div class="preview-box" id="makeFirstFrameBox">
-            <div class="preview-empty">拖入序列帧后这里显示首帧</div>
+            <div class="preview-empty">主人丢序列帧进来,Dobby 这里显示首帧</div>
           </div>
         </div>
         <div class="preview-col">
@@ -258,7 +258,7 @@
         <div class="preview-col">
           <div class="label">输出预览</div>
           <div class="preview-box" id="editOutBox">
-            <div class="preview-empty">应用操作后这里显示结果</div>
+            <div class="preview-empty">Dobby 干完显示在这里</div>
           </div>
         </div>
       </div>
@@ -464,9 +464,9 @@ Toolkit.injectTopbar('gif-tools');
   $('makeClearBtn').addEventListener('click', () => {
     makeFrames = []; makeLastBlob = null;
     $('makeFrameGrid').innerHTML = '';
-    $('makeFirstFrameBox').innerHTML = '<div class="preview-empty">拖入序列帧后这里显示首帧</div>';
+    $('makeFirstFrameBox').innerHTML = '<div class="preview-empty">主人丢序列帧进来,Dobby 这里显示首帧</div>';
     $('makeResultBox').innerHTML = '<div class="preview-empty">生成后这里显示动画预览</div>';
-    if (mode === 'make') $('stats').textContent = '未加载';
+    if (mode === 'make') $('stats').textContent = 'Dobby 待命';
     $('makeBuildBtn').disabled = true;
     $('makeDownloadBtn').disabled = true;
     $('makeOpenInTabBtn').disabled = true;
@@ -501,7 +501,7 @@ Toolkit.injectTopbar('gif-tools');
     const isGif = /\.gif$/i.test(f.name) || f.type === 'image/gif';
     const isPng = /\.(png|apng)$/i.test(f.name) || f.type === 'image/png' || f.type === 'image/apng';
     if (!isGif && !isPng) {
-      log.err('请拖入 GIF 或 APNG 文件');
+      log.err('Bad Dobby! 这不是 GIF 也不是 APNG,主人再丢一次?');
       return;
     }
     log.clear();
@@ -950,8 +950,8 @@ Toolkit.injectTopbar('gif-tools');
     editSrcFrames = []; editLastBlob = null;
     $('editFrameGrid').innerHTML = '';
     $('editSrcBox').innerHTML = '<div class="preview-empty">拖入 GIF</div>';
-    $('editOutBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
-    if (mode === 'edit') $('stats').textContent = '未加载';
+    $('editOutBox').innerHTML = '<div class="preview-empty">Dobby 干完显示在这里</div>';
+    if (mode === 'edit') $('stats').textContent = 'Dobby 待命';
     $('editActionControls').innerHTML = '';
     $('editApplyBtn').disabled = true;
     $('editDownloadBtn').disabled = true;

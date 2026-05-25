@@ -215,7 +215,7 @@ Toolkit.injectTopbar('image-editor');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('请拖入图片文件'); return; }
+    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 这不是图片文件,主人再丢一次?'); return; }
     log.clear();
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
     try {

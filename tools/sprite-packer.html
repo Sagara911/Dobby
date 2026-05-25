@@ -127,9 +127,9 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="preview-area" id="previewArea">
-      <div class="preview-empty">拖入文件后这里会显示合成后的精灵图预览</div>
+      <div class="preview-empty">主人丢帧进来,Dobby 拼好显示在这里</div>
     </div>
     <div>
       <h2 style="margin-top:0">原始帧</h2>
@@ -477,8 +477,8 @@ Toolkit.injectTopbar('sprite-packer');
   $('clearBtn').addEventListener('click', () => {
     rawFrames = []; packed = null;
     $('frameGrid').innerHTML = '';
-    $('previewArea').innerHTML = '<div class="preview-empty">拖入文件后这里会显示合成后的精灵图预览</div>';
-    $('stats').textContent = '未加载';
+    $('previewArea').innerHTML = '<div class="preview-empty">主人丢帧进来,Dobby 拼好显示在这里</div>';
+    $('stats').textContent = 'Dobby 待命';
     $('exportBtn').disabled = true;
     $('videoSettings').style.display = 'none';
     log.clear();

@@ -151,10 +151,10 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加入文件</div>
-    <div class="info" style="margin-bottom:8px">所有压缩在本地完成 · 不上传任何文件 · 引擎:fflate (deflate)</div>
+    <div class="stats" id="stats">Dobby 手里还没文件</div>
+    <div class="info" style="margin-bottom:8px">Dobby 在主人电脑里打包 · Dobby 不上传 · Dobby 不偷看 · 引擎:fflate (deflate)</div>
     <div class="file-list" id="fileList">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会列在这里</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢文件进来,Dobby 给列清楚</div>
     </div>
   </div>
 </div>
@@ -230,8 +230,8 @@ Toolkit.injectTopbar('zip-packer');
   function renderList() {
     const host = $('fileList');
     if (!files.length) {
-      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会列在这里</div>';
-      $('stats').textContent = '未加入文件';
+      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢文件进来,Dobby 给列清楚</div>';
+      $('stats').textContent = 'Dobby 手里还没文件';
       return;
     }
     const totalSize = files.reduce((a, b) => a + b.size, 0);

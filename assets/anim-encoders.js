@@ -460,17 +460,17 @@
 
   async function decodeAnim(blobOrBuffer, mimeHint) {
     if (!('ImageDecoder' in window)) {
-      throw new Error('当前浏览器不支持 ImageDecoder API,请用 Chrome 94+ / Edge 94+');
+      throw new Error('Bad Dobby! 当前浏览器不让 Dobby 用 ImageDecoder API,请用 Chrome 94+ / Edge 94+');
     }
     const buf = blobOrBuffer instanceof Blob ? await blobOrBuffer.arrayBuffer() : blobOrBuffer;
     const mime = mimeHint || sniffAnimMime(buf);
-    if (!mime) throw new Error('未识别的动画格式 (不是 GIF/PNG)');
+    if (!mime) throw new Error('Bad Dobby! 认不出这个格式 — 不是 GIF 也不是 PNG');
     const decoder = new ImageDecoder({ data: buf, type: mime });
     await decoder.tracks.ready;
     await decoder.completed;
     const track = decoder.tracks.selectedTrack;
-    if (!track) throw new Error('无法读取帧轨道,文件可能损坏');
-    if (track.frameCount < 1) throw new Error('文件没有动画帧 (静态图)');
+    if (!track) throw new Error('Bad Dobby! 读不出帧轨道 — 文件可能坏了');
+    if (track.frameCount < 1) throw new Error('Bad Dobby! 这是一张静态图,没有动画帧');
     const frames = [];
     for (let i = 0; i < track.frameCount; i++) {
       const result = await decoder.decode({ frameIndex: i });

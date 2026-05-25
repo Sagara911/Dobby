@@ -160,7 +160,7 @@
 
     <h2 style="margin-top:0">建议清单</h2>
     <div class="advice-list" id="adviceList">
-      <div class="preview-empty">扫描后会列出针对你这个项目的具体瘦身建议</div>
+      <div class="preview-empty">Dobby 扫完会列出针对主人这个项目的具体瘦身建议</div>
     </div>
   </div>
 </div>
@@ -178,7 +178,7 @@ Toolkit.injectTopbar('slim-coach');
 
   $('pickDirBtn').addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
-      log.err('请用 Chrome 86+ / Edge 86+,或直接拖入文件夹');
+      log.err('Bad Dobby! 这个浏览器太旧,Dobby 用不了 — 主人换 Chrome 86+ / Edge 86+,或者直接拖文件夹进来');
       return;
     }
     try {
@@ -237,7 +237,7 @@ Toolkit.injectTopbar('slim-coach');
   $('rescanBtn').addEventListener('click', analyze);
 
   function analyze() {
-    if (!files.length) { log.err('请先选择文件夹'); return; }
+    if (!files.length) { log.err('Dobby 还没拿到文件夹,主人先选一个?'); return; }
     $('stats').innerHTML = `共 <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
     $('rescanBtn').disabled = false;
 
@@ -364,7 +364,7 @@ Toolkit.injectTopbar('slim-coach');
 
     // ----- render -----
     if (!advices.length) {
-      $('adviceList').innerHTML = '<div class="preview-empty">没有发现明显的瘦身空间 — 项目已经很精简</div>';
+      $('adviceList').innerHTML = '<div class="preview-empty">Dobby 转了一圈,没挑出毛病 — 主人这项目已经很精瘦了</div>';
       $('totalSummary').style.display = 'none';
       return;
     }
@@ -420,7 +420,7 @@ Toolkit.injectTopbar('slim-coach');
     files = []; totalSize = 0;
     $('stats').textContent = '未扫描';
     $('totalSummary').style.display = 'none';
-    $('adviceList').innerHTML = '<div class="preview-empty">扫描后会列出针对你这个项目的具体瘦身建议</div>';
+    $('adviceList').innerHTML = '<div class="preview-empty">Dobby 扫完会列出针对主人这个项目的具体瘦身建议</div>';
     $('rescanBtn').disabled = true;
     log.clear();
   });

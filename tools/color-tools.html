@@ -272,7 +272,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
         <div class="label">原图 (取色模式下点击采样)</div>
@@ -283,7 +283,7 @@
       <div class="preview-col">
         <div class="label">输出</div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">应用工具后这里显示结果</div>
+          <div class="preview-empty">Dobby 干完显示在这里</div>
         </div>
       </div>
     </div>
@@ -332,7 +332,7 @@ Toolkit.injectTopbar('color-tools');
     if (!files.length) return;
     // filter to image files only
     files = [...files].filter(f => f.type.startsWith('image/'));
-    if (!files.length) { log.err('请拖入图片文件'); return; }
+    if (!files.length) { log.err('Bad Dobby! 没看到图片,主人再丢一次?'); return; }
     log.clear();
     const f = files[0];
     log.dim(`加载 ${f.name} (${fmtBytes(f.size)})${files.length > 1 ? ` + 另外 ${files.length - 1} 张` : ''}...`);
@@ -392,7 +392,7 @@ Toolkit.injectTopbar('color-tools');
         srcBitmap = null; srcCanvas = null; srcImageData = null;
         $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
         $('applyBtn').disabled = true;
-        $('stats').textContent = '未加载';
+        $('stats').textContent = 'Dobby 待命';
       }
       renderBatchList();
       updateBatchBtn();
@@ -509,7 +509,7 @@ Toolkit.injectTopbar('color-tools');
           <button type="button" id="brushUndo" class="secondary" style="flex:1">↶ 撤销</button>
           <button type="button" id="brushReset" class="secondary" style="flex:1">🔄 重置</button>
         </div>
-        <div class="info">在右侧"输出"画布上拖动涂抹<br>🧽 擦除 = 抹掉变透明 · ✨ 保留 = 涂回原图</div>
+        <div class="info">主人在右侧画布上涂一涂,Dobby 照着抹<br>🧽 擦除 = 抹掉变透明 · ✨ 保留 = 涂回原图</div>
       `;
       initBrush();
     } else if (action === 'replace') {
@@ -1087,9 +1087,9 @@ Toolkit.injectTopbar('color-tools');
     renderBatchList();
     updateBatchBtn();
     $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">应用工具后这里显示结果</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">Dobby 干完显示在这里</div>';
     $('paletteOut').style.display = 'none';
-    $('stats').textContent = '未加载';
+    $('stats').textContent = 'Dobby 待命';
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;

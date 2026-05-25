@@ -227,7 +227,7 @@ Toolkit.injectTopbar('code-minify');
 
   $('minifyBtn').addEventListener('click', async () => {
     const src = $('inputEditor').value;
-    if (!src.trim()) { log.err('请输入代码'); return; }
+    if (!src.trim()) { log.err('Dobby 还没拿到代码 — 主人贴一段?'); return; }
     log.dim(`压缩 ${lang.toUpperCase()}...`);
     $('minifyBtn').disabled = true;
     try {

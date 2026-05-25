@@ -106,7 +106,7 @@
 
     <h2>素材</h2>
     <div class="image-list" id="imageList">
-      <div class="empty-row">还没有图片</div>
+      <div class="empty-row">Dobby 手里还没图</div>
     </div>
 
     <h2>布局</h2>
@@ -179,7 +179,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="preview-area" id="previewArea">
       <div class="preview-empty">拖入图片并点击"合成"</div>
     </div>
@@ -225,7 +225,7 @@ Toolkit.injectTopbar('composer');
   function renderImageList() {
     const list = $('imageList');
     list.innerHTML = '';
-    if (!items.length) { list.innerHTML = '<div class="empty-row">还没有图片</div>'; return; }
+    if (!items.length) { list.innerHTML = '<div class="empty-row">Dobby 手里还没图</div>'; return; }
     items.forEach((it, i) => {
       const row = document.createElement('div');
       row.className = 'image-row';
@@ -440,9 +440,9 @@ Toolkit.injectTopbar('composer');
 
   $('clearBtn').addEventListener('click', () => {
     items = []; outBlob = null; outCanvas = null;
-    $('imageList').innerHTML = '<div class="empty-row">还没有图片</div>';
+    $('imageList').innerHTML = '<div class="empty-row">Dobby 手里还没图</div>';
     $('previewArea').innerHTML = '<div class="preview-empty">拖入图片并点击"合成"</div>';
-    $('stats').textContent = '未加载';
+    $('stats').textContent = 'Dobby 待命';
     $('renderBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.clear();

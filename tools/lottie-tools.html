@@ -174,7 +174,7 @@ Toolkit.injectTopbar('lottie-tools');
   async function loadFile(file) {
     if (!file) return;
     if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
-      log.err('请拖入 .json 文件');
+      log.err('Bad Dobby! 这不是 .json 文件,主人再丢一次?');
       return;
     }
     log.clear();

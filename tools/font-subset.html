@@ -227,7 +227,7 @@ Toolkit.injectTopbar('font-subset');
     if (!files.length) return;
     const f = files[0];
     if (!/\.(ttf|otf)$/i.test(f.name) && !f.type.startsWith('font/')) {
-      log.err('请拖入 TTF 或 OTF 字体文件');
+      log.err('Bad Dobby! 这不是 TTF 也不是 OTF,主人再丢一次?');
       return;
     }
     log.clear();
@@ -253,7 +253,7 @@ Toolkit.injectTopbar('font-subset');
   $('subsetBtn').addEventListener('click', async () => {
     if (!srcFontData) return;
     const chars = [...new Set([...$('charset').value])];
-    if (!chars.length) { log.err('请填入要保留的字符'); return; }
+    if (!chars.length) { log.err('Dobby 还没拿到字符表 — 主人先填一下要保留哪些字?'); return; }
     log.dim(`子集化中,目标 ${chars.length} 字符...`);
     $('subsetBtn').disabled = true;
     try {

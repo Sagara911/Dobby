@@ -174,7 +174,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
         <div class="label">原视频</div>
@@ -185,7 +185,7 @@
       <div class="preview-col">
         <div class="label">输出预览</div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">应用操作后这里显示结果</div>
+          <div class="preview-empty">Dobby 干完显示在这里</div>
         </div>
       </div>
     </div>
@@ -255,7 +255,7 @@ Toolkit.injectTopbar('video-toolkit');
       return;
     }
     if (!f0.type.startsWith('video/')) {
-      log.err('请拖入视频文件,或者拖入一组图片(会自动切到「帧合成视频」)');
+      log.err('Bad Dobby! 没看到视频,主人再丢一次?(或者扔一组图片,Dobby 自动切到「帧合成视频」)');
       return;
     }
     const f = f0;
@@ -717,9 +717,9 @@ Toolkit.injectTopbar('video-toolkit');
     // Source-presence gate differs per action: fromFrames needs srcFrames,
     // everything else needs srcVideo. Reject early with a helpful message.
     if (action === 'fromFrames') {
-      if (!srcFrames.length) { log.err('请先拖入序列帧'); return; }
+      if (!srcFrames.length) { log.err('Dobby 手里还没序列帧,主人先丢一组?'); return; }
     } else {
-      if (!srcVideo) { log.err('请先拖入视频'); return; }
+      if (!srcVideo) { log.err('Dobby 手里还没视频,主人先丢一个?'); return; }
     }
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
@@ -968,7 +968,7 @@ Toolkit.injectTopbar('video-toolkit');
     //   optical-fb    → Farnebäck only
     let backend = null;  // { name, prepare(), interpolate(A, B, α, out) }
     const tryRife = async () => {
-      if (!window.RIFE) throw new Error('RIFE 模块未加载');
+      if (!window.RIFE) throw new Error('RIFE 模块Dobby 待命');
       await window.RIFE.prepare({
         onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; },
         onProgress: p => {
@@ -979,7 +979,7 @@ Toolkit.injectTopbar('video-toolkit');
       return { name: 'RIFE (WebGPU)', interpolate: window.RIFE.interpolate };
     };
     const tryFarneback = async () => {
-      if (!window.Farneback) throw new Error('Farnebäck 模块未加载');
+      if (!window.Farneback) throw new Error('Farnebäck 模块Dobby 待命');
       await window.Farneback.prepare({
         onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; }
       });
@@ -1689,8 +1689,8 @@ Toolkit.injectTopbar('video-toolkit');
     if (srcUrl) URL.revokeObjectURL(srcUrl);
     srcVideo = null; srcUrl = null; srcMeta = null; outBlob = null;
     $('srcBox').innerHTML = '<div class="preview-empty">拖入视频</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
-    $('stats').textContent = '未加载';
+    $('outBox').innerHTML = '<div class="preview-empty">Dobby 干完显示在这里</div>';
+    $('stats').textContent = 'Dobby 待命';
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;

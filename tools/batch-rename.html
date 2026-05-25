@@ -189,11 +189,11 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加入文件</div>
+    <div class="stats" id="stats">Dobby 手里还没文件</div>
     <div id="conflictBanner"></div>
     <div class="info" style="margin-bottom:8px">规则按顺序应用: <strong>模板</strong> → <strong>替换</strong> → <strong>大小写</strong> → <strong>扩展名</strong>。重名行会红色高亮。</div>
     <div class="rename-table" id="renameTable">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会显示重命名预览</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢文件进来,Dobby 给改名预览</div>
     </div>
   </div>
 </div>
@@ -333,8 +333,8 @@ Toolkit.injectTopbar('batch-rename');
     const banner = $('conflictBanner');
     const table = $('renameTable');
     if (!files.length) {
-      $('stats').textContent = '未加入文件';
-      table.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后会显示重命名预览</div>';
+      $('stats').textContent = 'Dobby 手里还没文件';
+      table.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">主人丢文件进来,Dobby 给改名预览</div>';
       $('exportBtn').disabled = true;
       banner.innerHTML = '';
       return;
