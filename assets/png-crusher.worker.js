@@ -21,14 +21,21 @@ async function crushPng(imageData, opts, onProgress) {
   const { width: w, height: h, data: src } = imageData;
   const { nColors, dither, kmeans, perceptual, alphaMode, alphaThresh } = opts;
 
-  // 1. apply alpha mode
-  const pixels = new Uint8ClampedArray(src);
+  // Skip the copy when alphaMode === 'keep' — we never mutate the buffer in
+  // that path, and a copy of an 8K spritesheet's pixel data is 256MB on its
+  // own. With alpha threshold/discard we mutate in place on src (the main
+  // thread already transferred ownership to us).
+  let pixels;
   if (alphaMode === 'threshold') {
+    pixels = src;
     for (let i = 3; i < pixels.length; i += 4) {
       pixels[i] = pixels[i] >= alphaThresh ? 255 : 0;
     }
   } else if (alphaMode === 'discard') {
+    pixels = src;
     for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
+  } else {
+    pixels = src;
   }
 
   const W = perceptual
@@ -175,35 +182,82 @@ function nearestPaletteIndex(r, g, b, a, palette, pn, W) {
   return best;
 }
 
+// Streaming Floyd-Steinberg: only the current row + next row's error buffer
+// are kept in memory (2 × w × 4 floats), instead of the whole w·h·4 working
+// buffer the previous version allocated. For a 4K spritesheet this drops the
+// dither working set from ~268MB to ~256KB — fixes the "Array buffer
+// allocation failed" OOM in Workers on large images. Output is identical:
+// same FS error distribution (7/16, 3/16, 5/16, 1/16).
 function mapWithDither(pixels, w, h, palette, W) {
-  const buf = new Float32Array(w * h * 4);
-  for (let i = 0; i < buf.length; i++) buf[i] = pixels[i];
   const out = new Uint8Array(w * h);
   const pn = palette.length;
+  const rowFloats = w * 4;
+  // current row working values (source pixels + accumulated incoming error)
+  let cur = new Float32Array(rowFloats);
+  // next row accumulated incoming error (added to baseline pixels at row swap)
+  let nxt = new Float32Array(rowFloats);
+  // bootstrap row 0
+  for (let i = 0; i < rowFloats; i++) cur[i] = pixels[i];
+
   for (let y = 0; y < h; y++) {
+    const outRow = y * w;
     for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      const r = buf[idx], g = buf[idx+1], b = buf[idx+2], a = buf[idx+3];
+      const idx = x * 4;
+      const r = cur[idx], g = cur[idx+1], b = cur[idx+2], a = cur[idx+3];
       const pi = nearestPaletteIndex(
         Math.max(0, Math.min(255, r)),
         Math.max(0, Math.min(255, g)),
         Math.max(0, Math.min(255, b)),
         Math.max(0, Math.min(255, a)), palette, pn, W);
-      out[y * w + x] = pi;
+      out[outRow + x] = pi;
       const p = palette[pi];
       const er = r - p.r, eg = g - p.g, eb = b - p.b, ea = a - p.a;
-      function add(xx, yy, frac) {
-        if (xx < 0 || xx >= w || yy >= h) return;
-        const k = (yy * w + xx) * 4;
-        buf[k]   += er * frac;
-        buf[k+1] += eg * frac;
-        buf[k+2] += eb * frac;
-        buf[k+3] += ea * frac;
+      // forward to (x+1, y) in current row
+      if (x + 1 < w) {
+        const k = idx + 4;
+        const f = 7 / 16;
+        cur[k]   += er * f;
+        cur[k+1] += eg * f;
+        cur[k+2] += eb * f;
+        cur[k+3] += ea * f;
       }
-      add(x + 1, y,     7 / 16);
-      add(x - 1, y + 1, 3 / 16);
-      add(x,     y + 1, 5 / 16);
-      add(x + 1, y + 1, 1 / 16);
+      // diffuse to next row
+      if (y + 1 < h) {
+        if (x - 1 >= 0) {
+          const k = idx - 4;
+          const f = 3 / 16;
+          nxt[k]   += er * f;
+          nxt[k+1] += eg * f;
+          nxt[k+2] += eb * f;
+          nxt[k+3] += ea * f;
+        }
+        {
+          const f = 5 / 16;
+          nxt[idx]   += er * f;
+          nxt[idx+1] += eg * f;
+          nxt[idx+2] += eb * f;
+          nxt[idx+3] += ea * f;
+        }
+        if (x + 1 < w) {
+          const k = idx + 4;
+          const f = 1 / 16;
+          nxt[k]   += er * f;
+          nxt[k+1] += eg * f;
+          nxt[k+2] += eb * f;
+          nxt[k+3] += ea * f;
+        }
+      }
+    }
+    // advance: cur := pixels(y+1) + nxt;  nxt := zero
+    if (y + 1 < h) {
+      const base = (y + 1) * rowFloats;
+      const tmp = cur;
+      cur = nxt;
+      nxt = tmp;
+      for (let i = 0; i < rowFloats; i++) {
+        cur[i] += pixels[base + i];  // cur was nxt (with accumulated error)
+        nxt[i] = 0;                  // nxt was old cur, clear for fresh accumulation
+      }
     }
   }
   return out;

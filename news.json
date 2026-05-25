@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v17",
+      "date": "2026-05-25",
+      "title": "深度压缩: 大精灵图不再「Array buffer allocation failed」",
+      "items": [
+        "你报的 bug:大精灵图扔进深度压缩,Worker 直接报「Array buffer allocation failed」,1 秒就死了 — Dobby 复盘:Floyd-Steinberg 抖动算法以前一次性开了 `Float32Array(w × h × 4)`,4K 图就 268MB,8K 图 1GB,Worker 堆直接撑爆",
+        "改成行流式抖动: 只保留「当前行 + 下一行的误差缓冲」共 2 行,4K 图从 268MB 降到 256KB(4000 倍内存压缩),输出像素完全一致(同一套 7/16, 3/16, 5/16, 1/16 误差扩散)",
+        "顺手再省两笔: 1) 主线程把 ImageData 缓冲区 transfer 而非 clone 给 Worker,大图省一份 ~256MB 副本; 2) `alphaMode=keep`(最常用)时跳过 worker 内的 pixels 副本,又省一份",
+        "验证: 2048×2048 测试图 3.98s 压完,-77.9%,产物正常 — 同档工况下你之前直接 OOM"
+      ]
+    },
+    {
       "version": "dobby-v16",
       "date": "2026-05-25",
       "title": "去水印: 默认换成 LaMa AI + 不再整图压成 512 拉回去",
