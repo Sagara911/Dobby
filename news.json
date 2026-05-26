@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v47",
+      "date": "2026-05-26",
+      "title": "🛡️ 精灵图打包加 Canvas 超尺寸守护 — 不再假装打包成功",
+      "items": [
+        "用户反馈:110 张大图打包结果是 21140×21140 — 日志显示\"打包完成\",但预览一片空白",
+        "**根本原因:浏览器 Canvas 硬上限 16384px(Chrome / Edge),Safari 更低(4096~8192)**。超出后 drawImage 不报错,直接写到一个静默空白画布上 — 看起来\"成功了\",其实啥也没渲染",
+        "**修法:**渲染前预检最终 W/H。**>16384 直接拒绝**:log 红字、stats 显示 ✕、清空预览、disable 导出按钮、告诉用户 \"先用 📦 图片压缩 缩到 256~512px,或分批打包\"。这样不会再有\"成功的失败\"",
+        "**>8192 的中等尺寸软警告:**桌面 Chrome 能渲染,但 iOS / Android GPU 一般采样不了这么大的纹理。playable / mobile 游戏别直接拿去用,会黑屏。log 黄字提示,但不阻止生成(桌面打包工具链可能还有用)",
+        "i18n: `sp.err.tooBig` / `sp.warn.tooBigMobile` / `sp.stats.tooBig` 都加了 zh+en 双语"
+      ]
+    },
+    {
       "version": "dobby-v46",
       "date": "2026-05-26",
       "title": "🔲 视频裁剪现在能拖框选了 + 删了多余的 GitHub Pages 部署",

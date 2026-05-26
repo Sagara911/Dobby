@@ -402,6 +402,31 @@ Toolkit.injectTopbar('sprite-packer');
       finalH = nextPow2(finalH);
     }
 
+    // ===== Pre-render canvas-size guardrail =====
+    // Browsers cap <canvas> at ~16384 px on the long side (Chrome / Edge);
+    // Safari is even smaller (4096-8192 on iOS). Going past the limit
+    // produces a silent BLANK canvas — drawImage doesn't throw, it just
+    // writes to nothing — which used to mislead users (\"the log says
+    // 打包完成 but my preview is white\"). Refuse to render past the
+    // hard limit and tell the user what to do.
+    const MAX_CANVAS = 16384;
+    const MOBILE_TEX_LIMIT = 8192;
+    if (finalW > MAX_CANVAS || finalH > MAX_CANVAS) {
+      log.err(Toolkit.T('sp.err.tooBig',
+        { w: finalW, h: finalH, limit: MAX_CANVAS },
+        `输出 ${finalW}×${finalH} 超过浏览器 Canvas 上限 ${MAX_CANVAS}px — 渲染必然空白,不出图。先用 📦 图片压缩 把每帧缩到 256~512px,或者把 110 张拆成几批分别打包。`));
+      $('stats').innerHTML = `<span style="color:#ff8080">✕ ${Toolkit.T('sp.stats.tooBig', { w: finalW, h: finalH, limit: MAX_CANVAS }, `输出 ${finalW}×${finalH} 超过 ${MAX_CANVAS}px 上限`)}</span>`;
+      $('exportBtn').disabled = true;
+      packed = null;
+      $('previewArea').innerHTML = '';
+      return;
+    }
+    if (finalW > MOBILE_TEX_LIMIT || finalH > MOBILE_TEX_LIMIT) {
+      log.warn(Toolkit.T('sp.warn.tooBigMobile',
+        { w: finalW, h: finalH, limit: MOBILE_TEX_LIMIT },
+        `输出 ${finalW}×${finalH} 超过 ${MOBILE_TEX_LIMIT}px — 桌面端能渲染,但 iOS / Android GPU 通常采样不到这么大的纹理,playable / mobile 游戏别直接用。`));
+    }
+
     const out = newCanvas(finalW, finalH);
     const octx = out.getContext('2d');
     // center the actual sheet content within the (possibly enlarged) final canvas
