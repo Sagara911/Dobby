@@ -109,6 +109,79 @@
 :root[data-theme="light"] .topbar { background: rgba(255, 255, 255, 0.78); }
 :root[data-theme="light"] .news-modal-card { background: #ffffff; }
 
+/* ── Tool pages: bulk-flip light mode for tool sidebar + common panels ──
+   Most tool pages have hard-coded dark inline styles (rgba(0,0,0,0.3) etc.)
+   for panel highlights — those need to flip on light mode too. Targeting
+   the common patterns here keeps each individual tool HTML untouched. */
+:root[data-theme="light"] .sidebar {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(0, 0, 0, 0.10);
+  color: var(--text);
+}
+:root[data-theme="light"] .sidebar h1,
+:root[data-theme="light"] .sidebar h2 { color: var(--text); }
+:root[data-theme="light"] .sidebar h2 { color: var(--muted-2); }
+:root[data-theme="light"] .stats { color: var(--muted-2); }
+/* Common shared classes */
+:root[data-theme="light"] .drop-zone {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: var(--muted-2);
+}
+:root[data-theme="light"] .drop-zone:hover,
+:root[data-theme="light"] .drop-zone.drag {
+  background: rgba(var(--jade-rgb), 0.06);
+  border-color: rgba(var(--jade-rgb), 0.5);
+}
+:root[data-theme="light"] .log {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--muted-2);
+}
+:root[data-theme="light"] .field input,
+:root[data-theme="light"] .field select,
+:root[data-theme="light"] .field textarea {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text);
+}
+:root[data-theme="light"] .field input::placeholder,
+:root[data-theme="light"] .field textarea::placeholder { color: var(--muted); }
+:root[data-theme="light"] .field label { color: var(--muted-2); }
+/* Inline "panel" backgrounds — many tools use rgba(0,0,0,0.3 / 0.4) as
+   subtle highlight boxes. In light mode these should be near-white tints,
+   not black. !important needed because they're inline styles. */
+:root[data-theme="light"] [style*="rgba(0,0,0,0.3)"],
+:root[data-theme="light"] [style*="rgba(0, 0, 0, 0.3)"] {
+  background: rgba(0, 0, 0, 0.035) !important;
+  color: var(--text);
+}
+:root[data-theme="light"] [style*="rgba(0,0,0,0.4)"],
+:root[data-theme="light"] [style*="rgba(0, 0, 0, 0.4)"] {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text);
+}
+/* Sidebar inline info/hint boxes — those use the same dark rgba background
+   plus a left jade border. Force text dark on light theme. */
+:root[data-theme="light"] .sidebar [style*="rgba(0,0,0,0.3)"],
+:root[data-theme="light"] .sidebar [style*="rgba(0, 0, 0, 0.3)"] {
+  color: var(--text);
+}
+/* Common dark editor panels: textarea / pre / .stage backgrounds. Many tools
+   hardcode #0a0a0c or rgba(0,0,0,0.3-0.4) as code editor / preview backdrops.
+   For the deep #0a0a0c (intentional editor / image canvas backdrop), keep
+   it dark — code/images read better on dark. But for general "panel" use,
+   we already flipped above. */
+:root[data-theme="light"] .field input[type="range"] { background: transparent; }
+/* Topbar pill / icon button — they had light overrides for backgrounds
+   already (line 489+, etc.), but the icon color stays grey via --text-soft.
+   That works on light bg too. */
+/* Footer */
+:root[data-theme="light"] .site-footer {
+  border-top-color: rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.04) 100%);
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
