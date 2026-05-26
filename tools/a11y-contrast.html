@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>颜色对比度 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .ax-stage {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── ratio big card ── */
+  .ax-ratio-card {
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.06), rgba(0, 0, 0, 0.2));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  .ax-ratio-big {
+    font-size: 64px;
+    font-weight: 700;
+    font-family: ui-monospace, Consolas, monospace;
+    background: linear-gradient(135deg, var(--accent), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  .ax-ratio-big.fail { background: var(--danger); -webkit-text-fill-color: transparent; background-clip: text; -webkit-background-clip: text; }
+  .ax-ratio-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .ax-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ax-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    min-width: 120px;
+  }
+  .ax-badge .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ax-badge .verdict { font-size: 14px; font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+  .ax-badge.pass { border-color: rgba(var(--jade-rgb), 0.5); }
+  .ax-badge.pass .verdict { color: var(--accent); }
+  .ax-badge.fail { border-color: rgba(245, 91, 91, 0.5); }
+  .ax-badge.fail .verdict { color: #ff8080; }
+
+  /* ── preview block ── */
+  .ax-preview {
+    flex: 1;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 28px;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 280px;
+    overflow: auto;
+  }
+  .ax-preview h3 { margin: 0; font-size: 28px; font-weight: 700; }
+  .ax-preview p { margin: 0; font-size: 15px; line-height: 1.7; }
+  .ax-preview .small { font-size: 12px; opacity: 0.85; }
+
+  /* ── color blindness sim ── */
+  .ax-cb-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .ax-cb-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ax-cb-card .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .ax-cb-card .swatch-pair {
+    height: 60px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .ax-cb-card .ratio {
+    font-size: 11px;
+    text-align: center;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+  }
+
+  /* sidebar color pickers */
+  .ax-pick-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .ax-pick-row .swatch {
+    width: 38px; height: 38px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.12s;
+  }
+  .ax-pick-row .swatch:hover { transform: scale(1.05); }
+  .ax-pick-row input[type=text] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>♿ 颜色对比度</h1>
+
+    <h2>前景色(文字)</h2>
+    <div class="ax-pick-row">
+      <input type="color" id="fgPicker" value="#ffffff" class="swatch" style="padding:0" />
+      <input type="text" id="fgHex" value="#ffffff" maxlength="7" />
+    </div>
+
+    <h2>背景色</h2>
+    <div class="ax-pick-row">
+      <input type="color" id="bgPicker" value="#1a1a24" class="swatch" style="padding:0" />
+      <input type="text" id="bgHex" value="#1a1a24" maxlength="7" />
+    </div>
+
+    <h2>常见组合 <span style="float:right; font-size:10px; color:var(--muted)">点选</span></h2>
+    <div id="commonCombos" style="display:flex; flex-direction:column; gap:4px"></div>
+
+    <h2>动作</h2>
+    <button id="swapBtn" class="secondary">↔ 交换前/背景</button>
+    <button id="randomBtn" class="secondary">🎲 随机一对</button>
+    <button id="copyBtn" class="secondary">📋 复制 hex 对</button>
+
+    <h2>预览文本</h2>
+    <textarea id="previewText" style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; resize:vertical; min-height:60px" placeholder="自定义预览文字">Lorem ipsum dolor sit amet</textarea>
+
+    <h2>WCAG 速查</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div><strong>AA 普通文本</strong>: ≥ 4.5</div>
+      <div><strong>AA 大字</strong>: ≥ 3.0(≥18pt 或 14pt 加粗)</div>
+      <div><strong>AAA 普通</strong>: ≥ 7.0</div>
+      <div><strong>AAA 大字</strong>: ≥ 4.5</div>
+      <div><strong>非文本</strong>: ≥ 3.0(图标/边框)</div>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">WCAG 2.1 颜色对比度 + 三种色盲滤镜</div>
+
+    <div class="ax-stage">
+      <!-- BIG RATIO + BADGES -->
+      <div class="ax-ratio-card">
+        <div>
+          <div class="ax-ratio-big" id="ratioBig">21:1</div>
+          <div class="ax-ratio-sub" id="ratioSub">对比度</div>
+        </div>
+        <div class="ax-badges" id="badges">
+          <!-- populated at runtime -->
+        </div>
+      </div>
+
+      <!-- LIVE PREVIEW -->
+      <div class="ax-preview" id="preview">
+        <h3 id="previewH">大标题预览(24px 粗体)</h3>
+        <p id="previewP" style="font-size:18px">大字预览(18pt = 24px,WCAG 大字标准)</p>
+        <p id="previewBody">正文预览(15px)— Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.</p>
+        <p class="small" id="previewSmall">小字预览(12px)— 在低对比度下小字最难读,常用来判断合规底线。</p>
+      </div>
+
+      <!-- COLOR BLINDNESS -->
+      <div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">色盲模拟 (Color Vision Deficiency)</div>
+        <div class="ax-cb-grid" id="cbGrid">
+          <!-- populated at runtime -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('a11y-contrast');
+
+(() => {
+  const { $, makeLogger } = Toolkit;
+  const log = makeLogger($('log'));
+
+  function hex2rgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return null;
+    return [
+      parseInt(hex.slice(0,2), 16),
+      parseInt(hex.slice(2,4), 16),
+      parseInt(hex.slice(4,6), 16)
+    ];
+  }
+  function rgb2hex(r, g, b) {
+    return '#' + [r,g,b].map(n => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0')).join('');
+  }
+
+  // WCAG relative luminance (sRGB)
+  function relLum(rgb) {
+    const [r,g,b] = rgb.map(c => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrastRatio(rgb1, rgb2) {
+    const l1 = relLum(rgb1);
+    const l2 = relLum(rgb2);
+    const a = Math.max(l1, l2);
+    const b = Math.min(l1, l2);
+    return (a + 0.05) / (b + 0.05);
+  }
+
+  // Color blindness simulation matrices (Brettel/Viénot-style approximations)
+  function applyCB(rgb, type) {
+    // matrices from https://www.color-blindness.com / Brettel et al.
+    const M = {
+      protanopia:   [[0.567,0.433,0],   [0.558,0.442,0],   [0,0.242,0.758]],
+      deuteranopia: [[0.625,0.375,0],   [0.7,0.3,0],       [0,0.3,0.7]],
+      tritanopia:   [[0.95,0.05,0],     [0,0.433,0.567],   [0,0.475,0.525]]
+    }[type];
+    if (!M) return rgb;
+    const r = rgb[0]*M[0][0] + rgb[1]*M[0][1] + rgb[2]*M[0][2];
+    const g = rgb[0]*M[1][0] + rgb[1]*M[1][1] + rgb[2]*M[1][2];
+    const b = rgb[0]*M[2][0] + rgb[1]*M[2][1] + rgb[2]*M[2][2];
+    return [r,g,b].map(n => Math.max(0, Math.min(255, n)));
+  }
+
+  function refresh() {
+    const fgHex = $('fgHex').value.trim();
+    const bgHex = $('bgHex').value.trim();
+    const fg = hex2rgb(fgHex);
+    const bg = hex2rgb(bgHex);
+    if (!fg || !bg) { $('ratioBig').textContent = '?'; return; }
+    const r = contrastRatio(fg, bg);
+    $('ratioBig').textContent = r.toFixed(2) + ':1';
+    $('ratioBig').classList.toggle('fail', r < 3);
+    $('ratioSub').textContent = r >= 7 ? '极好,过 AAA' : r >= 4.5 ? '好,过 AA' : r >= 3 ? '勉强,只过 AA 大字' : '低,不合规';
+
+    // badges
+    const tests = [
+      { label: 'AA 普通文本', need: 4.5 },
+      { label: 'AA 大字',     need: 3.0 },
+      { label: 'AAA 普通',    need: 7.0 },
+      { label: 'AAA 大字',    need: 4.5 },
+      { label: '非文本',      need: 3.0 }
+    ];
+    $('badges').innerHTML = tests.map(t => {
+      const pass = r >= t.need;
+      return `<div class="ax-badge ${pass ? 'pass' : 'fail'}">
+        <span class="label">${t.label}</span>
+        <span class="verdict">${pass ? '✓ ' + t.need + '+' : '✗ ' + t.need + '+'}</span>
+      </div>`;
+    }).join('');
+
+    // preview
+    const fgCss = `rgb(${fg.join(',')})`;
+    const bgCss = `rgb(${bg.join(',')})`;
+    const prev = $('preview');
+    prev.style.background = bgCss;
+    prev.style.color = fgCss;
+    const pt = $('previewText').value || 'Lorem ipsum dolor sit amet';
+    $('previewH').textContent = pt;
+    $('previewP').textContent = pt;
+    $('previewBody').textContent = pt + ' — ' + pt;
+    $('previewSmall').textContent = pt + '(12px)';
+
+    // CB sim
+    const types = [
+      { id: 'normal',       name: '正常视觉',       desc: '~92% 人口' },
+      { id: 'protanopia',   name: '红色盲 (1% 男)',  desc: 'Protanopia' },
+      { id: 'deuteranopia', name: '绿色盲 (6% 男)',  desc: 'Deuteranopia' },
+      { id: 'tritanopia',   name: '蓝色盲 (~0.01%)', desc: 'Tritanopia' }
+    ];
+    $('cbGrid').innerHTML = types.map(t => {
+      const cfg = t.id === 'normal' ? fg : applyCB(fg, t.id);
+      const cbg = t.id === 'normal' ? bg : applyCB(bg, t.id);
+      const cr = contrastRatio(cfg, cbg);
+      return `<div class="ax-cb-card">
+        <div class="label">${t.name}</div>
+        <div class="swatch-pair" style="background:rgb(${cbg.map(n=>Math.round(n)).join(',')}); color:rgb(${cfg.map(n=>Math.round(n)).join(',')})">${pt.slice(0, 12) || 'Abc'}</div>
+        <div class="ratio">${cr.toFixed(2)}:1</div>
+      </div>`;
+    }).join('');
+  }
+
+  // sync color picker ↔ hex
+  function bindPair(picker, hex) {
+    picker.addEventListener('input', e => { hex.value = e.target.value; refresh(); });
+    hex.addEventListener('input', e => {
+      const v = e.target.value.trim();
+      if (/^#[0-9a-f]{6}$/i.test(v)) picker.value = v;
+      refresh();
+    });
+  }
+  bindPair($('fgPicker'), $('fgHex'));
+  bindPair($('bgPicker'), $('bgHex'));
+  $('previewText').addEventListener('input', refresh);
+
+  // common combos
+  const COMBOS = [
+    { fg: '#000000', bg: '#ffffff', n: '黑白' },
+    { fg: '#ffffff', bg: '#1a1a24', n: '白@深蓝 (Dobby)' },
+    { fg: '#0066cc', bg: '#ffffff', n: '链接蓝@白' },
+    { fg: '#fff',    bg: '#1da1f2', n: 'Twitter 蓝' },
+    { fg: '#fff',    bg: '#34a853', n: 'Google 绿' },
+    { fg: '#fff',    bg: '#dc3545', n: 'Bootstrap 红' },
+    { fg: '#444',    bg: '#f5f5f5', n: '低对比灰' }
+  ];
+  $('commonCombos').innerHTML = COMBOS.map((c, i) => `
+    <button data-i="${i}" style="text-align:left; padding:5px 8px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px">
+      <span style="display:inline-block; width:14px; height:14px; background:${c.bg}; border:1px solid var(--border); flex-shrink:0"></span>
+      <span style="display:inline-block; width:14px; height:14px; background:${c.fg}; border:1px solid var(--border); flex-shrink:0"></span>
+      <span style="margin-left:4px">${c.n}</span>
+    </button>
+  `).join('');
+  document.querySelectorAll('#commonCombos button').forEach(b => {
+    b.addEventListener('click', () => {
+      const c = COMBOS[parseInt(b.dataset.i, 10)];
+      $('fgHex').value = c.fg.length === 4 ? '#' + c.fg.slice(1).split('').map(x=>x+x).join('') : c.fg;
+      $('bgHex').value = c.bg.length === 4 ? '#' + c.bg.slice(1).split('').map(x=>x+x).join('') : c.bg;
+      $('fgPicker').value = $('fgHex').value;
+      $('bgPicker').value = $('bgHex').value;
+      refresh();
+    });
+  });
+
+  $('swapBtn').addEventListener('click', () => {
+    const a = $('fgHex').value, b = $('bgHex').value;
+    $('fgHex').value = b; $('bgHex').value = a;
+    $('fgPicker').value = b; $('bgPicker').value = a;
+    refresh();
+  });
+  $('randomBtn').addEventListener('click', () => {
+    const rh = () => '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+    $('fgHex').value = rh(); $('bgHex').value = rh();
+    $('fgPicker').value = $('fgHex').value;
+    $('bgPicker').value = $('bgHex').value;
+    refresh();
+  });
+  $('copyBtn').addEventListener('click', async () => {
+    const text = `fg: ${$('fgHex').value}\nbg: ${$('bgHex').value}\ncontrast: ${$('ratioBig').textContent}`;
+    try { await navigator.clipboard.writeText(text); log.ok('已复制 hex 对'); }
+    catch (e) { log.err('复制失败'); }
+  });
+
+  refresh();
+  log.ok('对比度检查器准备好');
+})();
+</script>
+</body>
+</html>
