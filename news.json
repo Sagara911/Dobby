@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v46",
+      "date": "2026-05-26",
+      "title": "🔲 视频裁剪现在能拖框选了 + 删了多余的 GitHub Pages 部署",
+      "items": [
+        "**🎬 video-toolkit 画面裁剪** — 之前只有 X / Y / 宽 / 高 四个数字输入框,用户反馈\"得自己算坐标\"。现在右边预览上**直接拖出框选区域**:框内拖动 = 平移,8 个控制点(4 角 + 4 边)拖动 = 缩放,框外按下 = 重新画一个新框",
+        "数字输入框还在,且**双向同步** — 你可以拖完框看数字,也可以输数字看框跟着动。框上方有个小标签实时显示 \"宽 × 高\"(原生像素)",
+        "框外区域用 box-shadow 999px ring 自动变暗,聚焦感更强;dashed 边框 + jade 控制点配 Dobby 整体色调",
+        "底层不动:导出仍走原来的 cropX / cropY / cropW / cropH 路径(再次编码 + WebCodecs / MediaRecorder)。视频原生分辨率 vs 预览显示像素之间用 scale 因子自动换算,所以拉伸到任意尺寸的预览都准",
+        "**🗑️ 移除 .github/workflows/pages.yml** — 部署用 Cloudflare Pages,这个 GitHub Pages 工作流是多余的双部署,而且最近 actions/configure-pages 一直 5xx。删了 push 时少跑 10 秒,少一封失败邮件。要恢复一行 git revert"
+      ]
+    },
+    {
       "version": "dobby-v45",
       "date": "2026-05-26",
       "title": "✨ 鼠标跟随发光升级 — 工具卡更亮 + 分类 chips + 搜索框也跟着发光了",

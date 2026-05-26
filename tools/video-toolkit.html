@@ -70,6 +70,56 @@
     display: flex; align-items: center; justify-content: center;
   }
   .preview-box video, .preview-box canvas, .preview-box img { max-width: 100%; max-height: 100%; }
+
+  /* ===== Crop selector overlay (sits on top of #srcBox's video) =====
+     The .crop-overlay is sized to the video's DISPLAY rect (which may
+     differ from native pixels due to max-width:100%). .crop-rect is a
+     draggable / resizable box; we mirror its position to the cropX /
+     cropY / cropW / cropH inputs (in native pixels) on every change. */
+  .crop-overlay {
+    position: absolute;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: crosshair;
+    z-index: 5;
+  }
+  .crop-rect {
+    position: absolute;
+    /* Dim everything outside the rect via a single huge box-shadow ring */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    border: 1px dashed rgba(var(--jade-rgb), 0.95);
+    background: transparent;
+    cursor: move;
+    box-sizing: border-box;
+  }
+  .crop-handle {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--jade);
+    border: 1px solid #0f1216;
+    border-radius: 2px;
+  }
+  .crop-handle.tl { top: -6px;    left: -6px;     cursor: nwse-resize; }
+  .crop-handle.tr { top: -6px;    right: -6px;    cursor: nesw-resize; }
+  .crop-handle.bl { bottom: -6px; left: -6px;     cursor: nesw-resize; }
+  .crop-handle.br { bottom: -6px; right: -6px;    cursor: nwse-resize; }
+  .crop-handle.t  { top: -6px;    left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .crop-handle.b  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .crop-handle.l  { left: -6px;   top: 50%; transform: translateY(-50%);  cursor: ew-resize; }
+  .crop-handle.r  { right: -6px;  top: 50%; transform: translateY(-50%);  cursor: ew-resize; }
+  /* Aspect-ratio readout pinned to the top edge of the rect */
+  .crop-rect .crop-label {
+    position: absolute;
+    top: -22px; left: 0;
+    background: rgba(0, 0, 0, 0.75);
+    color: var(--jade);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
   .timeline-row {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 12px;
@@ -489,6 +539,197 @@ Toolkit.injectTopbar('video-toolkit');
   // to set it (default 30). All seeks land on a frame boundary
   // (currentTime = frame_index / fps + half-frame offset for stability).
   let frameTrimCleanup = null;
+  let cropSelectorCleanup = null;
+
+  // Visual crop-region selector. Sits on top of #srcBox's video element
+  // and draws a draggable / resizable rectangle. Two-way bound to the
+  // cropX / cropY / cropW / cropH number inputs (which use NATIVE video
+  // pixels). All math involves a scale factor between displayed CSS
+  // pixels and native pixels — the video may be downscaled to fit
+  // .preview-box on tight viewports.
+  function setupCropSelector(nativeW, nativeH) {
+    const srcBox = $('srcBox');
+    if (!srcBox) return;
+    const video = srcBox.querySelector('video');
+    if (!video) return;
+
+    // If the video hasn't laid out yet (rare — usually metadata is loaded
+    // by the time we get here), wait one rAF and try again.
+    if (!video.getBoundingClientRect().width) {
+      requestAnimationFrame(() => setupCropSelector(nativeW, nativeH));
+      return;
+    }
+
+    // srcBox needs to be a positioning context so the overlay can be
+    // absolute-positioned within it.
+    srcBox.style.position = 'relative';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'crop-overlay';
+    overlay.innerHTML = `
+      <div class="crop-rect">
+        <span class="crop-label"></span>
+        <div class="crop-handle tl"></div>
+        <div class="crop-handle tr"></div>
+        <div class="crop-handle bl"></div>
+        <div class="crop-handle br"></div>
+        <div class="crop-handle t"></div>
+        <div class="crop-handle b"></div>
+        <div class="crop-handle l"></div>
+        <div class="crop-handle r"></div>
+      </div>
+    `;
+    srcBox.appendChild(overlay);
+    const rect = overlay.querySelector('.crop-rect');
+    const label = overlay.querySelector('.crop-label');
+
+    // Match overlay to current video display rect within srcBox
+    function syncOverlayToVideo() {
+      const vRect = video.getBoundingClientRect();
+      const sRect = srcBox.getBoundingClientRect();
+      overlay.style.left = (vRect.left - sRect.left) + 'px';
+      overlay.style.top = (vRect.top - sRect.top) + 'px';
+      overlay.style.width = vRect.width + 'px';
+      overlay.style.height = vRect.height + 'px';
+    }
+    syncOverlayToVideo();
+    const ro = new ResizeObserver(() => { syncOverlayToVideo(); renderRectFromInputs(); });
+    ro.observe(video);
+    ro.observe(srcBox);
+
+    function getScale() {
+      const vw = video.getBoundingClientRect().width;
+      return vw > 0 ? vw / nativeW : 1;
+    }
+
+    function renderRectFromInputs() {
+      const scale = getScale();
+      const x = Math.max(0, +$('cropX').value || 0);
+      const y = Math.max(0, +$('cropY').value || 0);
+      const w = Math.max(1, +$('cropW').value || nativeW);
+      const h = Math.max(1, +$('cropH').value || nativeH);
+      rect.style.left = (x * scale) + 'px';
+      rect.style.top = (y * scale) + 'px';
+      rect.style.width = (w * scale) + 'px';
+      rect.style.height = (h * scale) + 'px';
+      label.textContent = `${w} × ${h}`;
+    }
+
+    function commitRectToInputs() {
+      const scale = getScale();
+      let x = Math.round(parseFloat(rect.style.left) / scale);
+      let y = Math.round(parseFloat(rect.style.top) / scale);
+      let w = Math.round(parseFloat(rect.style.width) / scale);
+      let h = Math.round(parseFloat(rect.style.height) / scale);
+      x = Math.max(0, Math.min(nativeW - 1, x));
+      y = Math.max(0, Math.min(nativeH - 1, y));
+      w = Math.max(1, Math.min(nativeW - x, w));
+      h = Math.max(1, Math.min(nativeH - y, h));
+      $('cropX').value = x;
+      $('cropY').value = y;
+      $('cropW').value = w;
+      $('cropH').value = h;
+      label.textContent = `${w} × ${h}`;
+    }
+
+    // Two-way binding: typing in inputs redraws the rect
+    const inputIds = ['cropX', 'cropY', 'cropW', 'cropH'];
+    const inputListeners = inputIds.map(id => {
+      const el = $(id);
+      const fn = renderRectFromInputs;
+      el.addEventListener('input', fn);
+      return [el, fn];
+    });
+    renderRectFromInputs();
+
+    // ===== Drag state machine =====
+    let drag = null;
+
+    function getMousePos(e) {
+      const oRect = overlay.getBoundingClientRect();
+      return { x: e.clientX - oRect.left, y: e.clientY - oRect.top };
+    }
+    function startDrag(e, kind) {
+      e.preventDefault();
+      const pos = getMousePos(e);
+      drag = {
+        kind,
+        sx: pos.x, sy: pos.y,
+        sl: parseFloat(rect.style.left) || 0,
+        st: parseFloat(rect.style.top) || 0,
+        sw: parseFloat(rect.style.width) || 0,
+        sh: parseFloat(rect.style.height) || 0
+      };
+    }
+
+    function onRectMouseDown(e) {
+      if (e.target === rect) startDrag(e, 'move');
+    }
+    function onOverlayMouseDown(e) {
+      // Click outside the rect → start a brand new selection from this point.
+      if (e.target === overlay) {
+        const pos = getMousePos(e);
+        rect.style.left = pos.x + 'px';
+        rect.style.top = pos.y + 'px';
+        rect.style.width = '0px';
+        rect.style.height = '0px';
+        startDrag(e, 'resize-br');  // drag toward bottom-right to size it
+      }
+    }
+    function onHandleMouseDown(e) {
+      e.stopPropagation();
+      const dir = [...e.currentTarget.classList].find(c => c !== 'crop-handle');
+      startDrag(e, 'resize-' + dir);
+    }
+    function onMouseMove(e) {
+      if (!drag) return;
+      const pos = getMousePos(e);
+      const dx = pos.x - drag.sx, dy = pos.y - drag.sy;
+      const oW = overlay.getBoundingClientRect().width;
+      const oH = overlay.getBoundingClientRect().height;
+      let nl = drag.sl, nt = drag.st, nw = drag.sw, nh = drag.sh;
+
+      if (drag.kind === 'move') {
+        nl = Math.max(0, Math.min(oW - nw, drag.sl + dx));
+        nt = Math.max(0, Math.min(oH - nh, drag.st + dy));
+      } else if (drag.kind.startsWith('resize-')) {
+        const dir = drag.kind.slice(7);
+        if (dir.includes('l')) { nl = drag.sl + dx; nw = drag.sw - dx; }
+        if (dir.includes('r')) { nw = drag.sw + dx; }
+        if (dir.includes('t')) { nt = drag.st + dy; nh = drag.sh - dy; }
+        if (dir.includes('b')) { nh = drag.sh + dy; }
+        // Clamp shrink (don't let width/height go below 4 CSS px)
+        if (nw < 4) { if (dir.includes('l')) nl = drag.sl + drag.sw - 4; nw = 4; }
+        if (nh < 4) { if (dir.includes('t')) nt = drag.st + drag.sh - 4; nh = 4; }
+        // Clamp to overlay bounds
+        if (nl < 0) { nw += nl; nl = 0; }
+        if (nt < 0) { nh += nt; nt = 0; }
+        if (nl + nw > oW) nw = oW - nl;
+        if (nt + nh > oH) nh = oH - nt;
+      }
+      rect.style.left = nl + 'px';
+      rect.style.top = nt + 'px';
+      rect.style.width = nw + 'px';
+      rect.style.height = nh + 'px';
+      commitRectToInputs();
+    }
+    function onMouseUp() { drag = null; }
+
+    rect.addEventListener('mousedown', onRectMouseDown);
+    overlay.addEventListener('mousedown', onOverlayMouseDown);
+    overlay.querySelectorAll('.crop-handle').forEach(h => h.addEventListener('mousedown', onHandleMouseDown));
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    cropSelectorCleanup = () => {
+      ro.disconnect();
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      inputListeners.forEach(([el, fn]) => el.removeEventListener('input', fn));
+      overlay.remove();
+    };
+  }
+
   function setupFrameTrim(duration) {
     if (frameTrimCleanup) { frameTrimCleanup(); frameTrimCleanup = null; }
     let fps = 30;
@@ -690,6 +931,13 @@ Toolkit.injectTopbar('video-toolkit');
       frameTrimCleanup();
       frameTrimCleanup = null;
     }
+    // Always tear down any crop overlay from a previous render — even if
+    // we're staying in crop mode, the overlay gets rebuilt fresh below so
+    // input listeners / drag handlers don't double-attach.
+    if (cropSelectorCleanup) {
+      cropSelectorCleanup();
+      cropSelectorCleanup = null;
+    }
     // fromFrames has its own input flow (image sequence, no srcMeta) — render
     // even when no video is loaded, since the controls are useful before drop.
     if (action === 'fromFrames') {
@@ -870,7 +1118,9 @@ Toolkit.injectTopbar('video-toolkit');
     } else if (action === 'crop') {
       const wLbl = Toolkit.T('vt.dim.w', null, '宽');
       const hLbl = Toolkit.T('vt.dim.h', null, '高');
+      const dragHint = Toolkit.T('vt.crop.dragHint', null, '在右边预览上拖出框选区域,或直接输入数字。控制点八方向可拉伸,框内拖动整体平移。');
       c.innerHTML = `
+        <div class="info" style="margin-bottom:8px">${dragHint}</div>
         <div class="row-fields">
           <div class="field"><label>X</label><input type="number" id="cropX" value="0" min="0" max="${w}" /></div>
           <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" max="${h}" /></div>
@@ -880,6 +1130,7 @@ Toolkit.injectTopbar('video-toolkit');
           <div class="field"><label>${hLbl}</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
         </div>
       `;
+      setupCropSelector(w, h);
     } else if (action === 'resize') {
       const wLbl = Toolkit.T('vt.dim.w', null, '宽');
       const hLbl = Toolkit.T('vt.dim.h', null, '高');
