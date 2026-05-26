@@ -172,47 +172,64 @@
     width: 100%;
     margin: 0;
   }
+  /* IN/OUT controls: each button paired with its timecode on the same
+     row (vertical stack), then a separate range-summary line at bottom.
+     This survives narrow viewports — the old 3-column grid was overflowing
+     on widths under ~700px because the middle "range-info" couldn't shrink. */
   .frame-marks {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
+  }
+  .frame-mark-row {
+    display: flex;
     align-items: center;
+    gap: 12px;
   }
   .frame-marks button.mark {
     background: rgba(245, 200, 80, 0.12);
     border: 1px solid rgba(245, 200, 80, 0.4);
     color: #ffd07a;
-    padding: 7px 10px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
     font-family: inherit;
     font-weight: 600;
     box-shadow: none;
     white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 160px;
   }
   .frame-marks button.mark:hover {
     background: rgba(245, 200, 80, 0.22);
     border-color: rgba(245, 200, 80, 0.7);
   }
-  .frame-marks .range-info {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr auto;
-    gap: 6px;
-    align-items: baseline;
+  .frame-mark-row .tc {
     font-family: ui-monospace, Consolas, monospace;
-    font-size: 10.5px;
-    color: var(--muted);
-    text-align: center;
+    font-size: 12px;
+    color: #ffd07a;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .frame-marks .range-info .in-tc { color: #ffd07a; }
-  .frame-marks .range-info .out-tc { color: #ffd07a; }
-  .frame-marks .range-info .range-dur {
+  .frame-mark-row .tc.empty { color: var(--muted); font-style: italic; }
+  .range-dur {
+    text-align: center;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
     color: var(--accent);
-    grid-column: 1 / -1;
-    margin-top: 4px;
-    font-size: 11px;
     font-weight: 600;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+  }
+  .range-dur.empty {
+    color: var(--muted);
+    font-weight: 400;
+    font-style: italic;
   }
   .frame-shortcut {
     font-size: 10px;
@@ -588,17 +605,36 @@ Toolkit.injectTopbar('video-toolkit');
     function refreshRange() {
       const inT = inFrame != null ? inFrame / fps : null;
       const outT = outFrame != null ? outFrame / fps : null;
-      $('inDisplay').textContent  = inFrame  != null ? `IN: ${fmtTC(inT)} · 帧 ${inFrame}` : 'IN: 未设';
-      $('outDisplay').textContent = outFrame != null ? `OUT: ${fmtTC(outT)} · 帧 ${outFrame}` : 'OUT: 未设';
+      // The button alongside already says "IN" / "OUT", so the timecode
+      // span just shows the value (or "未设" in muted italic if unset).
+      const inEl = $('inDisplay'), outEl = $('outDisplay'), rEl = $('rangeDuration');
+      if (inFrame != null) {
+        inEl.textContent = `${fmtTC(inT)} · 帧 ${inFrame}`;
+        inEl.classList.remove('empty');
+      } else {
+        inEl.textContent = '未设';
+        inEl.classList.add('empty');
+      }
+      if (outFrame != null) {
+        outEl.textContent = `${fmtTC(outT)} · 帧 ${outFrame}`;
+        outEl.classList.remove('empty');
+      } else {
+        outEl.textContent = '未设';
+        outEl.classList.add('empty');
+      }
       if (inFrame != null && outFrame != null) {
         const dur = outT - inT;
-        $('rangeDuration').textContent = `📐 输出范围 · ${fmtTC(dur)} (${outFrame - inFrame + 1} 帧)`;
+        rEl.textContent = `📐 输出范围 · ${fmtTC(dur)} (${outFrame - inFrame + 1} 帧)`;
+        rEl.classList.remove('empty');
       } else if (inFrame != null) {
-        $('rangeDuration').textContent = '只设了 IN — 默认导出 [IN, 末尾]';
+        rEl.textContent = '只设了 IN — 默认导出 [IN, 末尾]';
+        rEl.classList.add('empty');
       } else if (outFrame != null) {
-        $('rangeDuration').textContent = '只设了 OUT — 默认导出 [开头, OUT]';
+        rEl.textContent = '只设了 OUT — 默认导出 [开头, OUT]';
+        rEl.classList.add('empty');
       } else {
-        $('rangeDuration').textContent = '未设置范围 · 默认导出整段';
+        rEl.textContent = '未设置范围 · 默认导出整段';
+        rEl.classList.add('empty');
       }
       // Update the hidden inputs used by the export pipeline
       const s = inFrame != null ? inFrame / fps : 0;
@@ -782,14 +818,15 @@ Toolkit.injectTopbar('video-toolkit');
           </div>
           <input type="range" id="frameScrub" min="0" max="100" value="0" step="1" class="frame-scrub" />
           <div class="frame-marks">
-            <button type="button" class="mark in"  id="setInBtn"  title="把当前帧设为起点 (I)">📍 设为起点 IN</button>
-            <div class="range-info">
-              <span class="in-tc"  id="inDisplay">IN: —</span>
-              <span class="sep">─</span>
-              <span class="out-tc" id="outDisplay">OUT: —</span>
-              <span class="range-dur" id="rangeDuration">未设置范围 · 默认导出整段</span>
+            <div class="frame-mark-row">
+              <button type="button" class="mark in"  id="setInBtn"  title="把当前帧设为起点 (I)">📍 设为起点 IN</button>
+              <span class="tc empty" id="inDisplay">未设</span>
             </div>
-            <button type="button" class="mark out" id="setOutBtn" title="把当前帧设为终点 (O)">📍 设为终点 OUT</button>
+            <div class="frame-mark-row">
+              <button type="button" class="mark out" id="setOutBtn" title="把当前帧设为终点 (O)">📍 设为终点 OUT</button>
+              <span class="tc empty" id="outDisplay">未设</span>
+            </div>
+            <div class="range-dur empty" id="rangeDuration">未设置范围 · 默认导出整段</div>
           </div>
           <div class="frame-shortcut">
             快捷键 <kbd>←</kbd>/<kbd>→</kbd> ±1 帧 · <kbd>Shift+←</kbd>/<kbd>→</kbd> ±1 秒 · <kbd>I</kbd> 设 IN · <kbd>O</kbd> 设 OUT · <kbd>Space</kbd> 播放/暂停
