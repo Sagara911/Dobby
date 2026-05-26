@@ -83,7 +83,9 @@
     max-width: 900px;
     font-size: clamp(2.6rem, 8vw, 5rem);
     font-weight: 700;
-    line-height: 1;
+    /* line-height: 1 clips descenders ("y", "p", "g") on tight headlines;
+       1.12 keeps the tight look but lets the y's tail breathe. */
+    line-height: 1.12;
     color: #fff;
     letter-spacing: -0.035em;
     margin: 0;
@@ -94,7 +96,12 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    /* inline-block + background-clip:text can chop the descender's
+       gradient fill on some renderers — give it a hair of vertical room
+       so the y's tail is fully painted */
     display: inline-block;
+    padding-bottom: 0.08em;
+    line-height: 1;
   }
   .hero .hero-sub {
     font-size: clamp(14px, 1.6vw, 17px);

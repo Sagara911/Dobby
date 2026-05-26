@@ -17,7 +17,7 @@ window.I18N_STRINGS = {
     // ───── Home page (index.html) ─────
     'home.title': 'Dobby — 你的本地素材精灵',
     'home.eyebrow': '🧦 Dobby 还在学本事 · 想找 Dobby 聊聊?写信 ',
-    'home.hero.title': '叫我 <span class="accent">Dobby</span>。<br/>你的本地素材精灵。',
+    'home.hero.title': '叫我 <span class="accent">Dobby</span>',
     'home.hero.tag': '🧦 Dobby is free · 本地素材精灵',
     'home.hero.subtitle': '— {n} 件本地工具 · 文件不上传 · Dobby 不偷看 · Dobby is free',
     'home.footer.contact': '📮 写信给 Dobby',
@@ -578,7 +578,7 @@ window.I18N_STRINGS = {
     // ───── Home page ─────
     'home.title': 'Dobby — Your local-only asset elf',
     'home.eyebrow': '🧦 Dobby is still learning · Want to chat with Dobby? Write to ',
-    'home.hero.title': 'Call me <span class="accent">Dobby</span>.<br/>Your local-only asset elf.',
+    'home.hero.title': 'Call me <span class="accent">Dobby</span>',
     'home.hero.tag': '🧦 Dobby is free · your local-only asset elf',
     'home.hero.subtitle': '— {n} local tools · files stay on your machine · Dobby does not peek · Dobby is free',
     'home.footer.contact': '📮 Email Dobby',
