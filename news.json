@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "version": "dobby-v50",
+      "date": "2026-05-26",
+      "title": "↩️ 卡片设计回滚 — 紧凑布局 + 大 icon 换回 emoji",
+      "items": [
+        "用户反馈:之前加的 102px 视觉块 + 52px Lucide line-art icon,卡片从 100px → 190px,首屏可见卡片数减半,**变得难找工具**。line-art icon 放大到 52px 显得骨架感、空。视觉块对 44 工具的密集仓库式 UI 来说反而是减分项",
+        "**回滚内容:**",
+        " · .tool-card 高度 190px → **回到 100px**(紧凑布局)",
+        " · 卡片内部:删 .card-visual 渐变块 + .card-text 文字块,**回到** 小 32×32 emoji icon + 标题 + 描述",
+        " · .tools-section min-height 1500 → **回到 800**",
+        " · makeCard JS 也回到 `<div class=\"icon\">${emoji}</div><h3><p>` 的原始结构",
+        "**保留的部分:**",
+        " · 🌟 **Hero 极简 + 氛围光球**(没人吐槽,显著提升首屏质感)",
+        " · 🌟 **Lucide 小 icon**:chips (14px) / cat-header (16px) / 顶栏导航 (14px) / 工具页 sidebar h1 (22px)。小尺寸下 line-art 不丑,且统一",
+        "教训:**Eagle 那种大视觉块卡片适合 6-12 个 feature 的 landing,不适合 44 个工具的工具盘**。密度和扫读速度比每张卡的故事感更重要。下次想再加视觉元素,先做 mockup 给我看了再 ship,别直接动 production CSS"
+      ]
+    },
+    {
       "version": "dobby-v49",
       "date": "2026-05-26",
       "title": "🎨 emoji 全替换成 Lucide SVG icon — 全站设计感升级第一刀",
