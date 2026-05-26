@@ -86,7 +86,11 @@
     /* line-height: 1 clips descenders ("y", "p", "g") on tight headlines;
        1.12 keeps the tight look but lets the y's tail breathe. */
     line-height: 1.12;
-    color: #fff;
+    /* var(--text) so the headline flips between #fff (dark theme) and
+       #1c1d24 (light theme). Hardcoding #fff here was making "叫我 Dobby"
+       invisible (white-on-white) when the user clicked the theme toggle,
+       so the toggle felt broken even though it was wired correctly. */
+    color: var(--text);
     letter-spacing: -0.035em;
     margin: 0;
     font-family: "Space Grotesk", sans-serif;
