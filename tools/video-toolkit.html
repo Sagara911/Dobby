@@ -1153,6 +1153,18 @@ Toolkit.injectTopbar('video-toolkit');
     let startT = 0, endT = duration;
     let speed = 1;
     let reverse = false;
+    // ── Hide srcVideo preview during encode ─────────────────────────
+    // The encode pipeline seeks srcVideo to every frame in sequence and
+    // draws it to the offscreen canvas. Since srcVideo is the VISIBLE
+    // element in the .srcBox preview pane, every seek triggers a full
+    // repaint of the preview area — for a 1-min video at 30fps that's
+    // 1800 visible repaints in sequence, which looks like the whole page
+    // is "flashing/strobing" while the encode runs. Hiding it during the
+    // loop lets users see a stable progress bar instead of a strobe.
+    // visibility (not display:none) preserves layout so the page doesn't
+    // jump when we restore it after the encode finishes.
+    const _preserveVis = srcVideo.style.visibility;
+    srcVideo.style.visibility = 'hidden';
     // canvas filter chain (built once for 'filter' action, applied to every frame draw)
     let canvasFilter = 'none';
     if (action === 'filter') {
@@ -1232,6 +1244,18 @@ Toolkit.injectTopbar('video-toolkit');
 
       let frameIdx = 0;
       ctx.filter = canvasFilter;
+      // ── Encoder backpressure ─────────────────────────────────────
+      // Without this, encoder.encode() calls can stack into encoder's
+      // internal queue faster than the encoder can drain them. For long
+      // (5min+) videos the queue grows unbounded — Chrome silently drops
+      // frames once a memory threshold is hit, and the encoded MP4 ends
+      // up truncated or never finalizes. Wait when queue > 30.
+      async function backpressureWait() {
+        // 30 frames ≈ 1 second of footage at 30fps; safe in-flight count.
+        while (encoder.encodeQueueSize > 30) {
+          await new Promise(r => setTimeout(r, 30));
+        }
+      }
       // For changeFps blend mode: remember the previously sampled canvas so we
       // can composite the *next* sample over it at 50% alpha, producing a
       // half-step motion-blur between adjacent output frames.
@@ -1259,37 +1283,48 @@ Toolkit.injectTopbar('video-toolkit');
         }
       }
 
-      if (!reverse) {
-        const playSpan = endT - startT;
-        let t = startT;
-        while (t < endT) {
-          await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
-          progress.set((t - startT) / playSpan);
-          t += interval * speed;
+      try {
+        if (!reverse) {
+          const playSpan = endT - startT;
+          let t = startT;
+          while (t < endT) {
+            await backpressureWait();
+            await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
+            progress.set((t - startT) / playSpan);
+            t += interval * speed;
+          }
+        } else {
+          let t = endT;
+          const playSpan = endT - startT;
+          while (t > startT) {
+            await backpressureWait();
+            await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
+            progress.set(1 - (t - startT) / playSpan);
+            t -= interval;
+          }
         }
-      } else {
-        let t = endT;
-        const playSpan = endT - startT;
-        while (t > startT) {
-          await pushFrame(t, Math.round((frameIdx / fpsNum) * 1e6));
-          progress.set(1 - (t - startT) / playSpan);
-          t -= interval;
-        }
+        await encoder.flush();
+        encoder.close();
+        muxer.finalize();
+        if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
+        if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+        outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+        outExt = 'mp4';
+        showOutput();
+        log.ok(`生成 MP4 ${fmtBytes(outBlob.size)}`);
+      } finally {
+        // Always restore preview visibility — even on error / cancel
+        srcVideo.style.visibility = _preserveVis;
       }
-      await encoder.flush();
-      encoder.close();
-      muxer.finalize();
-      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
-      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
-      outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
-      outExt = 'mp4';
-      showOutput();
-      log.ok(`生成 MP4 ${fmtBytes(outBlob.size)}`);
       return;
     }
 
     // === MediaRecorder path (WebM) ===
-    return doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, fmt, bitrate, canvasFilter);
+    try {
+      return await doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, fmt, bitrate, canvasFilter);
+    } finally {
+      srcVideo.style.visibility = _preserveVis;
+    }
   }
 
   async function doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, fmt, bitrate, canvasFilter) {
