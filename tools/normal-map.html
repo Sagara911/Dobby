@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>法线贴图生成器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .nm-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .nm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .nm-pane {
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .nm-pane-head {
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .nm-canvas-wrap {
+    flex: 1;
+    overflow: auto;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--checker), #0a0a0c;
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .nm-canvas-wrap canvas {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .nm-preview-3d {
+    background: #1a1a1f;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    height: 220px;
+    position: relative;
+    overflow: hidden;
+    cursor: move;
+  }
+  .nm-preview-3d canvas { display: block; width: 100%; height: 100%; }
+  .nm-preview-3d .hint {
+    position: absolute;
+    top: 8px; left: 12px;
+    font-size: 10px;
+    color: var(--muted);
+    pointer-events: none;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+
+  .nm-param-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .nm-param-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .nm-param-grid label .val {
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🗿 法线贴图</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入高度图</p>
+      <p class="hint">灰度 / 彩色都行<br>白色 = 高,黑色 = 低</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    </div>
+
+    <h2>参数</h2>
+    <div class="nm-param-grid">
+      <label>
+        强度 <span class="val" id="strengthVal">3.0</span>
+        <input type="range" id="strength" min="0" max="20" step="0.1" value="3.0" />
+      </label>
+      <label>
+        模糊预处理 <span class="val" id="blurVal">0</span>
+        <input type="range" id="blur" min="0" max="10" step="0.5" value="0" />
+      </label>
+    </div>
+
+    <h2>方向</h2>
+    <div style="display:flex; flex-direction:column; gap:4px">
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="invertR" /> <span>反转红通道(X)</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="invertG" /> <span>反转绿通道(Y)<br><span style="color:var(--muted); font-size:10px">DirectX 风格勾这个 / OpenGL 不勾</span></span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="invertHeight" /> <span>反转高度(白变低)</span>
+      </label>
+    </div>
+
+    <h2>源图当成</h2>
+    <select id="sourceMode" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="luma">亮度(灰度)— 默认,最通用</option>
+      <option value="red">仅 R 通道</option>
+      <option value="green">仅 G 通道</option>
+      <option value="blue">仅 B 通道</option>
+      <option value="alpha">仅 alpha 通道</option>
+    </select>
+
+    <h2>导出</h2>
+    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>💾 下载法线贴图 PNG</button>
+    <input type="text" id="filename" value="normal" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
+
+    <h2>说明</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7">
+      用 <strong>Sobel 算子</strong>算高度图的梯度(X 和 Y 方向),用 RGB 编码法线向量:<br>
+      • <span style="color:#ff5b5b">R</span> = X 方向<br>
+      • <span style="color:#31f59c">G</span> = Y 方向<br>
+      • <span style="color:#79b8ff">B</span> = Z 方向<br>
+      纯紫色 (128,128,255) = 朝上的法线(平地)
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">高度图 → 法线贴图 · 给 2.5D 游戏 / 浮雕材质做光照</div>
+
+    <div class="nm-stage">
+      <!-- side-by-side panes -->
+      <div class="nm-grid">
+        <div class="nm-pane">
+          <div class="nm-pane-head">📥 源(高度图)</div>
+          <div class="nm-canvas-wrap">
+            <canvas id="srcCv"></canvas>
+            <div id="srcPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px">
+              拖入图片当高度图 →<br><br>
+              <span style="font-size:10px">最适合: 浮雕 / 砖墙 / 木纹 / 像素角色轮廓</span>
+            </div>
+          </div>
+        </div>
+        <div class="nm-pane">
+          <div class="nm-pane-head">📤 法线贴图</div>
+          <div class="nm-canvas-wrap">
+            <canvas id="dstCv"></canvas>
+            <div id="dstPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px">输出会显示在这里</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D preview -->
+      <div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">💡 光照预览(鼠标移动改光源方向)</div>
+        <div class="nm-preview-3d" id="preview3d">
+          <canvas id="lightCv"></canvas>
+          <div class="hint">在这里移动鼠标 → 模拟点光源旋转</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('normal-map');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let srcImageData = null;
+  let resultImageData = null;
+  let cw = 0, ch = 0;
+
+  // ============================================================
+  //   Convert source image → grayscale heightmap (per pixel)
+  // ============================================================
+  function sourceToHeights(imageData, mode) {
+    const { width, height, data } = imageData;
+    const h = new Float32Array(width * height);
+    for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+      let v;
+      switch (mode) {
+        case 'red':   v = data[i]; break;
+        case 'green': v = data[i+1]; break;
+        case 'blue':  v = data[i+2]; break;
+        case 'alpha': v = data[i+3]; break;
+        default:      v = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]; break;  // luma
+      }
+      h[j] = v / 255;
+    }
+    return h;
+  }
+
+  // ============================================================
+  //   Optional 1-pass Gaussian blur on the heightmap
+  // ============================================================
+  function gaussianBlur(heights, width, height, sigma) {
+    if (sigma <= 0) return heights;
+    const radius = Math.ceil(sigma * 2);
+    const size = radius * 2 + 1;
+    const kernel = new Float32Array(size);
+    let sum = 0;
+    for (let i = 0; i < size; i++) {
+      const x = i - radius;
+      kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+      sum += kernel[i];
+    }
+    for (let i = 0; i < size; i++) kernel[i] /= sum;
+
+    const tmp = new Float32Array(width * height);
+    const out = new Float32Array(width * height);
+    // horizontal
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let s = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const sx = Math.min(width - 1, Math.max(0, x + k));
+          s += heights[y * width + sx] * kernel[k + radius];
+        }
+        tmp[y * width + x] = s;
+      }
+    }
+    // vertical
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let s = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const sy = Math.min(height - 1, Math.max(0, y + k));
+          s += tmp[sy * width + x] * kernel[k + radius];
+        }
+        out[y * width + x] = s;
+      }
+    }
+    return out;
+  }
+
+  // ============================================================
+  //   Sobel → normal map
+  // ============================================================
+  function computeNormalMap(heights, width, height, strength, invR, invG, invH) {
+    const out = new Uint8ClampedArray(width * height * 4);
+    const H = invH ? -1 : 1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        // sample 8 neighbors with clamp-to-edge
+        const sample = (sx, sy) => {
+          const cx = Math.min(width - 1, Math.max(0, sx));
+          const cy = Math.min(height - 1, Math.max(0, sy));
+          return heights[cy * width + cx] * H;
+        };
+        const tl = sample(x-1, y-1), t = sample(x, y-1), tr = sample(x+1, y-1);
+        const l  = sample(x-1, y),                                r  = sample(x+1, y);
+        const bl = sample(x-1, y+1), b = sample(x, y+1), br = sample(x+1, y+1);
+        // Sobel
+        let dx = (tr + 2*r + br) - (tl + 2*l + bl);
+        let dy = (bl + 2*b + br) - (tl + 2*t + tr);
+        // build normal vector — flip sign of dx/dy by gradient direction.
+        // For DirectX-style green: invert dy after sign assignment.
+        let nx = -dx * strength;
+        let ny = -dy * strength;
+        let nz = 1;
+        const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+        nx /= len; ny /= len; nz /= len;
+        if (invR) nx = -nx;
+        if (invG) ny = -ny;
+        const i = (y * width + x) * 4;
+        out[i]     = Math.round((nx * 0.5 + 0.5) * 255);
+        out[i + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+        out[i + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+        out[i + 3] = 255;
+      }
+    }
+    return out;
+  }
+
+  function regenerate() {
+    if (!srcImageData) return;
+    const strength = parseFloat($('strength').value);
+    const blurSigma = parseFloat($('blur').value);
+    const invR = $('invertR').checked;
+    const invG = $('invertG').checked;
+    const invH = $('invertHeight').checked;
+    const mode = $('sourceMode').value;
+
+    const t0 = performance.now();
+    let heights = sourceToHeights(srcImageData, mode);
+    if (blurSigma > 0) heights = gaussianBlur(heights, cw, ch, blurSigma);
+    const out = computeNormalMap(heights, cw, ch, strength, invR, invG, invH);
+    const ms = (performance.now() - t0).toFixed(0);
+    resultImageData = new ImageData(out, cw, ch);
+
+    const dst = $('dstCv');
+    dst.width = cw; dst.height = ch;
+    dst.getContext('2d').putImageData(resultImageData, 0, 0);
+    $('dstPlaceholder').style.display = 'none';
+    $('downloadBtn').disabled = false;
+    log.dim(`生成 ${cw}×${ch} 法线 · ${ms}ms`);
+
+    // also update light preview
+    updateLightPreview();
+  }
+
+  // ============================================================
+  //   Light preview — simple Lambertian diffuse using the normal map
+  // ============================================================
+  let lightDir = { x: 0.5, y: -0.5, z: 1 };  // unit-ish
+  function updateLightPreview() {
+    if (!resultImageData) return;
+    const cv = $('lightCv');
+    const dpr = window.devicePixelRatio || 1;
+    cv.width  = cv.clientWidth * dpr;
+    cv.height = cv.clientHeight * dpr;
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    // sample normal map onto a tiled background
+    const tileW = Math.min(cw, w);
+    const tileH = Math.min(ch, h);
+    const offX = (w - tileW) / 2;
+    const offY = (h - tileH) / 2;
+    const out = ctx.createImageData(w, h);
+    // normalize light dir
+    const lx = lightDir.x, ly = lightDir.y, lz = lightDir.z;
+    const ll = Math.sqrt(lx*lx + ly*ly + lz*lz) || 1;
+    const Lx = lx / ll, Ly = ly / ll, Lz = lz / ll;
+    const ambient = 0.18;
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const sx = Math.floor((px - offX) * cw / tileW);
+        const sy = Math.floor((py - offY) * ch / tileH);
+        if (sx < 0 || sx >= cw || sy < 0 || sy >= ch) {
+          const i = (py * w + px) * 4;
+          out.data[i] = 30; out.data[i+1] = 30; out.data[i+2] = 40; out.data[i+3] = 255;
+          continue;
+        }
+        const ni = (sy * cw + sx) * 4;
+        const nr = resultImageData.data[ni]     / 255 * 2 - 1;
+        const ng = resultImageData.data[ni + 1] / 255 * 2 - 1;
+        const nb = resultImageData.data[ni + 2] / 255 * 2 - 1;
+        let d = nr * Lx + ng * Ly + nb * Lz;
+        if (d < 0) d = 0;
+        const v = ambient + (1 - ambient) * d;
+        const i = (py * w + px) * 4;
+        out.data[i]     = Math.round(v * 220);
+        out.data[i + 1] = Math.round(v * 220);
+        out.data[i + 2] = Math.round(v * 240);
+        out.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(out, 0, 0);
+  }
+
+  // ============================================================
+  //   Wire UI
+  // ============================================================
+  function loadFile(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        cw = img.width; ch = img.height;
+        const cv = newCanvas(cw, ch);
+        cv.getContext('2d').drawImage(img, 0, 0);
+        srcImageData = cv.getContext('2d').getImageData(0, 0, cw, ch);
+        // render source preview
+        const sCv = $('srcCv');
+        sCv.width = cw; sCv.height = ch;
+        sCv.getContext('2d').drawImage(img, 0, 0);
+        $('srcPlaceholder').style.display = 'none';
+        log.ok(`加载 ${cw}×${ch}`);
+        regenerate();
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  attachDropZone($('dropZone'), $('fileInput'), files => files[0] && loadFile(files[0]));
+
+  ['strength','blur'].forEach(id => {
+    $(id).addEventListener('input', e => {
+      $(id + 'Val').textContent = parseFloat(e.target.value).toFixed(id === 'strength' ? 1 : 1);
+      regenerate();
+    });
+  });
+  ['invertR','invertG','invertHeight','sourceMode'].forEach(id => {
+    $(id).addEventListener('change', regenerate);
+  });
+
+  $('downloadBtn').addEventListener('click', async () => {
+    if (!resultImageData) return;
+    const cv = newCanvas(cw, ch);
+    cv.getContext('2d').putImageData(resultImageData, 0, 0);
+    const blob = await canvasToBlob(cv, 'image/png');
+    const name = ($('filename').value || 'normal').replace(/[^\w-]/g, '_');
+    download(blob, `${name}_${cw}x${ch}.png`);
+  });
+
+  // Light preview drag
+  let dragging = false;
+  $('preview3d').addEventListener('pointerdown', e => { dragging = true; });
+  window.addEventListener('pointerup', () => { dragging = false; });
+  $('preview3d').addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const r = $('preview3d').getBoundingClientRect();
+    const dx = (e.clientX - r.left) / r.width  * 2 - 1;
+    const dy = (e.clientY - r.top)  / r.height * 2 - 1;
+    lightDir.x = dx;
+    lightDir.y = dy;
+    lightDir.z = Math.max(0.2, 1 - Math.sqrt(dx*dx + dy*dy));
+    updateLightPreview();
+  });
+  window.addEventListener('resize', updateLightPreview);
+
+  log.ok('法线贴图生成器准备好');
+})();
+</script>
+</body>
+</html>
