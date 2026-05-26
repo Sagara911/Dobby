@@ -28,9 +28,10 @@
   --jade-glow:    rgba(49, 245, 156, 0.35);
 
   /* warm accent: champagne gold */
-  --champagne:    #f2dfb8;
-  --soft-gold:    #d8c38a;
-  --pearl-gold:   #f7ecd3;
+  --champagne:     #f2dfb8;
+  --champagne-rgb: 242, 223, 184;
+  --soft-gold:     #d8c38a;
+  --pearl-gold:    #f7ecd3;
 
   /* status */
   --success:      #31f59c;
@@ -87,9 +88,10 @@
   --jade-soft:    rgba(30, 168, 112, 0.10);
   --jade-glow:    rgba(30, 168, 112, 0.32);
 
-  --champagne:    #c89e3a;
-  --soft-gold:    #b3873a;
-  --pearl-gold:   #d4a83c;
+  --champagne:     #c89e3a;
+  --champagne-rgb: 200, 158, 58;
+  --soft-gold:     #b3873a;
+  --pearl-gold:    #d4a83c;
 
   /* Category accents — slightly darker variants so they read on white */
   --cat-image-rgb:  46, 110, 220;

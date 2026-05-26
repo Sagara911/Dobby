@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v48",
+      "date": "2026-05-26",
+      "title": "🎨 设计感升级:Hero 加氛围光球 + 工具卡换成「视觉块 + 文字」结构",
+      "items": [
+        "**首页 hero 不再是纯文字** — 背后多了两团巨大的模糊径向渐变(jade-green 一团在左上角、champagne 金色一团在右下角),22s / 28s 缓慢漂移,phase 错开不同步,prefers-reduced-motion 用户看到的是静态。Eagle / Linear / Vercel 都是这一招,简单粗暴又有效",
+        "**工具卡片重做** — 之前是\"小图标 32×32 + 标题 + 2 行描述\",信息密度高但全是文字。现在每张卡片上半部分是 **102px 高的视觉块**:cat 色渐变背景 + 14px 点阵图案 + 48px 大 emoji,带 drop-shadow,hover 时 emoji 微微上浮 + 放大。下半部分才是标题 + 描述。卡片从 100px 拔高到 190px",
+        "视觉块用 CSS-only:linear-gradient(135deg) + radial-gradient 点阵 + mask-image 对角线渐隐。每个 cat 分别 retint(image=teal, anim=purple, av=orange, code=jade, audit=blue) — 5 个色家族在工具墙上扫一遍能感觉到 \"图像区\" \"动画区\" \"代码区\" 的视觉聚类,跟 Eagle 的 feature 卡很像",
+        "tools-section 的 min-height 从 800 → 1500,因为卡片高度涨了 90% — CLS 不会回归",
+        "添加了 `--champagne-rgb` CSS 变量(之前只有 hex,没 rgb 三元组),hero 第二团光球能正确用 rgba() 配 alpha",
+        "底层的 mouse-following spotlight / border halo 全部保留,在新卡片上看效果更明显(发光范围 380px 现在能覆盖整个视觉块 + 文字块)"
+      ]
+    },
+    {
       "version": "dobby-v47",
       "date": "2026-05-26",
       "title": "🛡️ 精灵图打包加 Canvas 超尺寸守护 — 不再假装打包成功",

@@ -62,7 +62,66 @@
     align-items: center;
     justify-content: center;
     gap: clamp(20px, 3vh, 36px);
+    /* Clip the ambient orbs to the hero box so they don't bleed into the
+       tools section / topbar area below + above. */
+    overflow: hidden;
   }
+  /* ===== Hero ambient orbs =====
+     Two large, heavily blurred radial gradients drifting slowly in the
+     background. Provides depth + brand color presence without competing
+     with the centered mascot / title / sub copy. z-index: 0 sits below
+     `.hero > *` which inherits the default stack and renders above.
+     prefers-reduced-motion respected — orbs go static. */
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+  }
+  .hero::before {
+    width: clamp(360px, 50vw, 560px);
+    aspect-ratio: 1;
+    /* jade-green, top-left, drifting */
+    background: radial-gradient(circle, rgba(var(--jade-rgb), 0.55), rgba(var(--jade-rgb), 0) 70%);
+    top: -10%;
+    left: -8%;
+    opacity: 0.85;
+    animation: hero-orb-1 22s ease-in-out infinite;
+  }
+  .hero::after {
+    width: clamp(400px, 55vw, 620px);
+    aspect-ratio: 1;
+    /* champagne / warm gold complement, bottom-right, slower drift */
+    background: radial-gradient(circle,
+      rgba(var(--champagne-rgb, 215, 195, 115), 0.42),
+      rgba(var(--champagne-rgb, 215, 195, 115), 0) 70%);
+    bottom: -12%;
+    right: -10%;
+    opacity: 0.75;
+    animation: hero-orb-2 28s ease-in-out infinite;
+    animation-delay: -8s; /* offset phase so the two never sync */
+  }
+  @keyframes hero-orb-1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(40px, 60px) scale(1.08); }
+    66%      { transform: translate(-30px, 30px) scale(0.96); }
+  }
+  @keyframes hero-orb-2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    40%      { transform: translate(-60px, -40px) scale(1.12); }
+    75%      { transform: translate(20px, -20px) scale(0.94); }
+  }
+  /* Hero content (h1, sub, mascot, scroll-hint) lives above the orbs */
+  .hero > * { position: relative; z-index: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero::before, .hero::after { animation: none; }
+  }
+  :root[data-theme="light"] .hero::before { opacity: 0.45; }
+  :root[data-theme="light"] .hero::after  { opacity: 0.30; }
   .hero > * {
     margin-left: auto;
     margin-right: auto;
@@ -208,10 +267,11 @@
     margin: 24px auto 48px;
     padding: 0 20px;
     /* Reserve vertical space ahead of the JS card render so the footer
-       doesn't jump down once cards appear. 800px ~= one fold of tool
-       cards (4 cols × 2 rows = 8 cards × ~100px tall). Subsequent rows
-       extend below naturally, but the FIRST shift is what CLS measures. */
-    min-height: 800px;
+       doesn't jump down once cards appear. Bumped from 800 → 1500 in
+       v4 because cards grew from ~100px to ~190px tall (new visual block
+       at the top of each card). 4 cols × 4 rows × 190 ≈ 1520, so 1500
+       reserves the first fold and a half. */
+    min-height: 1500px;
   }
 
   /* Header for the tools section — moved out of hero in v3.
@@ -331,14 +391,74 @@
     -webkit-backdrop-filter: blur(18px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 14px 16px 12px;
+    /* v4: padding moved to .card-text; .card-visual owns the top portion
+       edge-to-edge for the gradient + pattern + big emoji */
+    padding: 0;
     text-decoration: none;
     color: var(--text);
     transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
     display: flex;
     flex-direction: column;
+    gap: 0;
+    min-height: 180px;
+  }
+  /* ===== Card visual block (v4) =====
+     The top ~100px of every card is now a category-colored gradient panel
+     with a dot-pattern overlay + a large emoji icon. Gives cards Eagle-
+     style "preview at a glance" feel without needing 44 unique
+     illustrations — the cat gradient + drop-shadowed emoji + bob-on-hover
+     does most of the work. */
+  .card-visual {
+    position: relative;
+    height: 102px;
+    background: linear-gradient(135deg,
+      rgba(var(--cat-rgb, var(--jade-rgb)), 0.24),
+      rgba(var(--cat-rgb, var(--jade-rgb)), 0.04));
+    border-bottom: 1px solid rgba(var(--cat-rgb, var(--jade-rgb)), 0.18);
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  /* Dot halftone pattern, faded diagonally so it doesn't compete with the
+     emoji. Same dot pattern across all 5 categories; the cat color comes
+     from the dot color itself (rgba(var(--cat-rgb))). */
+  .card-visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(var(--cat-rgb, var(--jade-rgb)), 0.22) 1.5px, transparent 1.6px);
+    background-size: 14px 14px;
+    background-position: 0 0;
+    opacity: 0.62;
+    -webkit-mask-image: linear-gradient(135deg, rgba(0,0,0,0.95) 0%, transparent 78%);
+    mask-image: linear-gradient(135deg, rgba(0,0,0,0.95) 0%, transparent 78%);
+  }
+  .card-visual .visual-icon {
+    position: relative;
+    z-index: 1;
+    font-size: 48px;
+    line-height: 1;
+    filter: drop-shadow(0 6px 16px rgba(var(--cat-rgb, var(--jade-rgb)), 0.45));
+    transition: transform 0.35s ease;
+    /* mute the OS emoji color cast slightly so it sits on the colored
+       backdrop without clashing — emoji are color-rendered by the system
+       font and can look "too saturated" on jade / purple / orange backdrops */
+    user-select: none;
+  }
+  .tool-card:hover .visual-icon {
+    transform: translateY(-4px) scale(1.07);
+  }
+  /* Text block sits below the visual */
+  .card-text {
+    padding: 12px 16px 14px;
+    display: flex;
+    flex-direction: column;
     gap: 4px;
-    min-height: 100px;
+    flex: 1;
+    min-height: 0;
   }
   .tool-card::before,
   .tool-card::after {
@@ -381,6 +501,9 @@
   .tool-card:hover::after { opacity: 1; }
   .tool-card > * { position: relative; z-index: 2; }
 
+  /* Legacy .icon rule kept for any old card markup that might still get
+     rendered (search-recent paths, handoff thumbnails, etc.). The home
+     page card builder now uses .card-visual / .visual-icon instead. */
   .tool-card .icon {
     width: 32px;
     height: 32px;
@@ -1074,9 +1197,13 @@
     const isEn = Toolkit.getLang && Toolkit.getLang() === 'en';
     const subHtml = isEn ? '' : `<span class="card-sub">${c.en}</span>`;
     a.innerHTML = `
-      <div class="icon">${c.icon}</div>
-      <h3>${toolName(c)} ${subHtml}</h3>
-      <p>${toolDesc(c)}</p>
+      <div class="card-visual">
+        <span class="visual-icon">${c.icon}</span>
+      </div>
+      <div class="card-text">
+        <h3>${toolName(c)}${subHtml ? ' ' + subHtml : ''}</h3>
+        <p>${toolDesc(c)}</p>
+      </div>
     `;
     wireSpotlight(a);
     return a;
