@@ -192,6 +192,13 @@ body {
   line-height: 1.5;
   overflow-x: hidden;
   letter-spacing: 0.005em;
+  /* Smooth theme switch — without this, dark↔light flips are instant and
+     can look like the page just blinked to a different DOM. 0.25s gives
+     enough time to see the change happen. */
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
 }
 a { color: inherit; text-decoration: none; transition: color 0.15s; }
 a:hover { color: var(--jade); }

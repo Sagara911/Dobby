@@ -492,11 +492,36 @@
   function getThemePref() {
     try { return localStorage.getItem(THEME_PREF_KEY) || 'dark'; } catch (_) { return 'dark'; }
   }
+  // Vars the rAF theme cycle writes inline on :root every ~100ms. When the
+  // user clicks the toggle, we need to strip these IMMEDIATELY — not wait
+  // for the next tick — so the static light/dark CSS values take over. If
+  // the tab happens to be hidden or the cycle paused at click time, the
+  // tick-based cleanup never runs and the page would visually appear stuck
+  // in the previous theme. User-reported symptom: "clicked the moon, page
+  // didn't react".
+  const _CYCLE_OVERRIDE_KEYS = [
+    '--jade','--jade-rgb','--jade-soft','--jade-glow','--accent',
+    '--accent-soft','--success','--bg','--text','--text-soft','--champagne'
+  ];
+  function _stripCycleOverrides() {
+    const rt = document.documentElement.style;
+    _CYCLE_OVERRIDE_KEYS.forEach(k => rt.removeProperty(k));
+  }
+
   function applyTheme(theme) {
     if (theme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light');
+      // Light theme uses the static :root[data-theme="light"] palette.
+      // Clear any cycle-set inline overrides right now so the switch is
+      // visible without waiting for the next rAF tick.
+      _stripCycleOverrides();
     } else {
       document.documentElement.removeAttribute('data-theme');
+      // Dark mode: the cycle will resume writing inline vars on its next
+      // tick. Until then, removing inline vars lets the dark :root values
+      // show (also useful when prefers-reduced-motion is on — cycle is
+      // disabled but switching dark↔light still needs to apply).
+      _stripCycleOverrides();
     }
     try { localStorage.setItem(THEME_PREF_KEY, theme); } catch (_) {}
     // refresh the toggle's icon if present
