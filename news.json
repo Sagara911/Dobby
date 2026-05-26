@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v45",
+      "date": "2026-05-26",
+      "title": "✨ 鼠标跟随发光升级 — 工具卡更亮 + 分类 chips + 搜索框也跟着发光了",
+      "items": [
+        "灵感来自 Eagle.cool / Linear / Vercel 那种「鼠标靠近边缘就亮」的小细节",
+        "**工具卡发光强化** — 内部 spotlight 半径 280px → **380px**,alpha 0.22 → **0.35**;边框光晕半径 220 → 260px,inner alpha 0.9 → **1.0**,drop-shadow 8 → 10px。现在鼠标过工具卡能清楚看到一团颜色跟着走,不再是若有若无的暗示",
+        "**🆕 分类 chips 加发光** — 5 个彩色 chips(图像 / 动画 / 音视频 / 代码 / 分析)现在也有 mouse-follow 效果,半径 140px(chip 本身窄,小一点合适),颜色用各自的 cat-rgb,鼠标进 chip 就亮起来",
+        "**🆕 搜索框加发光** — 搜索框 hover 或 focus 时,周边有一圈 jade 色的软光跟着鼠标动,半径 320px。focus 时光不消失,跟原来的 outline glow 叠加,焦点感更明显",
+        "代码层面提了个通用的 `wireSpotlight(el)` helper,任何带 border + `::before` radial-gradient 的元素丢进去就能跟鼠标。chip 渲染完调一次,search-wrap 调一次,工具卡 makeCard 里调一次",
+        "不影响 perf(只是 mousemove 监听 + CSS 变量写入,GPU friendly),不影响功能"
+      ]
+    },
+    {
       "version": "dobby-v44",
       "date": "2026-05-26",
       "title": "🧦 首页 Hero v3 极简化 — 一眼就看到 Dobby",

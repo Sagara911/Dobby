@@ -151,6 +151,29 @@
     border-color: var(--jade);
     box-shadow: 0 0 0 4px rgba(var(--jade-rgb), 0.14);
   }
+  /* Search box mouse-follow halo. Sits BEHIND the input via z-index 0
+     while .search-wrap children (icon, input, clear) are z-index 1.
+     Hover fades it in; the input's rgba(0,0,0,0.55) bg lets the halo
+     show through at the pill edges, painting a soft jade aura. */
+  .search-wrap {
+    --mx: 50%;
+    --my: 50%;
+  }
+  .search-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: var(--radius-pill);
+    background: radial-gradient(320px circle at var(--mx) var(--my),
+      rgba(var(--jade-rgb), 0.32), rgba(var(--jade-rgb), 0) 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .search-wrap:hover::before,
+  .search-wrap:focus-within::before { opacity: 1; }
+  .search-wrap > * { position: relative; z-index: 1; }
   .search-wrap .icon {
     position: absolute;
     left: 22px;
@@ -327,23 +350,27 @@
   }
   .tool-card::before {
     z-index: 0;
-    background: radial-gradient(280px circle at var(--mx) var(--my), rgba(var(--jade-rgb), 0.2), rgba(var(--jade-rgb), 0) 65%);
+    /* Stronger spotlight: 380px (was 280) + 0.35 alpha (was 0.20) so the
+       mouse-follow glow reads as a clear pool of light, not a hint. */
+    background: radial-gradient(380px circle at var(--mx) var(--my), rgba(var(--jade-rgb), 0.35), rgba(var(--jade-rgb), 0) 65%);
     opacity: 0;
     transition: opacity 0.22s ease;
   }
   .tool-card::after {
     z-index: 1;
     padding: 1px;
-    background: radial-gradient(220px circle at var(--mx) var(--my),
-      rgba(var(--jade-rgb), 0.9) 0%, rgba(var(--jade-rgb), 0.5) 25%,
-      rgba(var(--jade-rgb), 0.12) 55%, rgba(var(--jade-rgb), 0) 78%);
+    /* Border-glow halo: brighter inner + slightly larger fall-off so the
+       border arc you trace with the cursor is unambiguously lit. */
+    background: radial-gradient(260px circle at var(--mx) var(--my),
+      rgba(var(--jade-rgb), 1) 0%, rgba(var(--jade-rgb), 0.65) 25%,
+      rgba(var(--jade-rgb), 0.2) 55%, rgba(var(--jade-rgb), 0) 78%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
     opacity: 0;
     transition: opacity 0.22s ease;
-    filter: drop-shadow(0 0 8px rgba(var(--jade-rgb), 0.4));
+    filter: drop-shadow(0 0 10px rgba(var(--jade-rgb), 0.55));
   }
   .tool-card:hover {
     transform: translateY(-3px);
@@ -375,14 +402,14 @@
   .tool-card[data-cat="audit"] { --cat-rgb: var(--cat-audit-rgb); }
   /* Override the hover glow / outline to use --cat-rgb as well */
   .tool-card[data-cat]::before {
-    background: radial-gradient(280px circle at var(--mx) var(--my),
-      rgba(var(--cat-rgb), 0.22), rgba(var(--cat-rgb), 0) 65%);
+    background: radial-gradient(380px circle at var(--mx) var(--my),
+      rgba(var(--cat-rgb), 0.38), rgba(var(--cat-rgb), 0) 65%);
   }
   .tool-card[data-cat]::after {
-    background: radial-gradient(220px circle at var(--mx) var(--my),
-      rgba(var(--cat-rgb), 0.9) 0%, rgba(var(--cat-rgb), 0.5) 25%,
-      rgba(var(--cat-rgb), 0.12) 55%, rgba(var(--cat-rgb), 0) 78%);
-    filter: drop-shadow(0 0 8px rgba(var(--cat-rgb), 0.45));
+    background: radial-gradient(260px circle at var(--mx) var(--my),
+      rgba(var(--cat-rgb), 1) 0%, rgba(var(--cat-rgb), 0.65) 25%,
+      rgba(var(--cat-rgb), 0.2) 55%, rgba(var(--cat-rgb), 0) 78%);
+    filter: drop-shadow(0 0 10px rgba(var(--cat-rgb), 0.6));
   }
   .tool-card[data-cat]:hover {
     border-color: rgba(var(--cat-rgb), 0.32);
@@ -689,6 +716,10 @@
   }
   .hero-cat-chips a {
     --c: var(--jade-rgb);
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -704,6 +735,23 @@
     transition: background 0.15s, border-color 0.15s, transform 0.15s;
     min-height: 36px;
   }
+  /* Chip mouse-follow spotlight: smaller radius (140px) than tool-cards
+     since chips themselves are narrow. Sits between the chip background
+     and the text — so .chip-icon / label / count render above (z-index 1
+     via the rule below). */
+  .hero-cat-chips a::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(140px circle at var(--mx) var(--my),
+      rgba(var(--c), 0.45), rgba(var(--c), 0) 70%);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    pointer-events: none;
+  }
+  .hero-cat-chips a:hover::before { opacity: 1; }
+  .hero-cat-chips a > * { position: relative; z-index: 1; }
   .hero-cat-chips a:hover {
     background: rgba(var(--c), 0.22);
     border-color: rgba(var(--c), 0.6);
@@ -980,6 +1028,21 @@
   // templated the tool count into the v2 hero is gone — count info
   // is no longer in the hero (per Hero v3 minimal design).
 
+  // Mouse-follow spotlight helper. Sets --mx / --my CSS custom properties
+  // in pixels relative to the element, so a `::before` with a radial
+  // gradient at `var(--mx) var(--my)` follows the cursor. Used on tool
+  // cards, chips, and the search box. Idempotent — safe to call twice
+  // (overwrites the same handler).
+  function wireSpotlight(el) {
+    if (!el || el.__spotWired) return;
+    el.__spotWired = true;
+    el.addEventListener('mousemove', (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  }
+
   // Hero category chips — colored quick-jump buttons that double as a visual
   // anchor for the hero section.
   (function renderHeroChips() {
@@ -991,11 +1054,14 @@
         <span class="chip-icon">${cat.icon}</span><span data-i18n="${cat.key}">${cat.name}</span><span class="chip-count">${count}</span>
       </a>`;
     }).join('');
+    // Wire spotlight on each chip after the innerHTML render
+    host.querySelectorAll('a').forEach(wireSpotlight);
   })();
 
   const section = document.getElementById('toolsSection');
   const searchInput = document.getElementById('search');
   const searchWrap = document.getElementById('searchWrap');
+  wireSpotlight(searchWrap);
 
   function makeCard(c) {
     const a = document.createElement('a');
@@ -1012,11 +1078,7 @@
       <h3>${toolName(c)} ${subHtml}</h3>
       <p>${toolDesc(c)}</p>
     `;
-    a.addEventListener('mousemove', (e) => {
-      const r = a.getBoundingClientRect();
-      a.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-      a.style.setProperty('--my', (e.clientY - r.top) + 'px');
-    });
+    wireSpotlight(a);
     return a;
   }
 
