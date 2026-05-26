@@ -778,7 +778,7 @@
   <section class="hero">
     <div class="hero-tag" data-i18n="home.hero.tag">🧦 Dobby is free · 本地素材精灵</div>
     <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span></h1>
-    <p class="hero-sub" id="heroSub">— 44 件本地工具 · 文件不上传 · Dobby is free</p>
+    <p class="hero-sub" id="heroSub">压图 · 抠图 · 转 GIF · 录屏 · 字体瘦身 ... 共 44 件浏览器本地工具,文件不上传</p>
     <div class="search-wrap" id="searchWrap">
       <span class="icon">🔍</span>
       <input type="text" id="search" data-i18n-attr="placeholder:home.search.placeholder" placeholder="告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)" autocomplete="off" />
@@ -934,7 +934,7 @@
   function renderHeroSub() {
     const el = document.getElementById('heroSub');
     if (!el) return;
-    el.textContent = T('home.hero.subtitle', { n: CARDS.length }, `— ${CARDS.length} 件本地工具 · 文件不上传 · Dobby is free`);
+    el.textContent = T('home.hero.subtitle', { n: CARDS.length }, `压图 · 抠图 · 转 GIF · 录屏 · 字体瘦身 ... 共 ${CARDS.length} 件浏览器本地工具,文件不上传`);
   }
   renderHeroSub();
   document.addEventListener('langchange', renderHeroSub);
