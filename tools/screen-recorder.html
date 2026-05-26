@@ -146,6 +146,71 @@
   .rec-webcam-pip.show { display: block; }
   .rec-webcam-pip video { width: 100%; height: 100%; object-fit: cover; }
 
+  /* === crop framing overlay ===
+     Sits on top of the live preview when the user picked "框选一块" mode.
+     4 dark mask panels around the chosen rect + the rect itself with a
+     bright dashed border. User drags to define / redefine the rect. */
+  .rec-crop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    cursor: crosshair;
+    user-select: none;
+  }
+  .rec-crop-mask {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+  }
+  .rec-crop-mask.top    { top: 0; left: 0; right: 0; height: 0; }
+  .rec-crop-mask.bottom { bottom: 0; left: 0; right: 0; height: 0; }
+  .rec-crop-mask.left   { top: 0; bottom: 0; left: 0; width: 0; }
+  .rec-crop-mask.right  { top: 0; bottom: 0; right: 0; width: 0; }
+  .rec-crop-rect {
+    position: absolute;
+    border: 2px dashed #ffd07a;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 12px rgba(255, 208, 122, 0.4);
+    pointer-events: none;
+    display: none;
+  }
+  .rec-crop-rect.show { display: block; }
+  .rec-crop-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #ffd07a;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 208, 122, 0.4);
+    pointer-events: none;
+    text-align: center;
+  }
+  .rec-crop-hint.hide { display: none; }
+
+  /* Framing confirm bar — below the preview when user is framing a crop */
+  .rec-frame-confirm {
+    background: linear-gradient(135deg, rgba(255, 208, 122, 0.08), rgba(0,0,0,0.2));
+    border: 1px solid rgba(255, 208, 122, 0.35);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .rec-frame-confirm.show { display: flex !important; }
+  .rec-frame-info {
+    flex: 1;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+  }
+  .rec-frame-confirm .rec-big-btn { padding: 10px 18px; font-size: 14px; }
+  .rec-frame-confirm .rec-big-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
   /* result info */
   .rec-result-info {
     background: rgba(0, 0, 0, 0.3);
@@ -201,6 +266,13 @@
       <span>包含麦克风音轨</span>
     </label>
     <div class="rec-help">系统音(标签页 / 应用音)默认会录(取决于你浏览器的「分享」对话框,选「同时分享系统声音」)</div>
+
+    <h2>录制区域</h2>
+    <select id="captureArea" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="full" selected>整个画面(默认)</option>
+      <option value="crop">框选一块(选完屏幕后拖矩形)</option>
+    </select>
+    <div class="rec-help">选「框选一块」后,选完屏幕的下一步是在预览图上拖个矩形,只录那一块</div>
 
     <h2 data-i18n="sr.pip">摄像头叠加(PiP)</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
@@ -268,6 +340,23 @@
         <div class="rec-webcam-pip" id="webcamPip">
           <video id="webcamVideo" autoplay muted playsinline></video>
         </div>
+        <!-- Crop overlay: shown only during framing mode -->
+        <div class="rec-crop-overlay" id="cropOverlay" style="display:none">
+          <div class="rec-crop-mask top"></div>
+          <div class="rec-crop-mask left"></div>
+          <div class="rec-crop-mask right"></div>
+          <div class="rec-crop-mask bottom"></div>
+          <div class="rec-crop-rect" id="cropRect"></div>
+          <div class="rec-crop-hint" id="cropHint">在预览里拖一个矩形 — 那就是要录的区域</div>
+        </div>
+      </div>
+
+      <!-- Framing confirm bar: shown only during framing mode -->
+      <div class="rec-frame-confirm" id="frameConfirm" style="display:none">
+        <span class="rec-frame-info" id="frameInfo">尚未框选 · 拖一个矩形</span>
+        <button class="rec-big-btn" id="frameConfirmBtn" disabled>✓ 开始录制选中区</button>
+        <button class="rec-big-btn stop" id="frameCancelBtn">✗ 取消</button>
+        <button class="rec-big-btn" id="frameFullBtn" style="background:rgba(255,255,255,0.05); border-color:var(--border); color:var(--text)">📺 改录整屏</button>
       </div>
 
       <!-- RESULT INFO -->
@@ -296,6 +385,7 @@ Toolkit.injectTopbar('screen-recorder');
   let displayStream = null;
   let micStream = null;
   let webcamStream = null;
+  let mixedAudioStream = null;   // audio-only stream after display+mic mix
   let recorder = null;
   let chunks = [];
   let recordingBlob = null;
@@ -303,12 +393,19 @@ Toolkit.injectTopbar('screen-recorder');
   let timerId = null;
   // PiP composite state — when webcam is on, we render display + webcam onto
   // an offscreen canvas and use canvas.captureStream() as the recorder's
-  // video track so the camera ends up baked into the final WebM.
+  // video track so the camera ends up baked into the final WebM. The same
+  // canvas path is also used when the user picked a crop region, so the
+  // canvas size shrinks to the crop dimensions and only the chosen rect
+  // ends up in the output.
   let compositeCanvas = null;
   let compositeCtx = null;
   let compositeRAF = 0;
   let compositeVideo = null;     // hidden <video> sink for displayStream
   let compositeWebcamVideo = null;
+  // Crop region in SOURCE pixel coordinates. null = record full display.
+  let cropRect = null;
+  // Source resolution (resolved once we have the display stream).
+  let srcW = 0, srcH = 0;
 
   // Update the size-percent label live
   $('pipSize').addEventListener('input', () => { $('pipSizeLabel').textContent = $('pipSize').value; });
@@ -329,6 +426,7 @@ Toolkit.injectTopbar('screen-recorder');
     if (recorder) return;
     chunks = [];
     recordingBlob = null;
+    cropRect = null;
     $('resultInfo').style.display = 'none';
     $('resultPreview').style.display = 'none';
     $('webcamPip').classList.remove('show');
@@ -345,9 +443,9 @@ Toolkit.injectTopbar('screen-recorder');
     }
 
     // 2. optional mic stream — mixed with display audio via Web Audio
-    let finalStream = displayStream;
     const needMic = $('micEnabled').checked;
     const needWebcam = $('webcamEnabled').checked;
+    mixedAudioStream = null;
 
     if (needMic || displayStream.getAudioTracks().length > 0) {
       try {
@@ -365,16 +463,13 @@ Toolkit.injectTopbar('screen-recorder');
           const a = audioCtx.createMediaStreamSource(micStream);
           a.connect(dest);
         }
-        finalStream = new MediaStream([
-          ...displayStream.getVideoTracks(),
-          ...dest.stream.getAudioTracks()
-        ]);
+        mixedAudioStream = dest.stream;
       } catch (e) {
         log.warn('麦克风不可用,只录屏幕音: ' + e.message);
       }
     }
 
-    // 3. webcam picture-in-picture overlay — also composited into final video
+    // 3. webcam picture-in-picture overlay
     if (needWebcam) {
       try {
         webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -390,55 +485,222 @@ Toolkit.injectTopbar('screen-recorder');
     $('livePreview').style.display = '';
     $('livePreview').srcObject = displayStream;
 
-    // 4b. If webcam is on, wrap the display video track into a canvas
-    // composite so we can paint the camera onto every frame. The recorder
-    // then reads from canvas.captureStream() instead of the raw display.
-    if (webcamStream) {
-      // Wait for display video metadata so we know the real frame size.
-      // The picker reports it via the video track settings.
-      const dispTrack = displayStream.getVideoTracks()[0];
-      const settings = dispTrack.getSettings();
-      const W = settings.width || 1280;
-      const H = settings.height || 720;
+    // Resolve source resolution
+    const dispTrack = displayStream.getVideoTracks()[0];
+    const settings = dispTrack.getSettings();
+    srcW = settings.width || 1280;
+    srcH = settings.height || 720;
 
+    // user clicked the browser's "Stop sharing" → bail out cleanly
+    dispTrack.onended = () => {
+      if (recorder && recorder.state !== 'inactive') {
+        stopRecording();
+      } else {
+        // user stopped sharing before we even started recording — abort
+        teardownStreams();
+        exitFramingMode();
+        $('placeholder').style.display = '';
+        $('livePreview').style.display = 'none';
+        $('startBtn').style.display = '';
+        $('stopBtn').style.display = 'none';
+        log.warn('用户取消了屏幕共享');
+      }
+    };
+
+    // 5. Branch: framing mode (crop) or straight-to-record
+    if ($('captureArea').value === 'crop') {
+      enterFramingMode();
+    } else {
+      beginRecording();
+    }
+  }
+
+  // ─── Framing mode (crop) ────────────────────────────────────────────
+  // Wait for the live preview to render at its real layout size, then
+  // overlay a draggable rectangle on top. Coordinates are stored in
+  // SOURCE pixels (mapped from preview pixels via the source/preview
+  // size ratio) so they survive any later layout shift.
+  function enterFramingMode() {
+    $('cropOverlay').style.display = '';
+    $('cropRect').classList.remove('show');
+    $('cropHint').classList.remove('hide');
+    $('frameConfirm').style.display = 'flex';
+    $('frameConfirmBtn').disabled = true;
+    $('frameInfo').textContent = '尚未框选 · 在预览图上拖一个矩形';
+    $('startBtn').style.display = 'none';
+    $('stopBtn').style.display = 'none';
+    $('statusLabel').textContent = '🎯 框选要录的区域';
+
+    // Bind drag handlers on the overlay
+    bindCropDrag();
+    log.ok('已进入框选模式 — 在预览图上拖一个矩形');
+  }
+  function exitFramingMode() {
+    $('cropOverlay').style.display = 'none';
+    $('frameConfirm').style.display = 'none';
+  }
+
+  let dragState = null; // { startX, startY } in OVERLAY-LOCAL CSS px
+  function bindCropDrag() {
+    const overlay = $('cropOverlay');
+    // Use addEventListener with options{passive:false} so we can preventDefault
+    overlay.onpointerdown = (e) => {
+      if (e.button !== 0) return;
+      overlay.setPointerCapture(e.pointerId);
+      const r = overlay.getBoundingClientRect();
+      dragState = { startX: e.clientX - r.left, startY: e.clientY - r.top };
+      updateCropRectLayout(dragState.startX, dragState.startY, dragState.startX, dragState.startY);
+      $('cropHint').classList.add('hide');
+    };
+    overlay.onpointermove = (e) => {
+      if (!dragState) return;
+      const r = overlay.getBoundingClientRect();
+      const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
+      const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
+      updateCropRectLayout(dragState.startX, dragState.startY, x, y);
+    };
+    overlay.onpointerup = (e) => {
+      if (!dragState) return;
+      overlay.releasePointerCapture(e.pointerId);
+      const r = overlay.getBoundingClientRect();
+      const endX = Math.max(0, Math.min(r.width,  e.clientX - r.left));
+      const endY = Math.max(0, Math.min(r.height, e.clientY - r.top));
+      finalizeCropRect(dragState.startX, dragState.startY, endX, endY, r);
+      dragState = null;
+    };
+  }
+
+  function updateCropRectLayout(x0, y0, x1, y1) {
+    const left   = Math.min(x0, x1);
+    const top    = Math.min(y0, y1);
+    const width  = Math.abs(x1 - x0);
+    const height = Math.abs(y1 - y0);
+    const rectEl = $('cropRect');
+    rectEl.classList.add('show');
+    rectEl.style.left   = left + 'px';
+    rectEl.style.top    = top + 'px';
+    rectEl.style.width  = width + 'px';
+    rectEl.style.height = height + 'px';
+    // Update the 4 mask panels around the rect so the un-cropped area is darkened
+    $('cropOverlay').querySelector('.rec-crop-mask.top').style.height = top + 'px';
+    $('cropOverlay').querySelector('.rec-crop-mask.bottom').style.height = 'calc(100% - ' + (top + height) + 'px)';
+    $('cropOverlay').querySelector('.rec-crop-mask.left').style.width = left + 'px';
+    $('cropOverlay').querySelector('.rec-crop-mask.left').style.top = top + 'px';
+    $('cropOverlay').querySelector('.rec-crop-mask.left').style.height = height + 'px';
+    $('cropOverlay').querySelector('.rec-crop-mask.right').style.width = 'calc(100% - ' + (left + width) + 'px)';
+    $('cropOverlay').querySelector('.rec-crop-mask.right').style.top = top + 'px';
+    $('cropOverlay').querySelector('.rec-crop-mask.right').style.height = height + 'px';
+  }
+
+  function finalizeCropRect(x0, y0, x1, y1, overlayRect) {
+    // Need to map overlay CSS pixels → source pixels. The overlay sits over
+    // the preview <video>; preview's intrinsic size = source resolution.
+    // Compute the actual rendered video box within the overlay (the video
+    // is `display:block; max-width:100%; max-height:100%` so letter-boxing
+    // may leave bars on either axis).
+    const video = $('livePreview');
+    const vw = video.videoWidth || srcW;
+    const vh = video.videoHeight || srcH;
+    if (!vw || !vh) return;
+    const vRect = video.getBoundingClientRect();
+    const oRect = overlayRect;
+    const offsetX = vRect.left - oRect.left;
+    const offsetY = vRect.top - oRect.top;
+    // Drag coords in overlay-local space → video-local space
+    const left   = Math.min(x0, x1) - offsetX;
+    const top    = Math.min(y0, y1) - offsetY;
+    const width  = Math.abs(x1 - x0);
+    const height = Math.abs(y1 - y0);
+    // Convert to source pixels
+    const sx = (left   / vRect.width)  * vw;
+    const sy = (top    / vRect.height) * vh;
+    const sw = (width  / vRect.width)  * vw;
+    const sh = (height / vRect.height) * vh;
+    // Clamp to source bounds + round to integers (even numbers — H.264 wants even dimensions)
+    const cx = Math.max(0, Math.round(sx));
+    const cy = Math.max(0, Math.round(sy));
+    let cw = Math.max(0, Math.round(sw)); if (cw % 2) cw -= 1;
+    let ch = Math.max(0, Math.round(sh)); if (ch % 2) ch -= 1;
+    if (cw < 32 || ch < 32) {
+      // tiny rect → treat as no selection
+      $('frameInfo').textContent = '框太小了(< 32px),再拖大一点';
+      $('frameConfirmBtn').disabled = true;
+      cropRect = null;
+      return;
+    }
+    cropRect = { x: cx, y: cy, w: cw, h: ch };
+    $('frameInfo').textContent = `📐 已选 ${cw}×${ch} (源 ${vw}×${vh})`;
+    $('frameConfirmBtn').disabled = false;
+  }
+
+  function teardownStreams() {
+    [displayStream, micStream, webcamStream].forEach(s => {
+      s?.getTracks().forEach(t => t.stop());
+    });
+    displayStream = micStream = webcamStream = null;
+    mixedAudioStream = null;
+    $('webcamPip').classList.remove('show');
+  }
+
+  // ─── Phase 2: actually start the recorder (optionally with crop) ────
+  async function beginRecording() {
+    // Decide if we need the canvas composite path: yes if PiP webcam OR a crop is set
+    const useComposite = !!webcamStream || !!cropRect;
+
+    // Build the audio half of the final stream (already mixed or raw display audio)
+    const audioTracks = mixedAudioStream
+      ? mixedAudioStream.getAudioTracks()
+      : displayStream.getAudioTracks();
+
+    let finalStream;
+    if (useComposite) {
+      // Canvas dimensions = crop dimensions, or full source if no crop
+      const outW = cropRect ? cropRect.w : srcW;
+      const outH = cropRect ? cropRect.h : srcH;
       compositeCanvas = document.createElement('canvas');
-      compositeCanvas.width = W;
-      compositeCanvas.height = H;
+      compositeCanvas.width = outW;
+      compositeCanvas.height = outH;
       compositeCtx = compositeCanvas.getContext('2d');
 
-      // Hidden video elements feed pixel data into the canvas. We need
-      // real <video>s because canvas.drawImage can't read raw MediaStream
-      // tracks — it pulls from the playing video.
+      // Hidden videos feed pixel data into the canvas
       compositeVideo = document.createElement('video');
       compositeVideo.srcObject = displayStream;
       compositeVideo.muted = true;
       compositeVideo.playsInline = true;
       await compositeVideo.play().catch(() => {});
 
-      compositeWebcamVideo = document.createElement('video');
-      compositeWebcamVideo.srcObject = webcamStream;
-      compositeWebcamVideo.muted = true;
-      compositeWebcamVideo.playsInline = true;
-      await compositeWebcamVideo.play().catch(() => {});
+      if (webcamStream) {
+        compositeWebcamVideo = document.createElement('video');
+        compositeWebcamVideo.srcObject = webcamStream;
+        compositeWebcamVideo.muted = true;
+        compositeWebcamVideo.playsInline = true;
+        await compositeWebcamVideo.play().catch(() => {});
+      }
 
       const pipPos = $('pipPos').value;
       const pipPct = parseInt($('pipSize').value, 10) / 100;
 
       const renderFrame = () => {
-        // Display first as the full background
         if (compositeVideo.readyState >= 2) {
-          compositeCtx.drawImage(compositeVideo, 0, 0, W, H);
+          if (cropRect) {
+            // Crop blit: source rect → full canvas
+            compositeCtx.drawImage(
+              compositeVideo,
+              cropRect.x, cropRect.y, cropRect.w, cropRect.h,
+              0, 0, outW, outH
+            );
+          } else {
+            compositeCtx.drawImage(compositeVideo, 0, 0, outW, outH);
+          }
         }
-        // Webcam PiP — sized as a percentage of the screen width, 4:3-ish
-        if (compositeWebcamVideo.readyState >= 2 && compositeWebcamVideo.videoWidth) {
-          const pipW = Math.round(W * pipPct);
+        if (compositeWebcamVideo && compositeWebcamVideo.readyState >= 2 && compositeWebcamVideo.videoWidth) {
+          const pipW = Math.round(outW * pipPct);
           const pipH = Math.round(pipW * compositeWebcamVideo.videoHeight / compositeWebcamVideo.videoWidth);
-          const margin = Math.round(W * 0.015);
-          let x = W - pipW - margin, y = H - pipH - margin;
+          const margin = Math.round(outW * 0.015);
+          let x = outW - pipW - margin, y = outH - pipH - margin;
           if (pipPos === 'bl') { x = margin; }
           if (pipPos === 'tr') { y = margin; }
           if (pipPos === 'tl') { x = margin; y = margin; }
-          // Soft border + drop shadow so the camera reads as an overlay
           compositeCtx.save();
           compositeCtx.shadowColor = 'rgba(0,0,0,0.6)';
           compositeCtx.shadowBlur = 16;
@@ -447,7 +709,6 @@ Toolkit.injectTopbar('screen-recorder');
           compositeCtx.fillRect(x - 2, y - 2, pipW + 4, pipH + 4);
           compositeCtx.restore();
           compositeCtx.drawImage(compositeWebcamVideo, x, y, pipW, pipH);
-          // Accent border
           compositeCtx.strokeStyle = 'rgba(245, 91, 91, 0.9)';
           compositeCtx.lineWidth = 3;
           compositeCtx.strokeRect(x - 1.5, y - 1.5, pipW + 3, pipH + 3);
@@ -456,15 +717,20 @@ Toolkit.injectTopbar('screen-recorder');
       };
       compositeRAF = requestAnimationFrame(renderFrame);
 
-      // Build a synthetic stream: canvas video + already-mixed audio tracks
       const canvasStream = compositeCanvas.captureStream(30);
       finalStream = new MediaStream([
         ...canvasStream.getVideoTracks(),
-        ...finalStream.getAudioTracks()
+        ...audioTracks
+      ]);
+    } else {
+      // No composite needed — use the display stream's video track directly
+      finalStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...audioTracks
       ]);
     }
 
-    // 5. wire up MediaRecorder
+    // Wire up MediaRecorder
     const mimeOption = $('mimeType').value;
     const bitrate = parseInt($('bitrate').value, 10);
     let chosen = mimeOption;
@@ -478,22 +744,21 @@ Toolkit.injectTopbar('screen-recorder');
     });
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     recorder.onstop = onRecorderStop;
-    recorder.start(1000);  // 1s chunks for safety
+    recorder.start(1000);
     recordingStart = performance.now();
     timerId = setInterval(updateTimer, 200);
 
-    // 6. UI state
+    // UI state
+    exitFramingMode();
     $('controlCard').classList.add('recording');
     $('statusLabel').textContent = '🔴 录制中';
     $('timer').classList.add('live');
     $('startBtn').style.display = 'none';
     $('stopBtn').style.display = '';
 
-    // user clicked the browser's "Stop sharing" → also stop our recorder
-    displayStream.getVideoTracks()[0].onended = () => {
-      if (recorder && recorder.state !== 'inactive') stopRecording();
-    };
-    log.ok('开始录制');
+    log.ok(cropRect
+      ? `开始录制 · 区域 ${cropRect.w}×${cropRect.h}`
+      : '开始录制 · 整屏');
   }
 
   function stopRecording() {
@@ -516,6 +781,8 @@ Toolkit.injectTopbar('screen-recorder');
       s?.getTracks().forEach(t => t.stop());
     });
     displayStream = micStream = webcamStream = null;
+    mixedAudioStream = null;
+    cropRect = null;
     recorder = null;
 
     // UI
@@ -545,6 +812,28 @@ Toolkit.injectTopbar('screen-recorder');
 
   $('startBtn').addEventListener('click', startRecording);
   $('stopBtn').addEventListener('click', stopRecording);
+
+  // Framing-mode confirm/cancel/fullscreen handlers
+  $('frameConfirmBtn').addEventListener('click', () => {
+    if (!cropRect) return;
+    beginRecording();
+  });
+  $('frameCancelBtn').addEventListener('click', () => {
+    // bail out entirely: stop all streams + reset
+    teardownStreams();
+    exitFramingMode();
+    $('placeholder').style.display = '';
+    $('livePreview').style.display = 'none';
+    $('startBtn').style.display = '';
+    $('stopBtn').style.display = 'none';
+    $('statusLabel').textContent = '准备录制';
+    log.warn('已取消框选,屏幕共享停止');
+  });
+  $('frameFullBtn').addEventListener('click', () => {
+    // Skip crop, just record the full display
+    cropRect = null;
+    beginRecording();
+  });
 
   $('downloadBtn').addEventListener('click', () => {
     if (!recordingBlob) return;
