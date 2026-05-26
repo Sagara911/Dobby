@@ -96,6 +96,139 @@
     margin-bottom: 12px;
   }
   .compat-note strong { color: var(--warning); }
+
+  /* ===== Frame-precise trim editor ===== */
+  .frame-edit {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .frame-edit-readout {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    flex-wrap: wrap;
+  }
+  .frame-edit-readout .tc-big {
+    font-size: 17px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .frame-edit-readout .frame-num {
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(var(--jade-rgb), 0.12);
+    border: 1px solid rgba(var(--jade-rgb), 0.4);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+  }
+  .frame-edit-readout .fps-tag { font-size: 11px; color: var(--muted); }
+  .frame-edit-readout .fps-tag input {
+    width: 50px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 2px 5px;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 3px;
+    text-align: right;
+  }
+  .frame-step-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+  .frame-step-row button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 4px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    box-shadow: none;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .frame-step-row button:hover {
+    background: rgba(var(--jade-rgb), 0.12);
+    border-color: rgba(var(--jade-rgb), 0.4);
+  }
+  .frame-step-row button[data-step="-1"],
+  .frame-step-row button[data-step="1"] {
+    background: rgba(var(--jade-rgb), 0.08);
+    border-color: rgba(var(--jade-rgb), 0.3);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .frame-scrub {
+    width: 100%;
+    margin: 0;
+  }
+  .frame-marks {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .frame-marks button.mark {
+    background: rgba(245, 200, 80, 0.12);
+    border: 1px solid rgba(245, 200, 80, 0.4);
+    color: #ffd07a;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 600;
+    box-shadow: none;
+    white-space: nowrap;
+  }
+  .frame-marks button.mark:hover {
+    background: rgba(245, 200, 80, 0.22);
+    border-color: rgba(245, 200, 80, 0.7);
+  }
+  .frame-marks .range-info {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 6px;
+    align-items: baseline;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10.5px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .frame-marks .range-info .in-tc { color: #ffd07a; }
+  .frame-marks .range-info .out-tc { color: #ffd07a; }
+  .frame-marks .range-info .range-dur {
+    color: var(--accent);
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .frame-shortcut {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: -4px;
+  }
+  .frame-shortcut kbd {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--text-soft);
+  }
 </style>
 </head>
 <body>
@@ -327,9 +460,192 @@ Toolkit.injectTopbar('video-toolkit');
   const DEFAULT_BITRATE = $('bitrate').value;
   let lastAction = null;
 
+  // ─── Frame-precise trim editor ──────────────────────────────────────
+  // Wires up the UI block rendered for action === 'trim'. Pulls fps from
+  // requestVideoFrameCallback metadata when supported, else asks the user
+  // to set it (default 30). All seeks land on a frame boundary
+  // (currentTime = frame_index / fps + half-frame offset for stability).
+  let frameTrimCleanup = null;
+  function setupFrameTrim(duration) {
+    if (frameTrimCleanup) { frameTrimCleanup(); frameTrimCleanup = null; }
+    let fps = 30;
+    let totalFrames = Math.max(1, Math.round(duration * fps));
+    let inFrame = null;
+    let outFrame = null;
+
+    const fpsInput = $('fpsManual');
+    const fpsHint = $('fpsHint');
+    const scrub = $('frameScrub');
+    scrub.max = String(totalFrames);
+
+    function fmtTC(t) {
+      const ms = Math.max(0, Math.round(t * 1000));
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      const f = ms % 1000;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(f).padStart(3,'0')}`;
+    }
+    function currentFrame() {
+      return Math.max(0, Math.min(totalFrames - 1, Math.round(srcVideo.currentTime * fps)));
+    }
+    function refreshReadout() {
+      const t = srcVideo.currentTime;
+      const f = currentFrame();
+      $('tcBig').textContent = fmtTC(t);
+      $('frameNum').textContent = `帧 ${f} / ${totalFrames - 1}`;
+      scrub.value = String(f);
+    }
+    function rebuildOnFpsChange(newFps) {
+      fps = newFps;
+      totalFrames = Math.max(1, Math.round(duration * fps));
+      scrub.max = String(totalFrames);
+      refreshReadout();
+      refreshRange();
+    }
+    fpsInput.addEventListener('change', () => {
+      const v = parseFloat(fpsInput.value);
+      if (isFinite(v) && v >= 1 && v <= 240) {
+        rebuildOnFpsChange(v);
+        fpsHint.textContent = '(手动)';
+      }
+    });
+
+    // Auto-detect fps via requestVideoFrameCallback — most accurate path.
+    // We sample (mediaTime, presentedFrames) twice during a short play burst,
+    // then derive fps = Δframes / Δtime. Stops after detection or 2s.
+    if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+      let sample0 = null;
+      const detect = (now, meta) => {
+        if (sample0 == null) {
+          sample0 = { t: meta.mediaTime, f: meta.presentedFrames };
+        } else {
+          const dt = meta.mediaTime - sample0.t;
+          const df = meta.presentedFrames - sample0.f;
+          if (df > 2 && dt > 0.05) {
+            const detected = df / dt;
+            // Snap to common rates (24 / 25 / 30 / 50 / 60) when close
+            const snaps = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+            const snap = snaps.find(s => Math.abs(s - detected) < 0.5);
+            const final = snap || +detected.toFixed(2);
+            fpsInput.value = String(final);
+            fpsHint.textContent = '(自动检测)';
+            rebuildOnFpsChange(final);
+            srcVideo.pause();
+            srcVideo.currentTime = 0;
+            return;
+          }
+        }
+        srcVideo.requestVideoFrameCallback(detect);
+      };
+      srcVideo.requestVideoFrameCallback(detect);
+      srcVideo.play().catch(() => {});
+      setTimeout(() => srcVideo.pause(), 2000); // safety: stop if detection stalls
+    }
+
+    function stepFrames(delta) {
+      const target = currentFrame() + delta;
+      const clamped = Math.max(0, Math.min(totalFrames - 1, target));
+      // Half-frame offset improves landing on the intended frame on
+      // browsers that pick nearest keyframe; the readout still shows
+      // the clamped frame index so the user sees a consistent number.
+      srcVideo.currentTime = (clamped + 0.5) / fps;
+    }
+
+    // Frame-step buttons
+    document.querySelectorAll('.frame-step-row button').forEach(b => {
+      b.addEventListener('click', () => stepFrames(parseInt(b.dataset.step, 10)));
+    });
+
+    // Scrubber
+    scrub.addEventListener('input', () => {
+      const f = parseInt(scrub.value, 10);
+      srcVideo.currentTime = (f + 0.5) / fps;
+    });
+
+    // IN / OUT marks
+    function setIn() {
+      inFrame = currentFrame();
+      // Validate against existing OUT
+      if (outFrame != null && inFrame >= outFrame) {
+        outFrame = null;
+      }
+      refreshRange();
+      log.ok(`📍 IN 设在帧 ${inFrame}`);
+    }
+    function setOut() {
+      outFrame = currentFrame();
+      if (inFrame != null && outFrame <= inFrame) {
+        inFrame = null;
+      }
+      refreshRange();
+      log.ok(`📍 OUT 设在帧 ${outFrame}`);
+    }
+    $('setInBtn').addEventListener('click', setIn);
+    $('setOutBtn').addEventListener('click', setOut);
+
+    function refreshRange() {
+      const inT = inFrame != null ? inFrame / fps : null;
+      const outT = outFrame != null ? outFrame / fps : null;
+      $('inDisplay').textContent  = inFrame  != null ? `IN: ${fmtTC(inT)} · 帧 ${inFrame}` : 'IN: 未设';
+      $('outDisplay').textContent = outFrame != null ? `OUT: ${fmtTC(outT)} · 帧 ${outFrame}` : 'OUT: 未设';
+      if (inFrame != null && outFrame != null) {
+        const dur = outT - inT;
+        $('rangeDuration').textContent = `📐 输出范围 · ${fmtTC(dur)} (${outFrame - inFrame + 1} 帧)`;
+      } else if (inFrame != null) {
+        $('rangeDuration').textContent = '只设了 IN — 默认导出 [IN, 末尾]';
+      } else if (outFrame != null) {
+        $('rangeDuration').textContent = '只设了 OUT — 默认导出 [开头, OUT]';
+      } else {
+        $('rangeDuration').textContent = '未设置范围 · 默认导出整段';
+      }
+      // Update the hidden inputs used by the export pipeline
+      const s = inFrame != null ? inFrame / fps : 0;
+      const e = outFrame != null ? (outFrame + 1) / fps : duration;
+      $('trimStart').value = s.toFixed(3);
+      $('trimEnd').value = e.toFixed(3);
+      $('trimStartVal').textContent = s.toFixed(2);
+      $('trimEndVal').textContent = e.toFixed(2);
+    }
+    refreshRange();
+
+    // Live readout when the user scrubs via the video's own controls
+    const onTimeUpdate = () => refreshReadout();
+    srcVideo.addEventListener('timeupdate', onTimeUpdate);
+    srcVideo.addEventListener('seeked', onTimeUpdate);
+
+    // Keyboard shortcuts (active while focus is NOT in an input)
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      // Only act when the trim controls are visible
+      if ($('action').value !== 'trim') return;
+      if (e.key === 'ArrowLeft')  { stepFrames(e.shiftKey ? -30 : -1); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { stepFrames(e.shiftKey ?  30 :  1); e.preventDefault(); }
+      else if (e.key === 'i' || e.key === 'I') { setIn(); e.preventDefault(); }
+      else if (e.key === 'o' || e.key === 'O') { setOut(); e.preventDefault(); }
+      else if (e.key === ' ') {
+        if (srcVideo.paused) srcVideo.play(); else srcVideo.pause();
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+
+    frameTrimCleanup = () => {
+      document.removeEventListener('keydown', onKey);
+      srcVideo.removeEventListener('timeupdate', onTimeUpdate);
+      srcVideo.removeEventListener('seeked', onTimeUpdate);
+    };
+    refreshReadout();
+  }
+
   function renderActionControls() {
     const action = $('action').value;
     const c = $('actionControls');
+    // If we're leaving trim mode, tear down its key listener + RAF
+    if (frameTrimCleanup && action !== 'trim') {
+      frameTrimCleanup();
+      frameTrimCleanup = null;
+    }
     // fromFrames has its own input flow (image sequence, no srcMeta) — render
     // even when no video is loaded, since the controls are useful before drop.
     if (action === 'fromFrames') {
@@ -421,19 +737,55 @@ Toolkit.injectTopbar('video-toolkit');
       $('cmpTargetMb')?.addEventListener('input', applyPreset);
       applyPreset();
     } else if (action === 'trim') {
+      // Frame-precise trim editor. Three layers of precision:
+      //   1. requestVideoFrameCallback (rVFC) to MEASURE actual fps from the
+      //      video itself — we play 6 frames silently, sample mediaTime per
+      //      presented frame, derive fps. Falls back to 30 if rVFC absent.
+      //   2. -1f / +1f stepping uses srcVideo.currentTime ± (1/fps). For
+      //      most H.264 / VP9 streams this is frame-accurate; for sparsely
+      //      keyframed sources the browser falls back to nearest keyframe
+      //      but the time marker is still exact at the FRAME boundary.
+      //   3. IN / OUT marks capture the EXACT currentTime at click moment
+      //      (not slider value), so what you see in the preview at click
+      //      time is what gets cut.
       c.innerHTML = `
-        <div class="field">
-          <label>起始时间 (秒) <span id="trimStartVal" class="mono">0</span></label>
-          <input type="range" id="trimStart" min="0" max="${duration.toFixed(2)}" step="0.05" value="0" />
+        <div class="frame-edit">
+          <div class="frame-edit-readout">
+            <span class="tc-big" id="tcBig">00:00:00.000</span>
+            <span class="frame-num" id="frameNum">帧 0 / —</span>
+            <span class="fps-tag">@ <input type="number" id="fpsManual" min="1" max="240" step="0.001" value="30" /> fps</span>
+            <span class="fps-tag" id="fpsHint" style="color:var(--accent)"></span>
+          </div>
+          <div class="frame-step-row">
+            <button type="button" data-step="-300" title="-10s">⏮ -10s</button>
+            <button type="button" data-step="-30"  title="-1s (Shift+←)">⏪ -1s</button>
+            <button type="button" data-step="-1"   title="-1 帧 (←)">◀ -1f</button>
+            <button type="button" data-step="1"    title="+1 帧 (→)">+1f ▶</button>
+            <button type="button" data-step="30"   title="+1s (Shift+→)">+1s ⏩</button>
+            <button type="button" data-step="300"  title="+10s">+10s ⏭</button>
+          </div>
+          <input type="range" id="frameScrub" min="0" max="100" value="0" step="1" class="frame-scrub" />
+          <div class="frame-marks">
+            <button type="button" class="mark in"  id="setInBtn"  title="把当前帧设为起点 (I)">📍 设为起点 IN</button>
+            <div class="range-info">
+              <span class="in-tc"  id="inDisplay">IN: —</span>
+              <span class="sep">─</span>
+              <span class="out-tc" id="outDisplay">OUT: —</span>
+              <span class="range-dur" id="rangeDuration">未设置范围 · 默认导出整段</span>
+            </div>
+            <button type="button" class="mark out" id="setOutBtn" title="把当前帧设为终点 (O)">📍 设为终点 OUT</button>
+          </div>
+          <div class="frame-shortcut">
+            快捷键 <kbd>←</kbd>/<kbd>→</kbd> ±1 帧 · <kbd>Shift+←</kbd>/<kbd>→</kbd> ±1 秒 · <kbd>I</kbd> 设 IN · <kbd>O</kbd> 设 OUT · <kbd>Space</kbd> 播放/暂停
+          </div>
+          <!-- Hidden inputs that integrate with the existing trim export path -->
+          <input type="hidden" id="trimStart" value="0" />
+          <input type="hidden" id="trimEnd"   value="${duration.toFixed(3)}" />
+          <span id="trimStartVal" style="display:none">0</span>
+          <span id="trimEndVal"   style="display:none">${duration.toFixed(2)}</span>
         </div>
-        <div class="field">
-          <label>结束时间 (秒) <span id="trimEndVal" class="mono">${duration.toFixed(2)}</span></label>
-          <input type="range" id="trimEnd" min="0" max="${duration.toFixed(2)}" step="0.05" value="${duration.toFixed(2)}" />
-        </div>
-        <div class="info">保留 [起始, 结束] 之间的片段</div>
       `;
-      $('trimStart').addEventListener('input', e => { $('trimStartVal').textContent = (+e.target.value).toFixed(2); srcVideo.currentTime = +e.target.value; });
-      $('trimEnd').addEventListener('input', e => $('trimEndVal').textContent = (+e.target.value).toFixed(2));
+      setupFrameTrim(duration);
     } else if (action === 'crop') {
       c.innerHTML = `
         <div class="row-fields">

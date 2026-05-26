@@ -381,6 +381,10 @@ Toolkit.injectTopbar('screen-recorder');
 (() => {
   const { $, makeLogger, download, fmtBytes } = Toolkit;
   const log = makeLogger($('log'));
+  // Handoff system — after a recording finishes, the sidebar's auto-injected
+  // "📤 让 Dobby 送到下一个工具 ▾" button lights up and offers to send the
+  // .webm to video-toolkit (and any other tool that accepts video/webm).
+  const handoff = Toolkit.setupHandoff('screen-recorder', { outputType: 'video/webm' });
 
   let displayStream = null;
   let micStream = null;
@@ -807,7 +811,11 @@ Toolkit.injectTopbar('screen-recorder');
       $('resCodec').textContent = (mimeFromRecorder.match(/codecs=(.+?)(?:["']|$)/) || [, mimeFromRecorder])[1];
     };
     $('resultInfo').style.display = '';
-    log.ok(`录制完成 · ${fmtBytes(recordingBlob.size)}`);
+    // Activate the handoff button — sidebar shows "送到视频处理" target
+    const name = ($('filename').value || 'screen').replace(/[^\w-]/g, '_');
+    const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+    handoff?.setBlob(recordingBlob, `${name}_${ts}.webm`);
+    log.ok(`录制完成 · ${fmtBytes(recordingBlob.size)} · 用左侧「📤 送下一个工具」可直接发到视频处理`);
   }
 
   $('startBtn').addEventListener('click', startRecording);
@@ -849,6 +857,7 @@ Toolkit.injectTopbar('screen-recorder');
     $('placeholder').style.display = '';
     $('statusLabel').textContent = '准备录制';
     $('timer').textContent = '00:00';
+    handoff?.clear();
   });
 
   // browser support sanity
