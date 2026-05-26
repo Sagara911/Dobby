@@ -6,73 +6,35 @@
 // showed after a SECOND refresh). Network-first costs one extra round-trip per request
 // online but matches "push = next refresh shows it" behavior of a normal website.
 
-const CACHE = 'dobby-v63';
+const CACHE = 'dobby-v64';
 
 // Pre-cache the core shell + every tool page so the site works offline immediately.
+// Pre-cache only the SHELL (home + core assets + most-likely-first 12 tools).
+// Other tool pages are network-first by default and end up in cache lazily
+// as the user navigates to them. This change cut the pre-cache from 49 files
+// to 19 so first-visit doesn't bottleneck on background SW install fetches
+// (especially noticeable on China-mobile networks where Cloudflare's edge
+// can be slow).
 const CORE = [
   './',
   './index.html',
-  './404.html',
-  './messages.html',
-  './skill.html',
-  './private.html',
-  './SKILL.md',
   './manifest.json',
   './assets/shared.css',
   './assets/shared.js',
   './assets/i18n-strings.js',
   './assets/icon.svg',
-  './assets/anim-encoders.js',
-  './assets/rife.js',
-  './assets/farneback.js',
-  './assets/codecs.js',
-  './assets/png-crusher.worker.js',
-  './assets/code-minify.worker.js',
-  './tools/sprite-packer.html',
-  './tools/atlas-splitter.html',
+  // Popular landing tools (best-guess; revisit when analytics arrives)
   './tools/image-optimizer.html',
   './tools/png-crusher.html',
-  './tools/gif-tools.html',
-  './tools/pixel-editor.html',
-  './tools/sfx-maker.html',
-  './tools/tilemap.html',
-  './tools/json-tools.html',
-  './tools/a11y-contrast.html',
-  './tools/easing-editor.html',
-  './tools/screen-recorder.html',
-  './tools/jwt-decoder.html',
-  './tools/hash-calc.html',
-  './tools/regex-tester.html',
-  './tools/markdown-editor.html',
-  './tools/favicon-maker.html',
-  './tools/exif-tool.html',
-  './tools/normal-map.html',
-  './tools/texture-gen.html',
-  './tools/lottie-tools.html',
-  './tools/image-editor.html',
-  './tools/color-tools.html',
   './tools/ai-cutout.html',
-  './tools/watermark-remove.html',
+  './tools/gif-tools.html',
   './tools/video-toolkit.html',
-  './tools/composer.html',
-  './tools/image-diff.html',
-  './tools/svg-tools.html',
-  './tools/pdf-tools.html',
-  './tools/ocr-tool.html',
-  './tools/pixel-font.html',
+  './tools/screen-recorder.html',
   './tools/transcode.html',
-  './tools/html-inliner.html',
-  './tools/base64.html',
+  './tools/pdf-tools.html',
   './tools/qr-gen.html',
-  './tools/font-subset.html',
-  './tools/audio-compress.html',
-  './tools/bundle-analyzer.html',
-  './tools/channel-check.html',
-  './tools/code-minify.html',
-  './tools/slim-coach.html',
-  './tools/zip-packer.html',
-  './tools/batch-rename.html',
-  './tools/playable-slim.html'
+  './tools/base64.html',
+  './tools/json-tools.html'
 ];
 
 self.addEventListener('install', (e) => {
