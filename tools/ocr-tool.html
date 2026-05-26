@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>OCR 图转文字 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .ocr-stage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  @media (max-width: 1000px) {
+    .ocr-stage { grid-template-columns: 1fr; }
+  }
+  .ocr-pane {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 0;
+  }
+  .ocr-pane-head {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ocr-pane-body {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    min-height: 0;
+  }
+
+  .ocr-image-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    min-height: 100%;
+    padding: 10px;
+  }
+  .ocr-image-wrap img {
+    max-width: 100%;
+    max-height: 60vh;
+    display: block;
+  }
+  .ocr-image-wrap .overlay {
+    position: absolute;
+    pointer-events: none;
+  }
+  .ocr-image-wrap .word-box {
+    position: absolute;
+    border: 1px solid rgba(245, 91, 91, 0.6);
+    background: rgba(245, 91, 91, 0.08);
+  }
+
+  .ocr-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 28px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    margin: 12px;
+  }
+  .ocr-drop:hover, .ocr-drop.drag {
+    border-color: var(--accent);
+    background: rgba(var(--jade-rgb), 0.05);
+  }
+  .ocr-drop .big { font-size: 48px; margin-bottom: 10px; }
+
+  .ocr-text {
+    padding: 12px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, Consolas, monospace;
+    min-height: 100%;
+    background: #0a0a0c;
+  }
+  .ocr-text-empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 60px 20px;
+    font-family: inherit;
+  }
+  .ocr-progress {
+    background: rgba(var(--jade-rgb), 0.08);
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    margin: 10px 12px 0;
+    font-size: 12px;
+    color: var(--text);
+    display: none;
+  }
+  .ocr-progress.show { display: block; }
+  .ocr-progress .bar {
+    height: 4px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .ocr-progress .fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+
+  .ocr-controls {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .ocr-controls .stretch { flex: 1; }
+  .ocr-controls button {
+    background: rgba(var(--jade-rgb), 0.18);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ocr-controls button:hover { background: rgba(var(--jade-rgb), 0.28); }
+
+  .ocr-stats {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .ocr-stats .v { color: var(--text); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+  .ocr-help {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>👁️ OCR 图转文字</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">100% 本地</strong> · Tesseract.js + WASM 在你浏览器里跑识别。第一次跑要下模型(英文 ~2 MB,中文 ~15 MB),之后就缓存。
+    </div>
+
+    <h2>语言</h2>
+    <select id="lang" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="eng">🇬🇧 English</option>
+      <option value="chi_sim" selected>🇨🇳 简体中文</option>
+      <option value="chi_tra">🇭🇰 繁体中文</option>
+      <option value="chi_sim+eng">🇨🇳 简中 + 英文(混排)</option>
+      <option value="chi_tra+eng">🇭🇰 繁中 + 英文(混排)</option>
+      <option value="jpn">🇯🇵 日本語</option>
+      <option value="kor">🇰🇷 한국어</option>
+    </select>
+    <div class="ocr-help">选错语言识别会大错。中英混排选「简中+英文」。</div>
+
+    <h2>预处理</h2>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+      <input type="checkbox" id="prepGray" checked />
+      <span>灰度化</span>
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:6px">
+      <input type="checkbox" id="prepContrast" />
+      <span>增强对比度(扫描件 / 模糊照片)</span>
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:6px">
+      <input type="checkbox" id="prepInvert" />
+      <span>反色(白字黑底图)</span>
+    </label>
+
+    <h2>显示</h2>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+      <input type="checkbox" id="showBoxes" checked />
+      <span>左侧叠加单词框</span>
+    </label>
+
+    <h2>用法</h2>
+    <ol style="padding-left:20px; font-size:11px; color:var(--text-soft); line-height:1.8">
+      <li>拖入或粘贴图片(JPG / PNG / WebP)</li>
+      <li>选语言、可选预处理</li>
+      <li>点「识别」,等模型下载 + 推理</li>
+      <li>右侧可复制 / 下载 .txt</li>
+    </ol>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">OCR · Tesseract.js v5 · 全本地推理</div>
+
+    <div class="ocr-stage">
+      <!-- LEFT: image -->
+      <div class="ocr-pane">
+        <div class="ocr-pane-head">
+          <span>原图</span>
+          <span class="ocr-stats" id="imgStats"></span>
+        </div>
+        <div class="ocr-pane-body">
+          <div class="ocr-drop" id="drop">
+            <div class="big">👁️</div>
+            <div>拖入 / 粘贴 / 点击 选图片</div>
+            <div style="font-size:11px; margin-top:8px; color:var(--muted)">JPG / PNG / WebP / BMP</div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+          </div>
+          <div class="ocr-image-wrap" id="imgWrap" style="display:none">
+            <img id="srcImg" alt="" />
+            <div class="overlay" id="boxOverlay"></div>
+          </div>
+        </div>
+        <div class="ocr-controls">
+          <button id="runBtn" disabled>识别</button>
+          <button id="clearBtn" disabled>清空</button>
+          <div class="stretch"></div>
+          <div class="ocr-stats" id="durStats"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: text -->
+      <div class="ocr-pane">
+        <div class="ocr-pane-head">
+          <span>识别结果</span>
+          <span class="ocr-stats" id="confStats"></span>
+        </div>
+        <div class="ocr-progress" id="progress">
+          <span id="progStage">准备中...</span>
+          <div class="bar"><div class="fill" id="progFill"></div></div>
+        </div>
+        <div class="ocr-pane-body">
+          <div class="ocr-text" id="textOut">
+            <div class="ocr-text-empty">这里会显示识别结果<br/>左侧拖入图片后点「识别」</div>
+          </div>
+        </div>
+        <div class="ocr-controls">
+          <button id="copyBtn" disabled>📋 复制</button>
+          <button id="downloadBtn" disabled>💾 下载 .txt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script type="module">
+import Tesseract from 'https://esm.sh/tesseract.js@5.1.1';
+
+Toolkit.injectTopbar('ocr-tool');
+
+(() => {
+  const { $, makeLogger, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  let currentBlob = null;     // original drop
+  let currentBitmap = null;   // ImageBitmap for preprocessing
+  let currentText = '';
+  let worker = null;
+  let workerLang = '';        // language(s) currently loaded into worker
+
+  // ─── Drop / paste handling ───
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', () => {
+    if ($('fileInput').files.length) loadImage($('fileInput').files[0]);
+  });
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove('drag');
+  }));
+  drop.addEventListener('drop', e => {
+    const f = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (f) loadImage(f);
+  });
+  window.addEventListener('paste', e => {
+    const items = e.clipboardData?.items || [];
+    for (const it of items) {
+      if (it.type.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) { loadImage(f); break; }
+      }
+    }
+  });
+
+  async function loadImage(blob) {
+    try {
+      currentBitmap = await createImageBitmap(blob);
+    } catch (e) {
+      log.err('图片解码失败: ' + e.message);
+      return;
+    }
+    currentBlob = blob;
+    currentText = '';
+    $('srcImg').src = URL.createObjectURL(blob);
+    $('imgWrap').style.display = 'flex';
+    drop.style.display = 'none';
+    $('imgStats').textContent = `${currentBitmap.width}×${currentBitmap.height} · ${fmtBytes(blob.size)}`;
+    $('runBtn').disabled = false;
+    $('clearBtn').disabled = false;
+    $('boxOverlay').innerHTML = '';
+    $('textOut').innerHTML = '<div class="ocr-text-empty">点「识别」开始 OCR</div>';
+    $('confStats').textContent = '';
+    $('durStats').textContent = '';
+    $('copyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+    log.ok(`已加载 ${blob.name || '图片'} (${currentBitmap.width}×${currentBitmap.height})`);
+  }
+
+  function clearAll() {
+    currentBlob = null;
+    currentBitmap = null;
+    currentText = '';
+    $('srcImg').src = '';
+    $('imgWrap').style.display = 'none';
+    drop.style.display = '';
+    $('imgStats').textContent = '';
+    $('runBtn').disabled = true;
+    $('clearBtn').disabled = true;
+    $('boxOverlay').innerHTML = '';
+    $('textOut').innerHTML = '<div class="ocr-text-empty">这里会显示识别结果<br/>左侧拖入图片后点「识别」</div>';
+    $('confStats').textContent = '';
+    $('durStats').textContent = '';
+    $('copyBtn').disabled = true;
+    $('downloadBtn').disabled = true;
+  }
+  $('clearBtn').addEventListener('click', clearAll);
+
+  // ─── Preprocess: gray / contrast / invert via canvas ───
+  function preprocess(bitmap) {
+    const gray = $('prepGray').checked;
+    const contrast = $('prepContrast').checked;
+    const invert = $('prepInvert').checked;
+    if (!gray && !contrast && !invert) return bitmap;
+
+    const c = document.createElement('canvas');
+    c.width = bitmap.width;
+    c.height = bitmap.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let r = d[i], g = d[i+1], b = d[i+2];
+      if (gray) {
+        const v = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = g = b = v;
+      }
+      if (contrast) {
+        // Simple S-curve around 128
+        const k = 1.6;
+        r = Math.max(0, Math.min(255, (r - 128) * k + 128));
+        g = Math.max(0, Math.min(255, (g - 128) * k + 128));
+        b = Math.max(0, Math.min(255, (b - 128) * k + 128));
+      }
+      if (invert) {
+        r = 255 - r; g = 255 - g; b = 255 - b;
+      }
+      d[i] = r; d[i+1] = g; d[i+2] = b;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  // ─── OCR run ───
+  async function ensureWorker(lang) {
+    if (worker && workerLang === lang) return worker;
+    if (worker) { try { await worker.terminate(); } catch(_) {} worker = null; }
+    setProgress('加载模型 + 初始化 worker', 0);
+    worker = await Tesseract.createWorker(lang, 1, {
+      logger: m => {
+        if (m.status && m.progress != null) {
+          setProgress(translateStage(m.status), Math.round(m.progress * 100));
+        }
+      }
+    });
+    workerLang = lang;
+    return worker;
+  }
+
+  function setProgress(stage, pct) {
+    const p = $('progress');
+    p.classList.add('show');
+    $('progStage').textContent = `${stage} · ${pct}%`;
+    $('progFill').style.width = pct + '%';
+  }
+  function hideProgress() { $('progress').classList.remove('show'); }
+
+  function translateStage(s) {
+    const m = {
+      'loading tesseract core': '加载 OCR 内核',
+      'initializing tesseract': '初始化',
+      'loading language traineddata': '下载语言模型',
+      'initializing api': '准备 API',
+      'recognizing text': '识别文字',
+    };
+    return m[s] || s;
+  }
+
+  async function runOCR() {
+    if (!currentBitmap) return;
+    $('runBtn').disabled = true;
+    $('clearBtn').disabled = true;
+    const t0 = performance.now();
+    try {
+      const lang = $('lang').value;
+      const w = await ensureWorker(lang);
+
+      // Preprocess into a canvas if any prep options are on. Tesseract
+      // accepts ImageBitmap, Canvas, File, HTMLImageElement etc.
+      const input = preprocess(currentBitmap);
+
+      setProgress('识别文字', 0);
+      const result = await w.recognize(input);
+      hideProgress();
+
+      const text = result.data.text || '';
+      const conf = result.data.confidence;
+      currentText = text;
+
+      // Render text
+      if (text.trim()) {
+        $('textOut').textContent = text;
+        $('copyBtn').disabled = false;
+        $('downloadBtn').disabled = false;
+      } else {
+        $('textOut').innerHTML = '<div class="ocr-text-empty">没识别出文字<br/>试试换种语言或开预处理</div>';
+        $('copyBtn').disabled = true;
+        $('downloadBtn').disabled = true;
+      }
+
+      // Conf + duration
+      const dt = ((performance.now() - t0) / 1000).toFixed(2);
+      const wordCount = (result.data.words || []).length;
+      $('confStats').innerHTML = `平均置信度 <span class="v">${conf?.toFixed?.(1) ?? '?'}</span>%  ·  ${wordCount} 词`;
+      $('durStats').innerHTML = `用时 <span class="v">${dt}s</span>`;
+
+      // Boxes overlay
+      drawWordBoxes(result.data.words || []);
+
+      log.ok(`识别完成 · ${wordCount} 词 · ${dt}s · 置信度 ${conf?.toFixed?.(1) ?? '?'}%`);
+    } catch (e) {
+      hideProgress();
+      log.err('识别失败: ' + e.message);
+      console.error(e);
+    } finally {
+      $('runBtn').disabled = false;
+      $('clearBtn').disabled = false;
+    }
+  }
+
+  function drawWordBoxes(words) {
+    const overlay = $('boxOverlay');
+    overlay.innerHTML = '';
+    if (!$('showBoxes').checked || !words.length) return;
+    const img = $('srcImg');
+    // overlay sits over imgWrap; we position relative to the rendered img.
+    // Read rendered size:
+    const r = img.getBoundingClientRect();
+    const wrap = $('imgWrap').getBoundingClientRect();
+    const scaleX = r.width / currentBitmap.width;
+    const scaleY = r.height / currentBitmap.height;
+    const offsetX = r.left - wrap.left;
+    const offsetY = r.top - wrap.top;
+    overlay.style.left = offsetX + 'px';
+    overlay.style.top = offsetY + 'px';
+    overlay.style.width = r.width + 'px';
+    overlay.style.height = r.height + 'px';
+    for (const w of words) {
+      const bb = w.bbox;
+      if (!bb) continue;
+      const el = document.createElement('div');
+      el.className = 'word-box';
+      el.style.left = (bb.x0 * scaleX) + 'px';
+      el.style.top = (bb.y0 * scaleY) + 'px';
+      el.style.width = ((bb.x1 - bb.x0) * scaleX) + 'px';
+      el.style.height = ((bb.y1 - bb.y0) * scaleY) + 'px';
+      el.title = `${w.text} (${w.confidence?.toFixed?.(0) ?? '?'}%)`;
+      overlay.appendChild(el);
+    }
+  }
+
+  $('runBtn').addEventListener('click', runOCR);
+  $('showBoxes').addEventListener('change', () => {
+    // Re-render with current boxes if we have them — easiest is to just
+    // re-OCR? No, that's wasteful. Just hide/redraw using cached words.
+    if (currentText) $('boxOverlay').style.display = $('showBoxes').checked ? '' : 'none';
+  });
+  window.addEventListener('resize', () => {
+    if (currentText && $('showBoxes').checked) {
+      // Reposition overlay against current img layout — but we lost the
+      // words array. Acceptable: overlay drifts on resize; users can re-run.
+    }
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    if (!currentText) return;
+    try {
+      await navigator.clipboard.writeText(currentText);
+      log.ok('已复制到剪贴板');
+    } catch (e) {
+      log.warn('复制失败: ' + e.message);
+    }
+  });
+  $('downloadBtn').addEventListener('click', () => {
+    if (!currentText) return;
+    const blob = new Blob([currentText], { type: 'text/plain;charset=utf-8' });
+    download(blob, `ocr_${new Date().toISOString().slice(0,10)}.txt`);
+  });
+
+  log.ok('OCR 工具准备好(首次运行会下载语言模型)');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>像素字体设计器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .pf-stage {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .pf-charlist {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-y: auto;
+    padding: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 4px;
+    align-content: start;
+    max-height: 70vh;
+  }
+  .pf-char {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+    position: relative;
+  }
+  .pf-char.has-glyph { color: var(--text); }
+  .pf-char.has-glyph::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  .pf-char:hover { background: rgba(var(--jade-rgb), 0.1); }
+  .pf-char.active {
+    background: rgba(var(--jade-rgb), 0.22);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .pf-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .pf-editor-wrap {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .pf-editor {
+    display: grid;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .pf-cell {
+    background: #1a1a1e;
+    border: 1px solid #222;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .pf-cell.on { background: var(--accent); }
+  .pf-cell.onion { background: rgba(245, 91, 91, 0.18); }
+  .pf-cell.bsl { border-bottom: 1px dashed rgba(255,255,255,0.25); }
+
+  .pf-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .pf-side .info {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .pf-side .info .k { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .pf-side .info .v { color: var(--text); font-family: ui-monospace, Consolas, monospace; }
+  .pf-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pf-tools button {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .pf-tools button:hover { background: rgba(255,255,255,0.1); }
+  .pf-tools button.danger { color: #ff8080; border-color: rgba(255,128,128,0.4); }
+
+  .pf-preview {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .pf-preview h3 {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 8px;
+  }
+  .pf-preview .strings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pf-preview canvas {
+    image-rendering: pixelated;
+    background: #1a1a1e;
+    border-radius: 4px;
+    display: block;
+  }
+  .pf-preview .strip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .pf-preview .strip .label {
+    font-size: 11px;
+    color: var(--muted);
+    width: 50px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .pf-preview input.preview-text {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  .pf-export {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-top: 6px;
+    flex-wrap: wrap;
+  }
+  .pf-export button.primary {
+    background: rgba(var(--jade-rgb), 0.18);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .pf-export button.primary:hover { background: rgba(var(--jade-rgb), 0.28); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+  .pf-help {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🅰️ 像素字体设计器</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">画自己的像素字</strong> · 一格一像素,导 BDF / TTF / PNG 雪碧图,塞进游戏 / Playable / Phaser。
+    </div>
+
+    <h2>字体名 / 大小</h2>
+    <input type="text" id="fontName" value="MyPixelFont" placeholder="字体名" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+
+    <div style="display:flex; gap:6px; margin-top:6px">
+      <label style="font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:3px; flex:1">
+        宽
+        <input type="number" id="cellW" min="3" max="32" value="6" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      </label>
+      <label style="font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:3px; flex:1">
+        高
+        <input type="number" id="cellH" min="3" max="32" value="8" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      </label>
+    </div>
+
+    <h2>字符集</h2>
+    <select id="charsetPreset" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="ascii">ASCII 可见(95 字符)</option>
+      <option value="alpha">仅字母数字(62)</option>
+      <option value="digits">仅数字(10)</option>
+      <option value="custom">自定义</option>
+    </select>
+    <textarea id="customCharset" rows="3" placeholder="自定义字符,直接打进来" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace, Consolas, monospace; font-size:11px; margin-top:6px; display:none; resize:vertical"></textarea>
+
+    <h2>基线位置</h2>
+    <input type="range" id="baseline" min="0" max="16" value="6" style="width:100%">
+    <div class="pf-help">从顶部算第 <span id="baselineLabel">6</span> 行 — 字母「g」「p」「y」的下降部分在基线下方</div>
+
+    <h2>显示</h2>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+      <input type="checkbox" id="onion" checked />
+      <span>洋葱皮(显示上一个字)</span>
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:4px">
+      <input type="checkbox" id="showBaseline" checked />
+      <span>显示基线</span>
+    </label>
+
+    <h2>导出</h2>
+    <div class="pf-help">
+      <strong>BDF</strong>(.bdf): 文本格式像素字体,FreeType / 嵌入式系统通吃<br/>
+      <strong>TTF</strong>(.ttf): 真矢量字体,网页 / 游戏引擎全兼容<br/>
+      <strong>PNG 雪碧图</strong>: 加 JSON,适合 Phaser / Pixi 的 BitmapFont
+    </div>
+
+    <h2>保存 / 加载</h2>
+    <button id="saveLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit">💾 存到浏览器</button>
+    <button id="loadLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📂 从浏览器读</button>
+    <button id="exportJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📤 导出 JSON 工程</button>
+    <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none">
+    <button id="importJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📥 导入 JSON 工程</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">像素字体设计器 · 一格一像素,导 BDF/TTF/PNG</div>
+
+    <div class="pf-stage">
+      <!-- LEFT: char picker -->
+      <div class="pf-charlist" id="charList"></div>
+
+      <!-- RIGHT: editor + preview -->
+      <div class="pf-main">
+        <div class="pf-editor-wrap">
+          <div class="pf-editor" id="editor"></div>
+          <div class="pf-side">
+            <div class="info" id="curInfo"></div>
+            <div class="pf-tools">
+              <button id="clearGlyph">清空</button>
+              <button id="invertGlyph">反色</button>
+              <button id="shiftL">← 左移</button>
+              <button id="shiftR">右移 →</button>
+              <button id="shiftU">↑ 上移</button>
+              <button id="shiftD">↓ 下移</button>
+              <button id="copyGlyph">📋 复制</button>
+              <button id="pasteGlyph">📥 粘贴</button>
+              <button id="prevGlyph">◀ 上一个</button>
+              <button id="nextGlyph">下一个 ▶</button>
+            </div>
+            <div style="margin-top:6px; font-size:11px; color:var(--muted)">
+              快捷键:Space=切换格子 · X=清空 · I=反色 · 方向键移动 · [/]切换字符 · Ctrl+C/V复制粘贴
+            </div>
+          </div>
+        </div>
+
+        <div class="pf-preview">
+          <h3>预览(像素 + 放大）</h3>
+          <div class="strings">
+            <div class="strip">
+              <span class="label">输入:</span>
+              <input type="text" id="previewText" class="preview-text" value="Hello, Dobby! 0123456789">
+            </div>
+            <div class="strip">
+              <span class="label">1×:</span>
+              <canvas id="prevCanvas1"></canvas>
+            </div>
+            <div class="strip">
+              <span class="label">4×:</span>
+              <canvas id="prevCanvas4"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="pf-export">
+          <button class="primary" id="exportBDF">📐 导出 BDF</button>
+          <button class="primary" id="exportTTF">🔡 导出 TTF</button>
+          <button class="primary" id="exportPNG">🎨 导出 PNG 雪碧图 + JSON</button>
+          <span style="font-size:11px; color:var(--muted)" id="exportStat"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script type="module">
+import opentype from 'https://esm.sh/opentype.js@1.3.4';
+
+Toolkit.injectTopbar('pixel-font');
+
+(() => {
+  const { $, makeLogger, download, downloadText, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ─── State ───
+  const state = {
+    name: 'MyPixelFont',
+    cellW: 6,
+    cellH: 8,
+    baseline: 6,
+    chars: [],       // ordered list of code points (numbers)
+    glyphs: {},      // codepoint → 2D array [h][w] of 0/1
+    current: 65,     // 'A'
+    clipboard: null
+  };
+
+  function charsetFor(preset) {
+    if (preset === 'ascii') {
+      const out = [];
+      for (let i = 0x20; i <= 0x7E; i++) out.push(i);
+      return out;
+    }
+    if (preset === 'alpha') {
+      const out = [];
+      for (let i = 48; i <= 57; i++) out.push(i);
+      for (let i = 65; i <= 90; i++) out.push(i);
+      for (let i = 97; i <= 122; i++) out.push(i);
+      return out;
+    }
+    if (preset === 'digits') {
+      const out = [];
+      for (let i = 48; i <= 57; i++) out.push(i);
+      return out;
+    }
+    return [];
+  }
+
+  function ensureGlyph(cp) {
+    if (state.glyphs[cp]) return state.glyphs[cp];
+    const g = Array.from({ length: state.cellH }, () => Array(state.cellW).fill(0));
+    state.glyphs[cp] = g;
+    return g;
+  }
+
+  function resizeGlyphIfNeeded(g) {
+    // ensure rows match cellH
+    while (g.length < state.cellH) g.push(Array(state.cellW).fill(0));
+    if (g.length > state.cellH) g.length = state.cellH;
+    // ensure cols match cellW
+    for (let y = 0; y < g.length; y++) {
+      while (g[y].length < state.cellW) g[y].push(0);
+      if (g[y].length > state.cellW) g[y].length = state.cellW;
+    }
+    return g;
+  }
+
+  function resizeAllGlyphs() {
+    for (const cp in state.glyphs) resizeGlyphIfNeeded(state.glyphs[cp]);
+  }
+
+  // ─── Char list ───
+  function refreshCharList() {
+    const preset = $('charsetPreset').value;
+    if (preset === 'custom') {
+      const txt = $('customCharset').value;
+      state.chars = [];
+      const seen = new Set();
+      for (const ch of [...txt]) {
+        const cp = ch.codePointAt(0);
+        if (!seen.has(cp)) { seen.add(cp); state.chars.push(cp); }
+      }
+    } else {
+      state.chars = charsetFor(preset);
+    }
+    if (state.chars.length && !state.chars.includes(state.current)) {
+      state.current = state.chars[0];
+    }
+    renderCharList();
+    renderEditor();
+    renderPreview();
+  }
+
+  function renderCharList() {
+    const root = $('charList');
+    root.innerHTML = '';
+    for (const cp of state.chars) {
+      const el = document.createElement('div');
+      el.className = 'pf-char';
+      el.textContent = String.fromCodePoint(cp);
+      el.dataset.cp = cp;
+      if (state.glyphs[cp] && hasAnyPixel(state.glyphs[cp])) el.classList.add('has-glyph');
+      if (cp === state.current) el.classList.add('active');
+      el.title = `U+${cp.toString(16).toUpperCase().padStart(4,'0')}  "${String.fromCodePoint(cp)}"`;
+      el.addEventListener('click', () => {
+        state.current = cp;
+        renderCharList();
+        renderEditor();
+      });
+      root.appendChild(el);
+    }
+  }
+
+  function hasAnyPixel(g) {
+    for (const row of g) for (const v of row) if (v) return true;
+    return false;
+  }
+
+  // ─── Editor ───
+  let painting = false;
+  let paintValue = 0;
+  function renderEditor() {
+    const root = $('editor');
+    root.innerHTML = '';
+    const W = state.cellW, H = state.cellH;
+    root.style.gridTemplateColumns = `repeat(${W}, 32px)`;
+    root.style.gridTemplateRows = `repeat(${H}, 32px)`;
+
+    const g = resizeGlyphIfNeeded(ensureGlyph(state.current));
+    // previous glyph for onion-skin
+    const idx = state.chars.indexOf(state.current);
+    const prevG = (idx > 0 && $('onion').checked) ? state.glyphs[state.chars[idx - 1]] : null;
+    const baselineRow = parseInt($('baseline').value, 10);
+    const showBaseline = $('showBaseline').checked;
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const c = document.createElement('div');
+        c.className = 'pf-cell';
+        c.dataset.x = x; c.dataset.y = y;
+        if (g[y][x]) c.classList.add('on');
+        else if (prevG && prevG[y] && prevG[y][x]) c.classList.add('onion');
+        if (showBaseline && y === baselineRow - 1) c.classList.add('bsl');
+        c.addEventListener('mousedown', e => {
+          e.preventDefault();
+          painting = true;
+          paintValue = g[y][x] ? 0 : 1;
+          g[y][x] = paintValue;
+          renderEditor();
+          renderCharList();
+          renderPreview();
+        });
+        c.addEventListener('mouseenter', () => {
+          if (!painting) return;
+          if (g[y][x] !== paintValue) {
+            g[y][x] = paintValue;
+            renderEditor();
+            renderPreview();
+          }
+        });
+        root.appendChild(c);
+      }
+    }
+    const ch = String.fromCodePoint(state.current);
+    $('curInfo').innerHTML = `
+      <div><span class="k">字符</span> <span class="v" style="font-size:20px">${ch === ' ' ? '␣' : ch}</span> &nbsp; <span class="k">U+</span><span class="v">${state.current.toString(16).toUpperCase().padStart(4, '0')}</span> &nbsp; <span class="k">索引</span> <span class="v">${idx + 1}/${state.chars.length}</span></div>
+      <div><span class="k">网格</span> <span class="v">${W}×${H}</span> &nbsp; <span class="k">已有字</span> <span class="v">${Object.keys(state.glyphs).filter(k => hasAnyPixel(state.glyphs[k])).length}</span></div>
+    `;
+  }
+  window.addEventListener('mouseup', () => { painting = false; });
+
+  // ─── Glyph ops ───
+  function clearCurrent() {
+    const g = ensureGlyph(state.current);
+    for (let y = 0; y < g.length; y++) g[y].fill(0);
+    renderEditor(); renderCharList(); renderPreview();
+  }
+  function invertCurrent() {
+    const g = ensureGlyph(state.current);
+    for (let y = 0; y < g.length; y++) for (let x = 0; x < g[y].length; x++) g[y][x] = g[y][x] ? 0 : 1;
+    renderEditor(); renderCharList(); renderPreview();
+  }
+  function shiftCurrent(dx, dy) {
+    const g = ensureGlyph(state.current);
+    const W = state.cellW, H = state.cellH;
+    const out = Array.from({length: H}, () => Array(W).fill(0));
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const sy = y - dy, sx = x - dx;
+        if (sy >= 0 && sy < H && sx >= 0 && sx < W) out[y][x] = g[sy][sx];
+      }
+    }
+    state.glyphs[state.current] = out;
+    renderEditor(); renderPreview();
+  }
+  function copyCurrent() {
+    const g = ensureGlyph(state.current);
+    state.clipboard = g.map(row => row.slice());
+    log.ok('已复制当前字形');
+  }
+  function pasteCurrent() {
+    if (!state.clipboard) { log.warn('剪贴板为空'); return; }
+    state.glyphs[state.current] = state.clipboard.map(row => row.slice());
+    resizeGlyphIfNeeded(state.glyphs[state.current]);
+    renderEditor(); renderCharList(); renderPreview();
+  }
+  function nextChar(dir) {
+    const idx = state.chars.indexOf(state.current);
+    if (idx < 0) return;
+    const ni = (idx + dir + state.chars.length) % state.chars.length;
+    state.current = state.chars[ni];
+    renderCharList(); renderEditor();
+  }
+
+  $('clearGlyph').addEventListener('click', clearCurrent);
+  $('invertGlyph').addEventListener('click', invertCurrent);
+  $('shiftL').addEventListener('click', () => shiftCurrent(-1, 0));
+  $('shiftR').addEventListener('click', () => shiftCurrent(1, 0));
+  $('shiftU').addEventListener('click', () => shiftCurrent(0, -1));
+  $('shiftD').addEventListener('click', () => shiftCurrent(0, 1));
+  $('copyGlyph').addEventListener('click', copyCurrent);
+  $('pasteGlyph').addEventListener('click', pasteCurrent);
+  $('prevGlyph').addEventListener('click', () => nextChar(-1));
+  $('nextGlyph').addEventListener('click', () => nextChar(1));
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ' ') {
+      // toggle the hovered cell? simpler: do nothing without a focus cursor
+      return;
+    }
+    if (e.key === 'x' || e.key === 'X') { clearCurrent(); e.preventDefault(); }
+    if (e.key === 'i' || e.key === 'I') { invertCurrent(); e.preventDefault(); }
+    if (e.key === '[') { nextChar(-1); e.preventDefault(); }
+    if (e.key === ']') { nextChar(1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { shiftCurrent(-1, 0); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { shiftCurrent(1, 0); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { shiftCurrent(0, -1); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { shiftCurrent(0, 1); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) { copyCurrent(); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) { pasteCurrent(); e.preventDefault(); }
+  });
+
+  // ─── Settings hooks ───
+  $('cellW').addEventListener('change', () => {
+    state.cellW = Math.max(3, Math.min(32, parseInt($('cellW').value, 10) || 6));
+    resizeAllGlyphs();
+    renderEditor(); renderPreview();
+  });
+  $('cellH').addEventListener('change', () => {
+    state.cellH = Math.max(3, Math.min(32, parseInt($('cellH').value, 10) || 8));
+    // also update baseline max
+    $('baseline').max = state.cellH;
+    if (parseInt($('baseline').value, 10) > state.cellH) {
+      $('baseline').value = state.cellH;
+      $('baselineLabel').textContent = state.cellH;
+    }
+    state.baseline = parseInt($('baseline').value, 10);
+    resizeAllGlyphs();
+    renderEditor(); renderPreview();
+  });
+  $('baseline').addEventListener('input', () => {
+    $('baselineLabel').textContent = $('baseline').value;
+    state.baseline = parseInt($('baseline').value, 10);
+    renderEditor(); renderPreview();
+  });
+  $('charsetPreset').addEventListener('change', () => {
+    $('customCharset').style.display = $('charsetPreset').value === 'custom' ? '' : 'none';
+    refreshCharList();
+  });
+  $('customCharset').addEventListener('input', refreshCharList);
+  $('onion').addEventListener('change', renderEditor);
+  $('showBaseline').addEventListener('change', renderEditor);
+  $('fontName').addEventListener('input', () => { state.name = $('fontName').value || 'MyPixelFont'; });
+
+  // ─── Preview canvas rendering ───
+  function renderPreview() {
+    const text = $('previewText').value;
+    drawPreview(text, $('prevCanvas1'), 1);
+    drawPreview(text, $('prevCanvas4'), 4);
+  }
+  function drawPreview(text, canvas, scale) {
+    const chars = [...text];
+    const W = state.cellW, H = state.cellH;
+    const padX = 1; // 1 pixel space between glyphs in source
+    const totalW = chars.length * (W + padX);
+    canvas.width = totalW * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#1a1a1e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e6f0e0';
+    let x0 = 0;
+    for (const ch of chars) {
+      const cp = ch.codePointAt(0);
+      const g = state.glyphs[cp];
+      if (g) {
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            if (g[y][x]) {
+              ctx.fillRect((x0 + x) * scale, y * scale, scale, scale);
+            }
+          }
+        }
+      }
+      x0 += W + padX;
+    }
+  }
+  $('previewText').addEventListener('input', renderPreview);
+
+  // ─── Persistence ───
+  const LS_KEY = 'dobby.pixel-font.draft';
+  function saveLocal() {
+    const data = {
+      name: state.name, cellW: state.cellW, cellH: state.cellH, baseline: state.baseline,
+      charsetPreset: $('charsetPreset').value,
+      customCharset: $('customCharset').value,
+      glyphs: state.glyphs
+    };
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+      log.ok('已存到浏览器');
+    } catch (e) { log.err('保存失败: ' + e.message); }
+  }
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) { log.warn('浏览器里没有存档'); return; }
+      applyProject(JSON.parse(raw));
+      log.ok('从浏览器读取成功');
+    } catch (e) { log.err('读取失败: ' + e.message); }
+  }
+  function applyProject(p) {
+    state.name = p.name || 'MyPixelFont';
+    state.cellW = p.cellW || 6;
+    state.cellH = p.cellH || 8;
+    state.baseline = p.baseline || 6;
+    state.glyphs = p.glyphs || {};
+    $('fontName').value = state.name;
+    $('cellW').value = state.cellW;
+    $('cellH').value = state.cellH;
+    $('baseline').max = state.cellH;
+    $('baseline').value = state.baseline;
+    $('baselineLabel').textContent = state.baseline;
+    if (p.charsetPreset) $('charsetPreset').value = p.charsetPreset;
+    if (p.customCharset) { $('customCharset').value = p.customCharset; $('customCharset').style.display = $('charsetPreset').value === 'custom' ? '' : 'none'; }
+    resizeAllGlyphs();
+    refreshCharList();
+  }
+  $('saveLocal').addEventListener('click', saveLocal);
+  $('loadLocal').addEventListener('click', loadLocal);
+  $('exportJson').addEventListener('click', () => {
+    const data = {
+      name: state.name, cellW: state.cellW, cellH: state.cellH, baseline: state.baseline,
+      charsetPreset: $('charsetPreset').value,
+      customCharset: $('customCharset').value,
+      glyphs: state.glyphs
+    };
+    downloadText(JSON.stringify(data, null, 2), `${state.name}.dobby-font.json`, 'application/json');
+  });
+  $('importJson').addEventListener('click', () => $('importJsonInput').click());
+  $('importJsonInput').addEventListener('change', async () => {
+    const f = $('importJsonInput').files[0];
+    if (!f) return;
+    try {
+      const obj = JSON.parse(await f.text());
+      applyProject(obj);
+      log.ok('已导入 ' + f.name);
+    } catch (e) { log.err('导入失败: ' + e.message); }
+  });
+
+  // ─── Export: BDF ───
+  function exportBDF() {
+    const W = state.cellW, H = state.cellH;
+    const baseline = state.baseline;
+    const filledCount = state.chars.filter(cp => hasAnyPixel(state.glyphs[cp] || [])).length;
+    let out = `STARTFONT 2.1\nFONT -dobby-${state.name}-medium-r-normal--${H}-${H*10}-75-75-c-${W*10}-iso10646-1\nSIZE ${H} 75 75\nFONTBOUNDINGBOX ${W} ${H} 0 ${baseline - H}\nSTARTPROPERTIES 2\nFONT_ASCENT ${baseline}\nFONT_DESCENT ${H - baseline}\nENDPROPERTIES\nCHARS ${filledCount}\n`;
+    for (const cp of state.chars) {
+      const g = state.glyphs[cp];
+      if (!g || !hasAnyPixel(g)) continue;
+      const name = `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
+      out += `STARTCHAR ${name}\nENCODING ${cp}\nSWIDTH ${Math.round(1000 * (W + 1) / H)} 0\nDWIDTH ${W + 1} 0\nBBX ${W} ${H} 0 ${baseline - H}\nBITMAP\n`;
+      // bytes per row = ceil(W/8)
+      const bpr = Math.ceil(W / 8);
+      for (let y = 0; y < H; y++) {
+        let bits = '';
+        for (let x = 0; x < bpr * 8; x++) {
+          bits += (x < W && g[y][x]) ? '1' : '0';
+        }
+        let hex = '';
+        for (let i = 0; i < bits.length; i += 8) {
+          hex += parseInt(bits.substr(i, 8), 2).toString(16).padStart(2, '0').toUpperCase();
+        }
+        out += hex + '\n';
+      }
+      out += `ENDCHAR\n`;
+    }
+    out += `ENDFONT\n`;
+    downloadText(out, `${state.name}.bdf`, 'text/plain');
+    log.ok(`BDF 导出 · ${filledCount} 字 · ${fmtBytes(new Blob([out]).size)}`);
+  }
+  $('exportBDF').addEventListener('click', exportBDF);
+
+  // ─── Export: PNG sprite sheet + JSON ───
+  function exportPNG() {
+    const W = state.cellW, H = state.cellH;
+    const cols = 16;
+    const filled = state.chars.filter(cp => hasAnyPixel(state.glyphs[cp] || []));
+    if (!filled.length) { log.warn('没有任何字形可导'); return; }
+    const rows = Math.ceil(filled.length / cols);
+    const canvas = document.createElement('canvas');
+    canvas.width = cols * W;
+    canvas.height = rows * H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff00';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    const meta = {
+      name: state.name,
+      cellW: W, cellH: H,
+      cols, rows,
+      baseline: state.baseline,
+      chars: []
+    };
+    filled.forEach((cp, i) => {
+      const r = Math.floor(i / cols), c = i % cols;
+      const g = state.glyphs[cp];
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (g[y][x]) ctx.fillRect(c * W + x, r * H + y, 1, 1);
+        }
+      }
+      meta.chars.push({ cp, ch: String.fromCodePoint(cp), col: c, row: r });
+    });
+    canvas.toBlob(blob => {
+      if (!blob) { log.err('PNG 编码失败'); return; }
+      download(blob, `${state.name}.png`);
+      downloadText(JSON.stringify(meta, null, 2), `${state.name}.json`, 'application/json');
+      log.ok(`PNG 雪碧图 · ${filled.length} 字 · ${canvas.width}×${canvas.height} · ${fmtBytes(blob.size)}`);
+    }, 'image/png');
+  }
+  $('exportPNG').addEventListener('click', exportPNG);
+
+  // ─── Export: TTF via opentype.js ───
+  function exportTTF() {
+    const W = state.cellW, H = state.cellH;
+    const baseline = state.baseline;
+    const unitsPerEm = 1024;
+    const px = Math.floor(unitsPerEm / H);
+    const ascender = baseline * px;
+    const descender = (H - baseline) * px;
+
+    // .notdef glyph: empty box
+    const notdefPath = new opentype.Path();
+    notdefPath.moveTo(0, 0);
+    notdefPath.lineTo(W * px, 0);
+    notdefPath.lineTo(W * px, H * px);
+    notdefPath.lineTo(0, H * px);
+    notdefPath.close();
+    const notdefGlyph = new opentype.Glyph({
+      name: '.notdef',
+      unicode: 0,
+      advanceWidth: (W + 1) * px,
+      path: new opentype.Path()
+    });
+
+    const glyphs = [notdefGlyph];
+    for (const cp of state.chars) {
+      const g = state.glyphs[cp];
+      const path = new opentype.Path();
+      if (g && hasAnyPixel(g)) {
+        // Each pixel becomes a unit square. Note: opentype.js uses
+        // a Y-up coordinate system where the baseline is y=0, ascender is positive.
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            if (!g[y][x]) continue;
+            // Pixel top-left in font units. Row 0 = top of cell.
+            // ascender = baseline*px above the baseline.
+            const fx = x * px;
+            const fy = ascender - (y + 1) * px; // bottom of this pixel
+            const fx2 = fx + px;
+            const fy2 = fy + px;
+            path.moveTo(fx, fy);
+            path.lineTo(fx2, fy);
+            path.lineTo(fx2, fy2);
+            path.lineTo(fx, fy2);
+            path.close();
+          }
+        }
+      }
+      const gl = new opentype.Glyph({
+        name: `u${cp.toString(16).toUpperCase().padStart(4,'0')}`,
+        unicode: cp,
+        advanceWidth: (W + 1) * px,
+        path
+      });
+      glyphs.push(gl);
+    }
+
+    const font = new opentype.Font({
+      familyName: state.name,
+      styleName: 'Regular',
+      unitsPerEm,
+      ascender,
+      descender: -descender,
+      glyphs
+    });
+    const buf = font.toArrayBuffer();
+    const blob = new Blob([buf], { type: 'font/ttf' });
+    // verify magic — TTF should start with 0x00010000 or 'OTTO' for OTF
+    const head = new Uint8Array(buf.slice(0, 4));
+    const isTTF = head[0] === 0x00 && head[1] === 0x01 && head[2] === 0x00 && head[3] === 0x00;
+    const isOTF = head[0] === 0x4F && head[1] === 0x54 && head[2] === 0x54 && head[3] === 0x4F;
+    if (!isTTF && !isOTF) {
+      log.err('TTF magic 校验失败');
+      return;
+    }
+    download(blob, `${state.name}.ttf`);
+    log.ok(`TTF 导出 · ${glyphs.length - 1} 字 · ${fmtBytes(blob.size)}`);
+    $('exportStat').textContent = `最新导出 · TTF ${fmtBytes(blob.size)}`;
+  }
+  $('exportTTF').addEventListener('click', exportTTF);
+
+  // ─── Boot ───
+  // pre-fill some demo glyphs for 'A' so the user immediately sees what's going on
+  function bootDemo() {
+    const demo = {
+      65: [
+        [0,0,1,1,0,0],
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,1,1,1,1,0],
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+      ],
+      66: [
+        [0,1,1,1,0,0],
+        [0,1,0,0,1,0],
+        [0,1,1,1,0,0],
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,1,1,1,0,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+      ],
+      72: [
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,1,1,1,1,0],
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,1,0,0,1,0],
+        [0,0,0,0,0,0],
+        [0,0,0,0,0,0],
+      ],
+    };
+    state.glyphs = Object.fromEntries(Object.entries(demo).map(([k,v]) => [parseInt(k, 10), v]));
+  }
+  bootDemo();
+  refreshCharList();
+  log.ok('像素字体设计器准备好 — 网格里点格子开画');
+})();
+</script>
+</body>
+</html>

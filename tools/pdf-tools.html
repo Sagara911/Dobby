@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>PDF 工具包 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .pdf-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .pdf-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pdf-tabs button {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--muted);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  }
+  .pdf-tabs button.active {
+    color: var(--accent);
+    background: rgba(var(--jade-rgb), 0.08);
+    border-color: var(--border);
+    border-bottom: 1px solid var(--bg);
+    margin-bottom: -1px;
+  }
+  .pdf-panel { display: none; flex: 1; min-height: 0; flex-direction: column; gap: 12px; }
+  .pdf-panel.active { display: flex; }
+
+  .pdf-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .pdf-drop:hover, .pdf-drop.drag {
+    border-color: var(--accent);
+    background: rgba(var(--jade-rgb), 0.05);
+  }
+  .pdf-drop .big { font-size: 36px; margin-bottom: 8px; }
+
+  .pdf-list {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .pdf-list .item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.03);
+    border-radius: var(--radius-sm);
+    margin-bottom: 4px;
+    font-size: 12px;
+    cursor: grab;
+  }
+  .pdf-list .item:last-child { margin-bottom: 0; }
+  .pdf-list .item.dragging { opacity: 0.4; }
+  .pdf-list .item .grip { color: var(--muted); font-family: monospace; font-size: 14px; }
+  .pdf-list .item .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pdf-list .item .pages { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .pdf-list .item .size { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; min-width: 60px; text-align: right; }
+  .pdf-list .item .remove {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+  }
+  .pdf-list .item .remove:hover { color: #ff8080; border-color: rgba(255,128,128,0.5); }
+
+  .pdf-thumbs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .pdf-thumb {
+    position: relative;
+    background: #fff;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    cursor: pointer;
+    aspect-ratio: 0.707;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .pdf-thumb.selected { border-color: var(--accent); }
+  .pdf-thumb canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .pdf-thumb .num {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .pdf-thumb .check {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+  }
+  .pdf-thumb.selected .check { background: var(--accent); }
+
+  .pdf-result {
+    background: rgba(var(--jade-rgb), 0.06);
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    display: none;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pdf-result.show { display: flex; }
+  .pdf-result .info { flex: 1; font-size: 12px; color: var(--text); line-height: 1.6; }
+  .pdf-result .info .k { color: var(--muted); }
+  .pdf-result .info b { color: var(--accent); }
+  .pdf-result button {
+    background: rgba(var(--jade-rgb), 0.18);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .pdf-result button:hover { background: rgba(var(--jade-rgb), 0.28); }
+
+  .pdf-action-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pdf-action-row button.primary {
+    background: rgba(var(--jade-rgb), 0.18);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .pdf-action-row button.primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pdf-action-row button.primary:hover:not(:disabled) { background: rgba(var(--jade-rgb), 0.28); }
+
+  .pdf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+  .pdf-help {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .pdf-loading {
+    text-align: center;
+    color: var(--muted);
+    padding: 20px;
+    font-size: 12px;
+  }
+  .pdf-spin {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: pdfspin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes pdfspin { to { transform: rotate(360deg); } }
+
+  .img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .img-grid .cell {
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    text-align: center;
+  }
+  .img-grid .cell img { max-width: 100%; max-height: 100px; display: block; margin: 0 auto; }
+  .img-grid .cell .label {
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📄 PDF 工具包</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">100% 本地</strong> · 用 pdf-lib + pdf.js 在浏览器里处理 PDF,不上传任何东西。
+    </div>
+
+    <h2>当前模式</h2>
+    <div id="modeHint" style="font-size:12px; color:var(--text); line-height:1.7"></div>
+
+    <h2>合并 · 提示</h2>
+    <div class="pdf-help">拖入多个 PDF,可拖动排序,然后合并成一份。书签 / 表单字段都会保留。</div>
+
+    <h2>拆分 · 提示</h2>
+    <div class="pdf-help">拖入单个 PDF,点页码选要导出的页。可选「单个 ZIP(每页一文件)」或「合并这些页为新 PDF」。</div>
+
+    <h2>提图 · 提示</h2>
+    <div class="pdf-help">把每页栅格化为 PNG / JPEG。可调缩放(1×~4×),适合做截图、缩略图、备份。</div>
+
+    <h2>压缩 · 提示</h2>
+    <div class="pdf-help">把每页栅格化为 JPEG 再重新打包,适合扫描件 / 图片密集型 PDF。文本 PDF 会丢失文本可选属性,但体积通常 -60% ~ -85%。</div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">PDF 工具包 · 合并 / 拆分 / 提图 / 压缩,全本地</div>
+
+    <div class="pdf-stage">
+      <div class="pdf-tabs">
+        <button data-tab="merge" class="active">📚 合并</button>
+        <button data-tab="split">✂️ 拆分</button>
+        <button data-tab="extract">🖼️ 提图</button>
+        <button data-tab="compress">🗜️ 压缩</button>
+      </div>
+
+      <!-- MERGE TAB -->
+      <div class="pdf-panel active" data-panel="merge">
+        <div class="pdf-drop" id="mergeDrop">
+          <div class="big">📚</div>
+          <div>拖入多个 PDF 文件 · 或点击选择</div>
+          <input type="file" id="mergeInput" accept="application/pdf" multiple style="display:none">
+        </div>
+        <div class="pdf-list" id="mergeList" style="display:none"></div>
+        <div class="pdf-action-row">
+          <button class="primary" id="mergeBtn" disabled>合并为一份 PDF</button>
+          <button class="primary" id="mergeClearBtn" style="background:rgba(255,128,128,0.12); border-color:rgba(255,128,128,0.4); color:#ff8080" disabled>清空</button>
+          <span style="font-size:11px; color:var(--muted)" id="mergeStat"></span>
+        </div>
+        <div class="pdf-result" id="mergeResult">
+          <div class="info" id="mergeResultInfo"></div>
+          <button id="mergeDownload">💾 下载 PDF</button>
+        </div>
+      </div>
+
+      <!-- SPLIT TAB -->
+      <div class="pdf-panel" data-panel="split">
+        <div class="pdf-drop" id="splitDrop">
+          <div class="big">✂️</div>
+          <div>拖入一个 PDF 文件 · 或点击选择</div>
+          <input type="file" id="splitInput" accept="application/pdf" style="display:none">
+        </div>
+        <div id="splitLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在加载 PDF...</div>
+        <div class="pdf-thumbs" id="splitThumbs" style="display:none"></div>
+        <div class="pdf-action-row" id="splitActions" style="display:none">
+          <button class="primary" id="splitAllBtn">全选</button>
+          <button class="primary" id="splitNoneBtn">全不选</button>
+          <button class="primary" id="splitInvertBtn">反选</button>
+          <input type="text" id="splitRange" placeholder="或填范围如 1-3,5,7-9" style="flex:1; padding:7px 10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+          <button class="primary" id="splitRangeBtn">应用范围</button>
+        </div>
+        <div class="pdf-action-row" id="splitActions2" style="display:none">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            模式:
+            <select id="splitMode" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+              <option value="merged" selected>合并成新 PDF</option>
+              <option value="separate">每页单独 PDF + ZIP</option>
+            </select>
+          </label>
+          <button class="primary" id="splitGoBtn" disabled>导出选中页</button>
+          <span style="font-size:11px; color:var(--muted)" id="splitStat"></span>
+        </div>
+        <div class="pdf-result" id="splitResult">
+          <div class="info" id="splitResultInfo"></div>
+          <button id="splitDownload">💾 下载</button>
+        </div>
+      </div>
+
+      <!-- EXTRACT TAB -->
+      <div class="pdf-panel" data-panel="extract">
+        <div class="pdf-drop" id="extractDrop">
+          <div class="big">🖼️</div>
+          <div>拖入一个 PDF · 把每页栅格化为图片</div>
+          <input type="file" id="extractInput" accept="application/pdf" style="display:none">
+        </div>
+        <div class="pdf-action-row" id="extractOpts" style="display:none">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            格式:
+            <select id="extractFmt" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+              <option value="png">PNG(无损)</option>
+              <option value="jpeg" selected>JPEG(小)</option>
+              <option value="webp">WebP</option>
+            </select>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            缩放:
+            <select id="extractScale" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+              <option value="1">1×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2" selected>2×</option>
+              <option value="3">3×</option>
+              <option value="4">4×</option>
+            </select>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            质量:
+            <input type="range" id="extractQ" min="40" max="100" value="85" style="width:120px">
+            <span id="extractQLabel" style="font-family:ui-monospace, Consolas, monospace; font-size:11px; color:var(--text); min-width:30px">85</span>
+          </label>
+          <button class="primary" id="extractGoBtn">栅格化</button>
+        </div>
+        <div id="extractLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在栅格化...</div>
+        <div class="img-grid" id="extractGrid" style="display:none"></div>
+        <div class="pdf-result" id="extractResult">
+          <div class="info" id="extractResultInfo"></div>
+          <button id="extractDownload">💾 下载 ZIP</button>
+        </div>
+      </div>
+
+      <!-- COMPRESS TAB -->
+      <div class="pdf-panel" data-panel="compress">
+        <div class="pdf-drop" id="compressDrop">
+          <div class="big">🗜️</div>
+          <div>拖入一个 PDF · 重新栅格化压缩</div>
+          <input type="file" id="compressInput" accept="application/pdf" style="display:none">
+        </div>
+        <div class="pdf-action-row" id="compressOpts" style="display:none">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            分辨率:
+            <select id="compressScale" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+              <option value="0.75">0.75×(更小)</option>
+              <option value="1" selected>1×(原始)</option>
+              <option value="1.5">1.5×(更清)</option>
+            </select>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px">
+            JPEG 质量:
+            <input type="range" id="compressQ" min="40" max="92" value="72" style="width:140px">
+            <span id="compressQLabel" style="font-family:ui-monospace, Consolas, monospace; font-size:11px; color:var(--text); min-width:30px">72</span>
+          </label>
+          <button class="primary" id="compressGoBtn">开始压缩</button>
+          <span style="font-size:11px; color:var(--muted)" id="compressStat"></span>
+        </div>
+        <div id="compressLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在压缩...</div>
+        <div class="pdf-result" id="compressResult">
+          <div class="info" id="compressResultInfo"></div>
+          <button id="compressDownload">💾 下载</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script type="module">
+import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
+// pdf.js — load the UMD build via a script tag so the global pdfjsLib is set
+// up correctly with its worker. ESM builds of pdf.js have unstable worker URL
+// resolution across versions, so the UMD route is the most reliable.
+await new Promise((resolve, reject) => {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+  s.onload = resolve;
+  s.onerror = () => reject(new Error('pdf.js failed to load'));
+  document.head.appendChild(s);
+});
+const pdfjsLib = window.pdfjsLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+// pdf.js render() yields between operations using requestAnimationFrame by
+// default. When the tab is hidden/minimized (or in certain headless contexts)
+// RAF never fires and the render hangs forever. Wrap the render call to
+// force continuation via setTimeout instead so we make progress regardless.
+async function renderPage(page, canvasContext, viewport) {
+  const task = page.render({ canvasContext, viewport });
+  task.onContinue = (cont) => setTimeout(cont, 0);
+  await task.promise;
+}
+
+// Lazy-load JSZip when needed
+let _jszip = null;
+async function getJSZip() {
+  if (_jszip) return _jszip;
+  const m = await import('https://esm.sh/jszip@3.10.1');
+  _jszip = m.default;
+  return _jszip;
+}
+
+Toolkit.injectTopbar('pdf-tools');
+
+(() => {
+  const { $, makeLogger, download, fmtBytes } = Toolkit;
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const log = makeLogger($('log'));
+
+  // ─── Tab switching ───
+  const tabBtns = $$('.pdf-tabs button');
+  const panels = $$('.pdf-panel');
+  const modeHints = {
+    merge:    '📚 合并 — 拖入多个 PDF,排序后合并为一份',
+    split:    '✂️ 拆分 — 拖入一个 PDF,挑页导出',
+    extract:  '🖼️ 提图 — 把 PDF 每页栅格化为图片',
+    compress: '🗜️ 压缩 — 重新栅格化压缩(适合扫描件)'
+  };
+  function setMode(name) {
+    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+    $('modeHint').textContent = modeHints[name];
+  }
+  tabBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
+  setMode('merge');
+
+  // ─── Generic drop handlers ───
+  function bindDrop(dropEl, inputEl, onFiles) {
+    dropEl.addEventListener('click', () => inputEl.click());
+    inputEl.addEventListener('change', () => onFiles(Array.from(inputEl.files)));
+    ['dragenter', 'dragover'].forEach(ev => {
+      dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+      dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.remove('drag'); });
+    });
+    dropEl.addEventListener('drop', e => {
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      if (files.length) onFiles(files);
+    });
+  }
+
+  // ═════════════════════════════════════════════════════════════════
+  //   MERGE
+  // ═════════════════════════════════════════════════════════════════
+  const mergeFiles = []; // { file, name, size, pages, bytes }
+  let mergeBlob = null;
+
+  async function readPagesCount(arrayBuf) {
+    try {
+      const doc = await PDFDocument.load(arrayBuf, { ignoreEncryption: true });
+      return doc.getPageCount();
+    } catch (e) { return null; }
+  }
+
+  async function onMergeFiles(files) {
+    for (const f of files) {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const pages = await readPagesCount(bytes);
+      if (pages == null) { log.warn(`跳过 ${f.name}: 无法解析(可能加密了)`); continue; }
+      mergeFiles.push({ file: f, name: f.name, size: f.size, pages, bytes });
+    }
+    renderMergeList();
+    log.ok(`已添加 ${files.length} 个 PDF · 当前共 ${mergeFiles.length} 个`);
+  }
+
+  function renderMergeList() {
+    const list = $('mergeList');
+    if (!mergeFiles.length) {
+      list.style.display = 'none';
+      $('mergeBtn').disabled = true;
+      $('mergeClearBtn').disabled = true;
+      $('mergeStat').textContent = '';
+      return;
+    }
+    list.style.display = '';
+    const totalPages = mergeFiles.reduce((a, b) => a + b.pages, 0);
+    const totalSize = mergeFiles.reduce((a, b) => a + b.size, 0);
+    $('mergeStat').textContent = `${mergeFiles.length} 个文件 · ${totalPages} 页 · ${fmtBytes(totalSize)}`;
+    $('mergeBtn').disabled = mergeFiles.length < 2;
+    $('mergeClearBtn').disabled = false;
+
+    list.innerHTML = mergeFiles.map((f, i) => `
+      <div class="item" draggable="true" data-idx="${i}">
+        <span class="grip">≡</span>
+        <span class="name" title="${f.name}">${f.name}</span>
+        <span class="pages">${f.pages} 页</span>
+        <span class="size">${fmtBytes(f.size)}</span>
+        <button class="remove" data-rm="${i}">✕</button>
+      </div>
+    `).join('');
+
+    // Drag-reorder
+    let dragIdx = -1;
+    list.querySelectorAll('.item').forEach(it => {
+      it.addEventListener('dragstart', e => {
+        dragIdx = parseInt(it.dataset.idx, 10);
+        it.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      it.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      it.addEventListener('drop', e => {
+        e.preventDefault();
+        const tgt = parseInt(it.dataset.idx, 10);
+        if (dragIdx < 0 || dragIdx === tgt) return;
+        const [moved] = mergeFiles.splice(dragIdx, 1);
+        mergeFiles.splice(tgt, 0, moved);
+        renderMergeList();
+      });
+      it.addEventListener('dragend', () => { it.classList.remove('dragging'); dragIdx = -1; });
+    });
+    list.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.rm, 10);
+        mergeFiles.splice(idx, 1);
+        renderMergeList();
+      });
+    });
+  }
+
+  async function mergeNow() {
+    $('mergeBtn').disabled = true;
+    try {
+      const out = await PDFDocument.create();
+      for (const f of mergeFiles) {
+        const src = await PDFDocument.load(f.bytes, { ignoreEncryption: true });
+        const pages = await out.copyPages(src, src.getPageIndices());
+        pages.forEach(p => out.addPage(p));
+        log.ok(`合并 ${f.name}(${f.pages} 页)`);
+      }
+      const bytes = await out.save();
+      mergeBlob = new Blob([bytes], { type: 'application/pdf' });
+      // verify magic bytes
+      const head = new Uint8Array(await mergeBlob.slice(0, 4).arrayBuffer());
+      if (head[0] !== 0x25 || head[1] !== 0x50 || head[2] !== 0x44 || head[3] !== 0x46) {
+        throw new Error('输出文件不是有效的 PDF(magic 校验失败)');
+      }
+      const totalPages = mergeFiles.reduce((a, b) => a + b.pages, 0);
+      $('mergeResultInfo').innerHTML = `合成 <b>${mergeFiles.length}</b> 个 PDF · 共 <b>${totalPages}</b> 页 · <b>${fmtBytes(mergeBlob.size)}</b>`;
+      $('mergeResult').classList.add('show');
+      log.ok(`合并完成 · ${fmtBytes(mergeBlob.size)}`);
+    } catch (e) {
+      log.err('合并失败: ' + e.message);
+    } finally {
+      $('mergeBtn').disabled = false;
+    }
+  }
+
+  bindDrop($('mergeDrop'), $('mergeInput'), onMergeFiles);
+  $('mergeBtn').addEventListener('click', mergeNow);
+  $('mergeClearBtn').addEventListener('click', () => {
+    mergeFiles.length = 0;
+    mergeBlob = null;
+    renderMergeList();
+    $('mergeResult').classList.remove('show');
+  });
+  $('mergeDownload').addEventListener('click', () => {
+    if (mergeBlob) download(mergeBlob, `merged_${new Date().toISOString().slice(0,10)}.pdf`);
+  });
+
+  // ═════════════════════════════════════════════════════════════════
+  //   SPLIT
+  // ═════════════════════════════════════════════════════════════════
+  let splitDoc = null;      // pdf.js doc for thumbs
+  let splitBytes = null;    // raw bytes for pdf-lib re-pack
+  let splitSelected = new Set();
+  let splitBlob = null;
+  let splitSourceName = '';
+
+  async function onSplitFile(files) {
+    const f = files[0]; if (!f) return;
+    splitSourceName = f.name.replace(/\.pdf$/i, '');
+    splitBytes = new Uint8Array(await f.arrayBuffer());
+    $('splitLoading').style.display = '';
+    $('splitThumbs').style.display = 'none';
+    $('splitActions').style.display = 'none';
+    $('splitActions2').style.display = 'none';
+    $('splitResult').classList.remove('show');
+    try {
+      splitDoc = await pdfjsLib.getDocument({ data: splitBytes.slice() }).promise;
+      await renderSplitThumbs();
+      $('splitLoading').style.display = 'none';
+      $('splitThumbs').style.display = '';
+      $('splitActions').style.display = '';
+      $('splitActions2').style.display = '';
+      log.ok(`已加载 ${f.name} · ${splitDoc.numPages} 页`);
+    } catch (e) {
+      $('splitLoading').style.display = 'none';
+      log.err('加载 PDF 失败: ' + e.message);
+    }
+  }
+
+  async function renderSplitThumbs() {
+    const wrap = $('splitThumbs');
+    wrap.innerHTML = '';
+    splitSelected.clear();
+    for (let i = 1; i <= splitDoc.numPages; i++) {
+      const page = await splitDoc.getPage(i);
+      const vp = page.getViewport({ scale: 0.2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = vp.width;
+      canvas.height = vp.height;
+      await renderPage(page, canvas.getContext('2d'), vp);
+
+      const div = document.createElement('div');
+      div.className = 'pdf-thumb';
+      div.dataset.page = i;
+      div.appendChild(canvas);
+      const num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = i;
+      div.appendChild(num);
+      const check = document.createElement('div');
+      check.className = 'check';
+      check.textContent = '✓';
+      div.appendChild(check);
+      div.addEventListener('click', () => toggleSplitPage(i, div));
+      wrap.appendChild(div);
+    }
+    updateSplitStat();
+  }
+
+  function toggleSplitPage(i, el) {
+    if (splitSelected.has(i)) { splitSelected.delete(i); el.classList.remove('selected'); }
+    else { splitSelected.add(i); el.classList.add('selected'); }
+    updateSplitStat();
+  }
+
+  function updateSplitStat() {
+    $('splitStat').textContent = `已选 ${splitSelected.size} / ${splitDoc ? splitDoc.numPages : 0} 页`;
+    $('splitGoBtn').disabled = splitSelected.size === 0;
+  }
+
+  function selectSplitRange(text) {
+    splitSelected.clear();
+    if (!text) {
+      $$('.pdf-thumb', $('splitThumbs')).forEach(el => el.classList.remove('selected'));
+      updateSplitStat();
+      return;
+    }
+    const parts = text.split(',').map(s => s.trim()).filter(Boolean);
+    for (const part of parts) {
+      const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m) {
+        const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        for (let i = lo; i <= hi; i++) {
+          if (i >= 1 && i <= splitDoc.numPages) splitSelected.add(i);
+        }
+      } else if (/^\d+$/.test(part)) {
+        const n = parseInt(part, 10);
+        if (n >= 1 && n <= splitDoc.numPages) splitSelected.add(n);
+      }
+    }
+    $$('.pdf-thumb', $('splitThumbs')).forEach(el => {
+      const p = parseInt(el.dataset.page, 10);
+      el.classList.toggle('selected', splitSelected.has(p));
+    });
+    updateSplitStat();
+  }
+
+  async function splitNow() {
+    $('splitGoBtn').disabled = true;
+    try {
+      const pages = [...splitSelected].sort((a, b) => a - b);
+      const mode = $('splitMode').value;
+      const src = await PDFDocument.load(splitBytes, { ignoreEncryption: true });
+
+      if (mode === 'merged') {
+        const out = await PDFDocument.create();
+        const copied = await out.copyPages(src, pages.map(p => p - 1));
+        copied.forEach(p => out.addPage(p));
+        const bytes = await out.save();
+        splitBlob = new Blob([bytes], { type: 'application/pdf' });
+        $('splitResultInfo').innerHTML = `导出 <b>${pages.length}</b> 页为一份 PDF · <b>${fmtBytes(splitBlob.size)}</b>`;
+        log.ok(`拆分(合并模式)完成 · ${pages.length} 页`);
+      } else {
+        const JSZip = await getJSZip();
+        const zip = new JSZip();
+        for (const p of pages) {
+          const out = await PDFDocument.create();
+          const [pg] = await out.copyPages(src, [p - 1]);
+          out.addPage(pg);
+          const bytes = await out.save();
+          zip.file(`${splitSourceName}_p${p}.pdf`, bytes);
+        }
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+        splitBlob = blob;
+        $('splitResultInfo').innerHTML = `导出 <b>${pages.length}</b> 个单页 PDF · 打包为 ZIP <b>${fmtBytes(blob.size)}</b>`;
+        log.ok(`拆分(单页 ZIP)完成 · ${pages.length} 文件`);
+      }
+      $('splitResult').classList.add('show');
+    } catch (e) {
+      log.err('拆分失败: ' + e.message);
+    } finally {
+      $('splitGoBtn').disabled = false;
+    }
+  }
+
+  bindDrop($('splitDrop'), $('splitInput'), onSplitFile);
+  $('splitAllBtn').addEventListener('click', () => {
+    for (let i = 1; i <= splitDoc.numPages; i++) splitSelected.add(i);
+    $$('.pdf-thumb', $('splitThumbs')).forEach(el => el.classList.add('selected'));
+    updateSplitStat();
+  });
+  $('splitNoneBtn').addEventListener('click', () => {
+    splitSelected.clear();
+    $$('.pdf-thumb', $('splitThumbs')).forEach(el => el.classList.remove('selected'));
+    updateSplitStat();
+  });
+  $('splitInvertBtn').addEventListener('click', () => {
+    for (let i = 1; i <= splitDoc.numPages; i++) {
+      if (splitSelected.has(i)) splitSelected.delete(i); else splitSelected.add(i);
+    }
+    $$('.pdf-thumb', $('splitThumbs')).forEach(el => {
+      const p = parseInt(el.dataset.page, 10);
+      el.classList.toggle('selected', splitSelected.has(p));
+    });
+    updateSplitStat();
+  });
+  $('splitRangeBtn').addEventListener('click', () => selectSplitRange($('splitRange').value));
+  $('splitGoBtn').addEventListener('click', splitNow);
+  $('splitDownload').addEventListener('click', () => {
+    if (!splitBlob) return;
+    const ext = $('splitMode').value === 'merged' ? 'pdf' : 'zip';
+    download(splitBlob, `${splitSourceName}_split.${ext}`);
+  });
+
+  // ═════════════════════════════════════════════════════════════════
+  //   EXTRACT (rasterize pages → images)
+  // ═════════════════════════════════════════════════════════════════
+  let extractDoc = null;
+  let extractBlobs = [];
+  let extractSourceName = '';
+  let extractZipBlob = null;
+
+  $('extractQ').addEventListener('input', () => { $('extractQLabel').textContent = $('extractQ').value; });
+
+  async function onExtractFile(files) {
+    const f = files[0]; if (!f) return;
+    extractSourceName = f.name.replace(/\.pdf$/i, '');
+    const buf = new Uint8Array(await f.arrayBuffer());
+    try {
+      extractDoc = await pdfjsLib.getDocument({ data: buf.slice() }).promise;
+      $('extractOpts').style.display = '';
+      $('extractGrid').style.display = 'none';
+      $('extractResult').classList.remove('show');
+      log.ok(`已加载 ${f.name} · ${extractDoc.numPages} 页 — 设置参数后点「栅格化」`);
+    } catch (e) {
+      log.err('加载 PDF 失败: ' + e.message);
+    }
+  }
+
+  async function extractNow() {
+    if (!extractDoc) return;
+    $('extractGoBtn').disabled = true;
+    extractBlobs = [];
+    const fmt = $('extractFmt').value;
+    const scale = parseFloat($('extractScale').value);
+    const quality = parseInt($('extractQ').value, 10) / 100;
+    const mime = fmt === 'png' ? 'image/png' : (fmt === 'webp' ? 'image/webp' : 'image/jpeg');
+    const ext = fmt === 'jpeg' ? 'jpg' : fmt;
+    const grid = $('extractGrid');
+    grid.innerHTML = '';
+    $('extractGrid').style.display = '';
+    $('extractLoading').style.display = '';
+    try {
+      for (let i = 1; i <= extractDoc.numPages; i++) {
+        const page = await extractDoc.getPage(i);
+        const vp = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        await renderPage(page, canvas.getContext('2d'), vp);
+        const blob = await new Promise(res => canvas.toBlob(res, mime, mime === 'image/png' ? undefined : quality));
+        if (!blob) throw new Error(`page ${i} 转换失败`);
+        extractBlobs.push({ name: `${extractSourceName}_p${String(i).padStart(3,'0')}.${ext}`, blob });
+
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        cell.appendChild(img);
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = `p${i} · ${fmtBytes(blob.size)}`;
+        cell.appendChild(label);
+        grid.appendChild(cell);
+      }
+      $('extractLoading').style.display = 'none';
+
+      // pack into ZIP for download
+      const JSZip = await getJSZip();
+      const zip = new JSZip();
+      extractBlobs.forEach(({ name, blob }) => zip.file(name, blob));
+      extractZipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+      const totalSize = extractBlobs.reduce((a, b) => a + b.blob.size, 0);
+      $('extractResultInfo').innerHTML = `共 <b>${extractBlobs.length}</b> 页 · 单图合计 <b>${fmtBytes(totalSize)}</b> · ZIP <b>${fmtBytes(extractZipBlob.size)}</b>`;
+      $('extractResult').classList.add('show');
+      log.ok(`栅格化完成 · ${extractBlobs.length} 页`);
+    } catch (e) {
+      $('extractLoading').style.display = 'none';
+      log.err('栅格化失败: ' + e.message);
+    } finally {
+      $('extractGoBtn').disabled = false;
+    }
+  }
+
+  bindDrop($('extractDrop'), $('extractInput'), onExtractFile);
+  $('extractGoBtn').addEventListener('click', extractNow);
+  $('extractDownload').addEventListener('click', () => {
+    if (extractZipBlob) download(extractZipBlob, `${extractSourceName}_pages.zip`);
+  });
+
+  // ═════════════════════════════════════════════════════════════════
+  //   COMPRESS (rasterize + re-pack as new PDF)
+  // ═════════════════════════════════════════════════════════════════
+  let compressDoc = null;
+  let compressOrigBytes = null;
+  let compressBlob = null;
+  let compressSourceName = '';
+
+  $('compressQ').addEventListener('input', () => { $('compressQLabel').textContent = $('compressQ').value; });
+
+  async function onCompressFile(files) {
+    const f = files[0]; if (!f) return;
+    compressSourceName = f.name.replace(/\.pdf$/i, '');
+    compressOrigBytes = new Uint8Array(await f.arrayBuffer());
+    try {
+      compressDoc = await pdfjsLib.getDocument({ data: compressOrigBytes.slice() }).promise;
+      $('compressOpts').style.display = '';
+      $('compressStat').textContent = `${compressDoc.numPages} 页 · 原始 ${fmtBytes(compressOrigBytes.byteLength)}`;
+      $('compressResult').classList.remove('show');
+      log.ok(`已加载 ${f.name} · ${compressDoc.numPages} 页`);
+    } catch (e) {
+      log.err('加载 PDF 失败: ' + e.message);
+    }
+  }
+
+  async function compressNow() {
+    if (!compressDoc) return;
+    $('compressGoBtn').disabled = true;
+    $('compressLoading').style.display = '';
+    const scale = parseFloat($('compressScale').value);
+    const quality = parseInt($('compressQ').value, 10) / 100;
+    try {
+      const out = await PDFDocument.create();
+      for (let i = 1; i <= compressDoc.numPages; i++) {
+        const page = await compressDoc.getPage(i);
+        const vp = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        await renderPage(page, canvas.getContext('2d'), vp);
+        const jpegBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+        if (!jpegBlob) throw new Error(`page ${i} JPEG 编码失败`);
+        const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+        // verify JPEG magic
+        if (jpegBytes[0] !== 0xFF || jpegBytes[1] !== 0xD8) {
+          throw new Error(`page ${i} JPEG magic 校验失败`);
+        }
+        const img = await out.embedJpg(jpegBytes);
+        // original page size in points so the resulting PDF keeps the same physical dimensions
+        const origVp = page.getViewport({ scale: 1 });
+        const pdfPage = out.addPage([origVp.width, origVp.height]);
+        pdfPage.drawImage(img, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+      }
+      const bytes = await out.save();
+      compressBlob = new Blob([bytes], { type: 'application/pdf' });
+      // magic check
+      const head = new Uint8Array(await compressBlob.slice(0, 4).arrayBuffer());
+      if (head[0] !== 0x25 || head[1] !== 0x50 || head[2] !== 0x44 || head[3] !== 0x46) {
+        throw new Error('输出文件不是有效的 PDF');
+      }
+      const before = compressOrigBytes.byteLength;
+      const after = compressBlob.size;
+      const ratio = after / before;
+      const pct = ((1 - ratio) * 100).toFixed(1);
+      const sign = ratio < 1 ? '−' : '+';
+      $('compressResultInfo').innerHTML = `原始 <b>${fmtBytes(before)}</b> → 压缩后 <b>${fmtBytes(after)}</b> · ${sign}<b>${Math.abs(pct)}%</b>${ratio >= 1 ? ' <span style="color:#ffd07a">(原文件已经很小,压缩反而变大 — 直接用原图)</span>' : ''}`;
+      $('compressResult').classList.add('show');
+      log.ok(`压缩完成 · ${fmtBytes(after)} (${sign}${Math.abs(pct)}%)`);
+    } catch (e) {
+      log.err('压缩失败: ' + e.message);
+    } finally {
+      $('compressLoading').style.display = 'none';
+      $('compressGoBtn').disabled = false;
+    }
+  }
+
+  bindDrop($('compressDrop'), $('compressInput'), onCompressFile);
+  $('compressGoBtn').addEventListener('click', compressNow);
+  $('compressDownload').addEventListener('click', () => {
+    if (compressBlob) download(compressBlob, `${compressSourceName}_compressed.pdf`);
+  });
+
+  log.ok('PDF 工具包准备好(pdf-lib + pdf.js 已加载)');
+})();
+</script>
+</body>
+</html>

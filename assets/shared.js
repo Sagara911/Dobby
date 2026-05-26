@@ -129,6 +129,7 @@
     { id: 'exif-tool',      cat: 'image', name: 'EXIF 工具',      en: 'EXIF Tool',       icon: '📷', href: 'tools/exif-tool.html',      desc: '查看 + 清除 JPEG 元数据(GPS / 相机 / 时间...),保护拍摄隐私' },
     { id: 'normal-map',     cat: 'image', name: '法线贴图',       en: 'Normal Map',      icon: '🗿', href: 'tools/normal-map.html',     desc: 'Sobel 算子从灰度图生成法线贴图,可调强度 / 模糊 / 翻转,带光照预览' },
     { id: 'texture-gen',    cat: 'image', name: '程序化纹理',     en: 'Texture Gen',     icon: '🌀', href: 'tools/texture-gen.html',    desc: 'Perlin/fBm/Voronoi/砖墙/条纹 9 种程序化纹理,种子可控,6 种色谱图' },
+    { id: 'ocr-tool',       cat: 'image', name: 'OCR 图转文字',   en: 'OCR',             icon: '👁️', href: 'tools/ocr-tool.html',       desc: '图片识别文字,Tesseract.js,英 / 简中 / 繁中 / 日 / 韩,全本地推理' },
     // 动画 / 精灵图
     { id: 'pixel-editor',   cat: 'anim',  name: '像素画板',       en: 'Pixel Editor',    icon: '🎨', href: 'tools/pixel-editor.html',   desc: '从零画像素图 — 铅笔/填充/对称镜像 + PICO-8/GameBoy 调色板' },
     { id: 'tilemap',        cat: 'anim',  name: 'Tilemap 编辑器', en: 'Tilemap Editor',  icon: '🗺️', href: 'tools/tilemap.html',        desc: '用 tileset 拼地图,导出 Tiled 兼容 JSON + 平摊 PNG' },
@@ -137,6 +138,7 @@
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
     { id: 'gif-tools',      cat: 'anim',  name: 'GIF 工具',       en: 'GIF Tools',       icon: '🎞️', href: 'tools/gif-tools.html',      desc: '制作 (序列帧→GIF/APNG) + 编辑 (缩放/裁剪/调速/反向/减帧/优化/滤镜)' },
     { id: 'lottie-tools',   cat: 'anim',  name: 'Lottie 工具',    en: 'Lottie Tools',    icon: '🎭', href: 'tools/lottie-tools.html',   desc: 'Lottie JSON 预览 + 精度优化 (体积 -50%~-80%) + 转 APNG/GIF' },
+    { id: 'pixel-font',     cat: 'anim',  name: '像素字体设计器', en: 'Pixel Font',      icon: '🅰️', href: 'tools/pixel-font.html',     desc: '一格一像素画字形,导 BDF / TTF / PNG 雪碧图,塞进游戏 / Playable' },
     // 音视频
     { id: 'video-toolkit',  cat: 'av',    name: '视频处理',       en: 'Video Toolkit',   icon: '🎬', href: 'tools/video-toolkit.html',  desc: '视频裁剪 / 抽帧 / 转 GIF / 转 WebM' },
     { id: 'audio-compress', cat: 'av',    name: '音频压缩',       en: 'Audio Compressor',icon: '🔊', href: 'tools/audio-compress.html', desc: '降采样 / 单声道 / 裁剪 / fade / WAV/Opus 输出' },
@@ -155,6 +157,7 @@
     { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
     { id: 'batch-rename',   cat: 'code',  name: '批量重命名',     en: 'Batch Rename',    icon: '🏷️', href: 'tools/batch-rename.html',   desc: '模板 + 查找替换 + 序号补零,实时预览冲突高亮,导出 ZIP' },
+    { id: 'pdf-tools',      cat: 'code',  name: 'PDF 工具包',     en: 'PDF Tools',       icon: '📄', href: 'tools/pdf-tools.html',      desc: 'PDF 合并 / 拆分 / 提图 / 重压缩,pdf-lib + pdf.js,全本地' },
     // 分析 / 诊断
     { id: 'bundle-analyzer',cat: 'audit', name: '包体分析',       en: 'Bundle Analyzer', icon: '📊', href: 'tools/bundle-analyzer.html', desc: '扫描项目目录,显示类别分布 + 大文件清单' },
     { id: 'channel-check',  cat: 'audit', name: '渠道检查',       en: 'Channel Check',   icon: '✅', href: 'tools/channel-check.html', desc: 'Facebook / Google / TikTok 等渠道规范校验' },
@@ -295,6 +298,21 @@
       '选择 / 拖入项目文件夹,自动扫描',
       '看顶部"瘦身潜力"估算,以及下方按类别的具体建议',
       '点每条建议的"去 XX 工具"按钮跳转处理'
+    ],
+    'pdf-tools': [
+      '选模式: 📚 合并 / ✂️ 拆分 / 🖼️ 提图 / 🗜️ 压缩',
+      '合并: 拖入多个 PDF 可拖动排序; 拆分: 点缩略图选页, 或填范围如 1-3,5',
+      '压缩适合扫描件 / 图片密集型 PDF (文本 PDF 会丢失文字层)'
+    ],
+    'ocr-tool': [
+      '拖入 / 粘贴 / 选图片(JPG/PNG/WebP)',
+      '选语言, 必要时开预处理(灰度 / 对比度增强 / 反色)',
+      '点"识别"等模型下载 + 推理, 右侧复制或下载 .txt'
+    ],
+    'pixel-font': [
+      '选字符集和字号(如 6×8 / 8×16), 左侧字符列表点字开始画',
+      '编辑区一格一像素, 拖动批量绘制; 洋葱皮显示上一个字便于对齐',
+      '导出 BDF(嵌入式) / TTF(网页/游戏) / PNG 雪碧图(Phaser/Pixi)'
     ]
   };
 

@@ -206,7 +206,17 @@
       <input type="checkbox" id="webcamEnabled" />
       <span>右下角加摄像头小窗</span>
     </label>
-    <div class="rec-help">做教程时常用,但 <strong>PiP 仅在录制画面上显示</strong>;最终视频不会有 PiP(浏览器 API 限制),你需要后期合成或用 OBS</div>
+    <div class="rec-help">做教程时常用 — 摄像头会通过 Canvas 实时合成到输出视频里(不只是预览),教程类录像零后期</div>
+
+    <h2>PiP 位置 / 大小</h2>
+    <select id="pipPos" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="br" selected>右下</option>
+      <option value="bl">左下</option>
+      <option value="tr">右上</option>
+      <option value="tl">左上</option>
+    </select>
+    <input type="range" id="pipSize" min="10" max="35" value="20" style="width:100%; margin-top:6px">
+    <div class="rec-help"><span id="pipSizeLabel">20</span>% 屏幕宽度</div>
 
     <h2>编码格式</h2>
     <select id="mimeType" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
@@ -290,6 +300,17 @@ Toolkit.injectTopbar('screen-recorder');
   let recordingBlob = null;
   let recordingStart = 0;
   let timerId = null;
+  // PiP composite state — when webcam is on, we render display + webcam onto
+  // an offscreen canvas and use canvas.captureStream() as the recorder's
+  // video track so the camera ends up baked into the final WebM.
+  let compositeCanvas = null;
+  let compositeCtx = null;
+  let compositeRAF = 0;
+  let compositeVideo = null;     // hidden <video> sink for displayStream
+  let compositeWebcamVideo = null;
+
+  // Update the size-percent label live
+  $('pipSize').addEventListener('input', () => { $('pipSizeLabel').textContent = $('pipSize').value; });
 
   function pad(n) { return n.toString().padStart(2, '0'); }
   function formatTime(ms) {
@@ -352,7 +373,7 @@ Toolkit.injectTopbar('screen-recorder');
       }
     }
 
-    // 3. webcam picture-in-picture overlay (preview only — NOT in final video)
+    // 3. webcam picture-in-picture overlay — also composited into final video
     if (needWebcam) {
       try {
         webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -367,6 +388,80 @@ Toolkit.injectTopbar('screen-recorder');
     $('placeholder').style.display = 'none';
     $('livePreview').style.display = '';
     $('livePreview').srcObject = displayStream;
+
+    // 4b. If webcam is on, wrap the display video track into a canvas
+    // composite so we can paint the camera onto every frame. The recorder
+    // then reads from canvas.captureStream() instead of the raw display.
+    if (webcamStream) {
+      // Wait for display video metadata so we know the real frame size.
+      // The picker reports it via the video track settings.
+      const dispTrack = displayStream.getVideoTracks()[0];
+      const settings = dispTrack.getSettings();
+      const W = settings.width || 1280;
+      const H = settings.height || 720;
+
+      compositeCanvas = document.createElement('canvas');
+      compositeCanvas.width = W;
+      compositeCanvas.height = H;
+      compositeCtx = compositeCanvas.getContext('2d');
+
+      // Hidden video elements feed pixel data into the canvas. We need
+      // real <video>s because canvas.drawImage can't read raw MediaStream
+      // tracks — it pulls from the playing video.
+      compositeVideo = document.createElement('video');
+      compositeVideo.srcObject = displayStream;
+      compositeVideo.muted = true;
+      compositeVideo.playsInline = true;
+      await compositeVideo.play().catch(() => {});
+
+      compositeWebcamVideo = document.createElement('video');
+      compositeWebcamVideo.srcObject = webcamStream;
+      compositeWebcamVideo.muted = true;
+      compositeWebcamVideo.playsInline = true;
+      await compositeWebcamVideo.play().catch(() => {});
+
+      const pipPos = $('pipPos').value;
+      const pipPct = parseInt($('pipSize').value, 10) / 100;
+
+      const renderFrame = () => {
+        // Display first as the full background
+        if (compositeVideo.readyState >= 2) {
+          compositeCtx.drawImage(compositeVideo, 0, 0, W, H);
+        }
+        // Webcam PiP — sized as a percentage of the screen width, 4:3-ish
+        if (compositeWebcamVideo.readyState >= 2 && compositeWebcamVideo.videoWidth) {
+          const pipW = Math.round(W * pipPct);
+          const pipH = Math.round(pipW * compositeWebcamVideo.videoHeight / compositeWebcamVideo.videoWidth);
+          const margin = Math.round(W * 0.015);
+          let x = W - pipW - margin, y = H - pipH - margin;
+          if (pipPos === 'bl') { x = margin; }
+          if (pipPos === 'tr') { y = margin; }
+          if (pipPos === 'tl') { x = margin; y = margin; }
+          // Soft border + drop shadow so the camera reads as an overlay
+          compositeCtx.save();
+          compositeCtx.shadowColor = 'rgba(0,0,0,0.6)';
+          compositeCtx.shadowBlur = 16;
+          compositeCtx.shadowOffsetY = 4;
+          compositeCtx.fillStyle = '#000';
+          compositeCtx.fillRect(x - 2, y - 2, pipW + 4, pipH + 4);
+          compositeCtx.restore();
+          compositeCtx.drawImage(compositeWebcamVideo, x, y, pipW, pipH);
+          // Accent border
+          compositeCtx.strokeStyle = 'rgba(245, 91, 91, 0.9)';
+          compositeCtx.lineWidth = 3;
+          compositeCtx.strokeRect(x - 1.5, y - 1.5, pipW + 3, pipH + 3);
+        }
+        compositeRAF = requestAnimationFrame(renderFrame);
+      };
+      compositeRAF = requestAnimationFrame(renderFrame);
+
+      // Build a synthetic stream: canvas video + already-mixed audio tracks
+      const canvasStream = compositeCanvas.captureStream(30);
+      finalStream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...finalStream.getAudioTracks()
+      ]);
+    }
 
     // 5. wire up MediaRecorder
     const mimeOption = $('mimeType').value;
@@ -410,6 +505,11 @@ Toolkit.injectTopbar('screen-recorder');
     const mimeFromRecorder = recorder?.mimeType || 'video/webm';
     recordingBlob = new Blob(chunks, { type: mimeFromRecorder });
     const elapsed = performance.now() - recordingStart;
+    // stop the composite render loop + clean up off-screen video sinks
+    if (compositeRAF) { cancelAnimationFrame(compositeRAF); compositeRAF = 0; }
+    if (compositeVideo) { try { compositeVideo.pause(); } catch(_) {} compositeVideo.srcObject = null; compositeVideo = null; }
+    if (compositeWebcamVideo) { try { compositeWebcamVideo.pause(); } catch(_) {} compositeWebcamVideo.srcObject = null; compositeWebcamVideo = null; }
+    compositeCanvas = compositeCtx = null;
     // stop all tracks
     [displayStream, micStream, webcamStream].forEach(s => {
       s?.getTracks().forEach(t => t.stop());
