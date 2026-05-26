@@ -36,18 +36,29 @@
 <style>
   body { overflow-x: hidden; }
 
-  /* ===== HERO =====
-     Design intent (mobile-first):
-     - h1 + tight one-line subtitle + search + cat chips. That's it.
-     - Stats row & contact eyebrow moved out (counts absorbed into subtitle
-       via {n} interpolation, contact moved to footer). 5-second test:
-       user immediately sees "tool catalog" not "marketing pitch". */
+  /* ===== HERO (v2 — marketing-scale) =====
+     Design intent: this is a marketing landing page; visitors arrive cold.
+     Hero gets ~70vh on desktop, ~75vh on mobile, but only 5 clean elements:
+       1. eyebrow pill ("Dobby is free")
+       2. huge headline ("叫我 Dobby")
+       3. one-line tagline
+       4. big primary search input
+       5. 5 colorful category chips
+       (+ a scroll-hint arrow at the bottom edge)
+     What we DIDN'T put back: stats row (4 numbers), eyebrow contact link,
+     verbose subtitle. Those are noise; the chip count + footer cover them. */
   .hero {
     position: relative;
     z-index: 1;
-    padding: 40px 20px 28px;
+    padding: clamp(40px, 8vh, 80px) 20px clamp(28px, 5vh, 60px);
     text-align: center;
     margin: 0 auto;
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(16px, 2.5vh, 28px);
   }
   .hero > * {
     margin-left: auto;
@@ -55,14 +66,27 @@
     text-align: center;
     display: block;
   }
+  .hero-tag {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: var(--radius-pill);
+    background: rgba(var(--jade-rgb), 0.10);
+    border: 1px solid rgba(var(--jade-rgb), 0.35);
+    color: var(--jade);
+    font-size: 12.5px;
+    font-family: ui-monospace, Consolas, monospace;
+    letter-spacing: 0.08em;
+    margin: 0;
+    backdrop-filter: blur(4px);
+  }
   .hero h1 {
-    max-width: 800px;
-    font-size: clamp(2rem, 6vw, 3.4rem);
+    max-width: 900px;
+    font-size: clamp(2.6rem, 8vw, 5rem);
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1;
     color: #fff;
-    letter-spacing: -0.025em;
-    margin: 0 auto 10px;
+    letter-spacing: -0.035em;
+    margin: 0;
     font-family: "Space Grotesk", sans-serif;
   }
   .hero h1 .accent {
@@ -73,32 +97,37 @@
     display: inline-block;
   }
   .hero .hero-sub {
-    font-size: 14px;
+    font-size: clamp(14px, 1.6vw, 17px);
     color: var(--muted);
-    margin: 0 auto 22px;
-    line-height: 1.5;
-    max-width: 600px;
+    margin: 0;
+    line-height: 1.55;
+    max-width: 640px;
     font-family: ui-monospace, Consolas, monospace;
     letter-spacing: 0.02em;
   }
 
-  /* search */
+  /* search — big, prominent. This is the primary CTA. */
   .search-wrap {
     position: relative;
-    max-width: 540px;
-    margin: 0 auto 22px;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
   }
   .search-wrap input {
     width: 100%;
     background: rgba(0, 0, 0, 0.55);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-pill);
-    padding: 14px 20px 14px 44px;
+    padding: 17px 22px 17px 52px;
     color: var(--text);
-    /* 16px to avoid iOS auto-zoom on focus */
+    /* 16px+ to avoid iOS auto-zoom on focus */
     font-size: 16px;
     font-family: "Space Grotesk", sans-serif;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .search-wrap input:focus,
+  .search-wrap:focus-within input {
+    background: rgba(0, 0, 0, 0.7);
   }
   .search-wrap input:focus {
     outline: none;
@@ -107,11 +136,11 @@
   }
   .search-wrap .icon {
     position: absolute;
-    left: 18px;
+    left: 22px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--muted);
-    font-size: 14px;
+    font-size: 16px;
   }
   .search-wrap .clear {
     position: absolute;
@@ -572,10 +601,44 @@
   .hero-cat-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     justify-content: center;
     max-width: 720px;
     margin: 0 auto;
+  }
+
+  /* scroll hint at bottom of hero — gentle nudge that there's content below */
+  .hero-scroll-hint {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--muted);
+    text-decoration: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    animation: hero-bounce 2.2s ease-in-out infinite;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    margin: 0;
+  }
+  .hero-scroll-hint:hover {
+    border-color: rgba(var(--jade-rgb), 0.5);
+    color: var(--jade);
+    background: rgba(var(--jade-rgb), 0.08);
+  }
+  @keyframes hero-bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.55; }
+    50%      { transform: translateX(-50%) translateY(5px); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-scroll-hint { animation: none; }
   }
   .hero-cat-chips a {
     --c: var(--jade-rgb);
@@ -619,19 +682,15 @@
      ============================================================ */
   @media (max-width: 720px) {
     .hero {
-      padding: 28px 16px 20px;
+      min-height: 72vh;
+      padding: 36px 16px 56px;
+      gap: 18px;
     }
-    .hero h1 {
-      font-size: clamp(1.8rem, 8vw, 2.6rem);
-      margin-bottom: 8px;
-    }
-    .hero .hero-sub {
-      font-size: 13px;
-      margin-bottom: 18px;
-    }
-    .search-wrap {
-      margin-bottom: 18px;
-    }
+    .hero-tag { font-size: 11.5px; padding: 5px 13px; }
+    .hero h1 { font-size: clamp(2.2rem, 9vw, 3.4rem); }
+    .hero .hero-sub { font-size: 13.5px; }
+    .search-wrap input { padding: 15px 18px 15px 46px; }
+    .search-wrap .icon { left: 18px; font-size: 15px; }
     .tools-section {
       margin: 16px auto 36px;
       padding: 0 14px;
@@ -645,6 +704,7 @@
     }
     .cat-header .cat-name { font-size: 16px; }
     .cat-header .cat-en   { display: none; }
+    .hero-cat-chips { gap: 8px; }
     .hero-cat-chips a {
       padding: 9px 12px;
       font-size: 12.5px;
@@ -661,17 +721,21 @@
 
   @media (max-width: 480px) {
     .hero {
-      padding: 24px 14px 16px;
+      min-height: 78vh;
+      padding: 32px 14px 56px;
+      gap: 16px;
     }
+    .hero-tag { font-size: 11px; padding: 5px 12px; }
     .hero h1 {
-      font-size: 1.9rem;
-      letter-spacing: -0.02em;
+      font-size: clamp(2rem, 11vw, 2.8rem);
+      letter-spacing: -0.03em;
     }
     .hero .hero-sub {
       font-size: 12.5px;
       line-height: 1.55;
-      margin-bottom: 16px;
     }
+    .search-wrap input { padding: 14px 16px 14px 42px; }
+    .search-wrap .icon { left: 15px; }
     /* tools force single column with comfortable padding */
     .tools-grid {
       grid-template-columns: 1fr;
@@ -693,6 +757,8 @@
       min-height: 38px;
     }
     .hero-cat-chips a .chip-count { display: none; }
+    /* scroll hint smaller on phone */
+    .hero-scroll-hint { width: 32px; height: 32px; font-size: 14px; bottom: 12px; }
     /* news modal: full-width, smaller padding */
     .news-card { padding: 16px 16px 14px; max-height: 80vh; }
     .news-head { gap: 8px; margin-bottom: 14px; }
@@ -706,6 +772,7 @@
 
 <main>
   <section class="hero">
+    <div class="hero-tag" data-i18n="home.hero.tag">🧦 Dobby is free · 本地素材精灵</div>
     <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span></h1>
     <p class="hero-sub" id="heroSub">— 44 件本地工具 · 文件不上传 · Dobby is free</p>
     <div class="search-wrap" id="searchWrap">
@@ -714,6 +781,9 @@
       <button class="clear" id="searchClear" type="button" data-i18n-attr="aria-label:home.search.clear" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
+    <a class="hero-scroll-hint" href="#cat-image" aria-label="向下看工具">
+      <span class="arrow">↓</span>
+    </a>
   </section>
 
   <section class="tools-section" id="toolsSection"></section>

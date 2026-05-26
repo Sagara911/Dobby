@@ -1720,6 +1720,41 @@ button.danger:hover { background: linear-gradient(180deg, #ff7575, var(--danger)
   .topbar .brand span:last-child { display: none; }
 }
 
+/* Below 560 px: container 375 px - sidebar margin barely fits 9 chips
+   (brand + 5 cat icons + 中 + 🌓 + 💬). Squeeze every gap and
+   button down hard so nothing overlaps. */
+@media (max-width: 560px) {
+  .topbar-wrap {
+    width: calc(100% - 16px);
+    margin: 10px auto 16px;
+    top: 10px;
+    gap: 4px;
+  }
+  .topbar {
+    padding: 7px 8px;
+    gap: 3px;
+    width: calc(100% - 16px);
+    margin: 10px auto 16px;
+    top: 10px;
+  }
+  .topbar nav { gap: 0; }
+  .topbar .brand { gap: 0; }
+  .topbar .brand .logo { width: 24px; height: 24px; }
+  .topbar .nav-cat {
+    padding: 5px 5px;
+    gap: 0;
+  }
+  /* Caret eats horizontal space and adds nothing on touch — hide it on phones */
+  .topbar .nav-cat .caret { display: none; }
+  .topbar .nav-cat .cat-icon { font-size: 15px; }
+  /* Shrink the right-side chips slightly so the row fits */
+  .topbar-icon-btn { width: 30px; height: 30px; font-size: 13px; }
+  .topbar-pill-btn { height: 30px; padding: 0 8px; }
+  .topbar-pill-btn .emoji { font-size: 13px; }
+  /* Back-to-home pill on tool pages: hide the arrow label, keep tappable */
+  .topbar-back .arr { font-size: 12px; }
+}
+
 /* ============================================================
    Lightbox — click any preview img/canvas to inspect at scale,
    toggle background (checker / white / black) to see transparency

@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v37",
+      "date": "2026-05-26",
+      "title": "首页 Hero v2 — 回到大气派 + 修了手机导航栏挤成一坨的 bug",
+      "items": [
+        "**Hero 重做** — 上次 v1 砍太狠(38vh,首屏空荡),v2 把高度回到 70-78vh(桌面 / 手机),但只塞 5 个元素:小绿胶囊「🧦 Dobby is free」+ 巨型标题(clamp 2.6-5rem) + 一行短副标 + 大搜索框(57px 高) + 5 个彩色 chip + 底部 ↓ 滚动指示。元素少留白多,marketing 站气质回来了",
+        "**手机顶部导航修了** — ≤900px 那套 media query 不够紧,导致 ≤480 手机上 9 个元素(brand+5 cat 图标+中+🌓+💬)挤在 339px 宽的 topbar 里互相重叠。加了 ≤560px 专用规则:caret 隐藏 / gap 收到 3px / 右侧按钮缩到 30px。375 viewport 实测 0 重叠",
+        "搜索框 padding 加大到 17px(桌面)/ 14-15px(手机),字号顶 16px(iOS focus 不再放大);搜索框 hover/focus 时背景加深给反馈;搜索图标也跟着放大"
+      ]
+    },
+    {
       "version": "dobby-v36",
       "date": "2026-05-26",
       "title": "📱 首页大改 + 全站手机适配(viewport / hero 瘦身 / 卡片压扁)",
