@@ -139,6 +139,7 @@
     { id: 'html-inliner',   cat: 'code',  name: '单文件打包',     en: 'HTML Inliner',    icon: '📄', href: 'tools/html-inliner.html',   desc: '把外部 JS/CSS/图片内联为单 HTML' },
     { id: 'code-minify',    cat: 'code',  name: '代码压缩',       en: 'Code Minify',     icon: '🗜️', href: 'tools/code-minify.html',    desc: 'JS / CSS / HTML 压缩,JS 用 terser' },
     { id: 'base64',         cat: 'code',  name: 'Base64',         en: 'Base64',          icon: '🔤', href: 'tools/base64.html',         desc: '文件 ↔ base64/dataURL 互转' },
+    { id: 'json-tools',     cat: 'code',  name: 'JSON 工具',      en: 'JSON Tools',      icon: '📋', href: 'tools/json-tools.html',     desc: '格式化 / 压缩 / 校验 / 排序 keys / 树形浏览,错误带行列定位' },
     { id: 'zip-packer',     cat: 'code',  name: 'ZIP 打包',       en: 'ZIP Packer',      icon: '📦', href: 'tools/zip-packer.html',     desc: '多文件 / 文件夹 → ZIP,deflate level 0-9 可调' },
     { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },

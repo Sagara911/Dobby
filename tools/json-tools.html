@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>JSON 工具 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .json-main {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .json-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .json-toolbar button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .json-toolbar button:hover { background: rgba(255,255,255,0.10); }
+  .json-toolbar button.primary {
+    background: rgba(var(--jade-rgb), 0.12);
+    border-color: rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+  }
+  .json-toolbar button.primary:hover { background: rgba(var(--jade-rgb), 0.22); }
+  .json-toolbar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
+  .json-toolbar .gap { flex: 1; }
+  .json-toolbar .indent-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .json-toolbar .indent-row select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+
+  .json-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .json-grid > .pane {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .json-grid .pane-head {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .json-grid textarea {
+    flex: 1;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 12px 14px;
+    resize: none;
+    min-height: 360px;
+  }
+  .json-grid textarea:focus { outline: 1px solid var(--accent); }
+
+  .json-status {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .json-status.ok { color: var(--accent); border-color: rgba(var(--jade-rgb), 0.4); }
+  .json-status.err { color: #ff8080; border-color: rgba(245, 91, 91, 0.5); }
+
+  .tree-view {
+    flex: 1;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    overflow: auto;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    min-height: 360px;
+  }
+  .tree-view .row { white-space: nowrap; }
+  .tree-view .key { color: #79b8ff; }
+  .tree-view .str { color: #ce9178; }
+  .tree-view .num { color: #b5cea8; }
+  .tree-view .bool { color: #569cd6; }
+  .tree-view .null { color: var(--muted); }
+  .tree-view .punct { color: var(--muted); }
+  .tree-view .summary { color: var(--muted); font-style: italic; }
+  .tree-view .toggle {
+    display: inline-block;
+    width: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .tree-view .toggle:hover { color: var(--accent); }
+  .tree-view .collapsed > .children { display: none; }
+  .tree-view .collapsed > .summary { display: inline; }
+  .tree-view .expanded > .summary { display: none; }
+  .tree-view .children { padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📋 JSON 工具</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 .json 文件</p>
+      <p class="hint">或者直接在右边粘贴 / 输入</p>
+      <input type="file" id="fileInput" accept=".json,application/json,text/plain" style="display:none" />
+    </div>
+
+    <h2>视图</h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px">
+      <button class="px-tool-btn" data-view="text" id="viewText" style="background:var(--accent-soft); border-color:var(--accent); color:var(--accent); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">📝 文本</button>
+      <button class="px-tool-btn" data-view="tree" id="viewTree" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">🌳 树形</button>
+    </div>
+
+    <h2>导出</h2>
+    <button id="copyBtn" class="secondary">📋 复制结果</button>
+    <button id="downloadBtn" class="secondary">💾 下载 .json</button>
+    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+
+    <h2>统计</h2>
+    <div id="statsPanel" style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft); line-height:1.7">
+      —
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">JSON 格式化 / 压缩 / 校验 / 树形浏览 — 全在浏览器里</div>
+
+    <div class="json-main">
+      <div class="json-toolbar">
+        <button class="primary" id="formatBtn" title="格式化(Ctrl+Shift+F)">✨ 格式化</button>
+        <button id="minifyBtn" title="压缩成一行">🗜️ 压缩</button>
+        <button id="validateBtn" title="校验合法性">✅ 校验</button>
+        <button id="sortBtn" title="按 key 字母序排序">🔤 排序 keys</button>
+        <div class="sep"></div>
+        <div class="indent-row">
+          <span>缩进</span>
+          <select id="indent">
+            <option value="2">2 空格</option>
+            <option value="4">4 空格</option>
+            <option value="tab">Tab</option>
+          </select>
+        </div>
+        <div class="gap"></div>
+        <button id="copyResult" title="复制右侧结果">📋 复制</button>
+        <button id="swapBtn" title="把结果作为新输入">↺ 结果 → 输入</button>
+      </div>
+
+      <div class="json-grid">
+        <div class="pane">
+          <div class="pane-head">
+            <span>输入</span>
+            <span id="inputMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
+          </div>
+          <textarea id="input" spellcheck="false" placeholder='{"hello": "world", "items": [1, 2, 3]}'></textarea>
+        </div>
+        <div class="pane">
+          <div class="pane-head">
+            <span>结果</span>
+            <span id="outputMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
+          </div>
+          <textarea id="output" spellcheck="false" readonly placeholder="结果出现在这里"></textarea>
+          <div class="tree-view" id="treeView" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="json-status" id="status">准备好,粘贴 JSON 到左边</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('json-tools');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download } = Toolkit;
+  const log = makeLogger($('log'));
+
+  const inputEl = $('input');
+  const outputEl = $('output');
+  const treeView = $('treeView');
+  const statusEl = $('status');
+  const indentSel = $('indent');
+
+  let currentView = 'text';
+  let lastParsed = null;
+  let lastOutput = '';
+
+  function getIndent() {
+    const v = indentSel.value;
+    if (v === 'tab') return '\t';
+    return parseInt(v, 10) || 2;
+  }
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = 'json-status' + (kind ? ' ' + kind : '');
+  }
+
+  function tryParse(text) {
+    if (!text.trim()) return { ok: false, err: '输入为空' };
+    try {
+      return { ok: true, value: JSON.parse(text) };
+    } catch (e) {
+      // try to extract line/col from error message
+      const m = e.message.match(/position (\d+)/);
+      let lineCol = '';
+      if (m) {
+        const pos = parseInt(m[1], 10);
+        const upTo = text.slice(0, pos);
+        const line = upTo.split('\n').length;
+        const col = pos - upTo.lastIndexOf('\n');
+        lineCol = ` (第 ${line} 行 第 ${col} 列)`;
+      }
+      return { ok: false, err: e.message + lineCol };
+    }
+  }
+
+  function updateStats(parsed, text) {
+    let count = 0, keys = 0, arrs = 0, objs = 0, strs = 0, nums = 0;
+    function walk(v) {
+      count++;
+      if (v === null || typeof v !== 'object') {
+        if (typeof v === 'string') strs++;
+        if (typeof v === 'number') nums++;
+        return;
+      }
+      if (Array.isArray(v)) {
+        arrs++;
+        for (const x of v) walk(x);
+      } else {
+        objs++;
+        for (const k of Object.keys(v)) { keys++; walk(v[k]); }
+      }
+    }
+    if (parsed !== null && parsed !== undefined) walk(parsed);
+    $('statsPanel').innerHTML = `
+      <div>大小: <strong style="color:var(--text)">${(text.length / 1024).toFixed(1)} KB</strong></div>
+      <div>节点: ${count} · 键: ${keys}</div>
+      <div>对象: ${objs} · 数组: ${arrs}</div>
+      <div>字符串: ${strs} · 数字: ${nums}</div>
+    `;
+  }
+
+  function refreshOutput() {
+    if (currentView === 'tree') {
+      if (lastParsed !== undefined) renderTree(lastParsed);
+    } else {
+      outputEl.value = lastOutput;
+    }
+    $('outputMeta').textContent = `${(lastOutput.length / 1024).toFixed(2)} KB · ${lastOutput.split('\n').length} 行`;
+  }
+
+  function format() {
+    const r = tryParse(inputEl.value);
+    if (!r.ok) {
+      setStatus('❌ ' + r.err, 'err');
+      lastOutput = '';
+      outputEl.value = '';
+      treeView.innerHTML = '';
+      return;
+    }
+    lastParsed = r.value;
+    lastOutput = JSON.stringify(r.value, null, getIndent());
+    updateStats(r.value, lastOutput);
+    refreshOutput();
+    setStatus(`✓ 格式化完成 · ${lastOutput.split('\n').length} 行`, 'ok');
+  }
+
+  function minify() {
+    const r = tryParse(inputEl.value);
+    if (!r.ok) { setStatus('❌ ' + r.err, 'err'); return; }
+    lastParsed = r.value;
+    lastOutput = JSON.stringify(r.value);
+    updateStats(r.value, lastOutput);
+    refreshOutput();
+    const savePct = inputEl.value.length > 0
+      ? ((1 - lastOutput.length / inputEl.value.length) * 100).toFixed(1) : '0';
+    setStatus(`✓ 压缩完成 · ${(lastOutput.length / 1024).toFixed(2)} KB · 节省 ${savePct}%`, 'ok');
+  }
+
+  function validate() {
+    const r = tryParse(inputEl.value);
+    if (!r.ok) { setStatus('❌ ' + r.err, 'err'); return; }
+    lastParsed = r.value;
+    const minified = JSON.stringify(r.value);
+    updateStats(r.value, minified);
+    setStatus(`✓ 合法 JSON · ${(minified.length / 1024).toFixed(2)} KB`, 'ok');
+  }
+
+  function sortKeys() {
+    const r = tryParse(inputEl.value);
+    if (!r.ok) { setStatus('❌ ' + r.err, 'err'); return; }
+    function recurse(v) {
+      if (v === null || typeof v !== 'object') return v;
+      if (Array.isArray(v)) return v.map(recurse);
+      const out = {};
+      for (const k of Object.keys(v).sort()) out[k] = recurse(v[k]);
+      return out;
+    }
+    lastParsed = recurse(r.value);
+    lastOutput = JSON.stringify(lastParsed, null, getIndent());
+    updateStats(lastParsed, lastOutput);
+    refreshOutput();
+    setStatus('✓ key 已按字母序排序', 'ok');
+  }
+
+  // ── tree view ──
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function renderValueNode(v, key = null) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    let html = '';
+    if (key !== null) html += `<span class="key">"${escapeHtml(key)}"</span><span class="punct">: </span>`;
+    if (v === null) html += `<span class="null">null</span>`;
+    else if (typeof v === 'boolean') html += `<span class="bool">${v}</span>`;
+    else if (typeof v === 'number') html += `<span class="num">${v}</span>`;
+    else if (typeof v === 'string') html += `<span class="str">"${escapeHtml(v)}"</span>`;
+    else if (Array.isArray(v) || typeof v === 'object') {
+      const isArr = Array.isArray(v);
+      const ks = isArr ? v : Object.keys(v);
+      const len = isArr ? v.length : ks.length;
+      const open = isArr ? '[' : '{';
+      const close = isArr ? ']' : '}';
+      row.classList.add('expanded');
+      const tog = document.createElement('span');
+      tog.className = 'toggle';
+      tog.textContent = '▼';
+      tog.addEventListener('click', () => {
+        const collapsed = row.classList.toggle('collapsed');
+        row.classList.toggle('expanded', !collapsed);
+        tog.textContent = collapsed ? '▶' : '▼';
+      });
+      row.appendChild(tog);
+      const head = document.createElement('span');
+      head.innerHTML = html + `<span class="punct">${open}</span>`;
+      row.appendChild(head);
+      const sum = document.createElement('span');
+      sum.className = 'summary';
+      sum.innerHTML = ` ${isArr ? `${len} item${len === 1 ? '' : 's'}` : `${len} key${len === 1 ? '' : 's'}`} <span class="punct">${close}</span>`;
+      row.appendChild(sum);
+      const children = document.createElement('div');
+      children.className = 'children';
+      if (isArr) {
+        v.forEach((item, i) => {
+          const sub = renderValueNode(item);
+          children.appendChild(sub);
+        });
+      } else {
+        Object.keys(v).forEach(k => {
+          const sub = renderValueNode(v[k], k);
+          children.appendChild(sub);
+        });
+      }
+      row.appendChild(children);
+      const closeRow = document.createElement('div');
+      closeRow.className = 'row';
+      closeRow.innerHTML = `<span class="punct">${close}</span>`;
+      row.appendChild(closeRow);
+      return row;
+    }
+    row.innerHTML = html;
+    return row;
+  }
+  function renderTree(value) {
+    treeView.innerHTML = '';
+    treeView.appendChild(renderValueNode(value));
+  }
+
+  function setView(v) {
+    currentView = v;
+    $('viewText').style.background = v === 'text' ? 'var(--accent-soft)' : 'rgba(255,255,255,0.04)';
+    $('viewText').style.borderColor = v === 'text' ? 'var(--accent)' : 'var(--border)';
+    $('viewText').style.color = v === 'text' ? 'var(--accent)' : 'var(--text)';
+    $('viewTree').style.background = v === 'tree' ? 'var(--accent-soft)' : 'rgba(255,255,255,0.04)';
+    $('viewTree').style.borderColor = v === 'tree' ? 'var(--accent)' : 'var(--border)';
+    $('viewTree').style.color = v === 'tree' ? 'var(--accent)' : 'var(--text)';
+    outputEl.style.display = v === 'text' ? '' : 'none';
+    treeView.style.display  = v === 'tree' ? '' : 'none';
+    refreshOutput();
+  }
+
+  // wire up
+  $('formatBtn').addEventListener('click', format);
+  $('minifyBtn').addEventListener('click', minify);
+  $('validateBtn').addEventListener('click', validate);
+  $('sortBtn').addEventListener('click', sortKeys);
+  $('viewText').addEventListener('click', () => setView('text'));
+  $('viewTree').addEventListener('click', () => setView('tree'));
+  indentSel.addEventListener('change', () => { if (lastParsed !== null) format(); });
+
+  $('copyBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(lastOutput); log.ok('已复制结果'); }
+    catch (e) { log.err('复制失败: ' + e.message); }
+  });
+  $('copyResult').addEventListener('click', () => $('copyBtn').click());
+  $('downloadBtn').addEventListener('click', () => {
+    if (!lastOutput) { log.err('没有结果可下载'); return; }
+    const blob = new Blob([lastOutput], { type: 'application/json' });
+    download(blob, 'output.json');
+  });
+  $('swapBtn').addEventListener('click', () => {
+    if (!lastOutput) return;
+    inputEl.value = lastOutput;
+    onInput();
+  });
+  $('clearBtn').addEventListener('click', () => {
+    inputEl.value = '';
+    outputEl.value = '';
+    treeView.innerHTML = '';
+    lastParsed = null;
+    lastOutput = '';
+    setStatus('已清空');
+    $('inputMeta').textContent = '—';
+    $('outputMeta').textContent = '—';
+    $('statsPanel').textContent = '—';
+  });
+
+  // keyboard shortcuts
+  inputEl.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      format();
+    }
+  });
+
+  // live input meta
+  function onInput() {
+    const v = inputEl.value;
+    $('inputMeta').textContent = v ? `${(v.length / 1024).toFixed(2)} KB · ${v.split('\n').length} 行` : '—';
+  }
+  inputEl.addEventListener('input', onInput);
+
+  // drop file
+  attachDropZone($('dropZone'), $('fileInput'), async files => {
+    if (!files[0]) return;
+    try {
+      const text = await files[0].text();
+      inputEl.value = text;
+      onInput();
+      format();
+    } catch (e) { log.err('读文件失败: ' + e.message); }
+  });
+
+  log.ok('JSON 工具准备好');
+})();
+</script>
+</body>
+</html>
