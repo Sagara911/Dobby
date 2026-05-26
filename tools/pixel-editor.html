@@ -189,9 +189,14 @@
     transition: transform 0.12s;
   }
   .px-palette button:hover { transform: scale(1.15); z-index: 1; }
+  /* Active swatch ring uses a STABLE color, not var(--accent) — the
+     theme cycle slowly rotates --accent, which would make the highlight
+     ring around the user's selected palette color appear to drift,
+     giving the false impression that the picked color itself is
+     changing while in fact the painted pixels stay correct. */
   .px-palette button.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px rgba(0,0,0,0.5);
   }
 
   .px-size-row {
