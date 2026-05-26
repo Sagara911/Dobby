@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>缓动曲线编辑器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .ez-stage {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* curve canvas */
+  .ez-curve-wrap {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: relative;
+    aspect-ratio: 1;
+    max-width: 360px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .ez-curve-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+  .ez-curve-label {
+    position: absolute;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .ez-curve-label.x-start { bottom: 6px; left: 24px; }
+  .ez-curve-label.x-end   { bottom: 6px; right: 24px; }
+  .ez-curve-label.y-start { bottom: 24px; left: 6px; }
+  .ez-curve-label.y-end   { top: 24px; left: 6px; }
+
+  /* animation preview */
+  .ez-anim-wrap {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .ez-anim-track {
+    position: relative;
+    height: 40px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .ez-anim-ball {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--champagne));
+    box-shadow: 0 4px 12px rgba(var(--jade-rgb), 0.4);
+    left: 4px;
+  }
+  .ez-anim-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .ez-anim-meta button {
+    background: rgba(var(--jade-rgb), 0.12);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ez-anim-meta button:hover { background: rgba(var(--jade-rgb), 0.22); }
+  .ez-anim-meta .label { font-size: 11px; color: var(--muted); }
+  .ez-anim-meta input[type=range] { flex: 1; max-width: 200px; }
+  .ez-anim-meta .val { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text); min-width: 60px; text-align: right; }
+
+  /* export box */
+  .ez-export {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .ez-format-tabs {
+    display: flex;
+    gap: 2px;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+    padding: 4px;
+    flex-wrap: wrap;
+  }
+  .ez-format-tabs button {
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+    padding: 8px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .ez-format-tabs button:hover { color: var(--text-soft); background: rgba(255,255,255,0.04); }
+  .ez-format-tabs button.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .ez-code {
+    flex: 1;
+    padding: 16px 20px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: transparent;
+    border: 0;
+    resize: none;
+    min-height: 80px;
+  }
+  .ez-code:focus { outline: 0; }
+  .ez-export-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid var(--border);
+  }
+  .ez-export-actions button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ez-export-actions button:hover { background: rgba(255,255,255,0.10); }
+
+  /* preset grid */
+  .ez-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .ez-preset {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    border-radius: var(--radius-sm);
+    padding: 6px 4px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ez-preset:hover { background: rgba(var(--jade-rgb), 0.08); border-color: rgba(var(--jade-rgb), 0.5); color: var(--accent); }
+  .ez-preset.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🎢 缓动曲线</h1>
+
+    <h2>预设</h2>
+    <div class="ez-preset-grid" id="presetGrid">
+      <!-- populated at runtime -->
+    </div>
+
+    <h2>曲线类型</h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
+      <button class="ez-preset active" id="modeBezier" data-mode="bezier">cubic-bezier</button>
+      <button class="ez-preset" id="modeSpring" data-mode="spring">弹簧</button>
+    </div>
+
+    <h2 id="paramsHead">控制点</h2>
+    <div id="bezierParams" style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft)" id="bezierStr">cubic-bezier(0.4, 0, 0.2, 1)</div>
+      <div class="px-help" style="font-size:10px; color:var(--muted)">在右边画布上拖蓝/绿色控制点,或直接改下面数值</div>
+      <div style="display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; font-size:11px">
+        <span style="color:var(--muted); font-family:ui-monospace,Consolas,monospace">P1x</span>
+        <input type="number" id="p1x" min="0" max="1" step="0.01" value="0.4" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:5px 8px; font-family:ui-monospace,Consolas,monospace; font-size:11px">
+        <span style="color:var(--muted); font-family:ui-monospace,Consolas,monospace">P1y</span>
+        <input type="number" id="p1y" min="-2" max="2" step="0.01" value="0" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:5px 8px; font-family:ui-monospace,Consolas,monospace; font-size:11px">
+        <span style="color:var(--muted); font-family:ui-monospace,Consolas,monospace">P2x</span>
+        <input type="number" id="p2x" min="0" max="1" step="0.01" value="0.2" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:5px 8px; font-family:ui-monospace,Consolas,monospace; font-size:11px">
+        <span style="color:var(--muted); font-family:ui-monospace,Consolas,monospace">P2y</span>
+        <input type="number" id="p2y" min="-2" max="2" step="0.01" value="1" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:5px 8px; font-family:ui-monospace,Consolas,monospace; font-size:11px">
+      </div>
+    </div>
+
+    <div id="springParams" style="display:none; flex-direction:column; gap:8px">
+      <div style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft)" id="springStr">spring(1, 100, 10, 0)</div>
+      <div class="px-help" style="font-size:10px; color:var(--muted)">物理弹簧模拟,适合 Framer Motion / Reanimated 风格</div>
+      <div style="display:grid; gap:8px; font-size:11px">
+        <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
+          质量 (mass) <span id="massVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">1.0</span>
+          <input type="range" id="mass" min="0.1" max="5" step="0.1" value="1">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
+          劲度 (stiffness) <span id="stiffVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">100</span>
+          <input type="range" id="stiff" min="1" max="500" step="1" value="100">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
+          阻尼 (damping) <span id="dampVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">10</span>
+          <input type="range" id="damp" min="0" max="50" step="0.5" value="10">
+        </label>
+      </div>
+    </div>
+
+    <h2>动作</h2>
+    <button id="copyBtn" class="secondary">📋 复制当前格式代码</button>
+    <button id="resetBtn" class="secondary">🔄 重置</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">cubic-bezier + 弹簧 · 可视化拖控点 · 多引擎导出</div>
+
+    <div class="ez-stage">
+      <!-- CURVE CANVAS -->
+      <div class="ez-curve-wrap">
+        <canvas id="curveCv" width="320" height="320"></canvas>
+        <span class="ez-curve-label x-start">0</span>
+        <span class="ez-curve-label x-end">1 · 时间</span>
+        <span class="ez-curve-label y-start">0</span>
+        <span class="ez-curve-label y-end">1 · 进度</span>
+      </div>
+
+      <!-- ANIMATION PREVIEW -->
+      <div class="ez-anim-wrap">
+        <div class="ez-anim-track" id="animTrack">
+          <div class="ez-anim-ball" id="animBall"></div>
+        </div>
+        <div class="ez-anim-meta">
+          <button id="playBtn">▶ 播放</button>
+          <span class="label">时长</span>
+          <input type="range" id="duration" min="200" max="3000" value="1000" step="50">
+          <span class="val" id="durationVal">1.00s</span>
+        </div>
+      </div>
+
+      <!-- EXPORT BOX -->
+      <div class="ez-export">
+        <div class="ez-format-tabs" id="formatTabs">
+          <button class="active" data-fmt="css">CSS</button>
+          <button data-fmt="js">JavaScript</button>
+          <button data-fmt="unity">Unity</button>
+          <button data-fmt="godot">Godot</button>
+          <button data-fmt="phaser">Phaser</button>
+          <button data-fmt="lottie">Lottie</button>
+        </div>
+        <textarea class="ez-code" id="exportCode" readonly spellcheck="false"></textarea>
+        <div class="ez-export-actions">
+          <button id="copyCode">📋 复制</button>
+          <button id="downloadCode">💾 下载</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('easing-editor');
+
+(() => {
+  const { $, makeLogger, download } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   State
+  // ============================================================
+  let mode = 'bezier'; // bezier | spring
+  let p1 = { x: 0.4, y: 0 };
+  let p2 = { x: 0.2, y: 1 };
+  let spring = { mass: 1, stiffness: 100, damping: 10, velocity: 0 };
+  let duration = 1000;
+  let currentFmt = 'css';
+
+  // ============================================================
+  //   Presets
+  // ============================================================
+  const PRESETS = [
+    { name: '线性',       mode: 'bezier', p1: {x:0,y:0},     p2: {x:1,y:1} },
+    { name: 'ease',       mode: 'bezier', p1: {x:0.25,y:0.1},p2: {x:0.25,y:1} },
+    { name: 'ease-in',    mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:1,y:1} },
+    { name: 'ease-out',   mode: 'bezier', p1: {x:0,y:0},     p2: {x:0.58,y:1} },
+    { name: 'ease-in-out',mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:0.58,y:1} },
+    { name: 'Material',   mode: 'bezier', p1: {x:0.4,y:0},   p2: {x:0.2,y:1} },
+    { name: 'Apple',      mode: 'bezier', p1: {x:0.32,y:0.94},p2:{x:0.6,y:1} },
+    { name: 'Anticipate', mode: 'bezier', p1: {x:0.36,y:-0.36},p2:{x:0.4,y:0.96} },
+    { name: 'Overshoot',  mode: 'bezier', p1: {x:0.34,y:1.56},p2:{x:0.64,y:1} },
+    { name: 'Bounce out', mode: 'bezier', p1: {x:0.68,y:-0.55},p2:{x:0.27,y:1.55} },
+    { name: 'Spring 软',  mode: 'spring', spring: { mass: 1, stiffness: 80,  damping: 12, velocity: 0 } },
+    { name: 'Spring 弹',  mode: 'spring', spring: { mass: 1, stiffness: 200, damping: 8,  velocity: 0 } }
+  ];
+
+  // ============================================================
+  //   Canvas curve rendering
+  // ============================================================
+  const cv = $('curveCv');
+  function setupHiDPI() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = w * dpr;
+    cv.height = h * dpr;
+    cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  setupHiDPI();
+  window.addEventListener('resize', () => { setupHiDPI(); renderCurve(); });
+
+  function renderCurve() {
+    const ctx = cv.getContext('2d');
+    const w = cv.clientWidth, h = cv.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    // padding to allow control points to extend outside the unit box
+    const pad = 32;
+    const x0 = pad, y0 = h - pad;
+    const x1 = w - pad, y1 = pad;
+    const ux = x => x0 + x * (x1 - x0);
+    const uy = y => y0 + y * (y1 - y0);  // y inverted (0 at bottom)
+    // grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      ctx.beginPath();
+      ctx.moveTo(ux(t), y0);
+      ctx.lineTo(ux(t), y1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x0, uy(t));
+      ctx.lineTo(x1, uy(t));
+      ctx.stroke();
+    }
+    // unit box highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x0, y1, x1 - x0, y0 - y1);
+
+    // sample curve and draw
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#31f59c';
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const N = 100;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const y = sampleCurve(t);
+      const px = ux(t);
+      const py = uy(y);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    if (mode === 'bezier') {
+      // control point handles
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ux(0), uy(0));
+      ctx.lineTo(ux(p1.x), uy(p1.y));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ux(1), uy(1));
+      ctx.lineTo(ux(p2.x), uy(p2.y));
+      ctx.stroke();
+      // points
+      drawHandle(ux(p1.x), uy(p1.y), '#79b8ff', 'P1');
+      drawHandle(ux(p2.x), uy(p2.y), '#b5cea8', 'P2');
+      drawAnchor(ux(0), uy(0));
+      drawAnchor(ux(1), uy(1));
+    }
+
+    function drawHandle(x, y, color, label) {
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 9px ui-monospace, Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, y);
+    }
+    function drawAnchor(x, y) {
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fill();
+    }
+  }
+
+  // ============================================================
+  //   Curve evaluation
+  // ============================================================
+  function sampleBezier(t) {
+    // 1D cubic-bezier on y coordinate; need to solve for x first
+    // Use Newton-Raphson over t to find the parameter that yields x == target
+    const x = (s, p1x, p2x) => 3 * (1-s)*(1-s)*s*p1x + 3*(1-s)*s*s*p2x + s*s*s;
+    const y = (s, p1y, p2y) => 3 * (1-s)*(1-s)*s*p1y + 3*(1-s)*s*s*p2y + s*s*s;
+    const dx = (s, p1x, p2x) => 3*(1-s)*(1-s)*p1x + 6*(1-s)*s*(p2x - p1x) + 3*s*s*(1 - p2x);
+    let s = t;
+    for (let i = 0; i < 8; i++) {
+      const cx = x(s, p1.x, p2.x);
+      const err = cx - t;
+      if (Math.abs(err) < 1e-6) break;
+      const slope = dx(s, p1.x, p2.x);
+      if (Math.abs(slope) < 1e-6) break;
+      s -= err / slope;
+      s = Math.max(0, Math.min(1, s));
+    }
+    return y(s, p1.y, p2.y);
+  }
+  function sampleSpring(t) {
+    // Closed-form damped harmonic oscillator response to step input
+    const { mass, stiffness, damping, velocity } = spring;
+    const w0 = Math.sqrt(stiffness / mass);
+    const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+    const time = t * (duration / 1000);
+    if (zeta < 1) {
+      const wd = w0 * Math.sqrt(1 - zeta * zeta);
+      return 1 - Math.exp(-zeta * w0 * time) *
+        (Math.cos(wd * time) + ((zeta * w0 + velocity) / wd) * Math.sin(wd * time));
+    } else if (zeta === 1) {
+      return 1 - Math.exp(-w0 * time) * (1 + (w0 + velocity) * time);
+    } else {
+      const wd = w0 * Math.sqrt(zeta * zeta - 1);
+      return 1 - Math.exp(-zeta * w0 * time) *
+        (Math.cosh(wd * time) + ((zeta * w0 + velocity) / wd) * Math.sinh(wd * time));
+    }
+  }
+  function sampleCurve(t) {
+    return mode === 'bezier' ? sampleBezier(t) : sampleSpring(t);
+  }
+
+  // ============================================================
+  //   Drag handles on canvas
+  // ============================================================
+  let dragging = null;
+  cv.addEventListener('pointerdown', e => {
+    if (mode !== 'bezier') return;
+    const { x: mx, y: my } = canvasMouse(e);
+    if (hit(mx, my, p1)) dragging = 'p1';
+    else if (hit(mx, my, p2)) dragging = 'p2';
+    if (dragging) {
+      cv.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    }
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const { x: mx, y: my } = canvasMouse(e);
+    const pad = 32;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    const target = dragging === 'p1' ? p1 : p2;
+    target.x = Math.max(0, Math.min(1, (mx - pad) / (w - 2*pad)));
+    target.y = (h - pad - my) / (h - 2*pad);
+    target.y = Math.max(-1, Math.min(2, target.y));
+    syncInputs();
+    renderCurve();
+    refreshExport();
+  });
+  cv.addEventListener('pointerup', e => {
+    if (dragging) { try { cv.releasePointerCapture(e.pointerId); } catch {} dragging = null; }
+  });
+  function canvasMouse(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function hit(mx, my, pt) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    const pad = 32;
+    const px = pad + pt.x * (w - 2*pad);
+    const py = (h - pad) - pt.y * (h - 2*pad);
+    return Math.hypot(mx - px, my - py) < 14;
+  }
+
+  // ============================================================
+  //   Wire inputs
+  // ============================================================
+  function syncInputs() {
+    if (mode === 'bezier') {
+      $('p1x').value = p1.x.toFixed(2);
+      $('p1y').value = p1.y.toFixed(2);
+      $('p2x').value = p2.x.toFixed(2);
+      $('p2y').value = p2.y.toFixed(2);
+      $('bezierStr').textContent = `cubic-bezier(${p1.x.toFixed(2)}, ${p1.y.toFixed(2)}, ${p2.x.toFixed(2)}, ${p2.y.toFixed(2)})`;
+    } else {
+      $('massVal').textContent = spring.mass.toFixed(1);
+      $('stiffVal').textContent = spring.stiffness.toFixed(0);
+      $('dampVal').textContent = spring.damping.toFixed(1);
+      $('springStr').textContent = `spring(${spring.mass}, ${spring.stiffness}, ${spring.damping}, ${spring.velocity})`;
+    }
+  }
+  ['p1x','p1y','p2x','p2y'].forEach(id => {
+    $(id).addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v)) return;
+      if (id === 'p1x') p1.x = Math.max(0, Math.min(1, v));
+      if (id === 'p1y') p1.y = v;
+      if (id === 'p2x') p2.x = Math.max(0, Math.min(1, v));
+      if (id === 'p2y') p2.y = v;
+      $('bezierStr').textContent = `cubic-bezier(${p1.x.toFixed(2)}, ${p1.y.toFixed(2)}, ${p2.x.toFixed(2)}, ${p2.y.toFixed(2)})`;
+      renderCurve();
+      refreshExport();
+    });
+  });
+  ['mass','stiff','damp'].forEach(id => {
+    $(id).addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (id === 'mass')  spring.mass = v;
+      if (id === 'stiff') spring.stiffness = v;
+      if (id === 'damp')  spring.damping = v;
+      syncInputs();
+      renderCurve();
+      refreshExport();
+    });
+  });
+
+  // mode toggle
+  $('modeBezier').addEventListener('click', () => setMode('bezier'));
+  $('modeSpring').addEventListener('click', () => setMode('spring'));
+  function setMode(m) {
+    mode = m;
+    $('modeBezier').classList.toggle('active', m === 'bezier');
+    $('modeSpring').classList.toggle('active', m === 'spring');
+    $('bezierParams').style.display = m === 'bezier' ? 'flex' : 'none';
+    $('springParams').style.display = m === 'spring' ? 'flex' : 'none';
+    $('paramsHead').textContent = m === 'bezier' ? '控制点' : '弹簧参数';
+    renderCurve();
+    refreshExport();
+  }
+
+  // duration
+  $('duration').addEventListener('input', e => {
+    duration = parseInt(e.target.value, 10);
+    $('durationVal').textContent = (duration / 1000).toFixed(2) + 's';
+    refreshExport();
+  });
+
+  // presets
+  function renderPresets() {
+    const grid = $('presetGrid');
+    grid.innerHTML = '';
+    PRESETS.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.className = 'ez-preset';
+      b.textContent = p.name;
+      b.dataset.i = i;
+      b.addEventListener('click', () => {
+        if (p.mode === 'bezier') {
+          p1 = { ...p.p1 };
+          p2 = { ...p.p2 };
+          setMode('bezier');
+        } else {
+          spring = { ...p.spring };
+          setMode('spring');
+        }
+        syncInputs();
+        renderCurve();
+        refreshExport();
+        document.querySelectorAll('.ez-preset[data-i]').forEach(x => x.classList.toggle('active', x === b));
+      });
+      grid.appendChild(b);
+    });
+  }
+
+  // ============================================================
+  //   Animation preview
+  // ============================================================
+  let animStart = 0, animId = null;
+  function startAnim() {
+    if (animId) return;
+    animStart = performance.now();
+    $('playBtn').textContent = '⏸ 暂停';
+    function tick(now) {
+      const t = Math.min(1, (now - animStart) / duration);
+      const y = sampleCurve(t);
+      const track = $('animTrack');
+      const ballSize = 32;
+      const maxX = track.clientWidth - ballSize - 8;
+      $('animBall').style.left = (4 + Math.max(0, Math.min(maxX, y * maxX))) + 'px';
+      if (t < 1) animId = requestAnimationFrame(tick);
+      else {
+        animId = null;
+        $('playBtn').textContent = '▶ 播放';
+        setTimeout(() => $('animBall').style.left = '4px', 200);
+      }
+    }
+    animId = requestAnimationFrame(tick);
+  }
+  $('playBtn').addEventListener('click', () => {
+    if (animId) { cancelAnimationFrame(animId); animId = null; $('playBtn').textContent = '▶ 播放'; }
+    else startAnim();
+  });
+
+  // ============================================================
+  //   Export formats
+  // ============================================================
+  function exportFor(fmt) {
+    if (mode === 'bezier') {
+      const [a, b, c, d] = [p1.x, p1.y, p2.x, p2.y].map(n => n.toFixed(3));
+      const dur = (duration / 1000).toFixed(2);
+      switch (fmt) {
+        case 'css':
+          return `/* CSS transition */\ntransition: all ${dur}s cubic-bezier(${a}, ${b}, ${c}, ${d});\n\n/* OR as a CSS variable */\n--my-easing: cubic-bezier(${a}, ${b}, ${c}, ${d});`;
+        case 'js':
+          return `// 1D cubic-bezier easing function — pass a t ∈ [0,1], get progress\nfunction easing(t) {\n  const cx1 = ${a}, cy1 = ${b}, cx2 = ${c}, cy2 = ${d};\n  // Newton-Raphson to find s such that cubic-bezier-x(s) = t\n  const bx = s => 3*(1-s)*(1-s)*s*cx1 + 3*(1-s)*s*s*cx2 + s*s*s;\n  const by = s => 3*(1-s)*(1-s)*s*cy1 + 3*(1-s)*s*s*cy2 + s*s*s;\n  const dx = s => 3*(1-s)*(1-s)*cx1 + 6*(1-s)*s*(cx2 - cx1) + 3*s*s*(1 - cx2);\n  let s = t;\n  for (let i = 0; i < 8; i++) {\n    const e = bx(s) - t;\n    if (Math.abs(e) < 1e-6) break;\n    s -= e / dx(s);\n    s = Math.max(0, Math.min(1, s));\n  }\n  return by(s);\n}\n\n// Use with requestAnimationFrame\nconst duration = ${duration}; // ms\nlet start = null;\nfunction tick(now) {\n  start ??= now;\n  const t = Math.min(1, (now - start) / duration);\n  const progress = easing(t);\n  // apply progress to your animated value\n  if (t < 1) requestAnimationFrame(tick);\n}\nrequestAnimationFrame(tick);`;
+        case 'unity':
+          return `// Unity AnimationCurve (paste into a MonoBehaviour script)\nusing UnityEngine;\n\npublic class MyEasing : MonoBehaviour {\n  // Bezier control points: P0=(0,0), P1=(${a},${b}), P2=(${c},${d}), P3=(1,1)\n  public AnimationCurve curve = new AnimationCurve(\n    new Keyframe(0f, 0f, 0f, ${(b/(a || 0.001)).toFixed(3)}f),\n    new Keyframe(1f, 1f, ${((1-d)/((1-c) || 0.001)).toFixed(3)}f, 0f)\n  );\n  // sample with curve.Evaluate(t) where t in [0, 1]\n}`;
+        case 'godot':
+          return `# Godot 4 — paste into a Tween or Animation track\n# Bezier control points: P0=(0,0), P1=(${a},${b}), P2=(${c},${d}), P3=(1,1)\nvar tween = create_tween()\ntween.set_ease(Tween.EASE_IN_OUT)\ntween.set_trans(Tween.TRANS_CUBIC)  # closest built-in to your curve\n\n# For exact bezier control, sample the curve manually:\nfunc bezier_ease(t: float) -> float:\n  var cx1: float = ${a}\n  var cy1: float = ${b}\n  var cx2: float = ${c}\n  var cy2: float = ${d}\n  var s := t\n  for i in range(8):\n    var bx := 3.0*(1-s)*(1-s)*s*cx1 + 3.0*(1-s)*s*s*cx2 + s*s*s\n    var dx := 3.0*(1-s)*(1-s)*cx1 + 6.0*(1-s)*s*(cx2 - cx1) + 3.0*s*s*(1 - cx2)\n    if abs(bx - t) < 0.000001: break\n    s -= (bx - t) / dx\n    s = clamp(s, 0.0, 1.0)\n  return 3.0*(1-s)*(1-s)*s*cy1 + 3.0*(1-s)*s*s*cy2 + s*s*s`;
+        case 'phaser':
+          return `// Phaser 3 — custom ease function\nconst MyEasing = (t) => {\n  const cx1 = ${a}, cy1 = ${b}, cx2 = ${c}, cy2 = ${d};\n  const bx = s => 3*(1-s)*(1-s)*s*cx1 + 3*(1-s)*s*s*cx2 + s*s*s;\n  const by = s => 3*(1-s)*(1-s)*s*cy1 + 3*(1-s)*s*s*cy2 + s*s*s;\n  const dx = s => 3*(1-s)*(1-s)*cx1 + 6*(1-s)*s*(cx2 - cx1) + 3*s*s*(1 - cx2);\n  let s = t;\n  for (let i = 0; i < 8; i++) {\n    const e = bx(s) - t;\n    if (Math.abs(e) < 1e-6) break;\n    s -= e / dx(s);\n    s = Math.max(0, Math.min(1, s));\n  }\n  return by(s);\n};\n\n// Use it on a tween\nthis.tweens.add({\n  targets: sprite,\n  x: 400,\n  duration: ${duration},\n  ease: MyEasing\n});`;
+        case 'lottie':
+          return `// Lottie animation keyframe segment — paste into "ks" property data\n// "i" = in tangent, "o" = out tangent on the bezier segment between two keyframes\n{\n  "i": { "x": [${a}], "y": [${b}] },\n  "o": { "x": [${c}], "y": [${d}] }\n}`;
+      }
+    } else {
+      const { mass, stiffness, damping, velocity } = spring;
+      const dur = (duration / 1000).toFixed(2);
+      switch (fmt) {
+        case 'css':
+          return `/* CSS does not natively support spring physics —\n   use the linear() function (Chrome 113+) with sampled points: */\ntransition: all ${dur}s linear(${sampleN(20).join(', ')});`;
+        case 'js':
+          return `// Damped harmonic oscillator spring easing\nfunction springEasing(t) {\n  const mass = ${mass};\n  const stiffness = ${stiffness};\n  const damping = ${damping};\n  const velocity = ${velocity};\n  const duration = ${duration / 1000}; // seconds\n  const time = t * duration;\n  const w0 = Math.sqrt(stiffness / mass);\n  const zeta = damping / (2 * Math.sqrt(stiffness * mass));\n  if (zeta < 1) {\n    const wd = w0 * Math.sqrt(1 - zeta * zeta);\n    return 1 - Math.exp(-zeta * w0 * time) *\n      (Math.cos(wd * time) + ((zeta * w0 + velocity) / wd) * Math.sin(wd * time));\n  } else if (zeta === 1) {\n    return 1 - Math.exp(-w0 * time) * (1 + (w0 + velocity) * time);\n  } else {\n    const wd = w0 * Math.sqrt(zeta * zeta - 1);\n    return 1 - Math.exp(-zeta * w0 * time) *\n      (Math.cosh(wd * time) + ((zeta * w0 + velocity) / wd) * Math.sinh(wd * time));\n  }\n}`;
+        case 'unity':
+          return `// Unity — sampled spring curve (paste into AnimationCurve)\nAnimationCurve curve = new AnimationCurve(\n${sampleN(15).map((y, i) => `  new Keyframe(${(i/14).toFixed(3)}f, ${y.toFixed(3)}f)`).join(',\n')}\n);`;
+        case 'godot':
+          return `# Godot — sampled spring curve as Tween method calls\n# (Godot 4's tween_method lets you call a setter every frame)\nfunc spring_ease(t: float) -> float:\n  var mass: float = ${mass}\n  var stiffness: float = ${stiffness}\n  var damping: float = ${damping}\n  var duration: float = ${duration / 1000}\n  var time = t * duration\n  var w0 = sqrt(stiffness / mass)\n  var zeta = damping / (2.0 * sqrt(stiffness * mass))\n  if zeta < 1.0:\n    var wd = w0 * sqrt(1.0 - zeta * zeta)\n    return 1.0 - exp(-zeta * w0 * time) * (cos(wd * time) + (zeta * w0 / wd) * sin(wd * time))\n  elif zeta == 1.0:\n    return 1.0 - exp(-w0 * time) * (1.0 + w0 * time)\n  else:\n    var wd = w0 * sqrt(zeta * zeta - 1.0)\n    return 1.0 - exp(-zeta * w0 * time) * (cosh(wd * time) + (zeta * w0 / wd) * sinh(wd * time))`;
+        case 'phaser':
+          return `// Phaser 3 with spring physics (paste as custom ease)\nconst springEase = (t) => {\n  const mass = ${mass}, stiffness = ${stiffness}, damping = ${damping};\n  const time = t * ${duration / 1000};\n  const w0 = Math.sqrt(stiffness / mass);\n  const zeta = damping / (2 * Math.sqrt(stiffness * mass));\n  if (zeta < 1) {\n    const wd = w0 * Math.sqrt(1 - zeta * zeta);\n    return 1 - Math.exp(-zeta * w0 * time) *\n      (Math.cos(wd * time) + (zeta * w0 / wd) * Math.sin(wd * time));\n  }\n  return 1 - Math.exp(-w0 * time) * (1 + w0 * time);\n};`;
+        case 'lottie':
+          return `// Lottie doesn't have native spring — sample as multi-frame bezier track:\n${sampleN(15).map((y, i) => `// t=${(i/14).toFixed(2)} → progress=${y.toFixed(3)}`).join('\n')}\n\n// You'll need to convert these to Lottie keyframe i/o tangent pairs.\n// Easier path: use Lottie's built-in cubic-bezier and switch to the\n// bezier mode in this tool above.`;
+      }
+    }
+  }
+  function sampleN(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(sampleCurve(i / (n - 1)));
+    return out;
+  }
+  function refreshExport() {
+    $('exportCode').value = exportFor(currentFmt);
+  }
+  document.querySelectorAll('#formatTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      currentFmt = b.dataset.fmt;
+      document.querySelectorAll('#formatTabs button').forEach(x => x.classList.toggle('active', x === b));
+      refreshExport();
+    });
+  });
+
+  $('copyCode').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('exportCode').value); log.ok('已复制 ' + currentFmt.toUpperCase() + ' 代码'); }
+    catch { log.err('复制失败'); }
+  });
+  $('copyBtn').addEventListener('click', () => $('copyCode').click());
+  $('downloadCode').addEventListener('click', () => {
+    const code = $('exportCode').value;
+    const ext = { css: 'css', js: 'js', unity: 'cs', godot: 'gd', phaser: 'js', lottie: 'txt' }[currentFmt] || 'txt';
+    const blob = new Blob([code], { type: 'text/plain' });
+    download(blob, `easing.${ext}`);
+  });
+  $('resetBtn').addEventListener('click', () => {
+    p1 = { x: 0.4, y: 0 }; p2 = { x: 0.2, y: 1 };
+    spring = { mass: 1, stiffness: 100, damping: 10, velocity: 0 };
+    duration = 1000;
+    $('duration').value = 1000;
+    $('durationVal').textContent = '1.00s';
+    setMode('bezier');
+    syncInputs();
+    renderCurve();
+    refreshExport();
+  });
+
+  // init
+  renderPresets();
+  syncInputs();
+  renderCurve();
+  refreshExport();
+  log.ok('缓动曲线编辑器准备好');
+})();
+</script>
+</body>
+</html>

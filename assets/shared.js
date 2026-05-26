@@ -128,6 +128,7 @@
     // 动画 / 精灵图
     { id: 'pixel-editor',   cat: 'anim',  name: '像素画板',       en: 'Pixel Editor',    icon: '🎨', href: 'tools/pixel-editor.html',   desc: '从零画像素图 — 铅笔/填充/对称镜像 + PICO-8/GameBoy 调色板' },
     { id: 'tilemap',        cat: 'anim',  name: 'Tilemap 编辑器', en: 'Tilemap Editor',  icon: '🗺️', href: 'tools/tilemap.html',        desc: '用 tileset 拼地图,导出 Tiled 兼容 JSON + 平摊 PNG' },
+    { id: 'easing-editor',  cat: 'anim',  name: '缓动曲线',       en: 'Easing Editor',   icon: '🎢', href: 'tools/easing-editor.html',  desc: 'cubic-bezier 拖控点 + spring 弹簧,导出 CSS/JS/Unity/Godot/Phaser/Lottie' },
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
     { id: 'gif-tools',      cat: 'anim',  name: 'GIF 工具',       en: 'GIF Tools',       icon: '🎞️', href: 'tools/gif-tools.html',      desc: '制作 (序列帧→GIF/APNG) + 编辑 (缩放/裁剪/调速/反向/减帧/优化/滤镜)' },
