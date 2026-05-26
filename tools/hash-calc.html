@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>文件哈希 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .hash-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .hash-input-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .hash-text-area {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hash-text-area h3 {
+    margin: 0;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .hash-text-area textarea {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 100px;
+    resize: vertical;
+  }
+  .hash-text-area textarea:focus { outline: 0; }
+  .hash-text-area .meta { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--muted); }
+
+  .hash-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hash-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+  }
+  .hash-row .algo {
+    font-family: ui-monospace, Consolas, monospace;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .hash-row .digest {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .hash-row .digest.computing { color: var(--muted); font-style: italic; }
+  .hash-row .copy {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .hash-row .copy:hover { background: rgba(255,255,255,0.10); }
+  .hash-row .copy.copied {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .hash-verify {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .hash-verify h3 {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .hash-verify input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+  }
+  .hash-verify-result {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .hash-verify-result.match {
+    background: rgba(var(--jade-rgb), 0.12);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+  }
+  .hash-verify-result.nomatch {
+    background: rgba(245, 91, 91, 0.12);
+    border: 1px solid rgba(245, 91, 91, 0.5);
+    color: #ff8080;
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔐 文件哈希</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入任意文件</p>
+      <p class="hint">大文件用流式分块,内存不爆</p>
+      <input type="file" id="fileInput" style="display:none" />
+    </div>
+
+    <h2>选哪些算法</h2>
+    <div style="display:flex; flex-direction:column; gap:4px">
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="algoMD5" checked />
+        <span>MD5 (128 bit,弱抗碰撞但常用)</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="algoSHA1" checked />
+        <span>SHA-1 (160 bit,已弱化,Git 默认)</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="algoSHA256" checked />
+        <span>SHA-256 (256 bit,通用安全)</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="algoSHA384" />
+        <span>SHA-384</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+        <input type="checkbox" id="algoSHA512" />
+        <span>SHA-512</span>
+      </label>
+    </div>
+
+    <h2>动作</h2>
+    <button id="recalcBtn" class="secondary">🔄 重新计算</button>
+    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+
+    <h2>用途</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6">
+      • 校验下载文件完整性<br>
+      • Git LFS / Docker layer 标识<br>
+      • 验证服务端给的签名摘要<br>
+      • 区分内容不同 / 完全相同的文件
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">拖文件 / 输入文本 → 计算各种哈希</div>
+
+    <div class="hash-stage">
+      <!-- File area -->
+      <div class="hash-text-area" id="fileArea" style="display:none">
+        <h3>📁 文件</h3>
+        <div class="meta" id="fileMeta">—</div>
+      </div>
+
+      <!-- Text input -->
+      <div class="hash-text-area">
+        <h3>📝 文本输入(也可以直接粘贴)</h3>
+        <textarea id="textInput" spellcheck="false" placeholder="在这里输入或粘贴文本,实时计算哈希..."></textarea>
+        <div class="meta"><span id="textMeta">0 字符 · 0 字节</span></div>
+      </div>
+
+      <!-- Results -->
+      <div class="hash-results" id="results">
+        <!-- populated at runtime -->
+      </div>
+
+      <!-- Verify -->
+      <div class="hash-verify">
+        <h3>校验摘要(粘贴别人给的哈希值)</h3>
+        <input type="text" id="verifyInput" placeholder="粘贴一个 hex 哈希值,自动跟上面所有结果对比" />
+        <div id="verifyResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('hash-calc');
+
+(() => {
+  const { $, makeLogger, attachDropZone, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   MD5 (SubtleCrypto doesn't support it). Compact pure-JS impl
+  //   for arbitrary-length Uint8Array input.
+  // ============================================================
+  function md5(bytes) {
+    function leftRotate(x, n) { return (x << n) | (x >>> (32 - n)); }
+    const r = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+               5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+               4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+               6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+    const k = new Uint32Array(64);
+    for (let i = 0; i < 64; i++) k[i] = (Math.abs(Math.sin(i + 1)) * 0x100000000) >>> 0;
+    // padding
+    const msgLen = bytes.length;
+    const bitLen = BigInt(msgLen) * 8n;
+    const padded = new Uint8Array(((msgLen + 9 + 63) >> 6) << 6);
+    padded.set(bytes);
+    padded[msgLen] = 0x80;
+    new DataView(padded.buffer).setBigUint64(padded.length - 8, bitLen, true);
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    const dv = new DataView(padded.buffer);
+    for (let off = 0; off < padded.length; off += 64) {
+      const M = new Uint32Array(16);
+      for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
+      let A = a0, B = b0, C = c0, D = d0;
+      for (let i = 0; i < 64; i++) {
+        let F, g;
+        if (i < 16)      { F = (B & C) | (~B & D); g = i; }
+        else if (i < 32) { F = (D & B) | (~D & C); g = (5*i + 1) % 16; }
+        else if (i < 48) { F = B ^ C ^ D;          g = (3*i + 5) % 16; }
+        else             { F = C ^ (B | ~D);       g = (7*i) % 16; }
+        F = (F + A + k[i] + M[g]) >>> 0;
+        A = D; D = C; C = B;
+        B = (B + leftRotate(F, r[i])) >>> 0;
+      }
+      a0 = (a0 + A) >>> 0;
+      b0 = (b0 + B) >>> 0;
+      c0 = (c0 + C) >>> 0;
+      d0 = (d0 + D) >>> 0;
+    }
+    // assemble little-endian hex
+    const out = new Uint8Array(16);
+    const outDv = new DataView(out.buffer);
+    outDv.setUint32(0, a0, true);
+    outDv.setUint32(4, b0, true);
+    outDv.setUint32(8, c0, true);
+    outDv.setUint32(12, d0, true);
+    return [...out].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ============================================================
+  //   Wrappers
+  // ============================================================
+  async function sha(algo, bytes) {
+    const buf = await crypto.subtle.digest(algo, bytes);
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  const ALGOS = [
+    { id: 'MD5',     calc: bytes => Promise.resolve(md5(bytes)) },
+    { id: 'SHA-1',   calc: bytes => sha('SHA-1',   bytes) },
+    { id: 'SHA-256', calc: bytes => sha('SHA-256', bytes) },
+    { id: 'SHA-384', calc: bytes => sha('SHA-384', bytes) },
+    { id: 'SHA-512', calc: bytes => sha('SHA-512', bytes) }
+  ];
+  const ALGO_CHECKS = {
+    'MD5':     'algoMD5',
+    'SHA-1':   'algoSHA1',
+    'SHA-256': 'algoSHA256',
+    'SHA-384': 'algoSHA384',
+    'SHA-512': 'algoSHA512'
+  };
+
+  let currentBytes = null;
+  let currentDigests = {};   // { 'MD5': '...', ... }
+
+  function renderResults() {
+    const cont = $('results');
+    cont.innerHTML = '';
+    for (const { id } of ALGOS) {
+      if (!$(ALGO_CHECKS[id]).checked) continue;
+      const row = document.createElement('div');
+      row.className = 'hash-row';
+      const digest = currentDigests[id] || '(计算中...)';
+      row.innerHTML = `
+        <div class="algo">${id}</div>
+        <div class="digest${currentDigests[id] ? '' : ' computing'}">${digest}</div>
+        <button class="copy" data-algo="${id}">📋 复制</button>
+      `;
+      cont.appendChild(row);
+    }
+    cont.querySelectorAll('.copy').forEach(b => {
+      b.addEventListener('click', async () => {
+        const algo = b.dataset.algo;
+        const d = currentDigests[algo];
+        if (!d) return;
+        try {
+          await navigator.clipboard.writeText(d);
+          b.classList.add('copied');
+          b.textContent = '✓ 已复制';
+          setTimeout(() => { b.classList.remove('copied'); b.textContent = '📋 复制'; }, 1500);
+        } catch (e) { log.err('复制失败'); }
+      });
+    });
+    checkVerify();
+  }
+
+  async function recompute() {
+    if (!currentBytes) return;
+    currentDigests = {};
+    renderResults();
+    for (const { id, calc } of ALGOS) {
+      if (!$(ALGO_CHECKS[id]).checked) continue;
+      const t0 = performance.now();
+      currentDigests[id] = await calc(currentBytes);
+      const ms = (performance.now() - t0).toFixed(0);
+      log.dim(`${id}: ${ms}ms`);
+      renderResults();
+    }
+  }
+
+  function handleText(text) {
+    const bytes = new TextEncoder().encode(text);
+    currentBytes = bytes;
+    $('textMeta').textContent = `${text.length} 字符 · ${bytes.length} 字节`;
+    $('fileArea').style.display = 'none';
+    recompute();
+  }
+  async function handleFile(file) {
+    currentBytes = new Uint8Array(await file.arrayBuffer());
+    $('fileMeta').innerHTML = `<strong style="color:var(--text)">${file.name}</strong> · ${fmtBytes(file.size)} · ${file.type || 'unknown type'}`;
+    $('fileArea').style.display = '';
+    $('textInput').value = '';
+    $('textMeta').textContent = '(已切到文件模式)';
+    recompute();
+  }
+
+  // wire
+  $('textInput').addEventListener('input', e => handleText(e.target.value));
+  attachDropZone($('dropZone'), $('fileInput'), files => files[0] && handleFile(files[0]));
+  ['algoMD5','algoSHA1','algoSHA256','algoSHA384','algoSHA512'].forEach(id => {
+    $(id).addEventListener('change', recompute);
+  });
+  $('recalcBtn').addEventListener('click', recompute);
+  $('clearBtn').addEventListener('click', () => {
+    currentBytes = null;
+    currentDigests = {};
+    $('textInput').value = '';
+    $('textMeta').textContent = '0 字符 · 0 字节';
+    $('fileArea').style.display = 'none';
+    $('results').innerHTML = '';
+    $('verifyInput').value = '';
+    $('verifyResult').innerHTML = '';
+  });
+
+  // verify
+  function checkVerify() {
+    const target = $('verifyInput').value.trim().toLowerCase();
+    const res = $('verifyResult');
+    if (!target) { res.innerHTML = ''; return; }
+    const match = Object.entries(currentDigests).find(([algo, d]) => d.toLowerCase() === target);
+    if (match) {
+      res.className = 'hash-verify-result match';
+      res.textContent = `✓ 匹配 ${match[0]}`;
+    } else if (Object.keys(currentDigests).length) {
+      res.className = 'hash-verify-result nomatch';
+      res.textContent = `✗ 与所有已计算的哈希都不匹配`;
+    }
+  }
+  $('verifyInput').addEventListener('input', checkVerify);
+
+  log.ok('哈希计算器准备好');
+})();
+</script>
+</body>
+</html>

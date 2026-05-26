@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v30",
+      "date": "2026-05-26",
+      "title": "再一波 4 个通用工具:JWT / 哈希 / 正则 / Markdown",
+      "items": [
+        "Phase 2 全部完成,Dobby 现在共 36 个工具 — 上一波 4 个还热乎着,这波 4 个再补开发者通用工具的空缺",
+        "🔑 JWT 解码器:粘贴 token 自动拆 header/payload/signature,7 个标准 claims(iss/sub/aud/iat/nbf/exp/jti)智能解读,exp 显示「过期 N 分钟前」或「N 小时后过期」— 后端开发常用",
+        "🔐 文件哈希计算器:MD5 / SHA-1 / SHA-256 / SHA-384 / SHA-512,文件拖入或文本输入都行,带「粘贴别人给的哈希自动对比」功能。MD5 是自实现的(SubtleCrypto 不支持)。本地测试 MD5(\"hello\")=5d41402abc4b2a76b9719d911017c592 验证通过",
+        "🔍 正则测试器:实时高亮所有匹配 / 命名捕获组解析($1, $2, &lt;year&gt;, &lt;month&gt;...) / flag 6 个按钮切换 / 22 个常用正则预设(邮箱/URL/IP/手机/UUID/中文姓名/身份证...)/ 语法 + flag 速查表",
+        "📝 Markdown 编辑器:左右双栏实时预览,工具栏快捷插入,支持 GFM 表格(对齐)/待办列表(- [ ] / - [x])/删除线/fenced code/<kbd>键盘符号</kbd>,导出 .md 或带样式 .html(GitHub 风格)"
+      ]
+    },
+    {
       "version": "dobby-v29",
       "date": "2026-05-26",
       "title": "一波加 4 个新工具:JSON / 对比度 / 缓动曲线 / 屏幕录制",

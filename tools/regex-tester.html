@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>正则测试器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .rx-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .rx-input-bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    align-items: center;
+  }
+  .rx-input-bar .slash {
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 18px;
+  }
+  .rx-pattern {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: #ce9178;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 15px;
+    padding: 6px 0;
+    outline: 0;
+  }
+  .rx-flags-input {
+    background: transparent;
+    border: 0;
+    color: var(--accent);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 15px;
+    width: 60px;
+    outline: 0;
+  }
+  .rx-flag-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .rx-flag-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    border-radius: var(--radius-sm);
+    padding: 4px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .rx-flag-btn:hover { background: rgba(255,255,255,0.08); }
+  .rx-flag-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .rx-test-input {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    flex: 1;
+    min-height: 200px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .rx-test-input h3 {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rx-textarea-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+  .rx-textarea-wrap textarea,
+  .rx-highlight {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow: auto;
+    position: absolute;
+    top: 0; left: 0;
+    resize: none;
+  }
+  .rx-textarea-wrap textarea {
+    color: transparent;
+    caret-color: var(--text);
+    z-index: 2;
+    background: transparent;
+  }
+  .rx-textarea-wrap textarea::selection {
+    background: rgba(var(--jade-rgb), 0.25);
+  }
+  .rx-textarea-wrap textarea:focus { outline: 0; }
+  .rx-highlight {
+    color: var(--text);
+    z-index: 1;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .rx-highlight mark {
+    background: rgba(var(--jade-rgb), 0.30);
+    color: inherit;
+    padding: 1px 0;
+    border-radius: 2px;
+  }
+  .rx-highlight mark.alt { background: rgba(245, 200, 80, 0.30); }
+
+  .rx-results {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-soft);
+    max-height: 200px;
+    overflow: auto;
+  }
+  .rx-results .summary {
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .rx-results .summary.zero { color: var(--muted); }
+  .rx-results .summary.err  { color: #ff5b5b; }
+  .rx-results .match {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rx-results .match:last-child { border: 0; }
+  .rx-results .match .head { color: var(--accent); }
+  .rx-results .match .text { color: var(--text); padding-left: 12px; }
+  .rx-results .match .groups { padding-left: 12px; color: var(--muted); font-size: 11px; }
+  .rx-results .match .groups .g { color: var(--text-soft); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔍 正则测试器</h1>
+
+    <h2>常用模板</h2>
+    <select id="presetSelect" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="">— 选一个常用正则 —</option>
+      <option value="email">📧 邮箱</option>
+      <option value="url">🌐 URL (http/https)</option>
+      <option value="ipv4">📡 IPv4</option>
+      <option value="ipv6">📡 IPv6</option>
+      <option value="phone-cn">📞 中国手机号</option>
+      <option value="phone-us">📞 美国电话号</option>
+      <option value="datetime-iso">📅 ISO 日期时间</option>
+      <option value="date">📅 日期 YYYY-MM-DD</option>
+      <option value="hex-color">🎨 hex 颜色 (#RGB / #RRGGBB)</option>
+      <option value="uuid">🆔 UUID v4</option>
+      <option value="zh-name">👤 中文姓名</option>
+      <option value="id-card">🪪 身份证号</option>
+      <option value="postcode-cn">📮 中国邮编</option>
+      <option value="creditcard">💳 信用卡(粗略)</option>
+      <option value="username">📛 用户名 (3-16 字母数字下划线)</option>
+      <option value="password">🔒 密码 (至少 8 位 + 大小写 + 数字)</option>
+      <option value="filename">📄 文件名</option>
+      <option value="leading-ws">⬅️ 行首空白</option>
+      <option value="trailing-ws">➡️ 行尾空白</option>
+      <option value="empty-line">⏎ 空行</option>
+      <option value="quoted-string">"…" 引号字符串</option>
+      <option value="html-tag">&lt;tag&gt; HTML 标签</option>
+    </select>
+
+    <h2>Flags 速查</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div><strong>g</strong>: 全局,找所有匹配</div>
+      <div><strong>i</strong>: 忽略大小写</div>
+      <div><strong>m</strong>: 多行(^ $ 按行)</div>
+      <div><strong>s</strong>: . 匹配换行</div>
+      <div><strong>u</strong>: Unicode</div>
+      <div><strong>y</strong>: 黏性匹配</div>
+      <div><strong>d</strong>: 输出匹配子串索引</div>
+    </div>
+
+    <h2>语法速查</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div>\d 数字 · \D 非数字</div>
+      <div>\w 字母数字 _ · \W 反</div>
+      <div>\s 空白 · \S 非空白</div>
+      <div>^ 行首 · $ 行尾</div>
+      <div>* 零或多 · + 至少一 · ? 零或一</div>
+      <div>{n} 恰 n 次 · {n,} ≥n · {n,m} n到m</div>
+      <div>(?:abc) 非捕获 · (?&lt;name&gt;...) 命名捕获</div>
+      <div>(?=...) 前瞻 · (?!...) 负前瞻</div>
+    </div>
+
+    <h2>动作</h2>
+    <button id="copyRegexBtn" class="secondary">📋 复制完整正则 /pattern/flags</button>
+    <button id="copyJsBtn" class="secondary">📋 复制 JS 代码片段</button>
+    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">实时测试正则 · 高亮所有匹配 · 命名捕获组解析</div>
+
+    <div class="rx-stage">
+      <!-- Pattern + flags input bar -->
+      <div class="rx-input-bar">
+        <span class="slash">/</span>
+        <input type="text" id="pattern" class="rx-pattern" placeholder="在这里输入正则,例如 \d+" />
+        <div style="display:flex; align-items:center; gap:6px">
+          <span class="slash">/</span>
+          <input type="text" id="flags" class="rx-flags-input" value="g" placeholder="flags" />
+        </div>
+      </div>
+
+      <!-- Flag toggle row -->
+      <div class="rx-flag-row" id="flagToggles">
+        <!-- populated at runtime -->
+      </div>
+
+      <!-- Test input with highlighting overlay -->
+      <div class="rx-test-input">
+        <h3>测试文本</h3>
+        <div class="rx-textarea-wrap">
+          <pre class="rx-highlight" id="highlight"></pre>
+          <textarea id="testInput" spellcheck="false" placeholder="在这里粘贴或输入要测试的文本"></textarea>
+        </div>
+      </div>
+
+      <!-- Match results -->
+      <div class="rx-results">
+        <div class="summary" id="summary">输入正则 + 测试文本</div>
+        <div id="matchList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('regex-tester');
+
+(() => {
+  const { $, makeLogger } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   Presets
+  // ============================================================
+  const PRESETS = {
+    'email':        { pat: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}', flags: 'g',  test: 'Hi, contact me at sagara@example.com or admin@dobby-aih.pages.dev, but not foo@bar.' },
+    'url':          { pat: 'https?:\\/\\/[^\\s<>"]+', flags: 'g', test: 'See https://dobby-aih.pages.dev and http://example.com/path?q=1 — also (https://github.com/Sagara911/Dobby).' },
+    'ipv4':         { pat: '\\b(?:25[0-5]|2[0-4]\\d|[01]?\\d{1,2})(?:\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d{1,2})){3}\\b', flags: 'g', test: 'Server at 192.168.1.100 talking to 8.8.8.8 and 256.1.1.1 (invalid).' },
+    'ipv6':         { pat: '(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|::1', flags: 'g', test: 'Local: ::1\\nGlobal: 2001:0db8:85a3:0000:0000:8a2e:0370:7334' },
+    'phone-cn':     { pat: '1[3-9]\\d{9}', flags: 'g', test: '联系 13812345678 或 17600000001。150000(假的)。' },
+    'phone-us':     { pat: '(?:\\+1[-. ]?)?\\(?[2-9]\\d{2}\\)?[-. ]?\\d{3}[-. ]?\\d{4}', flags: 'g', test: 'Call (415) 555-0192 or 415-555-0193, also +1 415.555.0194.' },
+    'datetime-iso': { pat: '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})?', flags: 'g', test: 'Logged at 2026-05-26T03:22:19Z and 2026-05-26T11:22:19+08:00' },
+    'date':         { pat: '\\d{4}-\\d{2}-\\d{2}', flags: 'g', test: 'Today is 2026-05-26 (not 26-05-2026).' },
+    'hex-color':    { pat: '#(?:[0-9a-fA-F]{3}){1,2}\\b', flags: 'g', test: 'Theme: #31f59c jade, #fff white, #abc shorthand, #zzz invalid.' },
+    'uuid':         { pat: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}', flags: 'g', test: 'ID: 550e8400-e29b-41d4-a716-446655440000' },
+    'zh-name':      { pat: '[\\u4e00-\\u9fa5]{2,4}', flags: 'g', test: '张三、李四、王小明、欧阳锋。' },
+    'id-card':      { pat: '[1-9]\\d{5}(?:18|19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]', flags: 'g', test: '11010519491231002X' },
+    'postcode-cn':  { pat: '\\b[1-9]\\d{5}\\b', flags: 'g', test: 'Beijing 100089, Shanghai 200000.' },
+    'creditcard':   { pat: '\\b(?:\\d{4}[- ]?){3}\\d{4}\\b', flags: 'g', test: 'Card: 4111-1111-1111-1111 or 4111 1111 1111 1111.' },
+    'username':     { pat: '^[a-zA-Z][a-zA-Z0-9_]{2,15}$', flags: 'gm', test: 'sagara\\nadmin\\nuser_42\\n_bad_start\\n2digit\\nok' },
+    'password':     { pat: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$', flags: 'gm', test: 'Strong: Hello123\\nweak: hello\\nNoNumber: HelloHello' },
+    'filename':     { pat: '^[\\w\\-. ]+\\.(png|jpg|jpeg|gif|webp|avif)$', flags: 'gim', test: 'hero.png\\nicon-32.jpg\\nthumb.webp\\nbad name.txt\\nUPPER.JPEG' },
+    'leading-ws':   { pat: '^\\s+', flags: 'gm', test: '  hello\\n    world\\nno indent' },
+    'trailing-ws':  { pat: '\\s+$', flags: 'gm', test: 'line 1   \\nline 2\\t\\nclean' },
+    'empty-line':   { pat: '^\\s*$', flags: 'gm', test: 'first\\n\\n   \\nlast' },
+    'quoted-string':{ pat: '"([^"\\\\]|\\\\.)*"', flags: 'g', test: 'say "hello world" and "with \\"escapes\\"" then unquoted' },
+    'html-tag':     { pat: '<\\/?[a-zA-Z][a-zA-Z0-9]*(?:\\s[^>]*)?>', flags: 'g', test: 'Some <b>bold</b> and <a href="x">link</a> with <br/> selfclose.' }
+  };
+
+  // ============================================================
+  //   Flag toggles
+  // ============================================================
+  const FLAG_LIST = [
+    { k: 'g', n: 'global' },
+    { k: 'i', n: 'ignoreCase' },
+    { k: 'm', n: 'multiline' },
+    { k: 's', n: 'dotAll' },
+    { k: 'u', n: 'unicode' },
+    { k: 'y', n: 'sticky' }
+  ];
+  function buildFlagToggles() {
+    const row = $('flagToggles');
+    row.innerHTML = '';
+    FLAG_LIST.forEach(f => {
+      const b = document.createElement('button');
+      b.className = 'rx-flag-btn';
+      b.dataset.flag = f.k;
+      b.textContent = f.k;
+      b.title = f.n;
+      b.addEventListener('click', () => {
+        const cur = $('flags').value;
+        if (cur.includes(f.k)) {
+          $('flags').value = cur.replace(f.k, '');
+        } else {
+          $('flags').value = cur + f.k;
+        }
+        syncFlagToggles();
+        run();
+      });
+      row.appendChild(b);
+    });
+  }
+  function syncFlagToggles() {
+    const cur = $('flags').value;
+    document.querySelectorAll('.rx-flag-btn').forEach(b => {
+      b.classList.toggle('active', cur.includes(b.dataset.flag));
+    });
+  }
+  buildFlagToggles();
+  syncFlagToggles();
+
+  // ============================================================
+  //   Run + highlight
+  // ============================================================
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function run() {
+    const pat = $('pattern').value;
+    const flagsRaw = $('flags').value.replace(/[^gimsuyd]/g, '');
+    $('flags').value = flagsRaw;
+    const text = $('testInput').value;
+    syncFlagToggles();
+
+    if (!pat) {
+      $('highlight').innerHTML = escapeHtml(text);
+      $('summary').textContent = '输入正则';
+      $('summary').className = 'summary';
+      $('matchList').innerHTML = '';
+      return;
+    }
+
+    let re;
+    try {
+      // ensure 'g' for collecting all matches; we'll honor original flags for behavior
+      re = new RegExp(pat, flagsRaw.includes('g') ? flagsRaw : flagsRaw + 'g');
+    } catch (e) {
+      $('summary').textContent = '❌ 正则语法错: ' + e.message;
+      $('summary').className = 'summary err';
+      $('highlight').innerHTML = escapeHtml(text);
+      $('matchList').innerHTML = '';
+      return;
+    }
+
+    // collect matches
+    const matches = [];
+    let m;
+    let safety = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m[0] === '' ) { re.lastIndex++; continue; }
+      matches.push({ idx: m.index, text: m[0], groups: m.slice(1), named: m.groups || {} });
+      if (++safety > 10000) { log.warn('停在 10000 匹配 — 限制保护'); break; }
+    }
+
+    // build highlighted output
+    if (!matches.length) {
+      $('highlight').innerHTML = escapeHtml(text);
+      $('summary').textContent = '0 匹配';
+      $('summary').className = 'summary zero';
+      $('matchList').innerHTML = '';
+      return;
+    }
+    let html = '';
+    let cur = 0;
+    matches.forEach((m, i) => {
+      html += escapeHtml(text.slice(cur, m.idx));
+      html += `<mark class="${i % 2 ? 'alt' : ''}">${escapeHtml(m.text)}</mark>`;
+      cur = m.idx + m.text.length;
+    });
+    html += escapeHtml(text.slice(cur));
+    $('highlight').innerHTML = html;
+
+    // summary
+    $('summary').textContent = `✓ ${matches.length} 个匹配`;
+    $('summary').className = 'summary';
+
+    // list
+    const list = $('matchList');
+    list.innerHTML = '';
+    matches.slice(0, 50).forEach((m, i) => {
+      const div = document.createElement('div');
+      div.className = 'match';
+      let groupsHtml = '';
+      if (m.groups.length) {
+        groupsHtml = m.groups.map((g, gi) => `<span class="g">$${gi + 1}: ${g === undefined ? '<undefined>' : escapeHtml(JSON.stringify(g))}</span>`).join('  ');
+      }
+      const namedKeys = Object.keys(m.named || {});
+      if (namedKeys.length) {
+        groupsHtml += (groupsHtml ? '<br>' : '') + namedKeys.map(k => `<span class="g">&lt;${k}&gt;: ${escapeHtml(JSON.stringify(m.named[k]))}</span>`).join('  ');
+      }
+      div.innerHTML = `
+        <div class="head">#${i + 1} @ ${m.idx}–${m.idx + m.text.length}</div>
+        <div class="text">"${escapeHtml(m.text)}"</div>
+        ${groupsHtml ? `<div class="groups">${groupsHtml}</div>` : ''}
+      `;
+      list.appendChild(div);
+    });
+    if (matches.length > 50) {
+      const more = document.createElement('div');
+      more.style.color = 'var(--muted)';
+      more.style.padding = '6px 0';
+      more.textContent = `… 另有 ${matches.length - 50} 个匹配未显示`;
+      list.appendChild(more);
+    }
+  }
+
+  // sync textarea <-> highlight overlay scroll
+  $('testInput').addEventListener('scroll', () => {
+    $('highlight').scrollTop = $('testInput').scrollTop;
+    $('highlight').scrollLeft = $('testInput').scrollLeft;
+  });
+
+  // wire
+  $('pattern').addEventListener('input', run);
+  $('flags').addEventListener('input', () => { syncFlagToggles(); run(); });
+  $('testInput').addEventListener('input', run);
+  $('presetSelect').addEventListener('change', e => {
+    const p = PRESETS[e.target.value];
+    if (!p) return;
+    $('pattern').value = p.pat;
+    $('flags').value = p.flags;
+    $('testInput').value = p.test.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    syncFlagToggles();
+    run();
+  });
+
+  $('copyRegexBtn').addEventListener('click', async () => {
+    const re = `/${$('pattern').value}/${$('flags').value}`;
+    try { await navigator.clipboard.writeText(re); log.ok('已复制 ' + re); } catch { log.err('复制失败'); }
+  });
+  $('copyJsBtn').addEventListener('click', async () => {
+    const pat = $('pattern').value.replace(/`/g, '\\`');
+    const flags = $('flags').value;
+    const code = `const re = /${pat}/${flags};\nconst matches = [...text.matchAll(re)];`;
+    try { await navigator.clipboard.writeText(code); log.ok('已复制 JS 代码片段'); } catch { log.err('复制失败'); }
+  });
+  $('clearBtn').addEventListener('click', () => {
+    $('pattern').value = '';
+    $('flags').value = 'g';
+    $('testInput').value = '';
+    $('presetSelect').value = '';
+    run();
+  });
+
+  // default state: load email preset for demo
+  $('presetSelect').value = 'email';
+  $('presetSelect').dispatchEvent(new Event('change'));
+
+  log.ok('正则测试器准备好');
+})();
+</script>
+</body>
+</html>

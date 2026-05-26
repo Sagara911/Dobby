@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>Markdown 编辑 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .md-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .md-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+  }
+  .md-toolbar button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .md-toolbar button:hover { background: rgba(255,255,255,0.10); }
+  .md-toolbar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+  .md-toolbar .view-toggle {
+    background: rgba(var(--jade-rgb), 0.08);
+    border-color: rgba(var(--jade-rgb), 0.4);
+    color: var(--accent);
+  }
+  .md-toolbar .view-toggle.active {
+    background: var(--accent);
+    color: #0a1a14;
+    border-color: var(--accent);
+  }
+
+  .md-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .md-grid.preview-only {
+    grid-template-columns: 1fr;
+  }
+  .md-grid.preview-only .md-edit-pane { display: none; }
+  .md-grid.edit-only {
+    grid-template-columns: 1fr;
+  }
+  .md-grid.edit-only .md-preview-pane { display: none; }
+
+  .md-edit-pane, .md-preview-pane {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .md-pane-head {
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .md-edit-pane textarea {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    padding: 16px 18px;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    overflow: auto;
+  }
+  .md-edit-pane textarea:focus { outline: 0; }
+  .md-preview-pane .preview {
+    flex: 1;
+    padding: 20px 24px;
+    overflow: auto;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  /* Markdown render styles */
+  .md-preview-pane .preview h1,
+  .md-preview-pane .preview h2,
+  .md-preview-pane .preview h3,
+  .md-preview-pane .preview h4 {
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .md-preview-pane .preview h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  .md-preview-pane .preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.2em; }
+  .md-preview-pane .preview h3 { font-size: 1.2em; }
+  .md-preview-pane .preview p, .md-preview-pane .preview ul, .md-preview-pane .preview ol { margin: 0.8em 0; }
+  .md-preview-pane .preview code {
+    background: rgba(255,255,255,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.9em;
+    color: #ce9178;
+  }
+  .md-preview-pane .preview pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .md-preview-pane .preview pre code { background: transparent; padding: 0; color: var(--text); }
+  .md-preview-pane .preview blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 1em 0;
+    padding: 0.4em 1em;
+    background: rgba(var(--jade-rgb), 0.05);
+    color: var(--text-soft);
+  }
+  .md-preview-pane .preview a { color: var(--accent); text-decoration: none; }
+  .md-preview-pane .preview a:hover { text-decoration: underline; }
+  .md-preview-pane .preview img { max-width: 100%; border-radius: var(--radius-sm); }
+  .md-preview-pane .preview table {
+    border-collapse: collapse;
+    margin: 1em 0;
+    width: 100%;
+  }
+  .md-preview-pane .preview th, .md-preview-pane .preview td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .md-preview-pane .preview th { background: rgba(255,255,255,0.04); }
+  .md-preview-pane .preview hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+  .md-preview-pane .preview input[type=checkbox] { margin-right: 6px; vertical-align: middle; }
+  .md-preview-pane .preview ul.task-list { list-style: none; padding-left: 0; }
+  .md-preview-pane .preview ul.task-list li { margin: 0.3em 0; }
+  .md-preview-pane .preview kbd {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.85em;
+  }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📝 Markdown</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 .md 文件</p>
+      <p class="hint">或直接在右侧输入</p>
+      <input type="file" id="fileInput" accept=".md,.markdown,text/markdown,text/plain" style="display:none" />
+    </div>
+
+    <h2>导出</h2>
+    <button id="exportMd" class="secondary">💾 导出 .md</button>
+    <button id="exportHtml" class="secondary">💾 导出 .html(带样式)</button>
+    <button id="copyMd" class="secondary">📋 复制 Markdown</button>
+    <button id="copyHtml" class="secondary">📋 复制渲染 HTML</button>
+
+    <h2>动作</h2>
+    <button id="loadSampleBtn" class="secondary">🧪 加载示例</button>
+    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+
+    <h2>文件名</h2>
+    <input type="text" id="filename" value="document" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+
+    <h2>支持的语法</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div># H1 ## H2 ### H3</div>
+      <div>**粗体** *斜体* ~~删除~~</div>
+      <div>`行内代码` ```代码块```</div>
+      <div>&gt; 引用</div>
+      <div>- 无序列表 / 1. 有序</div>
+      <div>- [ ] 待办 / - [x] 完成</div>
+      <div>[链接](url) ![图](url)</div>
+      <div>| 表 | 头 | --- 表格</div>
+      <div>--- 分割线</div>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">实时 Markdown 渲染 · 支持 GFM 扩展(表格 / 待办 / 删除线 / fenced code)</div>
+
+    <div class="md-stage">
+      <!-- Toolbar -->
+      <div class="md-toolbar">
+        <button data-md="**" data-md-suffix="**" title="粗体">𝐁</button>
+        <button data-md="*" data-md-suffix="*" title="斜体">𝐼</button>
+        <button data-md="~~" data-md-suffix="~~" title="删除线">𝐒̶</button>
+        <button data-md="`" data-md-suffix="`" title="行内代码">&lt;/&gt;</button>
+        <div class="sep"></div>
+        <button data-md-line="# " title="H1">H1</button>
+        <button data-md-line="## " title="H2">H2</button>
+        <button data-md-line="### " title="H3">H3</button>
+        <div class="sep"></div>
+        <button data-md-line="- " title="无序列表">• 列表</button>
+        <button data-md-line="1. " title="有序列表">1. 列表</button>
+        <button data-md-line="- [ ] " title="待办">☐ 待办</button>
+        <button data-md-line="> " title="引用">❝ 引用</button>
+        <div class="sep"></div>
+        <button data-insert="[链接文本](https://)" title="链接">🔗 链接</button>
+        <button data-insert="![图片](https://)" title="图片">🖼️ 图片</button>
+        <button data-insert="| col1 | col2 |\n| --- | --- |\n| a    | b    |" title="表格">▦ 表格</button>
+        <button data-insert="```\n\n```" title="代码块">{ } 代码块</button>
+        <button data-insert="---" title="分割线">— 分隔</button>
+        <div class="sep"></div>
+        <button class="view-toggle active" id="viewSplit">分屏</button>
+        <button class="view-toggle" id="viewEdit">仅编辑</button>
+        <button class="view-toggle" id="viewPreview">仅预览</button>
+      </div>
+
+      <!-- Edit + preview -->
+      <div class="md-grid" id="grid">
+        <div class="md-edit-pane">
+          <div class="md-pane-head">
+            <span>Markdown 源码</span>
+            <span id="editMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">0 行 · 0 字符</span>
+          </div>
+          <textarea id="editor" spellcheck="false" placeholder="# Hello Markdown&#10;&#10;在这里输入 Markdown,右侧实时预览..."></textarea>
+        </div>
+        <div class="md-preview-pane">
+          <div class="md-pane-head">
+            <span>预览</span>
+            <span id="previewMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
+          </div>
+          <div class="preview" id="preview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('markdown-editor');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   Minimal but real Markdown renderer (subset of GFM)
+  //
+  // Covers: headers, bold/italic/strike, inline + fenced code,
+  // blockquotes, ordered/unordered lists, task lists, links,
+  // images, tables, horizontal rules, kbd elements. No syntax
+  // highlighting inside code blocks (keeps the page light and
+  // dependency-free; users who need highlighting can run the
+  // exported .md through a real renderer).
+  // ============================================================
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function renderInline(s) {
+    s = escapeHtml(s);
+    // inline code (handled first so its contents aren't re-parsed)
+    s = s.replace(/`([^`]+)`/g, (m, code) => `<code>${code}</code>`);
+    // images
+    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, url) => `<img alt="${alt}" src="${url}">`);
+    // links
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => `<a href="${url}" target="_blank" rel="noopener">${text}</a>`);
+    // bold
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    // italic — single * or _ that isn't part of bold
+    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    s = s.replace(/(^|\s)_([^_\n]+)_/g, '$1<em>$2</em>');
+    // strikethrough
+    s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    // kbd
+    s = s.replace(/&lt;kbd&gt;(.+?)&lt;\/kbd&gt;/g, '<kbd>$1</kbd>');
+    return s;
+  }
+  function renderMarkdown(src) {
+    const lines = src.split('\n');
+    let html = '';
+    let i = 0;
+    while (i < lines.length) {
+      let line = lines[i];
+
+      // fenced code block
+      let m = line.match(/^```(\w*)$/);
+      if (m) {
+        const lang = m[1] || '';
+        i++;
+        const codeLines = [];
+        while (i < lines.length && !/^```$/.test(lines[i])) {
+          codeLines.push(lines[i]);
+          i++;
+        }
+        i++; // skip closing fence
+        const code = escapeHtml(codeLines.join('\n'));
+        html += `<pre><code class="lang-${lang}">${code}</code></pre>\n`;
+        continue;
+      }
+
+      // horizontal rule
+      if (/^[-*_]{3,}\s*$/.test(line)) { html += '<hr>\n'; i++; continue; }
+
+      // headers
+      m = line.match(/^(#{1,6})\s+(.*)$/);
+      if (m) {
+        const level = m[1].length;
+        html += `<h${level}>${renderInline(m[2])}</h${level}>\n`;
+        i++;
+        continue;
+      }
+
+      // blockquote
+      if (/^>\s?/.test(line)) {
+        const quote = [];
+        while (i < lines.length && /^>\s?/.test(lines[i])) {
+          quote.push(lines[i].replace(/^>\s?/, ''));
+          i++;
+        }
+        html += `<blockquote>${renderMarkdown(quote.join('\n'))}</blockquote>\n`;
+        continue;
+      }
+
+      // task list (must check before normal ul)
+      if (/^[-*+]\s+\[[ xX]\]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^[-*+]\s+\[[ xX]\]\s+/.test(lines[i])) {
+          const tm = lines[i].match(/^[-*+]\s+\[([ xX])\]\s+(.*)$/);
+          items.push(`<li><input type="checkbox" disabled ${tm[1].toLowerCase() === 'x' ? 'checked' : ''}> ${renderInline(tm[2])}</li>`);
+          i++;
+        }
+        html += `<ul class="task-list">${items.join('')}</ul>\n`;
+        continue;
+      }
+
+      // unordered list
+      if (/^[-*+]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^[-*+]\s+/.test(lines[i])) {
+          items.push(`<li>${renderInline(lines[i].replace(/^[-*+]\s+/, ''))}</li>`);
+          i++;
+        }
+        html += `<ul>${items.join('')}</ul>\n`;
+        continue;
+      }
+
+      // ordered list
+      if (/^\d+\.\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+          items.push(`<li>${renderInline(lines[i].replace(/^\d+\.\s+/, ''))}</li>`);
+          i++;
+        }
+        html += `<ol>${items.join('')}</ol>\n`;
+        continue;
+      }
+
+      // table — needs a header row, then `|---|---|`, then data rows
+      if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|/.test(lines[i + 1])) {
+        const splitRow = (l) => l.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        const headers = splitRow(line);
+        const seps = splitRow(lines[i + 1]);
+        const aligns = seps.map(s => {
+          if (s.startsWith(':') && s.endsWith(':')) return 'center';
+          if (s.endsWith(':')) return 'right';
+          if (s.startsWith(':')) return 'left';
+          return '';
+        });
+        i += 2;
+        const rows = [];
+        while (i < lines.length && /\|/.test(lines[i]) && lines[i].trim() !== '') {
+          rows.push(splitRow(lines[i]));
+          i++;
+        }
+        let table = '<table><thead><tr>';
+        headers.forEach((h, j) => {
+          const a = aligns[j] ? ` style="text-align:${aligns[j]}"` : '';
+          table += `<th${a}>${renderInline(h)}</th>`;
+        });
+        table += '</tr></thead><tbody>';
+        rows.forEach(r => {
+          table += '<tr>';
+          r.forEach((c, j) => {
+            const a = aligns[j] ? ` style="text-align:${aligns[j]}"` : '';
+            table += `<td${a}>${renderInline(c)}</td>`;
+          });
+          table += '</tr>';
+        });
+        table += '</tbody></table>';
+        html += table + '\n';
+        continue;
+      }
+
+      // blank line
+      if (line.trim() === '') { i++; continue; }
+
+      // paragraph — accumulate until blank or block element
+      const paraLines = [line];
+      i++;
+      while (i < lines.length &&
+             lines[i].trim() !== '' &&
+             !/^(#{1,6}\s|[-*_]{3,}\s*$|```|>\s?|[-*+]\s+|\d+\.\s+)/.test(lines[i])) {
+        paraLines.push(lines[i]);
+        i++;
+      }
+      html += `<p>${renderInline(paraLines.join('\n'))}</p>\n`;
+    }
+    return html;
+  }
+
+  function exportAsHtml(md, title) {
+    const body = renderMarkdown(md);
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(title || 'Document')}</title>
+<style>
+body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; line-height: 1.7; color: #24292e; }
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.2em; }
+code { background: #f6f8fa; padding: 2px 6px; border-radius: 3px; font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; color: #d73a49; }
+pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+pre code { background: transparent; padding: 0; color: #24292e; }
+blockquote { border-left: 4px solid #dfe2e5; margin: 0; padding: 0.5em 1em; color: #6a737d; background: #f6f8fa; }
+a { color: #0366d6; }
+img { max-width: 100%; }
+table { border-collapse: collapse; margin: 1em 0; }
+th, td { border: 1px solid #dfe2e5; padding: 8px 12px; }
+th { background: #f6f8fa; }
+hr { border: 0; border-top: 1px solid #eaecef; }
+ul.task-list { list-style: none; padding-left: 0; }
+ul.task-list input[type=checkbox] { margin-right: 6px; }
+kbd { background: #fafbfc; border: 1px solid #d1d5da; border-radius: 3px; padding: 1px 5px; font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; box-shadow: inset 0 -1px 0 #d1d5da; }
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
+  }
+
+  function refresh() {
+    const src = $('editor').value;
+    $('preview').innerHTML = renderMarkdown(src);
+    $('editMeta').textContent = `${src.split('\n').length} 行 · ${src.length} 字符`;
+    const words = src.replace(/[\s\p{P}]+/gu, ' ').trim().split(/\s+/).filter(Boolean).length;
+    $('previewMeta').textContent = `约 ${words} 词`;
+  }
+
+  // ============================================================
+  //   Toolbar wiring
+  // ============================================================
+  function wrapSelection(prefix, suffix) {
+    const ta = $('editor');
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const before = ta.value.slice(0, start);
+    const sel = ta.value.slice(start, end);
+    const after = ta.value.slice(end);
+    ta.value = before + prefix + sel + suffix + after;
+    ta.focus();
+    ta.setSelectionRange(start + prefix.length, start + prefix.length + sel.length);
+    refresh();
+  }
+  function prefixLine(prefix) {
+    const ta = $('editor');
+    const pos = ta.selectionStart;
+    const lineStart = ta.value.lastIndexOf('\n', pos - 1) + 1;
+    ta.value = ta.value.slice(0, lineStart) + prefix + ta.value.slice(lineStart);
+    ta.focus();
+    ta.setSelectionRange(pos + prefix.length, pos + prefix.length);
+    refresh();
+  }
+  function insertAt(text) {
+    const ta = $('editor');
+    const pos = ta.selectionStart;
+    ta.value = ta.value.slice(0, pos) + text + ta.value.slice(pos);
+    ta.focus();
+    ta.setSelectionRange(pos + text.length, pos + text.length);
+    refresh();
+  }
+
+  document.querySelectorAll('.md-toolbar button[data-md]').forEach(b => {
+    b.addEventListener('click', () => wrapSelection(b.dataset.md, b.dataset.mdSuffix || b.dataset.md));
+  });
+  document.querySelectorAll('.md-toolbar button[data-md-line]').forEach(b => {
+    b.addEventListener('click', () => prefixLine(b.dataset.mdLine));
+  });
+  document.querySelectorAll('.md-toolbar button[data-insert]').forEach(b => {
+    b.addEventListener('click', () => insertAt(b.dataset.insert.replace(/\\n/g, '\n')));
+  });
+
+  // view toggles
+  function setView(v) {
+    $('grid').className = 'md-grid' + (v === 'split' ? '' : ' ' + v + '-only');
+    document.querySelectorAll('.view-toggle').forEach(b => b.classList.remove('active'));
+    $('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+  }
+  $('viewSplit').addEventListener('click', () => setView('split'));
+  $('viewEdit').addEventListener('click', () => setView('edit'));
+  $('viewPreview').addEventListener('click', () => setView('preview'));
+
+  $('editor').addEventListener('input', refresh);
+
+  // export
+  $('exportMd').addEventListener('click', () => {
+    const name = ($('filename').value || 'document').replace(/[^\w-]/g, '_');
+    const blob = new Blob([$('editor').value], { type: 'text/markdown' });
+    download(blob, name + '.md');
+  });
+  $('exportHtml').addEventListener('click', () => {
+    const name = ($('filename').value || 'document').replace(/[^\w-]/g, '_');
+    const html = exportAsHtml($('editor').value, name);
+    const blob = new Blob([html], { type: 'text/html' });
+    download(blob, name + '.html');
+  });
+  $('copyMd').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('editor').value); log.ok('已复制 Markdown'); } catch { log.err('复制失败'); }
+  });
+  $('copyHtml').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(renderMarkdown($('editor').value)); log.ok('已复制 HTML'); } catch { log.err('复制失败'); }
+  });
+
+  // import
+  attachDropZone($('dropZone'), $('fileInput'), async files => {
+    if (!files[0]) return;
+    try {
+      $('editor').value = await files[0].text();
+      refresh();
+      $('filename').value = files[0].name.replace(/\.[^.]+$/, '');
+    } catch (e) { log.err('读文件失败'); }
+  });
+
+  // sample
+  const SAMPLE = `# Dobby 示例文档
+
+> 这是一份用来展示 Markdown 编辑器**所有支持的特性**的示例。
+
+## 基础语法
+
+普通段落,**粗体**、*斜体*、~~删除~~、\`行内代码\`、[超链接](https://dobby-aih.pages.dev)、<kbd>Ctrl</kbd>+<kbd>S</kbd>。
+
+## 列表
+
+无序:
+- 第一项
+- 第二项,带 \`code\`
+- 第三项
+
+有序:
+1. 准备素材
+2. 调整参数
+3. 导出
+
+待办:
+- [x] 完成像素画板
+- [x] 完成 SFX 生成器
+- [ ] 加 PDF 工具包
+
+## 引用
+
+> Dobby is free! Dobby has no master.
+> — 多比
+
+## 代码块
+
+\`\`\`js
+function hello(name) {
+  console.log(\`Hi, \${name}!\`);
+}
+\`\`\`
+
+## 表格
+
+| 工具 | 类别 | 体积 |
+| --- | :---: | ---: |
+| 像素画板 | 动画 | 32KB |
+| SFX 生成器 | 音视频 | 28KB |
+| Tilemap | 动画 | 36KB |
+
+## 分割线
+
+---
+
+## 图片
+
+![Dobby logo placeholder](https://via.placeholder.com/200x100/31f59c/0a1a14?text=Dobby)
+`;
+  $('loadSampleBtn').addEventListener('click', () => { $('editor').value = SAMPLE; refresh(); });
+  $('clearBtn').addEventListener('click', () => { $('editor').value = ''; refresh(); });
+
+  // initial render
+  refresh();
+  log.ok('Markdown 编辑器准备好');
+})();
+</script>
+</body>
+</html>

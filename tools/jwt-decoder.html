@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>JWT 解码器 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .jwt-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .jwt-input-wrap {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .jwt-input-wrap textarea {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 100px;
+    resize: vertical;
+    word-break: break-all;
+  }
+  .jwt-input-wrap textarea:focus { outline: 0; }
+  .jwt-token-color {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-all;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-soft);
+  }
+  .jwt-part-red { color: #ff5b5b; }
+  .jwt-part-purple { color: #c586c0; }
+  .jwt-part-blue { color: #79b8ff; }
+
+  .jwt-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .jwt-pane {
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .jwt-pane h3 {
+    margin: 0;
+    padding: 8px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .jwt-pane.header h3 { color: #ff5b5b; }
+  .jwt-pane.payload h3 { color: #c586c0; }
+  .jwt-pane.sig h3 { color: #79b8ff; }
+  .jwt-pane pre {
+    margin: 0;
+    padding: 12px 14px;
+    flex: 1;
+    overflow: auto;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .jwt-pane .empty { color: var(--muted); font-style: italic; padding: 16px; font-size: 11px; }
+
+  .jwt-claims {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+  }
+  .jwt-claims h3 {
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .jwt-claims .row {
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 12px;
+    align-items: baseline;
+  }
+  .jwt-claims .row .k { color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+  .jwt-claims .row .v { color: var(--text); font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .jwt-claims .row .ago { color: var(--accent); font-size: 11px; }
+  .jwt-claims .row .ago.expired { color: #ff5b5b; }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔑 JWT 解码器</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">100% 本地</strong> · 解码完全在浏览器,token 不离开你这台机器
+    </div>
+
+    <h2>动作</h2>
+    <button id="pasteBtn" class="secondary">📋 粘贴剪贴板</button>
+    <button id="sampleBtn" class="secondary">🧪 加载示例 token</button>
+    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+
+    <h2>常见 claims 速查</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div><strong>iss</strong>: 签发者</div>
+      <div><strong>sub</strong>: 主体(用户 id)</div>
+      <div><strong>aud</strong>: 目标受众</div>
+      <div><strong>exp</strong>: 过期时间</div>
+      <div><strong>nbf</strong>: 在此之前无效</div>
+      <div><strong>iat</strong>: 签发时间</div>
+      <div><strong>jti</strong>: JWT 唯一 ID</div>
+    </div>
+
+    <h2>注意</h2>
+    <div style="font-size:11px; color:var(--muted); line-height:1.6">
+      Dobby 只解码不验签 — 验签需要服务端密钥,跟「浏览器本地」原则冲突。如果你要验签,用 jwt.io 或本地 jose 库
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">粘贴 JWT token 到下面 · 自动解码 header / payload / signature</div>
+
+    <div class="jwt-stage">
+      <!-- Input -->
+      <div class="jwt-input-wrap">
+        <textarea id="input" spellcheck="false" placeholder="粘贴你的 JWT(以 eyJ 开头,3 段用 . 分隔)..."></textarea>
+      </div>
+
+      <!-- Colored token -->
+      <div class="jwt-token-color" id="tokenColored" style="display:none">—</div>
+
+      <!-- 3 panes -->
+      <div class="jwt-grid">
+        <div class="jwt-pane header">
+          <h3>🔴 Header</h3>
+          <pre id="headerOut" class="empty">等待 token 输入</pre>
+        </div>
+        <div class="jwt-pane payload">
+          <h3>🟣 Payload</h3>
+          <pre id="payloadOut" class="empty">等待 token 输入</pre>
+        </div>
+        <div class="jwt-pane sig">
+          <h3>🔵 Signature</h3>
+          <pre id="sigOut" class="empty">等待 token 输入</pre>
+        </div>
+      </div>
+
+      <!-- Claims summary -->
+      <div class="jwt-claims" id="claimsCard" style="display:none">
+        <h3>常用 Claims 解读</h3>
+        <div id="claimsRows"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('jwt-decoder');
+
+(() => {
+  const { $, makeLogger } = Toolkit;
+  const log = makeLogger($('log'));
+
+  function base64UrlToUtf8(b64u) {
+    // base64url → base64 with proper padding
+    let b64 = b64u.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const binStr = atob(b64);
+    // assume utf-8 inside
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
+  function tryParseJSON(s) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function decode(token) {
+    token = (token || '').trim();
+    if (!token) {
+      $('tokenColored').style.display = 'none';
+      $('headerOut').textContent = '等待 token 输入';
+      $('headerOut').className = 'empty';
+      $('payloadOut').textContent = '等待 token 输入';
+      $('payloadOut').className = 'empty';
+      $('sigOut').textContent = '等待 token 输入';
+      $('sigOut').className = 'empty';
+      $('claimsCard').style.display = 'none';
+      return;
+    }
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      log.err(`格式错: JWT 应有 3 段(用 . 分隔),收到 ${parts.length} 段`);
+      return;
+    }
+    const [h, p, s] = parts;
+    // colored token
+    $('tokenColored').style.display = '';
+    $('tokenColored').innerHTML =
+      `<span class="jwt-part-red">${escapeHtml(h)}</span>` +
+      `<span style="color:var(--muted)">.</span>` +
+      `<span class="jwt-part-purple">${escapeHtml(p)}</span>` +
+      `<span style="color:var(--muted)">.</span>` +
+      `<span class="jwt-part-blue">${escapeHtml(s)}</span>`;
+
+    try {
+      const hStr = base64UrlToUtf8(h);
+      const hJson = tryParseJSON(hStr);
+      $('headerOut').textContent = hJson ? JSON.stringify(hJson, null, 2) : hStr;
+      $('headerOut').className = '';
+    } catch (e) {
+      $('headerOut').textContent = '解码失败: ' + e.message;
+      $('headerOut').className = 'empty';
+    }
+
+    let payloadJson = null;
+    try {
+      const pStr = base64UrlToUtf8(p);
+      payloadJson = tryParseJSON(pStr);
+      $('payloadOut').textContent = payloadJson ? JSON.stringify(payloadJson, null, 2) : pStr;
+      $('payloadOut').className = '';
+    } catch (e) {
+      $('payloadOut').textContent = '解码失败: ' + e.message;
+      $('payloadOut').className = 'empty';
+    }
+
+    // signature stays raw (base64url) — it's binary data, not text
+    $('sigOut').textContent = s + '\n\n(签名是原始字节的 base64url,不解码 — 验签需要密钥)';
+    $('sigOut').className = '';
+
+    // claims interpretation
+    if (payloadJson && typeof payloadJson === 'object') {
+      renderClaims(payloadJson);
+    } else {
+      $('claimsCard').style.display = 'none';
+    }
+  }
+
+  function fmtTimestamp(unixSec) {
+    if (typeof unixSec !== 'number') return null;
+    const ms = unixSec < 1e12 ? unixSec * 1000 : unixSec;
+    const d = new Date(ms);
+    if (isNaN(d)) return null;
+    const now = Date.now();
+    const diff = ms - now;
+    const absS = Math.abs(diff) / 1000;
+    let ago;
+    if (absS < 60) ago = Math.round(absS) + ' 秒';
+    else if (absS < 3600) ago = Math.round(absS / 60) + ' 分钟';
+    else if (absS < 86400) ago = Math.round(absS / 3600) + ' 小时';
+    else ago = Math.round(absS / 86400) + ' 天';
+    return {
+      iso: d.toISOString().replace('T', ' ').slice(0, 19),
+      relative: diff < 0 ? `${ago}前` : `${ago}后`,
+      future: diff > 0
+    };
+  }
+
+  function renderClaims(p) {
+    const card = $('claimsCard');
+    const rows = $('claimsRows');
+    rows.innerHTML = '';
+    const knownClaims = [
+      { k: 'iss', desc: '签发者' },
+      { k: 'sub', desc: '主体(用户)' },
+      { k: 'aud', desc: '受众' },
+      { k: 'iat', desc: '签发时间', isTime: true },
+      { k: 'nbf', desc: '生效时间', isTime: true },
+      { k: 'exp', desc: '过期时间', isTime: true, checkExpired: true },
+      { k: 'jti', desc: '唯一 ID' }
+    ];
+    let any = false;
+    for (const { k, desc, isTime, checkExpired } of knownClaims) {
+      if (!(k in p)) continue;
+      any = true;
+      const row = document.createElement('div');
+      row.className = 'row';
+      const v = p[k];
+      let vStr = typeof v === 'string' ? `"${v}"` : JSON.stringify(v);
+      let ago = '';
+      if (isTime) {
+        const t = fmtTimestamp(v);
+        if (t) {
+          vStr = `${v} (${t.iso})`;
+          const expired = checkExpired && !t.future;
+          ago = `<span class="ago${expired ? ' expired' : ''}">${expired ? '⚠️ 已过期 ' : ''}${t.relative}</span>`;
+        }
+      }
+      row.innerHTML = `
+        <span class="k">${k} <span style="color:var(--muted-2); font-family:inherit; font-style:italic; font-size:10px"> · ${desc}</span></span>
+        <span class="v">${escapeHtml(vStr)}</span>
+        ${ago}
+      `;
+      rows.appendChild(row);
+    }
+    if (any) card.style.display = '';
+    else card.style.display = 'none';
+  }
+
+  // wire
+  $('input').addEventListener('input', e => decode(e.target.value));
+  $('pasteBtn').addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      $('input').value = text;
+      decode(text);
+    } catch (e) {
+      log.err('读剪贴板失败: ' + e.message);
+    }
+  });
+  $('clearBtn').addEventListener('click', () => {
+    $('input').value = '';
+    decode('');
+  });
+  $('sampleBtn').addEventListener('click', () => {
+    // sample token: HS256, payload { sub: "1234567890", name: "John Doe", iat: 1516239022, exp: future }
+    const future = Math.floor(Date.now() / 1000) + 3600;
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const payload = btoa(JSON.stringify({
+      iss: 'https://dobby-aih.pages.dev',
+      sub: 'user-42',
+      aud: 'dobby-demo',
+      iat: Math.floor(Date.now() / 1000) - 60,
+      nbf: Math.floor(Date.now() / 1000) - 60,
+      exp: future,
+      jti: 'sample-' + Date.now(),
+      name: 'Sagara',
+      admin: false
+    })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const sig = 'this-signature-is-fake-since-we-have-no-key';
+    const token = `${header}.${payload}.${sig}`;
+    $('input').value = token;
+    decode(token);
+  });
+
+  log.ok('JWT 解码器准备好,粘贴 token 试试');
+})();
+</script>
+</body>
+</html>
