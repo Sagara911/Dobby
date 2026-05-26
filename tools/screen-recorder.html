@@ -293,10 +293,13 @@
 
     <h2 data-i18n="sr.codec">编码格式</h2>
     <select id="mimeType" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="video/webm;codecs=vp9,opus">WebM · VP9 + Opus(推荐,小)</option>
-      <option value="video/webm;codecs=vp8,opus">WebM · VP8 + Opus(老兼容)</option>
-      <option value="video/webm">WebM(浏览器选)</option>
+      <option value="video/mp4;codecs=avc1.42E01F,mp4a.40.2" selected>MP4 · H.264 + AAC(推荐,兼容性最广)</option>
+      <option value="video/mp4;codecs=avc1.640028,mp4a.40.2">MP4 · H.264 High + AAC(质量更好,体积稍小)</option>
+      <option value="video/webm;codecs=vp9,opus">WebM · VP9 + Opus(老路径,体积稍小)</option>
+      <option value="video/webm;codecs=vp8,opus">WebM · VP8 + Opus(超老兼容)</option>
+      <option value="video/webm">WebM(让浏览器选)</option>
     </select>
+    <div class="rec-help">MP4 需要 Chrome / Edge 138+ 或 Safari 16+;不支持时自动回退 WebM</div>
 
     <h2 data-i18n="sr.bitrate">比特率</h2>
     <select id="bitrate" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
@@ -811,11 +814,15 @@ Toolkit.injectTopbar('screen-recorder');
       $('resCodec').textContent = (mimeFromRecorder.match(/codecs=(.+?)(?:["']|$)/) || [, mimeFromRecorder])[1];
     };
     $('resultInfo').style.display = '';
-    // Activate the handoff button — sidebar shows "送到视频处理" target
+    // Activate the handoff button — sidebar shows "送到视频处理" target.
+    // Extension comes from the actual recorder mime so MP4 recordings hand
+    // off as .mp4 (and video-toolkit gets to skip a transcode step on the
+    // other side).
+    const ext = mimeFromRecorder.includes('mp4') ? 'mp4' : 'webm';
     const name = ($('filename').value || 'screen').replace(/[^\w-]/g, '_');
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-    handoff?.setBlob(recordingBlob, `${name}_${ts}.webm`);
-    log.ok(`录制完成 · ${fmtBytes(recordingBlob.size)} · 用左侧「📤 送下一个工具」可直接发到视频处理`);
+    handoff?.setBlob(recordingBlob, `${name}_${ts}.${ext}`, ext === 'mp4' ? 'video/mp4' : 'video/webm');
+    log.ok(`录制完成 · ${fmtBytes(recordingBlob.size)} · ${ext.toUpperCase()} · 用左侧「📤 送下一个工具」可直接发到视频处理`);
   }
 
   $('startBtn').addEventListener('click', startRecording);
@@ -847,7 +854,10 @@ Toolkit.injectTopbar('screen-recorder');
     if (!recordingBlob) return;
     const name = ($('filename').value || 'screen').replace(/[^\w-]/g, '_');
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-    download(recordingBlob, `${name}_${ts}.webm`);
+    // Use the blob's own mime type to pick the file extension (.mp4 for MP4
+    // recordings, .webm for the WebM path)
+    const ext = (recordingBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
+    download(recordingBlob, `${name}_${ts}.${ext}`);
   });
   $('clearBtn').addEventListener('click', () => {
     recordingBlob = null;

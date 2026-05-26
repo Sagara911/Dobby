@@ -254,6 +254,7 @@
     <div class="field">
       <select id="action">
         <option value="compress">🗜️ 一键压缩 (变小)</option>
+        <option value="transcode">🔁 转码 / 改格式 (WebM ↔ MP4)</option>
         <option value="trim">✂️ 时间裁剪 (Trim)</option>
         <option value="crop">🔲 画面裁剪 (Crop)</option>
         <option value="resize">📐 缩放</option>
@@ -692,7 +693,22 @@ Toolkit.injectTopbar('video-toolkit');
     }
     lastAction = action;
 
-    if (action === 'compress') {
+    if (action === 'transcode') {
+      // Pure transcode — no edits, just re-encode to the chosen output format.
+      // The default outW/outH = src dims so we don't touch the resolution;
+      // existing encode pipeline already handles src→output with no transforms
+      // when no other action flags are set.
+      c.innerHTML = `
+        <div class="info" style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; border-radius:var(--radius-sm)">
+          <strong style="color:var(--accent)">转码模式</strong> — 不做任何画面修改,只换编码格式(MP4 ↔ WebM)和码率。<br/>
+          原视频: <strong>${srcMeta.w}×${srcMeta.h}</strong> · ${srcMeta.duration.toFixed(1)}s
+        </div>
+        <div class="info" style="margin-top:8px">
+          📤 下方「输出」选 MP4 → 转 .mp4,选 WebM → 转 .webm。<br/>
+          🎚️ 「比特率」越高质量越好但体积越大,3000-5000 kbps 适合一般录像。
+        </div>
+      `;
+    } else if (action === 'compress') {
       const targetMb = Math.max(0.3, (srcMeta.w * srcMeta.h * srcMeta.duration / 5e6)).toFixed(1);
       c.innerHTML = `
         <div class="field">

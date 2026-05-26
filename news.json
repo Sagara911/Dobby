@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v40",
+      "date": "2026-05-26",
+      "title": "📺 屏幕录制加 MP4 输出 + 🎬 视频处理加「转码」入口",
+      "items": [
+        "**屏幕录制直接出 MP4** — 之前只能出 WebM 是因为我以为 MediaRecorder 不支持 MP4,实测 Chrome 138+ / Edge / Safari 16+ 全都原生支持了。现在编码格式默认是 MP4 · H.264+AAC(兼容性最广),还有 H.264 High(质量更好,体积稍小)选项。不支持的浏览器会自动回退到 WebM",
+        "录像下载和「📤 送下一个工具」按钮的文件扩展名也跟着真实编码走 — MP4 录像出 .mp4 文件,WebM 录像出 .webm。送到 video-toolkit 时也会带上正确的 mime 类型",
+        "**video-toolkit 加了显式「🔁 转码 / 改格式」action** — 之前转码功能藏在「一键压缩」里,用户找不到。现在动作下拉里有专门入口:不改画面、不剪片段,只换格式(MP4 ↔ WebM)和码率。WebM 想转 MP4 / MP4 想转 WebM 一步到位"
+      ]
+    },
+    {
       "version": "dobby-v39",
       "date": "2026-05-26",
       "title": "🎬 录屏 → 视频处理直送 + 视频裁剪升级到「真·帧级」",
