@@ -125,6 +125,8 @@
     { id: 'image-diff',     cat: 'image', name: '图像对比',       en: 'Image Diff',      icon: '🔬', href: 'tools/image-diff.html',     desc: 'A/B 对比 + 滑动 + 热图 + PSNR/SSIM,压缩前后必备' },
     { id: 'svg-tools',      cat: 'image', name: 'SVG 工具',       en: 'SVG Tools',       icon: '📐', href: 'tools/svg-tools.html',      desc: 'SVGO 优化 + 转 PNG (1x/2x/3x/4x),批量处理,实时预览' },
     { id: 'a11y-contrast',  cat: 'image', name: '颜色对比度',     en: 'A11y Contrast',   icon: '♿', href: 'tools/a11y-contrast.html',  desc: 'WCAG 对比度检查 + AA/AAA 合规 + 三种色盲滤镜预览' },
+    { id: 'favicon-maker',  cat: 'image', name: 'Favicon 套装',   en: 'Favicon Maker',   icon: '🌐', href: 'tools/favicon-maker.html',  desc: '一张图 → 10 个尺寸 favicon + manifest.json + HTML link 代码,一键 ZIP 打包' },
+    { id: 'exif-tool',      cat: 'image', name: 'EXIF 工具',      en: 'EXIF Tool',       icon: '📷', href: 'tools/exif-tool.html',      desc: '查看 + 清除 JPEG 元数据(GPS / 相机 / 时间...),保护拍摄隐私' },
     // 动画 / 精灵图
     { id: 'pixel-editor',   cat: 'anim',  name: '像素画板',       en: 'Pixel Editor',    icon: '🎨', href: 'tools/pixel-editor.html',   desc: '从零画像素图 — 铅笔/填充/对称镜像 + PICO-8/GameBoy 调色板' },
     { id: 'tilemap',        cat: 'anim',  name: 'Tilemap 编辑器', en: 'Tilemap Editor',  icon: '🗺️', href: 'tools/tilemap.html',        desc: '用 tileset 拼地图,导出 Tiled 兼容 JSON + 平摊 PNG' },

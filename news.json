@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v31",
+      "date": "2026-05-26",
+      "title": "Phase 3 起步:Favicon 套装 + EXIF 隐私工具",
+      "items": [
+        "🌐 Favicon 套装:一张方形 logo 图(建议 ≥512×512)→ 自动生成 16/32/48/64/96/180/192/256/384/512 共 10 个尺寸 PNG + manifest.json 模板 + HTML <link> 代码片段,一键打包 ZIP。算法可选「高质量」(适合 logo / 渐变)或「像素邻近」(适合像素图)",
+        "📷 EXIF 工具:拖入照片自动解析所有 EXIF 字段,按隐私分类显示(📍GPS / 📷相机 / 👤所有者 / 🎬 拍摄参数 / ⚙️ 技术)。顶部一眼看清「🔴 N 项隐私字段」提示。点「下载干净版」剥离所有 APP 段(EXIF/IPTC/XMP/COM),只保留图像数据。本地测试:Canon EOS-R5 字段正确识别,GPS 坐标解析为度分秒",
+        "Dobby 现在 38 个工具(图像 11 / 动画 6 / 音视频 4 / 代码 11 / 分析 4)"
+      ]
+    },
+    {
       "version": "dobby-v30",
       "date": "2026-05-26",
       "title": "再一波 4 个通用工具:JWT / 哈希 / 正则 / Markdown",

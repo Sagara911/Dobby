@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>Favicon 套装 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .fav-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .fav-source {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    align-items: center;
+  }
+  .fav-source .src-thumb {
+    width: 96px; height: 96px;
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .fav-source .src-thumb canvas { display: block; max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+  .fav-source .src-info { font-size: 12px; color: var(--muted); line-height: 1.7; font-family: ui-monospace, Consolas, monospace; }
+  .fav-source .src-info strong { color: var(--text); }
+
+  .fav-sizes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .fav-size-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .fav-size-card .canvas-wrap {
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    min-height: 100px;
+    width: 100%;
+  }
+  .fav-size-card canvas {
+    image-rendering: auto;
+    display: block;
+  }
+  .fav-size-card .meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    text-align: center;
+  }
+  .fav-size-card .meta strong { color: var(--text); }
+  .fav-size-card .name {
+    font-size: 10px;
+    color: var(--muted-2);
+    text-align: center;
+    word-break: break-all;
+  }
+  .fav-size-card .dl {
+    background: rgba(var(--jade-rgb), 0.12);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+  }
+  .fav-size-card .dl:hover { background: rgba(var(--jade-rgb), 0.22); }
+
+  .fav-html-snippet {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 240px;
+    overflow: auto;
+    position: relative;
+  }
+  .fav-html-snippet .copy-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(var(--jade-rgb), 0.15);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .fav-html-snippet .copy-btn:hover { background: rgba(var(--jade-rgb), 0.25); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🌐 Favicon 套装</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入源图</p>
+      <p class="hint">建议方形 / 透明背景<br>≥ 512×512</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" />
+    </div>
+
+    <h2>缩放算法</h2>
+    <select id="scaleAlgo" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="high">高质量(适合 logo / 渐变)</option>
+      <option value="pixelated">像素邻近(适合像素图)</option>
+    </select>
+
+    <h2>导出</h2>
+    <button id="downloadAllBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border-color:rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit; margin-top:4px">💾 下载全部(ZIP)</button>
+    <button id="copyHtmlBtn" class="secondary" style="margin-top:6px">📋 复制 HTML &lt;link&gt; 代码</button>
+
+    <h2>用途说明</h2>
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7">
+      <div><strong>16/32/48</strong>: 浏览器标签 / 收藏夹</div>
+      <div><strong>180</strong>: Apple touch(iOS 主屏)</div>
+      <div><strong>192/512</strong>: PWA manifest</div>
+      <div><strong>favicon.ico</strong>: 老 IE / 兜底</div>
+      <div><strong>safari-pinned</strong>: 单色 SVG(可选)</div>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">一张图 → 完整 favicon 套装 + HTML 引用代码 + manifest.json</div>
+
+    <div class="fav-stage">
+      <!-- Source preview -->
+      <div class="fav-source">
+        <div class="src-thumb" id="srcThumb">
+          <div style="color:var(--muted); font-size:11px; padding:10px; text-align:center">拖图进来 →</div>
+        </div>
+        <div class="src-info">
+          <div>源图: <strong id="srcName">—</strong></div>
+          <div>尺寸: <strong id="srcSize">—</strong></div>
+          <div>类型: <strong id="srcType">—</strong></div>
+          <div style="margin-top:6px; color:var(--text-soft)" id="srcWarn"></div>
+        </div>
+      </div>
+
+      <!-- Size grid -->
+      <div class="fav-sizes-grid" id="sizesGrid">
+        <!-- populated at runtime -->
+      </div>
+
+      <!-- HTML snippet -->
+      <div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">把这段贴到 &lt;head&gt; 里</div>
+        <div class="fav-html-snippet" id="htmlSnippet">
+          <button class="copy-btn" id="copyHtmlInline">📋 复制</button>
+          <span id="htmlOut">拖入源图后,这里出 HTML 引用代码 + manifest 配置...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('favicon-maker');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, makeZip } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   Output sizes
+  // ============================================================
+  const SIZES = [
+    { px: 16,  name: 'favicon-16x16.png',     purpose: '浏览器标签' },
+    { px: 32,  name: 'favicon-32x32.png',     purpose: '浏览器标签 hi-DPI' },
+    { px: 48,  name: 'favicon-48x48.png',     purpose: '收藏夹' },
+    { px: 64,  name: 'favicon-64x64.png',     purpose: '收藏夹 hi-DPI' },
+    { px: 96,  name: 'favicon-96x96.png',     purpose: 'Android Chrome' },
+    { px: 180, name: 'apple-touch-icon.png',  purpose: 'iOS 主屏' },
+    { px: 192, name: 'icon-192.png',          purpose: 'PWA manifest' },
+    { px: 256, name: 'icon-256.png',          purpose: 'Windows tile' },
+    { px: 384, name: 'icon-384.png',          purpose: 'PWA manifest' },
+    { px: 512, name: 'icon-512.png',          purpose: 'PWA splash' }
+  ];
+
+  let srcBitmap = null;
+  let outputs = {};  // size px -> Blob
+
+  function renderSourceCard(bitmap, file) {
+    const wrap = $('srcThumb');
+    wrap.innerHTML = '';
+    const cv = newCanvas(96, 96);
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    // letterbox: preserve aspect
+    const s = Math.min(96 / bitmap.width, 96 / bitmap.height);
+    const w = bitmap.width * s, h = bitmap.height * s;
+    ctx.drawImage(bitmap, (96 - w) / 2, (96 - h) / 2, w, h);
+    wrap.appendChild(cv);
+    $('srcName').textContent = file.name;
+    $('srcSize').textContent = `${bitmap.width}×${bitmap.height}`;
+    $('srcType').textContent = file.type || 'unknown';
+    const warns = [];
+    if (bitmap.width !== bitmap.height) warns.push('⚠️ 源图不是方形,渲染时会按宽高比适配后居中 letterbox');
+    if (Math.min(bitmap.width, bitmap.height) < 256) warns.push('⚠️ 源图小于 256,放大到 512 会糊 — 建议提供 ≥ 512×512');
+    $('srcWarn').innerHTML = warns.join('<br>');
+  }
+
+  async function generate(bitmap) {
+    srcBitmap = bitmap;
+    outputs = {};
+    const algo = $('scaleAlgo').value;
+    const grid = $('sizesGrid');
+    grid.innerHTML = '';
+    for (const { px, name, purpose } of SIZES) {
+      const cv = newCanvas(px, px);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = algo === 'high';
+      if (algo === 'high') ctx.imageSmoothingQuality = 'high';
+      // letterbox-style center fit (preserves aspect)
+      const s = Math.min(px / bitmap.width, px / bitmap.height);
+      const w = bitmap.width * s, h = bitmap.height * s;
+      ctx.drawImage(bitmap, (px - w) / 2, (px - h) / 2, w, h);
+      const blob = await canvasToBlob(cv, 'image/png');
+      outputs[px] = blob;
+
+      const card = document.createElement('div');
+      card.className = 'fav-size-card';
+      // display-canvas: at most 80px tall
+      const dispSize = Math.min(80, Math.max(16, px / 6));
+      const dispCv = newCanvas(dispSize, dispSize);
+      const dctx = dispCv.getContext('2d');
+      dctx.imageSmoothingEnabled = px <= 64 ? false : true;
+      dctx.drawImage(cv, 0, 0, dispSize, dispSize);
+      card.innerHTML = `
+        <div class="canvas-wrap"></div>
+        <div class="meta"><strong>${px}×${px}</strong> · ${fmtBytes(blob.size)}</div>
+        <div class="name">${name}</div>
+        <button class="dl">💾 下载</button>
+      `;
+      card.querySelector('.canvas-wrap').appendChild(dispCv);
+      card.querySelector('.dl').addEventListener('click', () => download(blob, name));
+      grid.appendChild(card);
+    }
+    renderHtmlSnippet();
+    log.ok(`生成 ${SIZES.length} 个尺寸`);
+  }
+
+  function renderHtmlSnippet() {
+    const html = `<!-- favicon links (paste into <head>) -->
+<link rel="icon" type="image/png" sizes="16x16"  href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32"  href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="48x48"  href="/favicon-48x48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+
+<!-- manifest.json content for PWA: -->
+<!--
+{
+  "name": "Your Site Name",
+  "short_name": "Site",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+-->`;
+    $('htmlOut').textContent = html;
+  }
+
+  // ============================================================
+  //   ZIP everything (incl. manifest.json template)
+  // ============================================================
+  async function packAll() {
+    if (!srcBitmap) { log.err('先拖入源图'); return; }
+    const files = [];
+    for (const [px, blob] of Object.entries(outputs)) {
+      const meta = SIZES.find(s => s.px === parseInt(px, 10));
+      if (!meta) continue;
+      const data = new Uint8Array(await blob.arrayBuffer());
+      files.push({ name: meta.name, data });
+    }
+    // add manifest.json
+    const manifest = {
+      name: 'Your Site Name',
+      short_name: 'Site',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#000000',
+      theme_color: '#000000',
+      icons: [
+        { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/icon-384.png', sizes: '384x384', type: 'image/png' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+      ]
+    };
+    files.push({ name: 'manifest.json', data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
+    // also include an html snippet
+    const snippet = $('htmlOut').textContent;
+    files.push({ name: 'README-paste-this-into-head.html', data: new TextEncoder().encode(snippet) });
+
+    const zip = makeZip(files);
+    download(zip, 'favicon-pack.zip');
+    log.ok(`已打包 ${files.length} 个文件 (${fmtBytes(zip.size)})`);
+  }
+
+  // wire
+  attachDropZone($('dropZone'), $('fileInput'), async files => {
+    if (!files[0]) return;
+    try {
+      const bmp = await createImageBitmap(files[0]);
+      renderSourceCard(bmp, files[0]);
+      await generate(bmp);
+    } catch (e) { log.err('加载失败: ' + e.message); }
+  });
+  $('scaleAlgo').addEventListener('change', () => {
+    if (srcBitmap) generate(srcBitmap);
+  });
+  $('downloadAllBtn').addEventListener('click', packAll);
+  $('copyHtmlBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('htmlOut').textContent); log.ok('已复制 HTML 代码'); } catch { log.err('复制失败'); }
+  });
+  $('copyHtmlInline').addEventListener('click', () => $('copyHtmlBtn').click());
+
+  log.ok('favicon 套装工具准备好,拖图开始');
+})();
+</script>
+</body>
+</html>

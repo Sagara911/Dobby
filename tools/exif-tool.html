@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>EXIF 查看/清除 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .exif-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .exif-summary {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+  }
+  .exif-summary .thumb {
+    width: 80px; height: 80px;
+    background: var(--checker), #0a0a0c;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .exif-summary .thumb img { max-width: 100%; max-height: 100%; display: block; }
+  .exif-summary .info { font-size: 12px; line-height: 1.7; }
+  .exif-summary .info .k { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .exif-summary .info .v { color: var(--text); }
+  .exif-summary .privacy {
+    text-align: right;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+  }
+  .exif-summary .privacy.private { color: var(--accent); }
+  .exif-summary .privacy.leak { color: #ff5b5b; }
+  .exif-summary .privacy .big { font-size: 20px; font-weight: 700; }
+
+  .exif-categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .exif-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .exif-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .exif-card.priv h3 { color: #ff8080; }
+  .exif-card .row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 12px;
+    font-family: ui-monospace, Consolas, monospace;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .exif-card .row:last-child { border: 0; }
+  .exif-card .row .k { color: var(--muted); }
+  .exif-card .row .v { color: var(--text); word-break: break-all; }
+  .exif-card .empty { color: var(--muted); font-size: 11px; font-style: italic; padding: 8px 0; }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>📷 EXIF 查看/清除</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">完全本地</strong> · 你的照片不离开浏览器,EXIF 解析 + 清除都在本地完成
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入照片</p>
+      <p class="hint">JPEG / TIFF<br>(PNG 一般没有 EXIF)</p>
+      <input type="file" id="fileInput" accept="image/jpeg,image/tiff,image/jpg" style="display:none" />
+    </div>
+
+    <h2>动作</h2>
+    <button id="cleanBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>🧹 下载干净版(清掉 EXIF)</button>
+    <button id="clearBtn" class="secondary" style="margin-top:6px">🗑️ 清空</button>
+
+    <h2>常见隐私字段</h2>
+    <div style="background:rgba(245,91,91,0.06); border:1px solid rgba(245,91,91,0.3); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
+      <div style="color:#ff8080"><strong>GPS</strong>: 经纬度坐标(最敏感)</div>
+      <div>DateTime: 拍摄时间</div>
+      <div>Make / Model: 相机型号</div>
+      <div>Software: 编辑软件</div>
+      <div>Artist / Copyright: 作者信息</div>
+      <div>ImageDescription: 自定义描述</div>
+    </div>
+
+    <h2>说明</h2>
+    <div style="font-size:11px; color:var(--muted); line-height:1.6">
+      EXIF 是 JPEG / TIFF 里的元数据,常被拍摄设备自动写入。<br>
+      <strong>清除</strong>会把所有 EXIF / IPTC / XMP 段都剥掉,只保留图像数据,看起来跟原图一模一样,但元数据全没了
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">查看 + 清除 JPEG 照片里的拍摄信息</div>
+
+    <div class="exif-stage">
+      <!-- Summary card -->
+      <div class="exif-summary" id="summaryCard" style="display:none">
+        <div class="thumb"><img id="thumbImg" /></div>
+        <div class="info">
+          <div><span class="k">文件:</span> <span class="v" id="metaFile">—</span></div>
+          <div><span class="k">尺寸:</span> <span class="v" id="metaSize">—</span></div>
+          <div><span class="k">EXIF 字段数:</span> <span class="v" id="metaCount">—</span></div>
+          <div><span class="k">总元数据体积:</span> <span class="v" id="metaBytes">—</span></div>
+        </div>
+        <div class="privacy" id="privacyVerdict">—</div>
+      </div>
+
+      <!-- Categorized tags -->
+      <div class="exif-categories" id="categories">
+        <!-- populated at runtime -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('exif-tool');
+
+(() => {
+  const { $, makeLogger, attachDropZone, download, fmtBytes } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   JPEG / EXIF parser (compact, no library)
+  //
+  // Reads APP1 (Exif) marker, walks the TIFF directory inside, and
+  // surfaces well-known tags. Also lists APP segments by marker
+  // so users can see what else (IPTC/XMP/ICC) is in the file.
+  // ============================================================
+  const EXIF_TAGS = {
+    0x010F: { n: 'Make',                cat: 'camera', priv: true },
+    0x0110: { n: 'Model',               cat: 'camera', priv: true },
+    0x0131: { n: 'Software',            cat: 'tech',   priv: true },
+    0x013B: { n: 'Artist',              cat: 'owner',  priv: true },
+    0x8298: { n: 'Copyright',           cat: 'owner',  priv: true },
+    0x010E: { n: 'ImageDescription',    cat: 'tech',   priv: true },
+    0x0132: { n: 'DateTime',            cat: 'tech',   priv: true },
+    0x0112: { n: 'Orientation',         cat: 'tech' },
+    0x011A: { n: 'XResolution',         cat: 'tech' },
+    0x011B: { n: 'YResolution',         cat: 'tech' },
+    0x0128: { n: 'ResolutionUnit',      cat: 'tech' },
+    0x9003: { n: 'DateTimeOriginal',    cat: 'tech',   priv: true },
+    0x9004: { n: 'DateTimeDigitized',   cat: 'tech',   priv: true },
+    0x829A: { n: 'ExposureTime',        cat: 'shoot' },
+    0x829D: { n: 'FNumber',             cat: 'shoot' },
+    0x8827: { n: 'ISOSpeedRatings',     cat: 'shoot' },
+    0x9201: { n: 'ShutterSpeedValue',   cat: 'shoot' },
+    0x9202: { n: 'ApertureValue',       cat: 'shoot' },
+    0x9203: { n: 'BrightnessValue',     cat: 'shoot' },
+    0x9204: { n: 'ExposureBiasValue',   cat: 'shoot' },
+    0x9205: { n: 'MaxApertureValue',    cat: 'shoot' },
+    0x9206: { n: 'SubjectDistance',     cat: 'shoot' },
+    0x9207: { n: 'MeteringMode',        cat: 'shoot' },
+    0x9208: { n: 'LightSource',         cat: 'shoot' },
+    0x9209: { n: 'Flash',               cat: 'shoot' },
+    0x920A: { n: 'FocalLength',         cat: 'shoot' },
+    0xA002: { n: 'PixelXDimension',     cat: 'tech' },
+    0xA003: { n: 'PixelYDimension',     cat: 'tech' },
+    0xA432: { n: 'LensSpecification',   cat: 'shoot' },
+    0xA433: { n: 'LensMake',            cat: 'camera', priv: true },
+    0xA434: { n: 'LensModel',           cat: 'camera', priv: true },
+    // GPS sub-IFD (these come from a separate IFD pointed to by 0x8825)
+    0x0000: { n: 'GPSVersionID',        cat: 'gps' },
+    0x0001: { n: 'GPSLatitudeRef',      cat: 'gps',    priv: true },
+    0x0002: { n: 'GPSLatitude',         cat: 'gps',    priv: true },
+    0x0003: { n: 'GPSLongitudeRef',     cat: 'gps',    priv: true },
+    0x0004: { n: 'GPSLongitude',        cat: 'gps',    priv: true },
+    0x0005: { n: 'GPSAltitudeRef',      cat: 'gps',    priv: true },
+    0x0006: { n: 'GPSAltitude',         cat: 'gps',    priv: true },
+    0x0007: { n: 'GPSTimeStamp',        cat: 'gps',    priv: true },
+    0x001D: { n: 'GPSDateStamp',        cat: 'gps',    priv: true }
+  };
+
+  function parseExif(bytes) {
+    // JPEG starts with FFD8
+    if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) {
+      throw new Error('不是合法 JPEG');
+    }
+    const segments = [];
+    let i = 2;
+    let exifData = null;
+    while (i < bytes.length) {
+      if (bytes[i] !== 0xFF) break;
+      const marker = bytes[i + 1];
+      if (marker === 0xD9 || marker === 0xDA) break;  // EOI / SOS
+      const len = (bytes[i + 2] << 8) | bytes[i + 3];
+      const name = markerName(marker);
+      segments.push({ marker, name, offset: i, length: len });
+      if (marker === 0xE1) {  // APP1
+        // check for "Exif\0\0" header
+        const header = String.fromCharCode(bytes[i+4], bytes[i+5], bytes[i+6], bytes[i+7]);
+        if (header === 'Exif') {
+          exifData = parseExifTiff(bytes, i + 10, len - 8);
+        }
+      }
+      i += 2 + len;
+    }
+    return { segments, tags: exifData || {} };
+  }
+  function markerName(m) {
+    if (m === 0xE0) return 'APP0 (JFIF)';
+    if (m === 0xE1) return 'APP1 (EXIF/XMP)';
+    if (m === 0xE2) return 'APP2 (ICC)';
+    if (m >= 0xE3 && m <= 0xEF) return 'APP' + (m - 0xE0);
+    if (m === 0xFE) return 'COM (comment)';
+    if (m === 0xDB) return 'DQT';
+    if (m === 0xC0) return 'SOF0';
+    if (m === 0xC4) return 'DHT';
+    return '0x' + m.toString(16).padStart(2, '0');
+  }
+  function parseExifTiff(bytes, off, length) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset + off, length);
+    const endian = String.fromCharCode(dv.getUint8(0), dv.getUint8(1));
+    const little = endian === 'II';
+    const magic = dv.getUint16(2, little);
+    if (magic !== 0x002A) return {};
+    const ifd0 = dv.getUint32(4, little);
+    const tags = {};
+    readIFD(dv, ifd0, little, tags, bytes, off);
+    // GPS sub-IFD
+    if (tags[0x8825]) {
+      const gpsOff = tags[0x8825].value;
+      readIFD(dv, gpsOff, little, tags, bytes, off, 'gps');
+    }
+    // EXIF sub-IFD
+    if (tags[0x8769]) {
+      const exifOff = tags[0x8769].value;
+      readIFD(dv, exifOff, little, tags, bytes, off);
+    }
+    return tags;
+  }
+  function readIFD(dv, offset, little, tags, allBytes, allOff, namespace) {
+    if (offset >= dv.byteLength) return;
+    const count = dv.getUint16(offset, little);
+    for (let i = 0; i < count; i++) {
+      const entry = offset + 2 + i * 12;
+      if (entry + 12 > dv.byteLength) break;
+      const tag = dv.getUint16(entry, little);
+      const type = dv.getUint16(entry + 2, little);
+      const num = dv.getUint32(entry + 4, little);
+      const valOff = entry + 8;
+      const value = readTagValue(dv, type, num, valOff, little);
+      const key = namespace ? `${namespace}_${tag}` : tag;
+      tags[key] = { tag, type, num, value, namespace };
+    }
+  }
+  function readTagValue(dv, type, count, off, little) {
+    const sizes = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+    const size = (sizes[type] || 1) * count;
+    let dataOff = off;
+    if (size > 4) {
+      dataOff = dv.getUint32(off, little);
+    }
+    if (dataOff + size > dv.byteLength) return '<out of bounds>';
+    if (type === 2) {
+      // ASCII
+      let s = '';
+      for (let i = 0; i < count - 1; i++) s += String.fromCharCode(dv.getUint8(dataOff + i));
+      return s;
+    }
+    if (type === 1 || type === 7) return dv.getUint8(dataOff);
+    if (type === 3) {
+      if (count === 1) return dv.getUint16(dataOff, little);
+      const a = [];
+      for (let i = 0; i < count; i++) a.push(dv.getUint16(dataOff + i * 2, little));
+      return a;
+    }
+    if (type === 4) {
+      if (count === 1) return dv.getUint32(dataOff, little);
+      const a = [];
+      for (let i = 0; i < count; i++) a.push(dv.getUint32(dataOff + i * 4, little));
+      return a;
+    }
+    if (type === 5) {
+      // RATIONAL = 2× uint32
+      if (count === 1) {
+        const n = dv.getUint32(dataOff, little);
+        const d = dv.getUint32(dataOff + 4, little);
+        return d ? n / d : 0;
+      }
+      const a = [];
+      for (let i = 0; i < count; i++) {
+        const n = dv.getUint32(dataOff + i * 8, little);
+        const d = dv.getUint32(dataOff + i * 8 + 4, little);
+        a.push(d ? n / d : 0);
+      }
+      return a;
+    }
+    return '<' + type + '>';
+  }
+
+  function fmtGPSCoord(arr, ref) {
+    if (!Array.isArray(arr) || arr.length < 3) return null;
+    const [d, m, s] = arr;
+    const dec = d + m / 60 + s / 3600;
+    const signed = (ref === 'S' || ref === 'W') ? -dec : dec;
+    return signed.toFixed(6);
+  }
+
+  // ============================================================
+  //   Render
+  // ============================================================
+  let currentBytes = null;
+  let currentFilename = null;
+
+  function renderResults(parsed, fileName, fileSize, blobUrl) {
+    $('summaryCard').style.display = '';
+    $('thumbImg').src = blobUrl;
+    $('metaFile').textContent = fileName;
+    $('metaSize').textContent = fmtBytes(fileSize);
+    const tags = parsed.tags;
+    const tagKeys = Object.keys(tags);
+    $('metaCount').textContent = tagKeys.length;
+    // estimate EXIF segment bytes: APP1 size from segments
+    const exifSeg = parsed.segments.find(s => s.marker === 0xE1);
+    $('metaBytes').textContent = exifSeg ? fmtBytes(exifSeg.length) : '0 字节';
+
+    // privacy assessment
+    const leaks = [];
+    if (tags['gps_2'] || tags['gps_4']) leaks.push('GPS 坐标');
+    if (tags[0x010F] || tags[0x0110]) leaks.push('相机型号');
+    if (tags[0x013B]) leaks.push('作者');
+    if (tags[0x8298]) leaks.push('版权');
+    if (tags[0x9003]) leaks.push('拍摄时间');
+    if (tags[0x010E]) leaks.push('描述');
+    const verdict = $('privacyVerdict');
+    if (leaks.length) {
+      verdict.className = 'privacy leak';
+      verdict.innerHTML = `<div class="big">🔴 ${leaks.length}</div><div>项隐私字段</div><div style="margin-top:4px; font-size:10px">${leaks.join(' · ')}</div>`;
+    } else if (tagKeys.length) {
+      verdict.className = 'privacy';
+      verdict.innerHTML = `<div class="big">🟡 ${tagKeys.length}</div><div>项元数据<br>无明显隐私</div>`;
+    } else {
+      verdict.className = 'privacy private';
+      verdict.innerHTML = `<div class="big">🟢 干净</div><div>没有 EXIF</div>`;
+    }
+
+    // categories
+    const categories = {
+      gps:    { title: '📍 GPS 位置(最敏感)',     priv: true, rows: [] },
+      camera: { title: '📷 相机 / 镜头(隐私)',    priv: true, rows: [] },
+      shoot:  { title: '🎬 拍摄参数(无隐私)',     priv: false, rows: [] },
+      tech:   { title: '⚙️ 其它技术字段',          priv: false, rows: [] },
+      owner:  { title: '👤 所有者信息(隐私)',     priv: true, rows: [] }
+    };
+
+    for (const k of tagKeys) {
+      const t = tags[k];
+      const numericTag = parseInt(t.tag, 10);
+      const meta = EXIF_TAGS[numericTag];
+      if (!meta) continue;
+      const cat = (t.namespace === 'gps' && meta.cat === 'gps') ? 'gps' : meta.cat;
+      if (!categories[cat]) continue;
+      let v = t.value;
+      // human-readable for some types
+      if (meta.n === 'Orientation') v = ['', '正常', '水平镜像', '180°', '垂直镜像', '90°顺+水平镜像', '90°顺', '90°逆+水平镜像', '90°逆'][v] || v;
+      if (meta.n === 'GPSLatitude' && tags['gps_1']) v = `${fmtGPSCoord(v, tags['gps_1'].value)}° ${tags['gps_1'].value}`;
+      if (meta.n === 'GPSLongitude' && tags['gps_3']) v = `${fmtGPSCoord(v, tags['gps_3'].value)}° ${tags['gps_3'].value}`;
+      if (Array.isArray(v)) v = v.join(', ');
+      if (typeof v === 'number' && !Number.isInteger(v)) v = v.toFixed(3);
+      categories[cat].rows.push({ k: meta.n, v: String(v) });
+    }
+
+    // also list segments
+    categories.tech.rows.push({ k: '── JPEG 段 ──', v: parsed.segments.map(s => s.name).join(', ') });
+
+    const grid = $('categories');
+    grid.innerHTML = '';
+    for (const [, info] of Object.entries(categories)) {
+      if (!info.rows.length) continue;
+      const card = document.createElement('div');
+      card.className = 'exif-card' + (info.priv ? ' priv' : '');
+      card.innerHTML = `<h3>${info.title}</h3>`;
+      info.rows.forEach(({ k, v }) => {
+        const r = document.createElement('div');
+        r.className = 'row';
+        r.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+        card.appendChild(r);
+      });
+      grid.appendChild(card);
+    }
+
+    if (!grid.children.length) {
+      grid.innerHTML = '<div class="exif-card"><h3>无 EXIF</h3><div class="empty">这张图没有 EXIF 元数据</div></div>';
+    }
+
+    $('cleanBtn').disabled = tagKeys.length === 0;
+  }
+
+  // ============================================================
+  //   Strip ALL non-image segments (clean export)
+  //
+  // For JPEG: walk segments, copy only SOF/DQT/DHT/SOS+image data,
+  // skip all APP* / COM. Re-wrap with FFD8 / FFD9.
+  // ============================================================
+  function stripJpeg(bytes) {
+    const out = [];
+    out.push(0xFF, 0xD8);
+    let i = 2;
+    while (i < bytes.length) {
+      if (bytes[i] !== 0xFF) break;
+      const marker = bytes[i + 1];
+      if (marker === 0xD9) break;
+      if (marker === 0xDA) {
+        // SOS — copy from here to EOI verbatim
+        for (let j = i; j < bytes.length; j++) out.push(bytes[j]);
+        break;
+      }
+      const len = (bytes[i + 2] << 8) | bytes[i + 3];
+      const isAppOrCom = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
+      if (!isAppOrCom) {
+        for (let j = i; j < i + 2 + len; j++) out.push(bytes[j]);
+      }
+      i += 2 + len;
+    }
+    return new Uint8Array(out);
+  }
+
+  // ============================================================
+  //   Wire UI
+  // ============================================================
+  attachDropZone($('dropZone'), $('fileInput'), async files => {
+    if (!files[0]) return;
+    const f = files[0];
+    if (!/jpe?g|tiff/i.test(f.type)) {
+      log.warn('文件类型 ' + (f.type || '未知') + ' — 只支持 JPEG/TIFF。PNG 几乎不会有 EXIF。');
+    }
+    try {
+      const buf = await f.arrayBuffer();
+      currentBytes = new Uint8Array(buf);
+      currentFilename = f.name;
+      const parsed = parseExif(currentBytes);
+      const blobUrl = URL.createObjectURL(f);
+      renderResults(parsed, f.name, f.size, blobUrl);
+      log.ok(`已解析 ${Object.keys(parsed.tags).length} 个 EXIF 字段`);
+    } catch (e) {
+      log.err('解析失败: ' + e.message);
+    }
+  });
+
+  $('cleanBtn').addEventListener('click', () => {
+    if (!currentBytes) return;
+    try {
+      const clean = stripJpeg(currentBytes);
+      const blob = new Blob([clean], { type: 'image/jpeg' });
+      const base = (currentFilename || 'photo').replace(/\.[^.]+$/, '');
+      download(blob, base + '_clean.jpg');
+      log.ok(`已剥离元数据 · 原 ${fmtBytes(currentBytes.length)} → ${fmtBytes(clean.length)} (省 ${fmtBytes(currentBytes.length - clean.length)})`);
+    } catch (e) {
+      log.err('清除失败: ' + e.message);
+    }
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    currentBytes = null;
+    currentFilename = null;
+    $('summaryCard').style.display = 'none';
+    $('categories').innerHTML = '';
+    $('cleanBtn').disabled = true;
+  });
+
+  log.ok('EXIF 工具准备好,拖照片进来');
+})();
+</script>
+</body>
+</html>
