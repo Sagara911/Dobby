@@ -128,6 +128,101 @@
   }
   loadStringsDict();
 
+  // ============================================================
+  //   Lucide icon set — replaces emoji as the per-tool / per-cat
+  //   icon language across home cards, hero chips, topbar nav,
+  //   sidebar h1. Lucide is loaded via CDN as a single global
+  //   `window.lucide`; calling `lucide.createIcons()` scans the
+  //   DOM for `<i data-lucide="name">...</i>` and replaces with
+  //   an inline <svg>. We keep the emoji inside <i> as a fallback
+  //   in case the CDN never loads (offline / blocked / slow net) —
+  //   it renders normally as text until the SVG replaces it.
+  // ============================================================
+  const CAT_LUCIDE = {
+    image: 'image',
+    anim:  'film',
+    av:    'volume-2',
+    code:  'code-xml',
+    audit: 'bar-chart-3'
+  };
+  const TOOL_LUCIDE = {
+    // image
+    'image-optimizer':  'minimize-2',
+    'png-crusher':      'gem',
+    'image-editor':     'crop',
+    'color-tools':      'palette',
+    'ai-cutout':        'scissors',
+    'watermark-remove': 'eraser',
+    'composer':         'layers',
+    'image-diff':       'split-square-vertical',
+    'svg-tools':        'pen-tool',
+    'a11y-contrast':    'contrast',
+    'favicon-maker':    'globe',
+    'exif-tool':        'camera',
+    'normal-map':       'mountain',
+    'texture-gen':      'grid-3x3',
+    'ocr-tool':         'scan-eye',
+    // anim
+    'pixel-editor':     'brush',
+    'tilemap':          'layout-grid',
+    'easing-editor':    'spline',
+    'sprite-packer':    'grid-2x2',
+    'atlas-splitter':   'split-square-horizontal',
+    'gif-tools':        'clapperboard',
+    'lottie-tools':     'sparkles',
+    'pixel-font':       'type',
+    // av
+    'video-toolkit':    'video',
+    'audio-compress':   'audio-waveform',
+    'sfx-maker':        'gamepad-2',
+    'screen-recorder':  'monitor',
+    // code
+    'html-inliner':     'file-code-2',
+    'code-minify':      'file-minus',
+    'base64':           'binary',
+    'json-tools':       'braces',
+    'jwt-decoder':      'key-round',
+    'hash-calc':        'hash',
+    'regex-tester':     'regex',
+    'markdown-editor':  'file-text',
+    'zip-packer':       'package',
+    'qr-gen':           'qr-code',
+    'font-subset':      'a-large-small',
+    'batch-rename':     'tag',
+    'pdf-tools':        'file-type-2',
+    'transcode':        'refresh-cw',
+    // audit
+    'bundle-analyzer':  'pie-chart',
+    'channel-check':    'circle-check-big',
+    'slim-coach':       'heart-pulse',
+    'playable-slim':    'trending-down'
+  };
+  function lucideIcon(id, kind, emoji) {
+    const table = kind === 'cat' ? CAT_LUCIDE : TOOL_LUCIDE;
+    const name = table[id];
+    if (!name) return emoji || '';
+    // emoji becomes the inner content — visible until Lucide replaces it
+    return `<i data-lucide="${name}" class="lucide-icon" aria-hidden="true">${emoji || ''}</i>`;
+  }
+  // Re-scan DOM for new <i data-lucide> nodes (call after any new icon
+  // renders). Idempotent — Lucide skips already-replaced elements.
+  function refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      try { window.lucide.createIcons(); } catch (_) { /* shrug */ }
+    }
+  }
+  function loadLucideScript() {
+    if (window.lucide || document.querySelector('script[data-lucide-cdn]')) return;
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js';
+    s.defer = true;
+    s.dataset.lucideCdn = '1';
+    s.onload = refreshIcons;
+    s.onerror = () => { console.warn('[icons] Lucide CDN failed to load, falling back to emoji'); };
+    document.head.appendChild(s);
+  }
+  loadLucideScript();
+
   const TOOLS = [
     { id: 'home',           cat: 'home',  name: '首页',           en: 'Home',            icon: '🏠', href: 'index.html' },
     // 图像处理
@@ -380,13 +475,13 @@
           return `
             <div class="nav-group ${isActive ? 'active' : ''}">
               <a href="${prefix}index.html#cat-${c.id}" class="nav-cat" title="${catName}">
-                <span class="cat-icon">${c.icon}</span><span class="nav-cat-name" data-i18n="${c.key}">${c.defaultName}</span>
+                <span class="cat-icon">${lucideIcon(c.id, 'cat', c.icon)}</span><span class="nav-cat-name" data-i18n="${c.key}">${c.defaultName}</span>
                 <span class="caret">▾</span>
               </a>
               <div class="nav-dropdown">
                 ${tools.map(t => `
                   <a href="${prefix}${t.href}" class="${t.id === activeId ? 'active' : ''}">
-                    <span>${t.icon}</span>
+                    <span class="dd-icon">${lucideIcon(t.id, 'tool', t.icon)}</span>
                     <span class="dd-name">${toolName(t)}</span>
                     <span class="dd-en">${t.en}</span>
                   </a>
@@ -436,7 +531,7 @@
         const isEn = getLang() === 'en';
         const displayName = (isEn && tool.en) ? tool.en : tool.name;
         const subHtml = isEn ? '' : `<span class="h1-sub">${tool.en}</span>`;
-        h1.innerHTML = `${tool.icon} ${displayName} ${subHtml}`;
+        h1.innerHTML = `${lucideIcon(tool.id, 'tool', tool.icon)} ${displayName} ${subHtml}`;
       }
       // add a standalone "← 全部工具" pill as a sibling of the topbar (tool pages only)
       if (!wrap.querySelector('.topbar-back')) {
@@ -462,6 +557,10 @@
     setupFeedbackChip();
     setupThemeToggle();
     setupLangToggle();
+    // Lucide may not have loaded yet; if it has (e.g. on second nav), this
+    // replaces the fallback emojis with SVG immediately. If not, the CDN
+    // script's onload will call refreshIcons() once it lands.
+    refreshIcons();
   }
 
   // ============================================================
@@ -2403,6 +2502,9 @@
     setLang,
     getLang,
     applyTranslations,
+    // icons
+    lucideIcon,
+    refreshIcons,
     Lightbox
   };
 })();

@@ -470,7 +470,19 @@ a:hover { color: var(--jade); }
   transition: all 0.15s;
   font-weight: 500;
 }
-.topbar .nav-cat .cat-icon { font-size: 13px; }
+.topbar .nav-cat .cat-icon { font-size: 13px; display: inline-flex; align-items: center; }
+.topbar .nav-cat .cat-icon i,
+.topbar .nav-cat .cat-icon svg { width: 14px; height: 14px; stroke-width: 2; }
+.topbar .nav-dropdown a .dd-icon { display: inline-flex; align-items: center; font-size: 13px; }
+.topbar .nav-dropdown a .dd-icon i,
+.topbar .nav-dropdown a .dd-icon svg { width: 14px; height: 14px; stroke-width: 2; }
+/* Sidebar h1 on each tool page (rendered by injectTopbar) — match the
+   existing emoji prefix size. The injected <i data-lucide> sits inline
+   with the title text. */
+.sidebar h1 i.lucide-icon,
+.sidebar h1 svg.lucide,
+.sidebar h1 i.lucide-icon svg { width: 22px; height: 22px; stroke-width: 2; vertical-align: -3px; }
+.sidebar h1 i.lucide-icon { display: inline-flex; align-items: center; font-style: normal; }
 .topbar .nav-cat .caret {
   font-size: 9px;
   margin-left: 2px;

@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "dobby-v49",
+      "date": "2026-05-26",
+      "title": "🎨 emoji 全替换成 Lucide SVG icon — 全站设计感升级第一刀",
+      "items": [
+        "之前 5 个分类 + 44 个工具的图标全是 emoji (📦 💎 🖼️ 🎨 🤖 🩹 ...),Mac / Windows / iOS / Android 渲染各不一样,放大了像幼儿园美术作业",
+        "**现在全部换 Lucide SVG**(linear stroke 风格,Vercel / Linear / Notion / Cal.com 都在用的那个图标库)。视觉一致 + 跨平台渲染统一 + 可调 stroke 颜色继承 cat 色",
+        "覆盖范围:**首页工具卡视觉块 (52px)** · **5 个分类 chips (14px)** · **5 个 cat-header section 标题 (16px)** · **顶栏分类导航 + 工具下拉菜单 (14px)** · **每个工具页 sidebar h1 (22px)**",
+        "技术细节:Lucide 通过 CDN(unpkg)在 shared.js 里 lazy-load,加载完自动 createIcons 替换。**emoji 作为 fallback 写在 `<i>` 内**,Lucide 失败/没加载时 emoji 仍然显示,不会白屏",
+        "stroke 用 `currentColor`,所以 cat 色变化(image teal / anim purple / av orange / code jade / audit blue)直接通过父元素的 `color` 传给 SVG。比 emoji 那套\"颜色固定无法调\"灵活多了",
+        "🧦 brand mascot / 🔍 搜索图标 / 🌓 主题切换按钮 / 💬 反馈按钮这些**保留 emoji** — 它们是 chrome / brand mark,不是分类索引",
+        "代价:每页多一个 ~50KB 的 CDN 请求(Lucide UMD bundle),GZip 后实际 ~18KB。defer 加载,不阻塞首屏。"
+      ]
+    },
+    {
       "version": "dobby-v48",
       "date": "2026-05-26",
       "title": "🎨 设计感升级:Hero 加氛围光球 + 工具卡换成「视觉块 + 文字」结构",

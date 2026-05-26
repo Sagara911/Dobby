@@ -441,13 +441,32 @@
     z-index: 1;
     font-size: 48px;
     line-height: 1;
+    /* Cat-rgb drives both the emoji drop-shadow AND (via currentColor) the
+       SVG stroke once Lucide swaps the inner <i> with an <svg>. */
+    color: rgb(var(--cat-rgb, var(--jade-rgb)));
     filter: drop-shadow(0 6px 16px rgba(var(--cat-rgb, var(--jade-rgb)), 0.45));
     transition: transform 0.35s ease;
-    /* mute the OS emoji color cast slightly so it sits on the colored
-       backdrop without clashing — emoji are color-rendered by the system
-       font and can look "too saturated" on jade / purple / orange backdrops */
     user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
+  .card-visual .visual-icon i,
+  .card-visual .visual-icon svg {
+    width: 52px;
+    height: 52px;
+    stroke-width: 1.8;
+  }
+  /* fallback emoji renders inside <i> if Lucide didn't replace */
+  .card-visual .visual-icon i { font-size: 44px; line-height: 1; color: inherit; font-style: normal; }
+  /* Chip lucide icon — small */
+  .hero-cat-chips a .chip-icon i,
+  .hero-cat-chips a .chip-icon svg { width: 14px; height: 14px; stroke-width: 2; }
+  .hero-cat-chips a .chip-icon { display: inline-flex; align-items: center; }
+  /* Cat-header (section title) icon */
+  .cat-header .cat-icon i,
+  .cat-header .cat-icon svg { width: 16px; height: 16px; stroke-width: 2; }
+  .cat-header .cat-icon { color: rgb(var(--cat-rgb, var(--jade-rgb))); }
   .tool-card:hover .visual-icon {
     transform: translateY(-4px) scale(1.07);
   }
@@ -1174,11 +1193,13 @@
     host.innerHTML = CATEGORIES.map(cat => {
       const count = CARDS.filter(c => c.cat === cat.id).length;
       return `<a href="#cat-${cat.id}" data-cat="${cat.id}">
-        <span class="chip-icon">${cat.icon}</span><span data-i18n="${cat.key}">${cat.name}</span><span class="chip-count">${count}</span>
+        <span class="chip-icon">${Toolkit.lucideIcon(cat.id, 'cat', cat.icon)}</span><span data-i18n="${cat.key}">${cat.name}</span><span class="chip-count">${count}</span>
       </a>`;
     }).join('');
     // Wire spotlight on each chip after the innerHTML render
     host.querySelectorAll('a').forEach(wireSpotlight);
+    // Swap the chip's <i data-lucide> placeholders into <svg>
+    Toolkit.refreshIcons?.();
   })();
 
   const section = document.getElementById('toolsSection');
@@ -1198,7 +1219,7 @@
     const subHtml = isEn ? '' : `<span class="card-sub">${c.en}</span>`;
     a.innerHTML = `
       <div class="card-visual">
-        <span class="visual-icon">${c.icon}</span>
+        <span class="visual-icon">${Toolkit.lucideIcon(c.id, 'tool', c.icon)}</span>
       </div>
       <div class="card-text">
         <h3>${toolName(c)}${subHtml ? ' ' + subHtml : ''}</h3>
@@ -1288,7 +1309,7 @@
       const catSubHtml = isEnCat ? '' : `<span class="cat-en" data-i18n="${cat.keyEn}">${cat.en}</span>`;
       div.innerHTML = `
         <div class="cat-header">
-          <div class="cat-icon">${cat.icon}</div>
+          <div class="cat-icon">${Toolkit.lucideIcon(cat.id, 'cat', cat.icon)}</div>
           <div class="cat-info">
             <span class="cat-name" data-i18n="${cat.key}">${cat.name}</span>
             ${catSubHtml}
@@ -1301,6 +1322,8 @@
       items.forEach(c => grid.appendChild(makeCard(c)));
       section.appendChild(div);
     }
+    // After cards land, swap any <i data-lucide> placeholders to <svg>
+    Toolkit.refreshIcons?.();
   }
 
   // Empty-state with click-to-fill phrasing chips. Called from the search
