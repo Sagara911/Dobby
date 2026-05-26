@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>程序化纹理 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tx-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .tx-canvas-wrap {
+    flex: 1;
+    background: var(--checker), #0a0a0c;
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+  }
+  .tx-canvas-wrap canvas {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .tx-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .tx-type-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    border-radius: var(--radius-sm);
+    padding: 8px 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tx-type-btn:hover { background: rgba(255,255,255,0.10); }
+  .tx-type-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  h2 { font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🌀 程序化纹理</h1>
+
+    <h2>纹理类型</h2>
+    <div class="tx-type-grid" id="typeGrid">
+      <button class="tx-type-btn active" data-t="perlin">🌊 Perlin</button>
+      <button class="tx-type-btn" data-t="fbm">📈 fBm</button>
+      <button class="tx-type-btn" data-t="ridged">🏔️ 山脊</button>
+      <button class="tx-type-btn" data-t="voronoi">🧩 Voronoi</button>
+      <button class="tx-type-btn" data-t="worley">⬢ Worley</button>
+      <button class="tx-type-btn" data-t="checker">▦ 棋盘</button>
+      <button class="tx-type-btn" data-t="brick">🧱 砖墙</button>
+      <button class="tx-type-btn" data-t="stripes">═ 条纹</button>
+      <button class="tx-type-btn" data-t="gradient">🌈 渐变</button>
+    </div>
+
+    <h2>尺寸</h2>
+    <select id="size" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="64">64×64</option>
+      <option value="128">128×128</option>
+      <option value="256" selected>256×256</option>
+      <option value="512">512×512</option>
+      <option value="1024">1024×1024</option>
+    </select>
+
+    <h2>种子(seed)</h2>
+    <div style="display:flex; gap:4px">
+      <input type="number" id="seed" value="42" style="flex:1; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace,Consolas,monospace; font-size:12px">
+      <button id="randomSeed" class="secondary" style="padding:6px 10px">🎲</button>
+    </div>
+
+    <h2 id="paramsHead">参数</h2>
+    <div id="params" style="display:flex; flex-direction:column; gap:8px"></div>
+
+    <h2>颜色</h2>
+    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">
+      <input type="color" id="color1" value="#000000" style="width:40px; height:32px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; padding:0">
+      <span style="color:var(--muted); font-size:11px">低</span>
+      <input type="color" id="color2" value="#ffffff" style="width:40px; height:32px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; padding:0">
+      <span style="color:var(--muted); font-size:11px">高</span>
+    </div>
+    <select id="colormap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+      <option value="2tone">两色渐变(默认)</option>
+      <option value="grayscale">灰度(标准高度图)</option>
+      <option value="viridis">Viridis(色谱图)</option>
+      <option value="fire">火焰(黑→红→黄→白)</option>
+      <option value="ice">冰(黑→蓝→白)</option>
+      <option value="terrain">地形(蓝→绿→棕→白)</option>
+    </select>
+
+    <h2>瓦片(tileable)</h2>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+      <input type="checkbox" id="tileable" />
+      <span>无缝拼接</span>
+    </label>
+    <div style="font-size:10px; color:var(--muted); margin-top:4px">勾上后,Perlin/fBm 类纹理边界可无缝重复(对 voronoi/checker 无影响)</div>
+
+    <h2>导出</h2>
+    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit">💾 下载 PNG</button>
+    <input type="text" id="filename" value="texture" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
+
+    <h2>送往</h2>
+    <div style="font-size:10px; color:var(--muted); line-height:1.5">输出可以直接喂给 <a href="normal-map.html" style="color:var(--accent)">法线贴图</a> 当高度图,或 <a href="png-crusher.html" style="color:var(--accent)">深度压缩</a> 减体积</div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">Perlin / Voronoi / 砖墙 等程序化噪声,游戏背景 / 地形 / 高度图</div>
+
+    <div class="tx-stage">
+      <div class="tx-canvas-wrap">
+        <canvas id="cv" width="256" height="256"></canvas>
+      </div>
+      <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 14px; font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap">
+        <div>当前: <span id="metaType" style="color:var(--text)">Perlin</span></div>
+        <div>尺寸: <span id="metaSize" style="color:var(--text)">256×256</span></div>
+        <div>生成耗时: <span id="metaTime" style="color:var(--text)">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('texture-gen');
+
+(() => {
+  const { $, makeLogger, download, newCanvas, canvasToBlob } = Toolkit;
+  const log = makeLogger($('log'));
+
+  // ============================================================
+  //   Seedable RNG (mulberry32)
+  // ============================================================
+  function makeRNG(seed) {
+    let s = seed >>> 0;
+    return function() {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ============================================================
+  //   Perlin noise (2D, with optional seeded permutation table)
+  // ============================================================
+  function makePerlin(seed) {
+    const rng = makeRNG(seed);
+    const p = new Uint8Array(512);
+    const base = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) base[i] = i;
+    // Fisher-Yates shuffle
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const t = base[i]; base[i] = base[j]; base[j] = t;
+    }
+    for (let i = 0; i < 512; i++) p[i] = base[i & 255];
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+      const h = hash & 3;
+      const u = h < 2 ? x : y;
+      const v = h < 2 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    }
+    return function(x, y) {
+      const X = Math.floor(x) & 255;
+      const Y = Math.floor(y) & 255;
+      x -= Math.floor(x);
+      y -= Math.floor(y);
+      const u = fade(x), v = fade(y);
+      const A = p[X] + Y;
+      const B = p[X + 1] + Y;
+      return lerp(
+        lerp(grad(p[A], x, y), grad(p[B], x - 1, y), u),
+        lerp(grad(p[A + 1], x, y - 1), grad(p[B + 1], x - 1, y - 1), u),
+        v
+      ) * 0.5 + 0.5;  // → [0,1]
+    };
+  }
+
+  // ============================================================
+  //   Voronoi (random points, distance to nearest)
+  // ============================================================
+  function makeVoronoi(seed, count) {
+    const rng = makeRNG(seed);
+    const pts = [];
+    for (let i = 0; i < count; i++) pts.push([rng(), rng()]);
+    return function(x, y, mode) {
+      // x, y in [0, 1]
+      let d1 = Infinity, d2 = Infinity;
+      for (const [px, py] of pts) {
+        const dx = x - px, dy = y - py;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < d1) { d2 = d1; d1 = d; }
+        else if (d < d2) d2 = d;
+      }
+      if (mode === 'worley') return Math.min(1, (d2 - d1) * 8);  // edges between cells
+      return Math.min(1, d1 * 4);  // distance from nearest point
+    };
+  }
+
+  // ============================================================
+  //   Colormaps
+  // ============================================================
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+    return [parseInt(hex.slice(0,2), 16), parseInt(hex.slice(2,4), 16), parseInt(hex.slice(4,6), 16)];
+  }
+  function colormap(name, t, c1, c2) {
+    t = Math.max(0, Math.min(1, t));
+    if (name === '2tone') {
+      const [r1, g1, b1] = c1, [r2, g2, b2] = c2;
+      return [Math.round(r1 + (r2 - r1) * t), Math.round(g1 + (g2 - g1) * t), Math.round(b1 + (b2 - b1) * t)];
+    }
+    if (name === 'grayscale') {
+      const v = Math.round(t * 255);
+      return [v, v, v];
+    }
+    if (name === 'viridis') {
+      // 5-stop viridis approx
+      const stops = [[68,1,84],[59,82,139],[33,144,140],[94,201,98],[253,231,37]];
+      const idx = Math.min(stops.length - 2, Math.floor(t * (stops.length - 1)));
+      const local = t * (stops.length - 1) - idx;
+      const a = stops[idx], b = stops[idx + 1];
+      return [Math.round(a[0] + (b[0] - a[0]) * local), Math.round(a[1] + (b[1] - a[1]) * local), Math.round(a[2] + (b[2] - a[2]) * local)];
+    }
+    if (name === 'fire') {
+      const r = Math.min(255, t * 3 * 255);
+      const g = Math.min(255, Math.max(0, (t - 0.33) * 3 * 255));
+      const b = Math.min(255, Math.max(0, (t - 0.66) * 3 * 255));
+      return [Math.round(r), Math.round(g), Math.round(b)];
+    }
+    if (name === 'ice') {
+      const r = Math.min(255, Math.max(0, (t - 0.66) * 3 * 255));
+      const g = Math.min(255, t * 1.5 * 255);
+      const b = Math.min(255, t * 2 * 255);
+      return [Math.round(r), Math.round(g), Math.round(b)];
+    }
+    if (name === 'terrain') {
+      if (t < 0.4) {  // water
+        const lt = t / 0.4;
+        return [Math.round(20 + lt * 30), Math.round(40 + lt * 60), Math.round(100 + lt * 100)];
+      } else if (t < 0.6) {  // grass
+        const lt = (t - 0.4) / 0.2;
+        return [Math.round(80 - lt * 30), Math.round(150 - lt * 40), Math.round(60 - lt * 30)];
+      } else if (t < 0.85) {  // mountains
+        const lt = (t - 0.6) / 0.25;
+        return [Math.round(110 + lt * 50), Math.round(90 + lt * 40), Math.round(60 + lt * 30)];
+      } else {  // snow
+        const lt = (t - 0.85) / 0.15;
+        return [Math.round(220 + lt * 35), Math.round(220 + lt * 35), Math.round(240 + lt * 15)];
+      }
+    }
+    return [Math.round(t * 255), Math.round(t * 255), Math.round(t * 255)];
+  }
+
+  // ============================================================
+  //   Texture types
+  // ============================================================
+  let currentType = 'perlin';
+  let params = {};
+  const TYPE_DEFS = {
+    perlin:   { params: [{ k: 'freq', label: '频率', min: 1, max: 32, step: 0.5, def: 4 }] },
+    fbm:      { params: [
+                  { k: 'freq', label: '频率', min: 1, max: 16, step: 0.5, def: 4 },
+                  { k: 'octaves', label: '倍频数', min: 1, max: 8, step: 1, def: 5 },
+                  { k: 'lacunarity', label: '间隙度', min: 1.5, max: 3, step: 0.1, def: 2 },
+                  { k: 'persistence', label: '持续度', min: 0.1, max: 0.9, step: 0.05, def: 0.5 }
+                ] },
+    ridged:   { params: [
+                  { k: 'freq', label: '频率', min: 1, max: 16, step: 0.5, def: 4 },
+                  { k: 'octaves', label: '倍频数', min: 1, max: 8, step: 1, def: 5 }
+                ] },
+    voronoi:  { params: [{ k: 'count', label: '点数', min: 5, max: 200, step: 1, def: 30 }] },
+    worley:   { params: [{ k: 'count', label: '点数', min: 5, max: 200, step: 1, def: 40 }] },
+    checker:  { params: [{ k: 'cells', label: '格子数', min: 2, max: 32, step: 1, def: 8 }] },
+    brick:    { params: [
+                  { k: 'bw', label: '砖宽', min: 16, max: 128, step: 4, def: 48 },
+                  { k: 'bh', label: '砖高', min: 8, max: 64, step: 2, def: 24 },
+                  { k: 'mortar', label: '砖缝', min: 1, max: 8, step: 1, def: 3 }
+                ] },
+    stripes:  { params: [
+                  { k: 'count', label: '条数', min: 2, max: 64, step: 1, def: 8 },
+                  { k: 'angle', label: '角度°', min: 0, max: 180, step: 5, def: 0 }
+                ] },
+    gradient: { params: [
+                  { k: 'angle', label: '角度°', min: 0, max: 360, step: 5, def: 90 },
+                  { k: 'curve', label: '曲线', min: 0.2, max: 5, step: 0.1, def: 1 }
+                ] }
+  };
+
+  function renderParams() {
+    const def = TYPE_DEFS[currentType];
+    const container = $('params');
+    container.innerHTML = '';
+    if (!def) return;
+    def.params.forEach(p => {
+      const wrap = document.createElement('label');
+      wrap.style.cssText = 'display:flex; flex-direction:column; gap:3px; color:var(--muted); font-size:11px';
+      wrap.innerHTML = `
+        ${p.label} <span class="val" style="color:var(--text); font-family:ui-monospace,Consolas,monospace; font-size:11px" id="val_${p.k}">${p.def}</span>
+        <input type="range" id="param_${p.k}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.def}" />
+      `;
+      container.appendChild(wrap);
+      params[p.k] = p.def;
+      wrap.querySelector('input').addEventListener('input', e => {
+        params[p.k] = parseFloat(e.target.value);
+        document.getElementById('val_' + p.k).textContent = params[p.k];
+        generate();
+      });
+    });
+  }
+
+  // ============================================================
+  //   Generate
+  // ============================================================
+  function generate() {
+    const size = parseInt($('size').value, 10);
+    const seed = parseInt($('seed').value, 10) || 0;
+    const tile = $('tileable').checked;
+    const cmap = $('colormap').value;
+    const c1 = hexToRgb($('color1').value);
+    const c2 = hexToRgb($('color2').value);
+
+    const cv = $('cv');
+    cv.width = size; cv.height = size;
+    cv.style.width  = Math.min(640, size) + 'px';
+    cv.style.height = Math.min(640, size) + 'px';
+    const ctx = cv.getContext('2d');
+    const id = ctx.createImageData(size, size);
+
+    const t0 = performance.now();
+
+    if (currentType === 'perlin' || currentType === 'fbm' || currentType === 'ridged') {
+      const freq = params.freq || 4;
+      const octaves = params.octaves || 5;
+      const lacunarity = params.lacunarity || 2;
+      const persistence = params.persistence || 0.5;
+      const perlin = makePerlin(seed);
+      const sample = (x, y) => {
+        if (currentType === 'perlin') return perlin(x * freq, y * freq);
+        // fbm / ridged: multi-octave sum
+        let amp = 1, fre = freq, sum = 0, max = 0;
+        for (let o = 0; o < octaves; o++) {
+          let n = perlin(x * fre, y * fre);
+          if (currentType === 'ridged') n = 1 - Math.abs(n - 0.5) * 2;
+          sum += n * amp;
+          max += amp;
+          amp *= persistence;
+          fre *= lacunarity;
+        }
+        return sum / max;
+      };
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          let nx = x / size, ny = y / size;
+          let v;
+          if (tile) {
+            // 4-corner blend for seamless tiling
+            const a = sample(nx, ny);
+            const b = sample(nx - 1, ny);
+            const c = sample(nx, ny - 1);
+            const d = sample(nx - 1, ny - 1);
+            v = a * (1 - nx) * (1 - ny) + b * nx * (1 - ny) + c * (1 - nx) * ny + d * nx * ny;
+          } else {
+            v = sample(nx, ny);
+          }
+          const [r, g, bl] = colormap(cmap, v, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    } else if (currentType === 'voronoi' || currentType === 'worley') {
+      const count = Math.floor(params.count || 30);
+      const v = makeVoronoi(seed, count);
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const val = v(x / size, y / size, currentType);
+          const [r, g, bl] = colormap(cmap, val, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    } else if (currentType === 'checker') {
+      const cells = Math.floor(params.cells || 8);
+      const sz = size / cells;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const cx = Math.floor(x / sz), cy = Math.floor(y / sz);
+          const v = (cx + cy) & 1;
+          const [r, g, bl] = colormap(cmap, v, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    } else if (currentType === 'brick') {
+      const bw = params.bw || 48, bh = params.bh || 24, mortar = params.mortar || 3;
+      for (let y = 0; y < size; y++) {
+        const row = Math.floor(y / bh);
+        const offset = (row & 1) ? bw / 2 : 0;
+        for (let x = 0; x < size; x++) {
+          const inMortar = (y % bh < mortar) || ((x + offset) % bw < mortar);
+          const v = inMortar ? 0 : 1;
+          const [r, g, bl] = colormap(cmap, v, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    } else if (currentType === 'stripes') {
+      const count = Math.floor(params.count || 8);
+      const angle = (params.angle || 0) * Math.PI / 180;
+      const cosA = Math.cos(angle), sinA = Math.sin(angle);
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const u = (x * cosA + y * sinA) / size * count;
+          const v = (Math.floor(u) & 1) ? 1 : 0;
+          const [r, g, bl] = colormap(cmap, v, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    } else if (currentType === 'gradient') {
+      const angle = (params.angle || 90) * Math.PI / 180;
+      const curve = params.curve || 1;
+      const cosA = Math.cos(angle), sinA = Math.sin(angle);
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          let u = (x * cosA + y * sinA) / size;
+          // normalize to [0,1] across full angle projection
+          u = (u + 1) / 2;
+          u = Math.pow(Math.max(0, Math.min(1, u)), curve);
+          const [r, g, bl] = colormap(cmap, u, c1, c2);
+          const i = (y * size + x) * 4;
+          id.data[i] = r; id.data[i+1] = g; id.data[i+2] = bl; id.data[i+3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(id, 0, 0);
+    const ms = (performance.now() - t0).toFixed(0);
+    $('metaType').textContent = currentType;
+    $('metaSize').textContent = `${size}×${size}`;
+    $('metaTime').textContent = `${ms} ms`;
+  }
+
+  // ============================================================
+  //   Wire UI
+  // ============================================================
+  document.querySelectorAll('.tx-type-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      currentType = b.dataset.t;
+      document.querySelectorAll('.tx-type-btn').forEach(x => x.classList.toggle('active', x === b));
+      renderParams();
+      generate();
+    });
+  });
+  $('size').addEventListener('change', generate);
+  $('seed').addEventListener('input', generate);
+  $('randomSeed').addEventListener('click', () => {
+    $('seed').value = Math.floor(Math.random() * 1000000);
+    generate();
+  });
+  $('color1').addEventListener('input', generate);
+  $('color2').addEventListener('input', generate);
+  $('colormap').addEventListener('change', generate);
+  $('tileable').addEventListener('change', generate);
+  $('downloadBtn').addEventListener('click', async () => {
+    const blob = await canvasToBlob($('cv'), 'image/png');
+    const name = ($('filename').value || 'texture').replace(/[^\w-]/g, '_');
+    const size = $('size').value;
+    download(blob, `${name}_${currentType}_${size}x${size}.png`);
+  });
+
+  renderParams();
+  generate();
+  log.ok('纹理生成器准备好');
+})();
+</script>
+</body>
+</html>
