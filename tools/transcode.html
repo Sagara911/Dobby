@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>🔁 万能转码 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .tx-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .tx-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 48px 28px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tx-drop:hover, .tx-drop.drag {
+    border-color: var(--accent);
+    background: rgba(var(--jade-rgb), 0.05);
+  }
+  .tx-drop .big { font-size: 60px; margin-bottom: 12px; }
+  .tx-drop .hint { font-size: 12px; margin-top: 8px; color: var(--muted-2); }
+
+  /* Source file info card */
+  .tx-src {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 14px;
+    align-items: center;
+  }
+  .tx-src .icon {
+    width: 56px; height: 56px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, rgba(var(--jade-rgb), 0.18), rgba(var(--jade-rgb), 0.04));
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .tx-src .info { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); line-height: 1.6; min-width: 0; overflow: hidden; }
+  .tx-src .info .name { color: var(--text); font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-src .info .meta { color: var(--muted-2); margin-top: 2px; }
+  .tx-src .swap-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    box-shadow: none;
+  }
+  .tx-src .swap-btn:hover { background: rgba(255,255,255,0.1); }
+
+  /* Format chooser */
+  .tx-formats {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .tx-formats h3 {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tx-format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .tx-format-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background 0.12s, border-color 0.12s;
+    text-align: center;
+    box-shadow: none;
+  }
+  .tx-format-btn .ext { font-weight: 700; font-size: 14px; color: var(--text); }
+  .tx-format-btn .desc { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+  .tx-format-btn:hover {
+    background: rgba(var(--jade-rgb), 0.10);
+    border-color: rgba(var(--jade-rgb), 0.5);
+  }
+  .tx-format-btn.active {
+    background: rgba(var(--jade-rgb), 0.18);
+    border-color: var(--accent);
+  }
+  .tx-format-btn.active .ext { color: var(--accent); }
+  .tx-format-btn[disabled] {
+    opacity: 0.35; cursor: not-allowed;
+  }
+
+  /* Common options row */
+  .tx-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .tx-options .field { display: flex; flex-direction: column; gap: 4px; }
+  .tx-options .field label { font-size: 11px; color: var(--muted); }
+  .tx-options .field input,
+  .tx-options .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .tx-options .field .val {
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  /* Go button */
+  .tx-go {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .tx-go button.primary {
+    background: rgba(var(--jade-rgb), 0.22);
+    border: 2px solid rgba(var(--jade-rgb), 0.6);
+    color: var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    flex: 1;
+  }
+  .tx-go button.primary:hover:not(:disabled) {
+    background: rgba(var(--jade-rgb), 0.32);
+    transform: translateY(-1px);
+  }
+  .tx-go button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Progress */
+  .tx-progress {
+    height: 6px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 3px;
+    overflow: hidden;
+    display: none;
+  }
+  .tx-progress.show { display: block; }
+  .tx-progress .bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+
+  /* Result card */
+  .tx-result {
+    background: rgba(var(--jade-rgb), 0.08);
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tx-result.show { display: flex; }
+  .tx-result .summary {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .tx-result .summary b { color: var(--accent); }
+  .tx-result .summary .saved { color: #ffd07a; }
+  .tx-result .summary .grown { color: #ff8080; }
+  .tx-result .preview {
+    background: #0a0a0c;
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 280px;
+    overflow: hidden;
+  }
+  .tx-result .preview img, .tx-result .preview video, .tx-result .preview audio {
+    max-width: 100%;
+    max-height: 260px;
+    display: block;
+  }
+  .tx-result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tx-result-actions button {
+    background: rgba(var(--jade-rgb), 0.18);
+    border: 1px solid rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    box-shadow: none;
+  }
+  .tx-result-actions button:hover { background: rgba(var(--jade-rgb), 0.28); }
+
+  h2 { font-size: 11px; margin-top: 14px; }
+  .tx-help { font-size: 10px; color: var(--muted); line-height: 1.6; }
+
+  .tx-unknown {
+    background: rgba(255, 128, 80, 0.08);
+    border: 1px solid rgba(255, 128, 80, 0.3);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .tx-unknown strong { color: #ff8050; }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🔁 万能转码</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+      <strong style="color:var(--accent)">一站转码</strong> · 拖文件进来,自动认类型,直接给出目标格式 → 一键转完。所有处理在浏览器本地。
+    </div>
+
+    <h2>支持的转换</h2>
+    <div class="tx-help">
+      🖼️ <strong>图片</strong>:PNG / JPEG / WebP / AVIF 互转<br/>
+      🎬 <strong>视频</strong>:MP4 / WebM 互转<br/>
+      🔊 <strong>音频</strong>:任意输入(MP3 / OGG / FLAC / M4A / WAV) → WAV / Opus(WebM)<br/>
+      🎞️ <strong>动图</strong>:GIF / APNG(转给 GIF 工具)<br/>
+      📄 <strong>其它</strong>:base64 / SVG → PNG(转给对应工具)
+    </div>
+
+    <h2>没支持的格式</h2>
+    <div class="tx-help">
+      ❌ HEIC / HEIF(浏览器解码受限)<br/>
+      ❌ MP3 编码(没装 LAME,要装 ~100KB 首次加载,看反馈再做)<br/>
+      ❌ MKV / FLV(浏览器不直接解封装)<br/>
+      ❌ WOFF / WOFF2 字体互转(在 font-subset 里做子集)
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">拖任意文件进来,Dobby 自动识别并给出转码选项</div>
+
+    <div class="tx-stage">
+      <!-- DROP ZONE -->
+      <div class="tx-drop" id="drop">
+        <div class="big">🔁</div>
+        <div>拖入或点击选择文件</div>
+        <div class="hint">图片 · 视频 · 音频 · 动图都行,自动识别类型</div>
+        <input type="file" id="fileInput" style="display:none">
+      </div>
+
+      <!-- SOURCE INFO + FORMAT OPTIONS (shown after file drop) -->
+      <div class="tx-src" id="srcCard" style="display:none">
+        <div class="icon" id="srcIcon">📄</div>
+        <div class="info">
+          <div class="name" id="srcName">—</div>
+          <div class="meta" id="srcMeta">—</div>
+        </div>
+        <button class="swap-btn" id="swapBtn">🔄 换一个</button>
+      </div>
+
+      <div class="tx-formats" id="fmtCard" style="display:none">
+        <h3 id="fmtTitle">输出格式</h3>
+        <div class="tx-format-grid" id="fmtGrid"></div>
+        <div class="tx-options" id="optsRow"></div>
+      </div>
+
+      <div class="tx-go" id="goRow" style="display:none">
+        <button class="primary" id="goBtn">🚀 开始转码</button>
+        <div class="tx-progress" id="progress"><div class="bar" id="progBar"></div></div>
+      </div>
+
+      <!-- Unknown type fallback -->
+      <div class="tx-unknown" id="unknownCard" style="display:none">
+        <strong id="unknownTitle">这个文件 Dobby 不会自己转</strong>
+        <div id="unknownBody" style="margin-top:6px"></div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="tx-result" id="resultCard">
+        <div class="summary" id="resultSummary"></div>
+        <div class="preview" id="resultPreview"></div>
+        <div class="tx-result-actions">
+          <button id="downloadBtn">💾 下载</button>
+          <button id="reuseBtn">↻ 当输入再转</button>
+          <button id="clearBtn" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text)">🗑️ 清空</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('transcode');
+
+(() => {
+  const { $, makeLogger, download, fmtBytes, attachDropZone, sendTo } = Toolkit;
+  const log = makeLogger($('log'));
+  const handoff = Toolkit.setupHandoff('transcode', { outputType: 'application/octet-stream' });
+
+  // ─── State ────────────────────────────────────────────────────────
+  let srcFile = null;       // current source File
+  let srcMode = null;       // 'image' | 'video' | 'audio' | null
+  let srcMeta = {};         // dims / duration / mime
+  let outBlob = null;       // last output Blob
+  let outName = '';         // output filename
+  let selectedFormat = null; // 'png' | 'jpeg' | ...
+
+  // ─── Format catalogs ──────────────────────────────────────────────
+  const IMAGE_FORMATS = [
+    { id: 'png',  mime: 'image/png',  ext: 'png',  desc: '无损,带透明' },
+    { id: 'jpeg', mime: 'image/jpeg', ext: 'jpg',  desc: '有损,体积最小' },
+    { id: 'webp', mime: 'image/webp', ext: 'webp', desc: '有损/无损,新一代' },
+    { id: 'avif', mime: 'image/avif', ext: 'avif', desc: '比 WebP 更小' },
+  ];
+  const VIDEO_FORMATS = [
+    { id: 'mp4',  mime: 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', ext: 'mp4',  desc: 'H.264 兼容广' },
+    { id: 'mp4h', mime: 'video/mp4;codecs=avc1.640028,mp4a.40.2', ext: 'mp4',  desc: 'H.264 High 体积小' },
+    { id: 'vp9',  mime: 'video/webm;codecs=vp9,opus',             ext: 'webm', desc: 'VP9 + Opus' },
+    { id: 'vp8',  mime: 'video/webm;codecs=vp8,opus',             ext: 'webm', desc: 'VP8 + Opus 老兼容' },
+  ];
+  const AUDIO_FORMATS = [
+    { id: 'wav-16', mime: 'audio/wav',         ext: 'wav',  desc: '16-bit PCM 无损' },
+    { id: 'wav-8',  mime: 'audio/wav',         ext: 'wav',  desc: '8-bit 体积减半' },
+    { id: 'opus',   mime: 'audio/webm;codecs=opus', ext: 'webm', desc: '有损,体积最小' },
+  ];
+
+  // ─── File acceptance ──────────────────────────────────────────────
+  attachDropZone($('drop'), $('fileInput'), files => {
+    if (files.length) loadFile(files[0]);
+  });
+
+  $('swapBtn').addEventListener('click', () => $('fileInput').click());
+
+  async function loadFile(f) {
+    srcFile = f;
+    outBlob = null;
+    outName = '';
+    selectedFormat = null;
+    $('resultCard').classList.remove('show');
+    $('progress').classList.remove('show');
+    log.clear();
+    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+
+    const mode = detectMode(f);
+    srcMode = mode;
+    $('srcCard').style.display = '';
+    $('srcName').textContent = f.name;
+    $('drop').style.display = 'none';
+
+    if (mode === 'image') {
+      await prepImage(f);
+    } else if (mode === 'video') {
+      await prepVideo(f);
+    } else if (mode === 'audio') {
+      await prepAudio(f);
+    } else {
+      $('srcIcon').textContent = '❓';
+      $('srcMeta').textContent = (f.type || '未知类型') + ' · ' + fmtBytes(f.size);
+      $('fmtCard').style.display = 'none';
+      $('goRow').style.display = 'none';
+      $('unknownCard').style.display = '';
+      $('unknownTitle').textContent = '这个文件类型 Dobby 不直接支持转码';
+      $('unknownBody').innerHTML = explainUnknown(f);
+      log.warn('未识别类型: ' + (f.type || f.name.split('.').pop()));
+      return;
+    }
+    $('unknownCard').style.display = 'none';
+    $('fmtCard').style.display = '';
+    $('goRow').style.display = 'flex';
+    renderFormatChoices();
+  }
+
+  function detectMode(f) {
+    const t = (f.type || '').toLowerCase();
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    // GIF / APNG: route to dedicated tool instead — they have animation
+    if (ext === 'gif' || t === 'image/gif' || ext === 'apng') return 'gif';
+    if (t.startsWith('image/') || ['png','jpg','jpeg','webp','bmp','avif','heic'].includes(ext)) return 'image';
+    if (t.startsWith('video/') || ['mp4','webm','mov','m4v','mkv','flv','avi','ogv'].includes(ext)) return 'video';
+    if (t.startsWith('audio/') || ['mp3','wav','ogg','flac','m4a','aac','opus','wma'].includes(ext)) return 'audio';
+    return null;
+  }
+
+  function explainUnknown(f) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (['heic','heif'].includes(ext)) {
+      return 'HEIC / HEIF 是 Apple 拍照格式,浏览器无法解码。手机里相册导出时改成 JPEG 或 PNG 再来,或用专门的 HEIC → JPEG 工具(没装在 Dobby 里)。';
+    }
+    if (['mkv','flv','avi'].includes(ext)) {
+      return `${ext.toUpperCase()} 浏览器不直接支持解封装。先用 ffmpeg / HandBrake 转成 MP4 / WebM 再来转码。`;
+    }
+    if (['wma','aac'].includes(ext) && f.type === '') {
+      return `${ext.toUpperCase()} 浏览器可能无法解码,试试拖到「🔊 音频压缩」工具,失败的话先用别的工具转 MP3 / WAV 再来。`;
+    }
+    return `Dobby 不认识这个文件类型(扩展名 .${ext} / mime ${f.type || '未知'})。如果你确认这是常见格式(图片 / 视频 / 音频),可能是扩展名错了。`;
+  }
+
+  // ─── Mode prep: read metadata + show source meta line ──────────────
+  async function prepImage(f) {
+    $('srcIcon').textContent = '🖼️';
+    try {
+      const bm = await createImageBitmap(f);
+      srcMeta = { w: bm.width, h: bm.height };
+      $('srcMeta').textContent = `图片 · ${bm.width}×${bm.height} · ${f.type || 'image/*'} · ${fmtBytes(f.size)}`;
+      // We'll re-decode in processImage; close this one
+      bm.close?.();
+    } catch (e) {
+      $('srcMeta').textContent = '图片解码失败: ' + e.message;
+      log.err('图片解码失败: ' + e.message);
+    }
+  }
+
+  async function prepVideo(f) {
+    $('srcIcon').textContent = '🎬';
+    const url = URL.createObjectURL(f);
+    const v = document.createElement('video');
+    v.src = url; v.muted = true; v.preload = 'metadata';
+    await new Promise((resolve, reject) => {
+      v.onloadedmetadata = resolve;
+      v.onerror = () => reject(new Error('视频解码失败'));
+    }).catch(e => log.warn(e.message));
+    srcMeta = { w: v.videoWidth, h: v.videoHeight, duration: v.duration, url };
+    $('srcMeta').textContent = `视频 · ${v.videoWidth}×${v.videoHeight} · ${v.duration.toFixed(1)}s · ${f.type || 'video/*'} · ${fmtBytes(f.size)}`;
+  }
+
+  async function prepAudio(f) {
+    $('srcIcon').textContent = '🔊';
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('audio');
+    a.src = url; a.preload = 'metadata';
+    await new Promise((resolve) => { a.onloadedmetadata = resolve; a.onerror = resolve; });
+    srcMeta = { duration: a.duration, url };
+    $('srcMeta').textContent = `音频 · ${isFinite(a.duration) ? a.duration.toFixed(1) + 's' : '时长未知'} · ${f.type || 'audio/*'} · ${fmtBytes(f.size)}`;
+  }
+
+  // ─── Format chooser UI ────────────────────────────────────────────
+  function renderFormatChoices() {
+    const grid = $('fmtGrid');
+    grid.innerHTML = '';
+    let formats, defaultFmt;
+    if (srcMode === 'image') { formats = IMAGE_FORMATS; defaultFmt = 'webp'; }
+    else if (srcMode === 'video') { formats = VIDEO_FORMATS; defaultFmt = 'mp4'; }
+    else if (srcMode === 'audio') { formats = AUDIO_FORMATS; defaultFmt = 'wav-16'; }
+    else if (srcMode === 'gif') {
+      $('fmtCard').style.display = 'none';
+      $('goRow').style.display = 'none';
+      $('unknownCard').style.display = '';
+      $('unknownTitle').textContent = '🎞️ 这是动图';
+      $('unknownBody').innerHTML = `<a href="gif-tools.html" style="color:var(--accent); text-decoration:underline">→ 用 GIF 工具(可在 GIF ↔ APNG 间转,还能调速 / 缩放 / 优化)</a>,或继续把它当静态图首帧:`;
+      // still allow image conversion path on first frame
+      return;
+    }
+    formats.forEach(fm => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tx-format-btn';
+      btn.dataset.id = fm.id;
+      // Disable identity conversion (e.g. PNG → PNG)
+      const srcExt = (srcFile.name.split('.').pop() || '').toLowerCase();
+      const isIdentity = (srcMode === 'image' && srcExt === fm.ext && srcFile.type === fm.mime)
+        || (srcMode === 'audio' && srcExt === fm.ext);
+      btn.innerHTML = `<div class="ext">${fm.ext.toUpperCase()}</div><div class="desc">${fm.desc}</div>`;
+      if (isIdentity) {
+        btn.disabled = true;
+        btn.title = '跟源格式一样,没必要转';
+      }
+      btn.addEventListener('click', () => selectFormat(fm.id));
+      grid.appendChild(btn);
+    });
+    selectFormat(defaultFmt);
+  }
+
+  function selectFormat(id) {
+    selectedFormat = id;
+    [...$('fmtGrid').children].forEach(b => b.classList.toggle('active', b.dataset.id === id && !b.disabled));
+    renderOptions(id);
+  }
+
+  function renderOptions(id) {
+    const row = $('optsRow');
+    row.innerHTML = '';
+    if (srcMode === 'image') {
+      // Quality slider for lossy formats; size-keep options
+      const needQuality = ['jpeg', 'webp', 'avif'].includes(id);
+      if (needQuality) {
+        row.innerHTML = `
+          <div class="field">
+            <label>质量 <span class="val" id="qualityVal">85</span> / 100</label>
+            <input type="range" id="quality" min="40" max="100" value="85">
+          </div>
+          <div class="field">
+            <label>最大边 (px, 0=不缩放)</label>
+            <input type="number" id="maxDim" value="0" min="0">
+          </div>
+        `;
+        $('quality').addEventListener('input', e => $('qualityVal').textContent = e.target.value);
+      } else {
+        row.innerHTML = `
+          <div class="field">
+            <label>最大边 (px, 0=不缩放)</label>
+            <input type="number" id="maxDim" value="0" min="0">
+          </div>
+        `;
+      }
+    } else if (srcMode === 'video') {
+      row.innerHTML = `
+        <div class="field">
+          <label>比特率 (Kbps) — 越高越清晰</label>
+          <input type="number" id="vBitrate" value="3000" min="200" max="50000">
+        </div>
+        <div class="field">
+          <label>音频比特率 (Kbps)</label>
+          <input type="number" id="aBitrate" value="128" min="32" max="320">
+        </div>
+      `;
+    } else if (srcMode === 'audio') {
+      if (id === 'opus') {
+        row.innerHTML = `
+          <div class="field">
+            <label>比特率 (Kbps) — 64 通话音 / 96-128 音乐够</label>
+            <input type="number" id="aBitrate" value="96" min="32" max="320">
+          </div>
+        `;
+      } else {
+        row.innerHTML = `
+          <div class="field">
+            <label>采样率 (Hz, 0=保持原始)</label>
+            <select id="aSampleRate">
+              <option value="0" selected>保持原始</option>
+              <option value="48000">48000 (高质量)</option>
+              <option value="44100">44100 (CD)</option>
+              <option value="22050">22050 (语音)</option>
+              <option value="16000">16000 (语音/小)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>声道</label>
+            <select id="aChannels">
+              <option value="0" selected>保持原始</option>
+              <option value="1">单声道(体积减半)</option>
+              <option value="2">立体声</option>
+            </select>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // ─── Processing pipelines ─────────────────────────────────────────
+  $('goBtn').addEventListener('click', go);
+
+  async function go() {
+    if (!srcFile || !selectedFormat) return;
+    $('goBtn').disabled = true;
+    $('progress').classList.add('show');
+    $('progBar').style.width = '5%';
+    $('resultCard').classList.remove('show');
+    outBlob = null;
+    const t0 = performance.now();
+    try {
+      if (srcMode === 'image') await processImage();
+      else if (srcMode === 'video') await processVideo();
+      else if (srcMode === 'audio') await processAudio();
+      const dt = ((performance.now() - t0) / 1000).toFixed(2);
+      log.ok(`转码完成 · 用时 ${dt}s · ${fmtBytes(outBlob.size)}`);
+      showResult();
+    } catch (e) {
+      log.err('转码失败: ' + e.message);
+      console.error(e);
+    } finally {
+      $('goBtn').disabled = false;
+      $('progress').classList.remove('show');
+    }
+  }
+
+  // — IMAGE — canvas.toBlob handles all 4 formats with the same call
+  async function processImage() {
+    const fm = IMAGE_FORMATS.find(f => f.id === selectedFormat);
+    const bm = await createImageBitmap(srcFile);
+    const maxDim = parseInt($('maxDim')?.value || '0', 10);
+    let w = bm.width, h = bm.height;
+    if (maxDim > 0 && Math.max(w, h) > maxDim) {
+      const s = maxDim / Math.max(w, h);
+      w = Math.round(w * s); h = Math.round(h * s);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bm, 0, 0, w, h);
+    $('progBar').style.width = '50%';
+    const quality = parseInt($('quality')?.value || '92', 10) / 100;
+    const blob = await new Promise((res, rej) => {
+      canvas.toBlob(b => b ? res(b) : rej(new Error(`${fm.mime} 编码失败 — 浏览器可能不支持 ${fm.id.toUpperCase()}`)),
+                    fm.mime, ['jpeg','webp','avif'].includes(fm.id) ? quality : undefined);
+    });
+    // Magic check
+    const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+    if (fm.id === 'png' && !(head[0]===0x89 && head[1]===0x50 && head[2]===0x4E && head[3]===0x47))
+      throw new Error('PNG magic 校验失败');
+    if (fm.id === 'jpeg' && !(head[0]===0xFF && head[1]===0xD8))
+      throw new Error('JPEG magic 校验失败');
+    if (fm.id === 'webp' && !(head[8]===0x57 && head[9]===0x45 && head[10]===0x42 && head[11]===0x50))
+      throw new Error('WebP magic 校验失败');
+    outBlob = blob;
+    outName = `${baseName(srcFile.name)}.${fm.ext}`;
+    $('progBar').style.width = '100%';
+    bm.close?.();
+  }
+
+  // — AUDIO — decode via AudioContext, encode to WAV (custom) or Opus (MediaRecorder)
+  async function processAudio() {
+    const fm = AUDIO_FORMATS.find(f => f.id === selectedFormat);
+    const arrayBuf = await srcFile.arrayBuffer();
+    $('progBar').style.width = '20%';
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = await ctx.decodeAudioData(arrayBuf.slice(0));
+    $('progBar').style.width = '50%';
+    // Optionally resample / downmix
+    let target = buf;
+    const wantSR = parseInt($('aSampleRate')?.value || '0', 10) || buf.sampleRate;
+    const wantCh = parseInt($('aChannels')?.value || '0', 10) || buf.numberOfChannels;
+    if (wantSR !== buf.sampleRate || wantCh !== buf.numberOfChannels) {
+      const off = new OfflineAudioContext(wantCh, Math.ceil(buf.duration * wantSR), wantSR);
+      const src = off.createBufferSource();
+      src.buffer = buf;
+      src.connect(off.destination);
+      src.start();
+      target = await off.startRendering();
+    }
+    $('progBar').style.width = '70%';
+    if (fm.id === 'wav-16') {
+      outBlob = encodeWav(target, 16);
+    } else if (fm.id === 'wav-8') {
+      outBlob = encodeWav(target, 8);
+    } else if (fm.id === 'opus') {
+      const aBitrate = parseInt($('aBitrate')?.value || '96', 10) * 1000;
+      outBlob = await encodeOpus(target, aBitrate);
+    }
+    outName = `${baseName(srcFile.name)}.${fm.ext}`;
+    $('progBar').style.width = '100%';
+    ctx.close?.();
+  }
+
+  // WAV PCM encoder. Supports 8-bit unsigned and 16-bit signed.
+  function encodeWav(audioBuffer, bitsPerSample) {
+    const nCh = audioBuffer.numberOfChannels;
+    const sr = audioBuffer.sampleRate;
+    const samples = audioBuffer.length;
+    const bytesPerSample = bitsPerSample / 8;
+    const dataSize = samples * nCh * bytesPerSample;
+    const buf = new ArrayBuffer(44 + dataSize);
+    const v = new DataView(buf);
+    function str(off, s) { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); }
+    str(0, 'RIFF'); v.setUint32(4, 36 + dataSize, true);
+    str(8, 'WAVE'); str(12, 'fmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);         // PCM
+    v.setUint16(22, nCh, true);
+    v.setUint32(24, sr, true);
+    v.setUint32(28, sr * nCh * bytesPerSample, true);
+    v.setUint16(32, nCh * bytesPerSample, true);
+    v.setUint16(34, bitsPerSample, true);
+    str(36, 'data'); v.setUint32(40, dataSize, true);
+    const chans = [];
+    for (let c = 0; c < nCh; c++) chans.push(audioBuffer.getChannelData(c));
+    let off = 44;
+    if (bitsPerSample === 16) {
+      for (let i = 0; i < samples; i++) {
+        for (let c = 0; c < nCh; c++) {
+          const s = Math.max(-1, Math.min(1, chans[c][i]));
+          v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          off += 2;
+        }
+      }
+    } else {
+      // 8-bit unsigned
+      for (let i = 0; i < samples; i++) {
+        for (let c = 0; c < nCh; c++) {
+          const s = Math.max(-1, Math.min(1, chans[c][i]));
+          v.setUint8(off, Math.round((s + 1) * 127.5));
+          off += 1;
+        }
+      }
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+
+  // Opus encoder via MediaRecorder over a streamed AudioBuffer
+  async function encodeOpus(audioBuffer, bitrate) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: audioBuffer.sampleRate });
+    const dst = ctx.createMediaStreamDestination();
+    const src = ctx.createBufferSource();
+    src.buffer = audioBuffer;
+    src.connect(dst);
+    const mime = 'audio/webm;codecs=opus';
+    if (!MediaRecorder.isTypeSupported(mime)) throw new Error('浏览器不支持 Opus 编码');
+    const rec = new MediaRecorder(dst.stream, { mimeType: mime, audioBitsPerSecond: bitrate });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(res => rec.onstop = res);
+    rec.start();
+    src.start();
+    await new Promise(r => setTimeout(r, audioBuffer.duration * 1000 + 200));
+    rec.stop();
+    await done;
+    await ctx.close();
+    return new Blob(chunks, { type: 'audio/webm' });
+  }
+
+  // — VIDEO — render frames to canvas + capture via MediaRecorder
+  async function processVideo() {
+    const fm = VIDEO_FORMATS.find(f => f.id === selectedFormat);
+    if (!MediaRecorder.isTypeSupported(fm.mime)) {
+      throw new Error(`浏览器不支持 ${fm.ext.toUpperCase()} (${fm.id}) 编码`);
+    }
+    const v = document.createElement('video');
+    v.src = srcMeta.url; v.muted = false; v.crossOrigin = 'anonymous';
+    await new Promise(r => v.onloadedmetadata = r);
+
+    const W = v.videoWidth, H = v.videoHeight;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Capture video frames via canvas
+    const canvasStream = canvas.captureStream(30);
+    // Pull audio via MediaElementSource → MediaStreamDestination, then merge
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = audioCtx.createMediaStreamDestination();
+    try {
+      const aSrc = audioCtx.createMediaElementSource(v);
+      aSrc.connect(dest);
+      // Don't connect to ctx.destination so the user doesn't hear loud audio
+    } catch (e) {
+      log.warn('音频路由失败,输出可能没声音: ' + e.message);
+    }
+    const combined = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...dest.stream.getAudioTracks()
+    ]);
+
+    const vBitrate = parseInt($('vBitrate')?.value || '3000', 10) * 1000;
+    const aBitrate = parseInt($('aBitrate')?.value || '128', 10) * 1000;
+    const rec = new MediaRecorder(combined, {
+      mimeType: fm.mime,
+      videoBitsPerSecond: vBitrate,
+      audioBitsPerSecond: aBitrate
+    });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(res => rec.onstop = res);
+
+    rec.start(1000);
+    // Render frames in a RAF loop while video plays
+    let raf = 0;
+    function frame() {
+      if (v.paused || v.ended) return;
+      ctx.drawImage(v, 0, 0, W, H);
+      const pct = Math.min(0.95, v.currentTime / srcMeta.duration);
+      $('progBar').style.width = Math.round(pct * 100) + '%';
+      raf = requestAnimationFrame(frame);
+    }
+    v.onplaying = () => { raf = requestAnimationFrame(frame); };
+    v.onended = () => { cancelAnimationFrame(raf); rec.stop(); };
+    v.onerror = () => { cancelAnimationFrame(raf); rec.stop(); };
+    await v.play();
+    await done;
+    await audioCtx.close();
+    outBlob = new Blob(chunks, { type: fm.mime.split(';')[0] });
+    // Magic-byte sanity
+    const head = new Uint8Array(await outBlob.slice(0, 8).arrayBuffer());
+    if (fm.ext === 'webm' && !(head[0]===0x1A && head[1]===0x45 && head[2]===0xDF && head[3]===0xA3))
+      throw new Error('WebM magic 校验失败');
+    // MP4 magic check (ftyp box at offset 4)
+    if (fm.ext === 'mp4' && !(head[4]===0x66 && head[5]===0x74 && head[6]===0x79 && head[7]===0x70))
+      log.warn('MP4 magic 校验弱(浏览器有时不会写 ftyp 头),先信浏览器');
+    outName = `${baseName(srcFile.name)}.${fm.ext}`;
+    $('progBar').style.width = '100%';
+  }
+
+  // ─── Result rendering + actions ───────────────────────────────────
+  function showResult() {
+    const card = $('resultCard');
+    card.classList.add('show');
+    const srcSize = srcFile.size;
+    const outSize = outBlob.size;
+    const ratio = outSize / srcSize;
+    const pct = ((1 - ratio) * 100).toFixed(1);
+    const sign = ratio < 1 ? '−' : '+';
+    const cls = ratio < 1 ? 'saved' : 'grown';
+    $('resultSummary').innerHTML =
+      `${srcMode === 'image' ? '🖼️' : srcMode === 'video' ? '🎬' : '🔊'} ` +
+      `<b>${outName}</b> · ${fmtBytes(outSize)} · 源 ${fmtBytes(srcSize)} · ` +
+      `<span class="${cls}">${sign}${Math.abs(pct)}%</span>`;
+    // Preview
+    const prev = $('resultPreview');
+    prev.innerHTML = '';
+    const url = URL.createObjectURL(outBlob);
+    if (srcMode === 'image') {
+      const img = document.createElement('img');
+      img.src = url;
+      prev.appendChild(img);
+    } else if (srcMode === 'video') {
+      const vid = document.createElement('video');
+      vid.src = url; vid.controls = true;
+      prev.appendChild(vid);
+    } else if (srcMode === 'audio') {
+      const a = document.createElement('audio');
+      a.src = url; a.controls = true;
+      prev.appendChild(a);
+    }
+    // Wire handoff so user can chain to next tool
+    handoff?.setBlob(outBlob, outName, outBlob.type);
+  }
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (outBlob) download(outBlob, outName);
+  });
+  $('reuseBtn').addEventListener('click', () => {
+    if (!outBlob) return;
+    const f = new File([outBlob], outName, { type: outBlob.type });
+    loadFile(f);
+  });
+  $('clearBtn').addEventListener('click', () => {
+    srcFile = null;
+    outBlob = null;
+    selectedFormat = null;
+    srcMode = null;
+    $('srcCard').style.display = 'none';
+    $('fmtCard').style.display = 'none';
+    $('goRow').style.display = 'none';
+    $('unknownCard').style.display = 'none';
+    $('resultCard').classList.remove('show');
+    $('drop').style.display = '';
+    log.clear();
+    handoff?.clear();
+  });
+
+  function baseName(filename) {
+    return filename.replace(/\.[^.]+$/, '').replace(/[^\w一-龥-]/g, '_');
+  }
+
+  log.ok('万能转码准备好 — 拖个文件进来');
+})();
+</script>
+</body>
+</html>

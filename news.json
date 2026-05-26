@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "dobby-v41",
+      "date": "2026-05-26",
+      "title": "🔁 万能转码 — 一站搞定图片/视频/音频格式转换",
+      "items": [
+        "新工具 `🔁 万能转码`(代码类),拖任意文件进去 → 自动认类型 → 直接给出目标格式选项 → 一键转完。**操作流程从「打开 X 工具 → 找对动作 → 改输出格式 → 应用」**4 步**压成 2 步**",
+        "**🖼️ 图片** — PNG / JPEG / WebP / AVIF 互转。可选最大边缩放,有损格式给质量滑块(40-100)。源格式自动 disable(PNG → PNG 没必要)",
+        "**🎬 视频** — MP4(H.264 Baseline / High)/ WebM(VP9 / VP8)互转。Canvas 重渲染 + MediaRecorder 录制,音频走 MediaElementSource 路由保留原音轨。比特率可调",
+        "**🔊 音频** — 任意输入(MP3/OGG/FLAC/M4A/AAC/WAV)→ WAV(16-bit / 8-bit 自实现 PCM 编码器)/ Opus(WebM via MediaRecorder)。可改采样率 / 声道数",
+        "**🎞️ GIF/APNG** 识别后引导到 GIF 工具(动图需要专门的帧编码,不在转码工具范围)",
+        "**❌ 浏览器不支持的格式**(HEIC / MKV / FLV / WOFF / MP3 编码)给明确提示和绕路建议,不会假装能转然后失败",
+        "结果带 magic-byte 校验(PNG 89504E47 / JPEG FFD8 / WebP RIFF...WEBP / MP4 ftyp / WebM 1A45DFA3),宁可报错也不输出垃圾文件。**Dobby 现在 45 个工具**"
+      ]
+    },
+    {
       "version": "dobby-v40",
       "date": "2026-05-26",
       "title": "📺 屏幕录制加 MP4 输出 + 🎬 视频处理加「转码」入口",

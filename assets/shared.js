@@ -158,6 +158,7 @@
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
     { id: 'batch-rename',   cat: 'code',  name: '批量重命名',     en: 'Batch Rename',    icon: '🏷️', href: 'tools/batch-rename.html',   desc: '模板 + 查找替换 + 序号补零,实时预览冲突高亮,导出 ZIP' },
     { id: 'pdf-tools',      cat: 'code',  name: 'PDF 工具包',     en: 'PDF Tools',       icon: '📄', href: 'tools/pdf-tools.html',      desc: 'PDF 合并 / 拆分 / 提图 / 重压缩,pdf-lib + pdf.js,全本地' },
+    { id: 'transcode',      cat: 'code',  name: '万能转码',       en: 'Transcode',       icon: '🔁', href: 'tools/transcode.html',      desc: '图片 / 视频 / 音频一站转格式,拖进去自动认类型,一键转完' },
     // 分析 / 诊断
     { id: 'bundle-analyzer',cat: 'audit', name: '包体分析',       en: 'Bundle Analyzer', icon: '📊', href: 'tools/bundle-analyzer.html', desc: '扫描项目目录,显示类别分布 + 大文件清单' },
     { id: 'channel-check',  cat: 'audit', name: '渠道检查',       en: 'Channel Check',   icon: '✅', href: 'tools/channel-check.html', desc: 'Facebook / Google / TikTok 等渠道规范校验' },
@@ -313,6 +314,11 @@
       '选字符集和字号(如 6×8 / 8×16), 左侧字符列表点字开始画',
       '编辑区一格一像素, 拖动批量绘制; 洋葱皮显示上一个字便于对齐',
       '导出 BDF(嵌入式) / TTF(网页/游戏) / PNG 雪碧图(Phaser/Pixi)'
+    ],
+    'transcode': [
+      '拖任意文件进来 — 图片 / 视频 / 音频自动识别类型',
+      '选目标格式(图片 PNG/JPEG/WebP/AVIF · 视频 MP4/WebM · 音频 WAV/Opus)',
+      '点「🚀 开始转码」 — 完成后可下载、当输入再转一次,或送下一个工具'
     ]
   };
 
