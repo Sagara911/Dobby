@@ -614,26 +614,23 @@
     margin: 0 auto;
   }
 
-  /* scroll hint at bottom of hero — gentle nudge that there's content below */
+  /* scroll hint — own block between hero and tools-section so it never
+     overlaps with chips (which wrap into 2 rows on narrow viewports) */
   .hero-scroll-hint {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: var(--muted);
-    text-decoration: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
     font-size: 16px;
     animation: hero-bounce 2.2s ease-in-out infinite;
     transition: border-color 0.15s, color 0.15s, background 0.15s;
-    margin: 0;
   }
   .hero-scroll-hint:hover {
     border-color: rgba(var(--jade-rgb), 0.5);
@@ -641,8 +638,8 @@
     background: rgba(var(--jade-rgb), 0.08);
   }
   @keyframes hero-bounce {
-    0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.55; }
-    50%      { transform: translateX(-50%) translateY(5px); opacity: 1; }
+    0%, 100% { transform: translateY(0); opacity: 0.55; }
+    50%      { transform: translateY(5px); opacity: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
     .hero-scroll-hint { animation: none; }
@@ -765,7 +762,7 @@
     }
     .hero-cat-chips a .chip-count { display: none; }
     /* scroll hint smaller on phone */
-    .hero-scroll-hint { width: 32px; height: 32px; font-size: 14px; bottom: 12px; }
+    .hero-scroll-hint { width: 32px; height: 32px; font-size: 14px; }
     /* news modal: full-width, smaller padding */
     .news-card { padding: 16px 16px 14px; max-height: 80vh; }
     .news-head { gap: 8px; margin-bottom: 14px; }
@@ -788,10 +785,11 @@
       <button class="clear" id="searchClear" type="button" data-i18n-attr="aria-label:home.search.clear" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
-    <a class="hero-scroll-hint" href="#cat-image" aria-label="向下看工具">
-      <span class="arrow">↓</span>
-    </a>
   </section>
+
+  <a class="hero-scroll-hint" href="#cat-image" aria-label="向下看工具">
+    <span class="arrow">↓</span>
+  </a>
 
   <section class="tools-section" id="toolsSection"></section>
 </main>
