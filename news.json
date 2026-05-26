@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v44",
+      "date": "2026-05-26",
+      "title": "🧦 首页 Hero v3 极简化 — 一眼就看到 Dobby",
+      "items": [
+        "灵感来自 Eagle.cool / Notion / Linear 的 minimal landing 模式。**第一屏现在 90vh 只有 4 件东西:大 🧦 mascot、超大 \"Dobby\" 标题、一句 tagline、向下箭头**。其他全部下放",
+        "原 hero 里的搜索框 + 5 个分类 chips → 移到 tools-section 上方,变成专门的 `.tools-header` 容器。滚一下就到,不影响功能,但首屏完全没有视觉噪声",
+        "**移除:** `.hero-tag` 那个小药丸(\"🧦 Dobby is free · 本地素材精灵\") — 信息被 mascot + tagline 取代;原 `renderHeroSub` 那一段把工具数量塞进 hero 的 JS 也删了,工具数信息不再属于首屏",
+        "**新增:** 巨大 mascot 带 4.2s 的轻微 bob 动画 + jade green drop-shadow。h1 字号从 clamp(2.6rem, 8vw, 5rem) 升到 clamp(4rem, 14vw, 9rem) — 桌面下 \"Dobby\" 三个字几乎 100px 大",
+        "Mobile (≤480px) hero 占 82vh,mascot ~100px,h1 ~72px — 都按比例缩,arrow 仍在视口内提示往下滚",
+        "代价:回访用户每次需要多滚一下才到工具列表。换来的是新访客\"哇一下\"的品牌印象 + 视觉减负。本来你自己也说\"工具太多了\",首屏先静下来反而好"
+      ]
+    },
+    {
       "version": "dobby-v43",
       "date": "2026-05-26",
       "title": "⚡ 中文用户跳过 i18n-strings.js 下载 — page load -60% / CLS 修复",

@@ -17,9 +17,10 @@ window.I18N_STRINGS = {
     // ───── Home page (index.html) ─────
     'home.title': 'Dobby — 你的本地素材精灵',
     'home.eyebrow': '🧦 Dobby 还在学本事 · 想找 Dobby 聊聊?写信 ',
-    'home.hero.title': '叫我 <span class="accent">Dobby</span>',
+    'home.hero.title': 'Dobby',
     'home.hero.tag': '🧦 Dobby is free · 本地素材精灵',
     'home.hero.subtitle': '压图 · 抠图 · 转 GIF · 录屏 · 字体瘦身 ... 共 {n} 件浏览器本地工具,文件不上传',
+    'home.hero.subMinimal': '你的本地素材精灵 · 文件不上传',
     'tool.transcode.desc': '图片 / 视频 / 音频一站转格式,拖进去自动认类型,一键转完',
     'home.footer.contact': '📮 写信给 Dobby',
     'home.search.placeholder': '告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)',
@@ -2532,9 +2533,10 @@ window.I18N_STRINGS = {
     // ───── Home page ─────
     'home.title': 'Dobby — Your local-only asset elf',
     'home.eyebrow': '🧦 Dobby is still learning · Want to chat with Dobby? Write to ',
-    'home.hero.title': 'Call me <span class="accent">Dobby</span>',
+    'home.hero.title': 'Dobby',
     'home.hero.tag': '🧦 Dobby is free · your local-only asset elf',
     'home.hero.subtitle': 'Compress · cutout · MP4→GIF · screen-record · font subset ... {n} browser-local tools, zero uploads',
+    'home.hero.subMinimal': 'Your local-only asset elf · nothing uploaded',
     'tool.transcode.desc': 'Image / video / audio — drop a file, Dobby detects type and transcodes in one click',
     'home.footer.contact': '📮 Email Dobby',
     'home.search.placeholder': 'Tell Dobby what you need...  (Ctrl+K to focus)',

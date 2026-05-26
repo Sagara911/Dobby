@@ -39,29 +39,29 @@
 <style>
   body { overflow-x: hidden; }
 
-  /* ===== HERO (v2 — marketing-scale) =====
-     Design intent: this is a marketing landing page; visitors arrive cold.
-     Hero gets ~70vh on desktop, ~75vh on mobile, but only 5 clean elements:
-       1. eyebrow pill ("Dobby is free")
-       2. huge headline ("叫我 Dobby")
+  /* ===== HERO (v3 — extreme minimal, Eagle-style) =====
+     Design intent: this is a tool dashboard, but the FIRST screen
+     is a pure brand statement. Eagle / Notion / Linear pattern.
+     Hero is 90vh on desktop, ~80vh on mobile, and contains ONLY:
+       1. big sock mascot (🧦) with gentle bob animation
+       2. huge "Dobby" headline
        3. one-line tagline
-       4. big primary search input
-       5. 5 colorful category chips
-       (+ a scroll-hint arrow at the bottom edge)
-     What we DIDN'T put back: stats row (4 numbers), eyebrow contact link,
-     verbose subtitle. Those are noise; the chip count + footer cover them. */
+       4. scroll-hint arrow at bottom edge
+     Search + category chips MOVED OUT of hero into .tools-header
+     so the first screen breathes. Returning users pay one scroll
+     to get to their tool — accepted cost for first-time wow factor. */
   .hero {
     position: relative;
     z-index: 1;
     padding: clamp(40px, 8vh, 80px) 20px clamp(28px, 5vh, 60px);
     text-align: center;
     margin: 0 auto;
-    min-height: 70vh;
+    min-height: 90vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(16px, 2.5vh, 28px);
+    gap: clamp(20px, 3vh, 36px);
   }
   .hero > * {
     margin-left: auto;
@@ -69,32 +69,35 @@
     text-align: center;
     display: block;
   }
-  .hero-tag {
+  /* The sock mascot: oversized, gently bobbing, the focal point */
+  .hero-mascot {
+    font-size: clamp(96px, 14vw, 168px);
+    line-height: 1;
     display: inline-block;
-    padding: 6px 16px;
-    border-radius: var(--radius-pill);
-    background: rgba(var(--jade-rgb), 0.10);
-    border: 1px solid rgba(var(--jade-rgb), 0.35);
-    color: var(--jade);
-    font-size: 12.5px;
-    font-family: ui-monospace, Consolas, monospace;
-    letter-spacing: 0.08em;
-    margin: 0;
-    backdrop-filter: blur(4px);
+    /* gentle bob — slower than the original hero-tag's animation so it
+       reads as 'living', not 'twitchy'. Bobbing also covers the slight
+       baseline-misalignment of emoji glyphs across OSes. */
+    animation: hero-mascot-bob 4.2s ease-in-out infinite;
+    /* drop-shadow gives the emoji a hint of depth on light backgrounds
+       where the OS emoji can otherwise look flat against bg. */
+    filter: drop-shadow(0 8px 24px rgba(var(--jade-rgb), 0.18));
+    user-select: none;
+  }
+  @keyframes hero-mascot-bob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-10px) rotate(2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-mascot { animation: none; }
   }
   .hero h1 {
     max-width: 900px;
-    font-size: clamp(2.6rem, 8vw, 5rem);
+    /* MUCH bigger than v2 — Dobby word stands on its own, no "叫我" prefix */
+    font-size: clamp(4rem, 14vw, 9rem);
     font-weight: 700;
-    /* line-height: 1 clips descenders ("y", "p", "g") on tight headlines;
-       1.12 keeps the tight look but lets the y's tail breathe. */
-    line-height: 1.12;
-    /* var(--text) so the headline flips between #fff (dark theme) and
-       #1c1d24 (light theme). Hardcoding #fff here was making "叫我 Dobby"
-       invisible (white-on-white) when the user clicked the theme toggle,
-       so the toggle felt broken even though it was wired correctly. */
+    line-height: 1;
     color: var(--text);
-    letter-spacing: -0.035em;
+    letter-spacing: -0.045em;
     margin: 0;
     font-family: "Space Grotesk", sans-serif;
   }
@@ -186,6 +189,33 @@
        cards (4 cols × 2 rows = 8 cards × ~100px tall). Subsequent rows
        extend below naturally, but the FIRST shift is what CLS measures. */
     min-height: 800px;
+  }
+
+  /* Header for the tools section — moved out of hero in v3.
+     Contains the search bar (primary action) + 5 category chips
+     (quick-jump nav). Centered, comfortable max-width so the search
+     stays prominent without ballooning across wide screens. */
+  .tools-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    margin: 0 auto 36px;
+    padding: 8px 20px 0;
+    /* width:100% + max-width gives the standard "centered, capped" layout.
+       Without width:100%, flex-column with no explicit width shrinks to
+       fit its widest child, which can collapse to a few pixels if the
+       child also relies on the parent for sizing — chips ended up stacking
+       in a 60px column instead of one row across 720px. */
+    width: 100%;
+    /* 760px (was 720) so all 5 colored chips fit on ONE row at desktop.
+       The chip widths sum to ~655 + 40 gaps = 695; 760 minus 40 padding
+       leaves 720 inside — comfy fit with no wrap until ~720px viewport. */
+    max-width: 760px;
+    box-sizing: border-box;
+  }
+  .tools-header .search-wrap {
+    width: 100%;
   }
 
   /* category header */
@@ -626,21 +656,22 @@
     margin: 0 auto;
   }
 
-  /* scroll hint — own block between hero and tools-section so it never
-     overlaps with chips (which wrap into 2 rows on narrow viewports) */
+  /* scroll hint — inside .hero in v3, pinned near the bottom of the
+     90vh hero so it's the visual "next step" sign. flex-end nudges it
+     down within the centered flex layout above. */
   .hero-scroll-hint {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    margin: 0 auto;
+    width: 40px;
+    height: 40px;
+    margin: 32px auto 0;
     color: var(--muted);
     text-decoration: none;
     border-radius: 50%;
     border: 1px solid var(--border);
     background: rgba(255,255,255,0.04);
-    font-size: 16px;
+    font-size: 18px;
     animation: hero-bounce 2.2s ease-in-out infinite;
     transition: border-color 0.15s, color 0.15s, background 0.15s;
   }
@@ -698,12 +729,12 @@
      ============================================================ */
   @media (max-width: 720px) {
     .hero {
-      min-height: 72vh;
+      min-height: 80vh;
       padding: 36px 16px 56px;
-      gap: 18px;
+      gap: 20px;
     }
-    .hero-tag { font-size: 11.5px; padding: 5px 13px; }
-    .hero h1 { font-size: clamp(2.2rem, 9vw, 3.4rem); }
+    .hero-mascot { font-size: clamp(80px, 22vw, 120px); }
+    .hero h1 { font-size: clamp(3.2rem, 18vw, 5rem); }
     .hero .hero-sub { font-size: 13.5px; }
     .search-wrap input { padding: 15px 18px 15px 46px; }
     .search-wrap .icon { left: 18px; font-size: 15px; }
@@ -737,19 +768,21 @@
 
   @media (max-width: 480px) {
     .hero {
-      min-height: 78vh;
+      min-height: 82vh;
       padding: 32px 14px 56px;
-      gap: 16px;
+      gap: 18px;
     }
-    .hero-tag { font-size: 11px; padding: 5px 12px; }
+    .hero-mascot { font-size: clamp(72px, 26vw, 104px); }
     .hero h1 {
-      font-size: clamp(2rem, 11vw, 2.8rem);
-      letter-spacing: -0.03em;
+      font-size: clamp(3rem, 22vw, 4.5rem);
+      letter-spacing: -0.04em;
     }
     .hero .hero-sub {
       font-size: 12.5px;
       line-height: 1.55;
+      padding: 0 8px;
     }
+    .tools-header { padding: 0 8px; }
     .search-wrap input { padding: 14px 16px 14px 42px; }
     .search-wrap .icon { left: 15px; }
     /* tools force single column with comfortable padding */
@@ -787,21 +820,23 @@
 <body>
 
 <main>
-  <section class="hero">
-    <div class="hero-tag" data-i18n="home.hero.tag">🧦 Dobby is free · 本地素材精灵</div>
-    <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span></h1>
-    <p class="hero-sub" id="heroSub">压图 · 抠图 · 转 GIF · 录屏 · 字体瘦身 ... 共 45 件浏览器本地工具,文件不上传</p>
+  <section class="hero hero-v3">
+    <span class="hero-mascot" aria-hidden="true">🧦</span>
+    <h1 data-i18n="home.hero.title">Dobby</h1>
+    <p class="hero-sub" id="heroSub" data-i18n="home.hero.subMinimal">你的本地素材精灵 · 文件不上传</p>
+    <a class="hero-scroll-hint" href="#toolsSection" aria-label="向下看工具">
+      <span class="arrow">↓</span>
+    </a>
+  </section>
+
+  <div class="tools-header">
     <div class="search-wrap" id="searchWrap">
       <span class="icon">🔍</span>
       <input type="text" id="search" data-i18n-attr="placeholder:home.search.placeholder" placeholder="告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)" autocomplete="off" />
       <button class="clear" id="searchClear" type="button" data-i18n-attr="aria-label:home.search.clear" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
-  </section>
-
-  <a class="hero-scroll-hint" href="#cat-image" aria-label="向下看工具">
-    <span class="arrow">↓</span>
-  </a>
+  </div>
 
   <section class="tools-section" id="toolsSection"></section>
 </main>
@@ -940,19 +975,10 @@
     return score;
   }
 
-  // Subtitle is templated with {n} so the count stays in sync with the
-  // TOOLS array — no more hard-coded "44" that goes stale. Re-run on
-  // langchange so the swap to EN also fills in the count.
-  function renderHeroSub() {
-    const el = document.getElementById('heroSub');
-    if (!el) return;
-    el.textContent = T('home.hero.subtitle', { n: CARDS.length }, `压图 · 抠图 · 转 GIF · 录屏 · 字体瘦身 ... 共 ${CARDS.length} 件浏览器本地工具,文件不上传`);
-
-    // ALSO refresh the title's tool count if anywhere uses CARDS.length-derived text
-    // (handled by var(--accent) etc, no-op here)
-  }
-  renderHeroSub();
-  document.addEventListener('langchange', renderHeroSub);
+  // Hero subtitle is now the static `home.hero.subMinimal` tagline,
+  // handled by data-i18n on the <p>. The old renderHeroSub() that
+  // templated the tool count into the v2 hero is gone — count info
+  // is no longer in the hero (per Hero v3 minimal design).
 
   // Hero category chips — colored quick-jump buttons that double as a visual
   // anchor for the hero section.
