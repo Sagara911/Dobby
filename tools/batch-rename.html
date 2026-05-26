@@ -111,93 +111,93 @@
     <h1>🏷️ 批量重命名</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入文件或文件夹</p>
-      <p class="hint">任意类型 · 可多选 · 拖 ZIP 自动解压</p>
+      <p data-i18n="br.drop.title">📂 拖入文件或文件夹</p>
+      <p class="hint" data-i18n="br.drop.hint">任意类型 · 可多选 · 拖 ZIP 自动解压</p>
       <input type="file" id="fileInput" multiple style="display:none" />
       <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none" />
     </div>
     <div style="display:flex; gap:6px; margin-top:6px">
-      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件</button>
-      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件夹</button>
+      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px" data-i18n="br.addFiles">+ 加文件</button>
+      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px" data-i18n="br.addFolder">+ 加文件夹</button>
     </div>
 
     <h2 data-i18n="br.sort">排序</h2>
     <div class="field">
-      <label>排序依据 (决定 {i} 编号顺序)</label>
+      <label data-i18n="br.sortBy">排序依据 (决定 {i} 编号顺序)</label>
       <select id="sortBy">
-        <option value="natural" selected>文件名自然排序 (推荐)</option>
-        <option value="mtime">修改时间</option>
-        <option value="size">文件大小</option>
-        <option value="original">保持拖入顺序</option>
+        <option value="natural" selected data-i18n="br.sort.natural">文件名自然排序 (推荐)</option>
+        <option value="mtime" data-i18n="br.sort.mtime">修改时间</option>
+        <option value="size" data-i18n="br.sort.size">文件大小</option>
+        <option value="original" data-i18n="br.sort.original">保持拖入顺序</option>
       </select>
     </div>
 
     <h2 data-i18n="br.template">命名模板</h2>
     <div class="field">
-      <label>模板</label>
+      <label data-i18n="br.tplLabel">模板</label>
       <input type="text" id="pattern" value="{base}{ext}" />
     </div>
-    <div class="placeholder-hint">
+    <div class="placeholder-hint" data-i18n-html="br.tplHint">
       占位符: <code>{base}</code> 原名(无扩展) · <code>{ext}</code> 扩展名带点 · <code>{i}</code> 序号 · <code>{i:04}</code> 4 位补零 · <code>{name}</code> 完整原名<br/>
       例: <code>walk_{i:04}{ext}</code> → walk_0001.png · <code>{base}_v2{ext}</code> → 原名加 v2 后缀
     </div>
     <div class="row-fields" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
-      <div class="field"><label>起始号</label><input type="number" id="startN" value="1" min="0" /></div>
-      <div class="field"><label>步长</label><input type="number" id="stepN" value="1" min="1" /></div>
+      <div class="field"><label data-i18n="br.startN">起始号</label><input type="number" id="startN" value="1" min="0" /></div>
+      <div class="field"><label data-i18n="br.stepN">步长</label><input type="number" id="stepN" value="1" min="1" /></div>
     </div>
 
     <h2 data-i18n="br.replace">文本替换 (可选)</h2>
     <div class="field">
-      <label>查找</label>
-      <input type="text" id="findStr" value="" placeholder="留空则跳过" />
+      <label data-i18n="br.find">查找</label>
+      <input type="text" id="findStr" value="" data-i18n-attr="placeholder:br.find.ph" placeholder="留空则跳过" />
     </div>
     <div class="field">
-      <label>替换为</label>
+      <label data-i18n="br.replaceWith">替换为</label>
       <input type="text" id="replStr" value="" />
     </div>
-    <label class="checkbox"><input type="checkbox" id="useRegex" /><span>用正则表达式</span></label>
-    <label class="checkbox"><input type="checkbox" id="caseSensitive" checked /><span>区分大小写</span></label>
+    <label class="checkbox"><input type="checkbox" id="useRegex" /><span data-i18n="br.useRegex">用正则表达式</span></label>
+    <label class="checkbox"><input type="checkbox" id="caseSensitive" checked /><span data-i18n="br.caseSensitive">区分大小写</span></label>
 
     <h2 data-i18n="br.caseExt">大小写 / 扩展名</h2>
     <div class="field">
-      <label>大小写</label>
+      <label data-i18n="br.caseLabel">大小写</label>
       <select id="caseMode">
-        <option value="none" selected>不变</option>
-        <option value="lower">全小写</option>
-        <option value="upper">全大写</option>
-        <option value="title">首字母大写</option>
+        <option value="none" selected data-i18n="br.case.none">不变</option>
+        <option value="lower" data-i18n="br.case.lower">全小写</option>
+        <option value="upper" data-i18n="br.case.upper">全大写</option>
+        <option value="title" data-i18n="br.case.title">首字母大写</option>
       </select>
     </div>
     <div class="field">
-      <label>扩展名</label>
+      <label data-i18n="br.extLabel">扩展名</label>
       <select id="extMode">
-        <option value="keep" selected>保持原样</option>
-        <option value="lower">小写</option>
-        <option value="custom">指定为...</option>
+        <option value="keep" selected data-i18n="br.ext.keep">保持原样</option>
+        <option value="lower" data-i18n="br.ext.lower">小写</option>
+        <option value="custom" data-i18n="br.ext.custom">指定为...</option>
       </select>
     </div>
     <div class="field" id="extCustomField" style="display:none">
-      <label>新扩展名 (含或不含点都行)</label>
+      <label data-i18n="br.extCustom">新扩展名 (含或不含点都行)</label>
       <input type="text" id="extCustom" value=".png" />
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
     <div class="field">
-      <label>ZIP 文件名</label>
+      <label data-i18n="br.zipName">ZIP 文件名</label>
       <input type="text" id="zipName" value="renamed" />
     </div>
-    <button id="exportBtn" disabled>导出 ZIP</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="exportBtn" disabled data-i18n="br.exportZip">导出 ZIP</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 手里还没文件</div>
+    <div class="stats" id="stats" data-i18n="br.stats.empty">Dobby 手里还没文件</div>
     <div id="conflictBanner"></div>
-    <div class="info" style="margin-bottom:8px">规则按顺序应用: <strong>模板</strong> → <strong>替换</strong> → <strong>大小写</strong> → <strong>扩展名</strong>。重名行会红色高亮。</div>
+    <div class="info" style="margin-bottom:8px" data-i18n-html="br.info.order">规则按顺序应用: <strong>模板</strong> → <strong>替换</strong> → <strong>大小写</strong> → <strong>扩展名</strong>。重名行会红色高亮。</div>
     <div class="rename-table" id="renameTable">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢文件进来,Dobby 给改名预览</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)" data-i18n="br.list.empty">你丢文件进来,Dobby 给改名预览</div>
     </div>
   </div>
 </div>
@@ -233,7 +233,7 @@ Toolkit.injectTopbar('batch-rename');
         originalIdx: baseIdx + i,
       });
     }
-    log.ok(`加入 ${incoming.length} 个文件 (累计 ${files.length})`);
+    log.ok(Toolkit.T('br.log.added', { n: incoming.length, total: files.length }, `加入 ${incoming.length} 个文件 (累计 ${files.length})`));
     refresh();
   }
 
@@ -337,8 +337,8 @@ Toolkit.injectTopbar('batch-rename');
     const banner = $('conflictBanner');
     const table = $('renameTable');
     if (!files.length) {
-      $('stats').textContent = 'Dobby 手里还没文件';
-      table.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢文件进来,Dobby 给改名预览</div>';
+      $('stats').textContent = Toolkit.T('br.stats.empty', null, 'Dobby 手里还没文件');
+      table.innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('br.list.empty', null, '你丢文件进来,Dobby 给改名预览')}</div>`;
       $('exportBtn').disabled = true;
       banner.innerHTML = '';
       return;
@@ -384,9 +384,9 @@ Toolkit.injectTopbar('batch-rename');
         <span class="idx">${i + 1}</span>
         <span class="from" title="${r.entry.name}">${r.entry.name}</span>
         <span class="arr">→</span>
-        <span class="to" title="${r.newName || '(空)'}">${r.newName || '<em style="color:#ff8a8a">(空名)</em>'}</span>
+        <span class="to" title="${r.newName || Toolkit.T('br.empty', null, '(空)')}">${r.newName || `<em style="color:#ff8a8a">${Toolkit.T('br.emptyName', null, '(空名)')}</em>`}</span>
         <span class="size">${fmtBytes(r.entry.size)}</span>
-        <button class="remove" data-i="${r.entry.originalIdx}" title="移除">×</button>
+        <button class="remove" data-i="${r.entry.originalIdx}" title="${Toolkit.T('br.remove', null, '移除')}">×</button>
       `;
       row.querySelector('.remove').addEventListener('click', e => {
         const idx = parseInt(e.target.dataset.i, 10);
@@ -398,22 +398,25 @@ Toolkit.injectTopbar('batch-rename');
 
     const conflictCount = conflicts.size;
     if (ctx.regexError) {
-      banner.innerHTML = `<div class="conflict-banner">⚠ 正则表达式错误: ${ctx.regexError}</div>`;
+      banner.innerHTML = `<div class="conflict-banner">⚠ ${Toolkit.T('br.err.regex', { msg: ctx.regexError }, '正则表达式错误: ' + ctx.regexError)}</div>`;
     } else if (conflictCount > 0) {
-      banner.innerHTML = `<div class="conflict-banner">⚠ ${conflictCount} 个文件名冲突 (红色行) — 调整模板的 {i} 或加唯一性占位符再导出</div>`;
+      banner.innerHTML = `<div class="conflict-banner">⚠ ${Toolkit.T('br.err.conflict', { n: conflictCount }, `${conflictCount} 个文件名冲突 (红色行) — 调整模板的 {i} 或加唯一性占位符再导出`)}</div>`;
     } else {
       banner.innerHTML = '';
     }
 
     const changed = rows.filter(r => r.entry.name !== r.newName).length;
-    $('stats').innerHTML = `<strong>${files.length}</strong> 个文件 · <strong>${changed}</strong> 个被改名${conflictCount ? ` · <strong style="color:#ff8a8a">${conflictCount}</strong> 冲突` : ''}`;
+    const filesLbl = Toolkit.T('br.unit.files', null, '个文件');
+    const renamedLbl = Toolkit.T('br.unit.renamed', null, '个被改名');
+    const conflictLbl = Toolkit.T('br.unit.conflict', null, '冲突');
+    $('stats').innerHTML = `<strong>${files.length}</strong> ${filesLbl} · <strong>${changed}</strong> ${renamedLbl}${conflictCount ? ` · <strong style="color:#ff8a8a">${conflictCount}</strong> ${conflictLbl}` : ''}`;
     $('exportBtn').disabled = conflictCount > 0 || ctx.regexError;
   }
 
   $('exportBtn').addEventListener('click', async () => {
     if (!files.length) return;
     $('exportBtn').disabled = true;
-    log.dim('读取文件 + 打包 ZIP...');
+    log.dim(Toolkit.T('br.log.packing', null, '读取文件 + 打包 ZIP...'));
     try {
       const ctx = {
         pattern: $('pattern').value || '{base}{ext}',
@@ -439,7 +442,7 @@ Toolkit.injectTopbar('batch-rename');
       const blob = await makeZip(zipEntries);
       outBlob = blob;
       const zipFilename = ($('zipName').value || 'renamed') + '.zip';
-      log.ok(`打包完成 ${fmtBytes(blob.size)} · ${zipEntries.length} 个文件`);
+      log.ok(Toolkit.T('br.log.done', { size: fmtBytes(blob.size), n: zipEntries.length }, `打包完成 ${fmtBytes(blob.size)} · ${zipEntries.length} 个文件`));
       handoff?.setBlob(blob, zipFilename, 'application/zip');
       download(blob, zipFilename);
     } catch (e) {

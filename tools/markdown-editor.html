@@ -209,20 +209,20 @@
     <h1>📝 Markdown</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 .md 文件</p>
-      <p class="hint">或直接在右侧输入</p>
+      <p data-i18n="md.drop.title">📂 拖入 .md 文件</p>
+      <p class="hint" data-i18n="md.drop.hint">或直接在右侧输入</p>
       <input type="file" id="fileInput" accept=".md,.markdown,text/markdown,text/plain" style="display:none" />
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
-    <button id="exportMd" class="secondary">💾 导出 .md</button>
-    <button id="exportHtml" class="secondary">💾 导出 .html(带样式)</button>
-    <button id="copyMd" class="secondary">📋 复制 Markdown</button>
-    <button id="copyHtml" class="secondary">📋 复制渲染 HTML</button>
+    <button id="exportMd" class="secondary" data-i18n="md.exportMd">💾 导出 .md</button>
+    <button id="exportHtml" class="secondary" data-i18n="md.exportHtml">💾 导出 .html(带样式)</button>
+    <button id="copyMd" class="secondary" data-i18n="md.copyMd">📋 复制 Markdown</button>
+    <button id="copyHtml" class="secondary" data-i18n="md.copyHtml">📋 复制渲染 HTML</button>
 
     <h2 data-i18n="common.actions">动作</h2>
-    <button id="loadSampleBtn" class="secondary">🧪 加载示例</button>
-    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+    <button id="loadSampleBtn" class="secondary" data-i18n="md.loadSample">🧪 加载示例</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
     <h2 data-i18n="common.filename">文件名</h2>
     <input type="text" id="filename" value="document" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
@@ -230,62 +230,62 @@
     <h2 data-i18n="md.syntax">支持的语法</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div># H1 ## H2 ### H3</div>
-      <div>**粗体** *斜体* ~~删除~~</div>
-      <div>`行内代码` ```代码块```</div>
-      <div>&gt; 引用</div>
-      <div>- 无序列表 / 1. 有序</div>
-      <div>- [ ] 待办 / - [x] 完成</div>
-      <div>[链接](url) ![图](url)</div>
-      <div>| 表 | 头 | --- 表格</div>
-      <div>--- 分割线</div>
+      <div data-i18n="md.syn.bold">**粗体** *斜体* ~~删除~~</div>
+      <div data-i18n="md.syn.code">`行内代码` ```代码块```</div>
+      <div data-i18n="md.syn.quote">&gt; 引用</div>
+      <div data-i18n="md.syn.list">- 无序列表 / 1. 有序</div>
+      <div data-i18n="md.syn.todo">- [ ] 待办 / - [x] 完成</div>
+      <div data-i18n="md.syn.link">[链接](url) ![图](url)</div>
+      <div data-i18n="md.syn.table">| 表 | 头 | --- 表格</div>
+      <div data-i18n="md.syn.hr">--- 分割线</div>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">实时 Markdown 渲染 · 支持 GFM 扩展(表格 / 待办 / 删除线 / fenced code)</div>
+    <div class="stats" id="stats" data-i18n="md.stats.ready">实时 Markdown 渲染 · 支持 GFM 扩展(表格 / 待办 / 删除线 / fenced code)</div>
 
     <div class="md-stage">
       <!-- Toolbar -->
       <div class="md-toolbar">
-        <button data-md="**" data-md-suffix="**" title="粗体">𝐁</button>
-        <button data-md="*" data-md-suffix="*" title="斜体">𝐼</button>
-        <button data-md="~~" data-md-suffix="~~" title="删除线">𝐒̶</button>
-        <button data-md="`" data-md-suffix="`" title="行内代码">&lt;/&gt;</button>
+        <button data-md="**" data-md-suffix="**" data-i18n-attr="title:md.tb.bold" title="粗体">𝐁</button>
+        <button data-md="*" data-md-suffix="*" data-i18n-attr="title:md.tb.italic" title="斜体">𝐼</button>
+        <button data-md="~~" data-md-suffix="~~" data-i18n-attr="title:md.tb.strike" title="删除线">𝐒̶</button>
+        <button data-md="`" data-md-suffix="`" data-i18n-attr="title:md.tb.inlineCode" title="行内代码">&lt;/&gt;</button>
         <div class="sep"></div>
         <button data-md-line="# " title="H1">H1</button>
         <button data-md-line="## " title="H2">H2</button>
         <button data-md-line="### " title="H3">H3</button>
         <div class="sep"></div>
-        <button data-md-line="- " title="无序列表">• 列表</button>
-        <button data-md-line="1. " title="有序列表">1. 列表</button>
-        <button data-md-line="- [ ] " title="待办">☐ 待办</button>
-        <button data-md-line="> " title="引用">❝ 引用</button>
+        <button data-md-line="- " data-i18n="md.tb.ul" data-i18n-attr="title:md.tb.ul.title" title="无序列表">• 列表</button>
+        <button data-md-line="1. " data-i18n="md.tb.ol" data-i18n-attr="title:md.tb.ol.title" title="有序列表">1. 列表</button>
+        <button data-md-line="- [ ] " data-i18n="md.tb.todo" data-i18n-attr="title:md.tb.todo.title" title="待办">☐ 待办</button>
+        <button data-md-line="> " data-i18n="md.tb.quote" data-i18n-attr="title:md.tb.quote.title" title="引用">❝ 引用</button>
         <div class="sep"></div>
-        <button data-insert="[链接文本](https://)" title="链接">🔗 链接</button>
-        <button data-insert="![图片](https://)" title="图片">🖼️ 图片</button>
-        <button data-insert="| col1 | col2 |\n| --- | --- |\n| a    | b    |" title="表格">▦ 表格</button>
-        <button data-insert="```\n\n```" title="代码块">{ } 代码块</button>
-        <button data-insert="---" title="分割线">— 分隔</button>
+        <button data-insert="[链接文本](https://)" data-i18n="md.tb.link" data-i18n-attr="title:md.tb.link.title" title="链接">🔗 链接</button>
+        <button data-insert="![图片](https://)" data-i18n="md.tb.image" data-i18n-attr="title:md.tb.image.title" title="图片">🖼️ 图片</button>
+        <button data-insert="| col1 | col2 |\n| --- | --- |\n| a    | b    |" data-i18n="md.tb.table" data-i18n-attr="title:md.tb.table.title" title="表格">▦ 表格</button>
+        <button data-insert="```\n\n```" data-i18n="md.tb.codeblock" data-i18n-attr="title:md.tb.codeblock.title" title="代码块">{ } 代码块</button>
+        <button data-insert="---" data-i18n="md.tb.hr" data-i18n-attr="title:md.tb.hr.title" title="分割线">— 分隔</button>
         <div class="sep"></div>
-        <button class="view-toggle active" id="viewSplit">分屏</button>
-        <button class="view-toggle" id="viewEdit">仅编辑</button>
-        <button class="view-toggle" id="viewPreview">仅预览</button>
+        <button class="view-toggle active" id="viewSplit" data-i18n="md.view.split">分屏</button>
+        <button class="view-toggle" id="viewEdit" data-i18n="md.view.edit">仅编辑</button>
+        <button class="view-toggle" id="viewPreview" data-i18n="md.view.preview">仅预览</button>
       </div>
 
       <!-- Edit + preview -->
       <div class="md-grid" id="grid">
         <div class="md-edit-pane">
           <div class="md-pane-head">
-            <span>Markdown 源码</span>
+            <span data-i18n="md.editor.label">Markdown 源码</span>
             <span id="editMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">0 行 · 0 字符</span>
           </div>
-          <textarea id="editor" spellcheck="false" placeholder="# Hello Markdown&#10;&#10;在这里输入 Markdown,右侧实时预览..."></textarea>
+          <textarea id="editor" spellcheck="false" data-i18n-attr="placeholder:md.editor.ph" placeholder="# Hello Markdown&#10;&#10;在这里输入 Markdown,右侧实时预览..."></textarea>
         </div>
         <div class="md-preview-pane">
           <div class="md-pane-head">
-            <span>预览</span>
+            <span data-i18n="md.preview.label">预览</span>
             <span id="previewMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
           </div>
           <div class="preview" id="preview"></div>
@@ -505,9 +505,9 @@ ${body}
   function refresh() {
     const src = $('editor').value;
     $('preview').innerHTML = renderMarkdown(src);
-    $('editMeta').textContent = `${src.split('\n').length} 行 · ${src.length} 字符`;
+    $('editMeta').textContent = Toolkit.T('md.meta.edit', { lines: src.split('\n').length, chars: src.length }, `${src.split('\n').length} 行 · ${src.length} 字符`);
     const words = src.replace(/[\s\p{P}]+/gu, ' ').trim().split(/\s+/).filter(Boolean).length;
-    $('previewMeta').textContent = `约 ${words} 词`;
+    $('previewMeta').textContent = Toolkit.T('md.meta.words', { n: words }, `约 ${words} 词`);
   }
 
   // ============================================================
@@ -577,10 +577,10 @@ ${body}
     download(blob, name + '.html');
   });
   $('copyMd').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('editor').value); log.ok('已复制 Markdown'); } catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText($('editor').value); log.ok(Toolkit.T('md.log.copiedMd', null, '已复制 Markdown')); } catch { log.err(Toolkit.T('md.log.copyFail', null, '复制失败')); }
   });
   $('copyHtml').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(renderMarkdown($('editor').value)); log.ok('已复制 HTML'); } catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText(renderMarkdown($('editor').value)); log.ok(Toolkit.T('md.log.copiedHtml', null, '已复制 HTML')); } catch { log.err(Toolkit.T('md.log.copyFail', null, '复制失败')); }
   });
 
   // import
@@ -590,7 +590,7 @@ ${body}
       $('editor').value = await files[0].text();
       refresh();
       $('filename').value = files[0].name.replace(/\.[^.]+$/, '');
-    } catch (e) { log.err('读文件失败'); }
+    } catch (e) { log.err(Toolkit.T('md.log.readFail', null, '读文件失败')); }
   });
 
   // sample
@@ -653,7 +653,7 @@ function hello(name) {
 
   // initial render
   refresh();
-  log.ok('Markdown 编辑器准备好');
+  log.ok(Toolkit.T('md.log.ready', null, 'Markdown 编辑器准备好'));
 })();
 </script>
 </body>

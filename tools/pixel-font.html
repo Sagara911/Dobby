@@ -232,66 +232,66 @@
   <div class="sidebar">
     <h1>🅰️ 像素字体设计器</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="pf.intro">
       <strong style="color:var(--accent)">画自己的像素字</strong> · 一格一像素,导 BDF / TTF / PNG 雪碧图,塞进游戏 / Playable / Phaser。
     </div>
 
     <h2 data-i18n="pf.nameSize">字体名 / 大小</h2>
-    <input type="text" id="fontName" value="MyPixelFont" placeholder="字体名" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
+    <input type="text" id="fontName" value="MyPixelFont" placeholder="字体名" data-i18n-attr="placeholder:pf.ph.fontName" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
 
     <div style="display:flex; gap:6px; margin-top:6px">
       <label style="font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:3px; flex:1">
-        宽
+        <span data-i18n="pf.width">宽</span>
         <input type="number" id="cellW" min="3" max="32" value="6" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       </label>
       <label style="font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:3px; flex:1">
-        高
+        <span data-i18n="pf.height">高</span>
         <input type="number" id="cellH" min="3" max="32" value="8" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       </label>
     </div>
 
     <h2 data-i18n="pf.charset">字符集</h2>
     <select id="charsetPreset" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="ascii">ASCII 可见(95 字符)</option>
-      <option value="alpha">仅字母数字(62)</option>
-      <option value="digits">仅数字(10)</option>
-      <option value="custom">自定义</option>
+      <option value="ascii" data-i18n="pf.cs.ascii">ASCII 可见(95 字符)</option>
+      <option value="alpha" data-i18n="pf.cs.alpha">仅字母数字(62)</option>
+      <option value="digits" data-i18n="pf.cs.digits">仅数字(10)</option>
+      <option value="custom" data-i18n="pf.cs.custom">自定义</option>
     </select>
-    <textarea id="customCharset" rows="3" placeholder="自定义字符,直接打进来" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace, Consolas, monospace; font-size:11px; margin-top:6px; display:none; resize:vertical"></textarea>
+    <textarea id="customCharset" rows="3" placeholder="自定义字符,直接打进来" data-i18n-attr="placeholder:pf.ph.customChars" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace, Consolas, monospace; font-size:11px; margin-top:6px; display:none; resize:vertical"></textarea>
 
     <h2 data-i18n="pf.baseline">基线位置</h2>
     <input type="range" id="baseline" min="0" max="16" value="6" style="width:100%">
-    <div class="pf-help">从顶部算第 <span id="baselineLabel">6</span> 行 — 字母「g」「p」「y」的下降部分在基线下方</div>
+    <div class="pf-help" data-i18n-html="pf.baseline.hint">从顶部算第 <span id="baselineLabel">6</span> 行 — 字母「g」「p」「y」的下降部分在基线下方</div>
 
     <h2 data-i18n="common.display">显示</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="onion" checked />
-      <span>洋葱皮(显示上一个字)</span>
+      <span data-i18n="pf.onion">洋葱皮(显示上一个字)</span>
     </label>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:4px">
       <input type="checkbox" id="showBaseline" checked />
-      <span>显示基线</span>
+      <span data-i18n="pf.showBaseline">显示基线</span>
     </label>
 
     <h2 data-i18n="common.export">导出</h2>
-    <div class="pf-help">
+    <div class="pf-help" data-i18n-html="pf.export.help">
       <strong>BDF</strong>(.bdf): 文本格式像素字体,FreeType / 嵌入式系统通吃<br/>
       <strong>TTF</strong>(.ttf): 真矢量字体,网页 / 游戏引擎全兼容<br/>
       <strong>PNG 雪碧图</strong>: 加 JSON,适合 Phaser / Pixi 的 BitmapFont
     </div>
 
     <h2 data-i18n="pf.saveLoad">保存 / 加载</h2>
-    <button id="saveLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit">💾 存到浏览器</button>
-    <button id="loadLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📂 从浏览器读</button>
-    <button id="exportJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📤 导出 JSON 工程</button>
+    <button id="saveLocal" data-i18n="pf.btn.saveLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit">💾 存到浏览器</button>
+    <button id="loadLocal" data-i18n="pf.btn.loadLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📂 从浏览器读</button>
+    <button id="exportJson" data-i18n="pf.btn.exportJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📤 导出 JSON 工程</button>
     <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none">
-    <button id="importJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📥 导入 JSON 工程</button>
+    <button id="importJson" data-i18n="pf.btn.importJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📥 导入 JSON 工程</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">像素字体设计器 · 一格一像素,导 BDF/TTF/PNG</div>
+    <div class="stats" id="stats" data-i18n="pf.stats.intro">像素字体设计器 · 一格一像素,导 BDF/TTF/PNG</div>
 
     <div class="pf-stage">
       <!-- LEFT: char picker -->
@@ -304,28 +304,28 @@
           <div class="pf-side">
             <div class="info" id="curInfo"></div>
             <div class="pf-tools">
-              <button id="clearGlyph">清空</button>
-              <button id="invertGlyph">反色</button>
-              <button id="shiftL">← 左移</button>
-              <button id="shiftR">右移 →</button>
-              <button id="shiftU">↑ 上移</button>
-              <button id="shiftD">↓ 下移</button>
-              <button id="copyGlyph">📋 复制</button>
-              <button id="pasteGlyph">📥 粘贴</button>
-              <button id="prevGlyph">◀ 上一个</button>
-              <button id="nextGlyph">下一个 ▶</button>
+              <button id="clearGlyph" data-i18n="pf.btn.clearGlyph">清空</button>
+              <button id="invertGlyph" data-i18n="pf.btn.invertGlyph">反色</button>
+              <button id="shiftL" data-i18n="pf.btn.shiftL">← 左移</button>
+              <button id="shiftR" data-i18n="pf.btn.shiftR">右移 →</button>
+              <button id="shiftU" data-i18n="pf.btn.shiftU">↑ 上移</button>
+              <button id="shiftD" data-i18n="pf.btn.shiftD">↓ 下移</button>
+              <button id="copyGlyph" data-i18n="pf.btn.copyGlyph">📋 复制</button>
+              <button id="pasteGlyph" data-i18n="pf.btn.pasteGlyph">📥 粘贴</button>
+              <button id="prevGlyph" data-i18n="pf.btn.prevGlyph">◀ 上一个</button>
+              <button id="nextGlyph" data-i18n="pf.btn.nextGlyph">下一个 ▶</button>
             </div>
-            <div style="margin-top:6px; font-size:11px; color:var(--muted)">
+            <div style="margin-top:6px; font-size:11px; color:var(--muted)" data-i18n="pf.kbdHint">
               快捷键:Space=切换格子 · X=清空 · I=反色 · 方向键移动 · [/]切换字符 · Ctrl+C/V复制粘贴
             </div>
           </div>
         </div>
 
         <div class="pf-preview">
-          <h3>预览(像素 + 放大）</h3>
+          <h3 data-i18n="pf.previewH">预览(像素 + 放大）</h3>
           <div class="strings">
             <div class="strip">
-              <span class="label">输入:</span>
+              <span class="label" data-i18n="pf.preview.inputLabel">输入:</span>
               <input type="text" id="previewText" class="preview-text" value="Hello, Dobby! 0123456789">
             </div>
             <div class="strip">
@@ -340,9 +340,9 @@
         </div>
 
         <div class="pf-export">
-          <button class="primary" id="exportBDF">📐 导出 BDF</button>
-          <button class="primary" id="exportTTF">🔡 导出 TTF</button>
-          <button class="primary" id="exportPNG">🎨 导出 PNG 雪碧图 + JSON</button>
+          <button class="primary" id="exportBDF" data-i18n="pf.btn.exportBDF">📐 导出 BDF</button>
+          <button class="primary" id="exportTTF" data-i18n="pf.btn.exportTTF">🔡 导出 TTF</button>
+          <button class="primary" id="exportPNG" data-i18n="pf.btn.exportPNG">🎨 导出 PNG 雪碧图 + JSON</button>
           <span style="font-size:11px; color:var(--muted)" id="exportStat"></span>
         </div>
       </div>
@@ -543,10 +543,10 @@ Toolkit.injectTopbar('pixel-font');
   function copyCurrent() {
     const g = ensureGlyph(state.current);
     state.clipboard = g.map(row => row.slice());
-    log.ok('已复制当前字形');
+    log.ok(Toolkit.T('pf.log.copied', null, '已复制当前字形'));
   }
   function pasteCurrent() {
-    if (!state.clipboard) { log.warn('剪贴板为空'); return; }
+    if (!state.clipboard) { log.warn(Toolkit.T('pf.log.clipboardEmpty', null, '剪贴板为空')); return; }
     state.glyphs[state.current] = state.clipboard.map(row => row.slice());
     resizeGlyphIfNeeded(state.glyphs[state.current]);
     renderEditor(); renderCharList(); renderPreview();
@@ -668,16 +668,16 @@ Toolkit.injectTopbar('pixel-font');
     };
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(data));
-      log.ok('已存到浏览器');
-    } catch (e) { log.err('保存失败: ' + e.message); }
+      log.ok(Toolkit.T('pf.log.savedLocal', null, '已存到浏览器'));
+    } catch (e) { log.err(Toolkit.T('pf.err.saveFail', { msg: e.message }, '保存失败: ' + e.message)); }
   }
   function loadLocal() {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (!raw) { log.warn('浏览器里没有存档'); return; }
+      if (!raw) { log.warn(Toolkit.T('pf.log.noLocal', null, '浏览器里没有存档')); return; }
       applyProject(JSON.parse(raw));
-      log.ok('从浏览器读取成功');
-    } catch (e) { log.err('读取失败: ' + e.message); }
+      log.ok(Toolkit.T('pf.log.loadedLocal', null, '从浏览器读取成功'));
+    } catch (e) { log.err(Toolkit.T('pf.err.loadFail', { msg: e.message }, '读取失败: ' + e.message)); }
   }
   function applyProject(p) {
     state.name = p.name || 'MyPixelFont';
@@ -714,8 +714,8 @@ Toolkit.injectTopbar('pixel-font');
     try {
       const obj = JSON.parse(await f.text());
       applyProject(obj);
-      log.ok('已导入 ' + f.name);
-    } catch (e) { log.err('导入失败: ' + e.message); }
+      log.ok(Toolkit.T('pf.log.imported', { name: f.name }, '已导入 ' + f.name));
+    } catch (e) { log.err(Toolkit.T('pf.err.importFail', { msg: e.message }, '导入失败: ' + e.message)); }
   });
 
   // ─── Export: BDF ───
@@ -746,7 +746,7 @@ Toolkit.injectTopbar('pixel-font');
     }
     out += `ENDFONT\n`;
     downloadText(out, `${state.name}.bdf`, 'text/plain');
-    log.ok(`BDF 导出 · ${filledCount} 字 · ${fmtBytes(new Blob([out]).size)}`);
+    log.ok(Toolkit.T('pf.log.bdfDone', { n: filledCount, size: fmtBytes(new Blob([out]).size) }, `BDF 导出 · ${filledCount} 字 · ${fmtBytes(new Blob([out]).size)}`));
   }
   $('exportBDF').addEventListener('click', exportBDF);
 
@@ -755,7 +755,7 @@ Toolkit.injectTopbar('pixel-font');
     const W = state.cellW, H = state.cellH;
     const cols = 16;
     const filled = state.chars.filter(cp => hasAnyPixel(state.glyphs[cp] || []));
-    if (!filled.length) { log.warn('没有任何字形可导'); return; }
+    if (!filled.length) { log.warn(Toolkit.T('pf.log.noGlyphs', null, '没有任何字形可导')); return; }
     const rows = Math.ceil(filled.length / cols);
     const canvas = document.createElement('canvas');
     canvas.width = cols * W;
@@ -782,10 +782,10 @@ Toolkit.injectTopbar('pixel-font');
       meta.chars.push({ cp, ch: String.fromCodePoint(cp), col: c, row: r });
     });
     canvas.toBlob(blob => {
-      if (!blob) { log.err('PNG 编码失败'); return; }
+      if (!blob) { log.err(Toolkit.T('pf.err.pngEncode', null, 'PNG 编码失败')); return; }
       download(blob, `${state.name}.png`);
       downloadText(JSON.stringify(meta, null, 2), `${state.name}.json`, 'application/json');
-      log.ok(`PNG 雪碧图 · ${filled.length} 字 · ${canvas.width}×${canvas.height} · ${fmtBytes(blob.size)}`);
+      log.ok(Toolkit.T('pf.log.pngDone', { n: filled.length, w: canvas.width, h: canvas.height, size: fmtBytes(blob.size) }, `PNG 雪碧图 · ${filled.length} 字 · ${canvas.width}×${canvas.height} · ${fmtBytes(blob.size)}`));
     }, 'image/png');
   }
   $('exportPNG').addEventListener('click', exportPNG);
@@ -861,12 +861,12 @@ Toolkit.injectTopbar('pixel-font');
     const isTTF = head[0] === 0x00 && head[1] === 0x01 && head[2] === 0x00 && head[3] === 0x00;
     const isOTF = head[0] === 0x4F && head[1] === 0x54 && head[2] === 0x54 && head[3] === 0x4F;
     if (!isTTF && !isOTF) {
-      log.err('TTF magic 校验失败');
+      log.err(Toolkit.T('pf.err.ttfMagic', null, 'TTF magic 校验失败'));
       return;
     }
     download(blob, `${state.name}.ttf`);
-    log.ok(`TTF 导出 · ${glyphs.length - 1} 字 · ${fmtBytes(blob.size)}`);
-    $('exportStat').textContent = `最新导出 · TTF ${fmtBytes(blob.size)}`;
+    log.ok(Toolkit.T('pf.log.ttfDone', { n: glyphs.length - 1, size: fmtBytes(blob.size) }, `TTF 导出 · ${glyphs.length - 1} 字 · ${fmtBytes(blob.size)}`));
+    $('exportStat').textContent = Toolkit.T('pf.exportStat.ttf', { size: fmtBytes(blob.size) }, `最新导出 · TTF ${fmtBytes(blob.size)}`);
   }
   $('exportTTF').addEventListener('click', exportTTF);
 
@@ -909,7 +909,7 @@ Toolkit.injectTopbar('pixel-font');
   }
   bootDemo();
   refreshCharList();
-  log.ok('像素字体设计器准备好 — 网格里点格子开画');
+  log.ok(Toolkit.T('pf.log.ready', null, '像素字体设计器准备好 — 网格里点格子开画'));
 })();
 </script>
 </body>

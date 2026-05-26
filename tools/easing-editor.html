@@ -225,14 +225,14 @@
 
     <h2 data-i18n="ease.curveType">曲线类型</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
-      <button class="ez-preset active" id="modeBezier" data-mode="bezier">cubic-bezier</button>
-      <button class="ez-preset" id="modeSpring" data-mode="spring">弹簧</button>
+      <button class="ez-preset active" id="modeBezier" data-mode="bezier" data-i18n="ease.mode.bezier">cubic-bezier</button>
+      <button class="ez-preset" id="modeSpring" data-mode="spring" data-i18n="ease.mode.spring">弹簧</button>
     </div>
 
     <h2 id="paramsHead" data-i18n="ease.ctrlPts">控制点</h2>
     <div id="bezierParams" style="display:flex; flex-direction:column; gap:8px">
       <div style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft)" id="bezierStr">cubic-bezier(0.4, 0, 0.2, 1)</div>
-      <div class="px-help" style="font-size:10px; color:var(--muted)">在右边画布上拖蓝/绿色控制点,或直接改下面数值</div>
+      <div class="px-help" style="font-size:10px; color:var(--muted)" data-i18n="ease.bezier.hint">在右边画布上拖蓝/绿色控制点,或直接改下面数值</div>
       <div style="display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; font-size:11px">
         <span style="color:var(--muted); font-family:ui-monospace,Consolas,monospace">P1x</span>
         <input type="number" id="p1x" min="0" max="1" step="0.01" value="0.4" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:5px 8px; font-family:ui-monospace,Consolas,monospace; font-size:11px">
@@ -247,41 +247,41 @@
 
     <div id="springParams" style="display:none; flex-direction:column; gap:8px">
       <div style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft)" id="springStr">spring(1, 100, 10, 0)</div>
-      <div class="px-help" style="font-size:10px; color:var(--muted)">物理弹簧模拟,适合 Framer Motion / Reanimated 风格</div>
+      <div class="px-help" style="font-size:10px; color:var(--muted)" data-i18n="ease.spring.hint">物理弹簧模拟,适合 Framer Motion / Reanimated 风格</div>
       <div style="display:grid; gap:8px; font-size:11px">
         <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
-          质量 (mass) <span id="massVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">1.0</span>
+          <span><span data-i18n="ease.spring.mass">质量 (mass)</span> <span id="massVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">1.0</span></span>
           <input type="range" id="mass" min="0.1" max="5" step="0.1" value="1">
         </label>
         <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
-          劲度 (stiffness) <span id="stiffVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">100</span>
+          <span><span data-i18n="ease.spring.stiff">劲度 (stiffness)</span> <span id="stiffVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">100</span></span>
           <input type="range" id="stiff" min="1" max="500" step="1" value="100">
         </label>
         <label style="display:flex; flex-direction:column; gap:3px; color:var(--muted)">
-          阻尼 (damping) <span id="dampVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">10</span>
+          <span><span data-i18n="ease.spring.damp">阻尼 (damping)</span> <span id="dampVal" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">10</span></span>
           <input type="range" id="damp" min="0" max="50" step="0.5" value="10">
         </label>
       </div>
     </div>
 
     <h2 data-i18n="common.actions">动作</h2>
-    <button id="copyBtn" class="secondary">📋 复制当前格式代码</button>
-    <button id="resetBtn" class="secondary">🔄 重置</button>
+    <button id="copyBtn" class="secondary" data-i18n="ease.btn.copy">📋 复制当前格式代码</button>
+    <button id="resetBtn" class="secondary" data-i18n="ease.btn.reset">🔄 重置</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">cubic-bezier + 弹簧 · 可视化拖控点 · 多引擎导出</div>
+    <div class="stats" id="stats" data-i18n="ease.stats.intro">cubic-bezier + 弹簧 · 可视化拖控点 · 多引擎导出</div>
 
     <div class="ez-stage">
       <!-- CURVE CANVAS -->
       <div class="ez-curve-wrap">
         <canvas id="curveCv" width="320" height="320"></canvas>
         <span class="ez-curve-label x-start">0</span>
-        <span class="ez-curve-label x-end">1 · 时间</span>
+        <span class="ez-curve-label x-end" data-i18n="ease.lbl.time">1 · 时间</span>
         <span class="ez-curve-label y-start">0</span>
-        <span class="ez-curve-label y-end">1 · 进度</span>
+        <span class="ez-curve-label y-end" data-i18n="ease.lbl.progress">1 · 进度</span>
       </div>
 
       <!-- ANIMATION PREVIEW -->
@@ -290,8 +290,8 @@
           <div class="ez-anim-ball" id="animBall"></div>
         </div>
         <div class="ez-anim-meta">
-          <button id="playBtn">▶ 播放</button>
-          <span class="label">时长</span>
+          <button id="playBtn" data-i18n="ease.btn.play">▶ 播放</button>
+          <span class="label" data-i18n="ease.duration">时长</span>
           <input type="range" id="duration" min="200" max="3000" value="1000" step="50">
           <span class="val" id="durationVal">1.00s</span>
         </div>
@@ -309,8 +309,8 @@
         </div>
         <textarea class="ez-code" id="exportCode" readonly spellcheck="false"></textarea>
         <div class="ez-export-actions">
-          <button id="copyCode">📋 复制</button>
-          <button id="downloadCode">💾 下载</button>
+          <button id="copyCode" data-i18n="ease.btn.copyShort">📋 复制</button>
+          <button id="downloadCode" data-i18n="ease.btn.download">💾 下载</button>
         </div>
       </div>
     </div>
@@ -339,18 +339,18 @@ Toolkit.injectTopbar('easing-editor');
   //   Presets
   // ============================================================
   const PRESETS = [
-    { name: '线性',       mode: 'bezier', p1: {x:0,y:0},     p2: {x:1,y:1} },
-    { name: 'ease',       mode: 'bezier', p1: {x:0.25,y:0.1},p2: {x:0.25,y:1} },
-    { name: 'ease-in',    mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:1,y:1} },
-    { name: 'ease-out',   mode: 'bezier', p1: {x:0,y:0},     p2: {x:0.58,y:1} },
-    { name: 'ease-in-out',mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:0.58,y:1} },
-    { name: 'Material',   mode: 'bezier', p1: {x:0.4,y:0},   p2: {x:0.2,y:1} },
-    { name: 'Apple',      mode: 'bezier', p1: {x:0.32,y:0.94},p2:{x:0.6,y:1} },
-    { name: 'Anticipate', mode: 'bezier', p1: {x:0.36,y:-0.36},p2:{x:0.4,y:0.96} },
-    { name: 'Overshoot',  mode: 'bezier', p1: {x:0.34,y:1.56},p2:{x:0.64,y:1} },
-    { name: 'Bounce out', mode: 'bezier', p1: {x:0.68,y:-0.55},p2:{x:0.27,y:1.55} },
-    { name: 'Spring 软',  mode: 'spring', spring: { mass: 1, stiffness: 80,  damping: 12, velocity: 0 } },
-    { name: 'Spring 弹',  mode: 'spring', spring: { mass: 1, stiffness: 200, damping: 8,  velocity: 0 } }
+    { key: 'linear',     name: '线性',       mode: 'bezier', p1: {x:0,y:0},     p2: {x:1,y:1} },
+    { key: 'ease',       name: 'ease',       mode: 'bezier', p1: {x:0.25,y:0.1},p2: {x:0.25,y:1} },
+    { key: 'easeIn',     name: 'ease-in',    mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:1,y:1} },
+    { key: 'easeOut',    name: 'ease-out',   mode: 'bezier', p1: {x:0,y:0},     p2: {x:0.58,y:1} },
+    { key: 'easeInOut',  name: 'ease-in-out',mode: 'bezier', p1: {x:0.42,y:0},  p2: {x:0.58,y:1} },
+    { key: 'material',   name: 'Material',   mode: 'bezier', p1: {x:0.4,y:0},   p2: {x:0.2,y:1} },
+    { key: 'apple',      name: 'Apple',      mode: 'bezier', p1: {x:0.32,y:0.94},p2:{x:0.6,y:1} },
+    { key: 'anticipate', name: 'Anticipate', mode: 'bezier', p1: {x:0.36,y:-0.36},p2:{x:0.4,y:0.96} },
+    { key: 'overshoot',  name: 'Overshoot',  mode: 'bezier', p1: {x:0.34,y:1.56},p2:{x:0.64,y:1} },
+    { key: 'bounceOut',  name: 'Bounce out', mode: 'bezier', p1: {x:0.68,y:-0.55},p2:{x:0.27,y:1.55} },
+    { key: 'springSoft', name: 'Spring 软',  mode: 'spring', spring: { mass: 1, stiffness: 80,  damping: 12, velocity: 0 } },
+    { key: 'springBouncy',name:'Spring 弹',  mode: 'spring', spring: { mass: 1, stiffness: 200, damping: 8,  velocity: 0 } }
   ];
 
   // ============================================================
@@ -588,7 +588,7 @@ Toolkit.injectTopbar('easing-editor');
     $('modeSpring').classList.toggle('active', m === 'spring');
     $('bezierParams').style.display = m === 'bezier' ? 'flex' : 'none';
     $('springParams').style.display = m === 'spring' ? 'flex' : 'none';
-    $('paramsHead').textContent = m === 'bezier' ? '控制点' : '弹簧参数';
+    $('paramsHead').textContent = m === 'bezier' ? Toolkit.T('ease.ctrlPts', null, '控制点') : Toolkit.T('ease.springParams', null, '弹簧参数');
     renderCurve();
     refreshExport();
   }
@@ -607,7 +607,7 @@ Toolkit.injectTopbar('easing-editor');
     PRESETS.forEach((p, i) => {
       const b = document.createElement('button');
       b.className = 'ez-preset';
-      b.textContent = p.name;
+      b.textContent = Toolkit.T('ease.preset.' + p.key, null, p.name);
       b.dataset.i = i;
       b.addEventListener('click', () => {
         if (p.mode === 'bezier') {
@@ -634,7 +634,7 @@ Toolkit.injectTopbar('easing-editor');
   function startAnim() {
     if (animId) return;
     animStart = performance.now();
-    $('playBtn').textContent = '⏸ 暂停';
+    $('playBtn').textContent = Toolkit.T('ease.btn.pause', null, '⏸ 暂停');
     function tick(now) {
       const t = Math.min(1, (now - animStart) / duration);
       const y = sampleCurve(t);
@@ -645,14 +645,14 @@ Toolkit.injectTopbar('easing-editor');
       if (t < 1) animId = requestAnimationFrame(tick);
       else {
         animId = null;
-        $('playBtn').textContent = '▶ 播放';
+        $('playBtn').textContent = Toolkit.T('ease.btn.play', null, '▶ 播放');
         setTimeout(() => $('animBall').style.left = '4px', 200);
       }
     }
     animId = requestAnimationFrame(tick);
   }
   $('playBtn').addEventListener('click', () => {
-    if (animId) { cancelAnimationFrame(animId); animId = null; $('playBtn').textContent = '▶ 播放'; }
+    if (animId) { cancelAnimationFrame(animId); animId = null; $('playBtn').textContent = Toolkit.T('ease.btn.play', null, '▶ 播放'); }
     else startAnim();
   });
 
@@ -713,8 +713,8 @@ Toolkit.injectTopbar('easing-editor');
   });
 
   $('copyCode').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('exportCode').value); log.ok('已复制 ' + currentFmt.toUpperCase() + ' 代码'); }
-    catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText($('exportCode').value); log.ok(Toolkit.T('ease.log.copied', { fmt: currentFmt.toUpperCase() }, '已复制 ' + currentFmt.toUpperCase() + ' 代码')); }
+    catch { log.err(Toolkit.T('ease.log.copyFail', null, '复制失败')); }
   });
   $('copyBtn').addEventListener('click', () => $('copyCode').click());
   $('downloadCode').addEventListener('click', () => {
@@ -740,7 +740,7 @@ Toolkit.injectTopbar('easing-editor');
   syncInputs();
   renderCurve();
   refreshExport();
-  log.ok('缓动曲线编辑器准备好');
+  log.ok(Toolkit.T('ease.log.ready', null, '缓动曲线编辑器准备好'));
 })();
 </script>
 </body>

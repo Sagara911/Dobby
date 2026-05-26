@@ -259,57 +259,57 @@
   <div class="sidebar">
     <h1>📺 屏幕录制器</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="sr.intro">
       <strong style="color:var(--accent)">100% 本地</strong> · 录像直接存在浏览器内存,完成后下载到本地。不上传任何东西。
     </div>
 
     <h2 data-i18n="sr.what">录什么</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="micEnabled" />
-      <span>包含麦克风音轨</span>
+      <span data-i18n="sr.micLabel">包含麦克风音轨</span>
     </label>
-    <div class="rec-help">系统音(标签页 / 应用音)默认会录(取决于你浏览器的「分享」对话框,选「同时分享系统声音」)</div>
+    <div class="rec-help" data-i18n="sr.micHelp">系统音(标签页 / 应用音)默认会录(取决于你浏览器的「分享」对话框,选「同时分享系统声音」)</div>
 
-    <h2>录制区域</h2>
+    <h2 data-i18n="sr.areaH">录制区域</h2>
     <select id="captureArea" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="full" selected>整个画面(默认)</option>
-      <option value="crop">框选一块(选完屏幕后拖矩形)</option>
+      <option value="full" selected data-i18n="sr.area.full">整个画面(默认)</option>
+      <option value="crop" data-i18n="sr.area.crop">框选一块(选完屏幕后拖矩形)</option>
     </select>
-    <div class="rec-help">选「框选一块」后,选完屏幕的下一步是在预览图上拖个矩形,只录那一块</div>
+    <div class="rec-help" data-i18n="sr.areaHelp">选「框选一块」后,选完屏幕的下一步是在预览图上拖个矩形,只录那一块</div>
 
     <h2 data-i18n="sr.pip">摄像头叠加(PiP)</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="webcamEnabled" />
-      <span>右下角加摄像头小窗</span>
+      <span data-i18n="sr.webcamLabel">右下角加摄像头小窗</span>
     </label>
-    <div class="rec-help">做教程时常用 — 摄像头会通过 Canvas 实时合成到输出视频里(不只是预览),教程类录像零后期</div>
+    <div class="rec-help" data-i18n="sr.webcamHelp">做教程时常用 — 摄像头会通过 Canvas 实时合成到输出视频里(不只是预览),教程类录像零后期</div>
 
     <h2 data-i18n="sr.pipPos">PiP 位置 / 大小</h2>
     <select id="pipPos" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="br" selected>右下</option>
-      <option value="bl">左下</option>
-      <option value="tr">右上</option>
-      <option value="tl">左上</option>
+      <option value="br" selected data-i18n="sr.pos.br">右下</option>
+      <option value="bl" data-i18n="sr.pos.bl">左下</option>
+      <option value="tr" data-i18n="sr.pos.tr">右上</option>
+      <option value="tl" data-i18n="sr.pos.tl">左上</option>
     </select>
     <input type="range" id="pipSize" min="10" max="35" value="20" style="width:100%; margin-top:6px">
-    <div class="rec-help"><span id="pipSizeLabel">20</span>% 屏幕宽度</div>
+    <div class="rec-help" data-i18n-html="sr.pipSizeHelp"><span id="pipSizeLabel">20</span>% 屏幕宽度</div>
 
     <h2 data-i18n="sr.codec">编码格式</h2>
     <select id="mimeType" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="video/mp4;codecs=avc1.42E01F,mp4a.40.2" selected>MP4 · H.264 + AAC(推荐,兼容性最广)</option>
-      <option value="video/mp4;codecs=avc1.640028,mp4a.40.2">MP4 · H.264 High + AAC(质量更好,体积稍小)</option>
-      <option value="video/webm;codecs=vp9,opus">WebM · VP9 + Opus(老路径,体积稍小)</option>
-      <option value="video/webm;codecs=vp8,opus">WebM · VP8 + Opus(超老兼容)</option>
-      <option value="video/webm">WebM(让浏览器选)</option>
+      <option value="video/mp4;codecs=avc1.42E01F,mp4a.40.2" selected data-i18n="sr.codec.mp4">MP4 · H.264 + AAC(推荐,兼容性最广)</option>
+      <option value="video/mp4;codecs=avc1.640028,mp4a.40.2" data-i18n="sr.codec.mp4h">MP4 · H.264 High + AAC(质量更好,体积稍小)</option>
+      <option value="video/webm;codecs=vp9,opus" data-i18n="sr.codec.vp9">WebM · VP9 + Opus(老路径,体积稍小)</option>
+      <option value="video/webm;codecs=vp8,opus" data-i18n="sr.codec.vp8">WebM · VP8 + Opus(超老兼容)</option>
+      <option value="video/webm" data-i18n="sr.codec.webm">WebM(让浏览器选)</option>
     </select>
-    <div class="rec-help">MP4 需要 Chrome / Edge 138+ 或 Safari 16+;不支持时自动回退 WebM</div>
+    <div class="rec-help" data-i18n="sr.codecHelp">MP4 需要 Chrome / Edge 138+ 或 Safari 16+;不支持时自动回退 WebM</div>
 
     <h2 data-i18n="sr.bitrate">比特率</h2>
     <select id="bitrate" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="2500000">2.5 Mbps · 普通(小)</option>
-      <option value="5000000" selected>5 Mbps · 推荐</option>
-      <option value="10000000">10 Mbps · 高质量</option>
-      <option value="20000000">20 Mbps · 极清</option>
+      <option value="2500000" data-i18n="sr.br.25">2.5 Mbps · 普通(小)</option>
+      <option value="5000000" selected data-i18n="sr.br.5">5 Mbps · 推荐</option>
+      <option value="10000000" data-i18n="sr.br.10">10 Mbps · 高质量</option>
+      <option value="20000000" data-i18n="sr.br.20">20 Mbps · 极清</option>
     </select>
 
     <h2 data-i18n="sr.namePrefix">文件名前缀</h2>
@@ -319,18 +319,18 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">浏览器原生录屏 · WebM 输出 · 零上传</div>
+    <div class="stats" id="stats" data-i18n="sr.stats.idle">浏览器原生录屏 · WebM 输出 · 零上传</div>
 
     <div class="rec-stage">
       <!-- BIG CONTROL -->
       <div class="rec-control" id="controlCard">
         <div class="rec-status">
-          <div class="label" id="statusLabel">准备录制</div>
+          <div class="label" id="statusLabel" data-i18n="sr.status.ready">准备录制</div>
           <div class="timer" id="timer">00:00</div>
         </div>
         <div class="rec-actions">
-          <button class="rec-big-btn" id="startBtn">⏺ 开始录制</button>
-          <button class="rec-big-btn stop" id="stopBtn" style="display:none">⏹ 停止</button>
+          <button class="rec-big-btn" id="startBtn" data-i18n="sr.start">⏺ 开始录制</button>
+          <button class="rec-big-btn stop" id="stopBtn" style="display:none" data-i18n="sr.stop">⏹ 停止</button>
         </div>
       </div>
 
@@ -338,8 +338,8 @@
       <div class="rec-preview" id="previewWrap">
         <div class="placeholder" id="placeholder">
           <div class="big">📺</div>
-          <div>点上面 ⏺ 开始录制,选屏幕 / 窗口 / 标签页</div>
-          <div style="font-size:11px; margin-top:8px; color:var(--muted)">浏览器会问你要录什么 — 选完点 分享 即可</div>
+          <div data-i18n="sr.ph.line1">点上面 ⏺ 开始录制,选屏幕 / 窗口 / 标签页</div>
+          <div style="font-size:11px; margin-top:8px; color:var(--muted)" data-i18n="sr.ph.line2">浏览器会问你要录什么 — 选完点 分享 即可</div>
         </div>
         <video id="livePreview" autoplay muted playsinline style="display:none"></video>
         <video id="resultPreview" controls playsinline style="display:none"></video>
@@ -353,27 +353,27 @@
           <div class="rec-crop-mask right"></div>
           <div class="rec-crop-mask bottom"></div>
           <div class="rec-crop-rect" id="cropRect"></div>
-          <div class="rec-crop-hint" id="cropHint">在预览里拖一个矩形 — 那就是要录的区域</div>
+          <div class="rec-crop-hint" id="cropHint" data-i18n="sr.crop.hint">在预览里拖一个矩形 — 那就是要录的区域</div>
         </div>
       </div>
 
       <!-- Framing confirm bar: shown only during framing mode -->
       <div class="rec-frame-confirm" id="frameConfirm" style="display:none">
-        <span class="rec-frame-info" id="frameInfo">尚未框选 · 拖一个矩形</span>
-        <button class="rec-big-btn" id="frameConfirmBtn" disabled>✓ 开始录制选中区</button>
-        <button class="rec-big-btn stop" id="frameCancelBtn">✗ 取消</button>
-        <button class="rec-big-btn" id="frameFullBtn" style="background:rgba(255,255,255,0.05); border-color:var(--border); color:var(--text)">📺 改录整屏</button>
+        <span class="rec-frame-info" id="frameInfo" data-i18n="sr.frame.none">尚未框选 · 拖一个矩形</span>
+        <button class="rec-big-btn" id="frameConfirmBtn" disabled data-i18n="sr.frame.confirm">✓ 开始录制选中区</button>
+        <button class="rec-big-btn stop" id="frameCancelBtn" data-i18n="sr.frame.cancel">✗ 取消</button>
+        <button class="rec-big-btn" id="frameFullBtn" style="background:rgba(255,255,255,0.05); border-color:var(--border); color:var(--text)" data-i18n="sr.frame.full">📺 改录整屏</button>
       </div>
 
       <!-- RESULT INFO -->
       <div class="rec-result-info" id="resultInfo" style="display:none">
-        <div class="item">时长 <span class="v" id="resDuration">—</span></div>
-        <div class="item">大小 <span class="v" id="resSize">—</span></div>
-        <div class="item">分辨率 <span class="v" id="resRes">—</span></div>
-        <div class="item">编码 <span class="v" id="resCodec">—</span></div>
+        <div class="item"><span data-i18n="sr.res.dur">时长</span> <span class="v" id="resDuration">—</span></div>
+        <div class="item"><span data-i18n="sr.res.size">大小</span> <span class="v" id="resSize">—</span></div>
+        <div class="item"><span data-i18n="sr.res.res">分辨率</span> <span class="v" id="resRes">—</span></div>
+        <div class="item"><span data-i18n="sr.res.codec">编码</span> <span class="v" id="resCodec">—</span></div>
         <div class="rec-result-actions">
-          <button id="downloadBtn">💾 下载</button>
-          <button id="clearBtn">🗑️ 清除</button>
+          <button id="downloadBtn" data-i18n="sr.download">💾 下载</button>
+          <button id="clearBtn" data-i18n="sr.clear">🗑️ 清除</button>
         </div>
       </div>
     </div>
@@ -448,7 +448,7 @@ Toolkit.injectTopbar('screen-recorder');
         audio: true   // browser may ignore based on user choice in the picker
       });
     } catch (e) {
-      log.err('屏幕录制被取消或失败: ' + e.message);
+      log.err(Toolkit.T('sr.log.captureFail', { msg: e.message }, `屏幕录制被取消或失败: ${e.message}`));
       return;
     }
 
@@ -475,7 +475,7 @@ Toolkit.injectTopbar('screen-recorder');
         }
         mixedAudioStream = dest.stream;
       } catch (e) {
-        log.warn('麦克风不可用,只录屏幕音: ' + e.message);
+        log.warn(Toolkit.T('sr.log.micUnavail', { msg: e.message }, `麦克风不可用,只录屏幕音: ${e.message}`));
       }
     }
 
@@ -486,7 +486,7 @@ Toolkit.injectTopbar('screen-recorder');
         $('webcamVideo').srcObject = webcamStream;
         $('webcamPip').classList.add('show');
       } catch (e) {
-        log.warn('摄像头不可用: ' + e.message);
+        log.warn(Toolkit.T('sr.log.camUnavail', { msg: e.message }, `摄像头不可用: ${e.message}`));
       }
     }
 
@@ -513,7 +513,7 @@ Toolkit.injectTopbar('screen-recorder');
         $('livePreview').style.display = 'none';
         $('startBtn').style.display = '';
         $('stopBtn').style.display = 'none';
-        log.warn('用户取消了屏幕共享');
+        log.warn(Toolkit.T('sr.log.userCanceled', null, '用户取消了屏幕共享'));
       }
     };
 
@@ -536,14 +536,14 @@ Toolkit.injectTopbar('screen-recorder');
     $('cropHint').classList.remove('hide');
     $('frameConfirm').style.display = 'flex';
     $('frameConfirmBtn').disabled = true;
-    $('frameInfo').textContent = '尚未框选 · 在预览图上拖一个矩形';
+    $('frameInfo').textContent = Toolkit.T('sr.frame.noneDrag', null, '尚未框选 · 在预览图上拖一个矩形');
     $('startBtn').style.display = 'none';
     $('stopBtn').style.display = 'none';
-    $('statusLabel').textContent = '🎯 框选要录的区域';
+    $('statusLabel').textContent = Toolkit.T('sr.status.framing', null, '🎯 框选要录的区域');
 
     // Bind drag handlers on the overlay
     bindCropDrag();
-    log.ok('已进入框选模式 — 在预览图上拖一个矩形');
+    log.ok(Toolkit.T('sr.log.enterFraming', null, '已进入框选模式 — 在预览图上拖一个矩形'));
   }
   function exitFramingMode() {
     $('cropOverlay').style.display = 'none';
@@ -633,13 +633,13 @@ Toolkit.injectTopbar('screen-recorder');
     let ch = Math.max(0, Math.round(sh)); if (ch % 2) ch -= 1;
     if (cw < 32 || ch < 32) {
       // tiny rect → treat as no selection
-      $('frameInfo').textContent = '框太小了(< 32px),再拖大一点';
+      $('frameInfo').textContent = Toolkit.T('sr.frame.tooSmall', null, '框太小了(< 32px),再拖大一点');
       $('frameConfirmBtn').disabled = true;
       cropRect = null;
       return;
     }
     cropRect = { x: cx, y: cy, w: cw, h: ch };
-    $('frameInfo').textContent = `📐 已选 ${cw}×${ch} (源 ${vw}×${vh})`;
+    $('frameInfo').textContent = Toolkit.T('sr.frame.picked', { cw, ch, vw, vh }, `📐 已选 ${cw}×${ch} (源 ${vw}×${vh})`);
     $('frameConfirmBtn').disabled = false;
   }
 
@@ -745,7 +745,7 @@ Toolkit.injectTopbar('screen-recorder');
     const bitrate = parseInt($('bitrate').value, 10);
     let chosen = mimeOption;
     if (chosen && !MediaRecorder.isTypeSupported(chosen)) {
-      log.warn(`${chosen} 不支持,回退到浏览器默认`);
+      log.warn(Toolkit.T('sr.log.codecFallback', { codec: chosen }, `${chosen} 不支持,回退到浏览器默认`));
       chosen = '';
     }
     recorder = new MediaRecorder(finalStream, {
@@ -761,14 +761,14 @@ Toolkit.injectTopbar('screen-recorder');
     // UI state
     exitFramingMode();
     $('controlCard').classList.add('recording');
-    $('statusLabel').textContent = '🔴 录制中';
+    $('statusLabel').textContent = Toolkit.T('sr.status.recording', null, '🔴 录制中');
     $('timer').classList.add('live');
     $('startBtn').style.display = 'none';
     $('stopBtn').style.display = '';
 
     log.ok(cropRect
-      ? `开始录制 · 区域 ${cropRect.w}×${cropRect.h}`
-      : '开始录制 · 整屏');
+      ? Toolkit.T('sr.log.startCrop', { w: cropRect.w, h: cropRect.h }, `开始录制 · 区域 ${cropRect.w}×${cropRect.h}`)
+      : Toolkit.T('sr.log.startFull', null, '开始录制 · 整屏'));
   }
 
   function stopRecording() {
@@ -797,7 +797,7 @@ Toolkit.injectTopbar('screen-recorder');
 
     // UI
     $('controlCard').classList.remove('recording');
-    $('statusLabel').textContent = '录制完成';
+    $('statusLabel').textContent = Toolkit.T('sr.status.done', null, '录制完成');
     $('timer').classList.remove('live');
     $('timer').textContent = formatTime(elapsed);
     $('startBtn').style.display = '';
@@ -825,7 +825,7 @@ Toolkit.injectTopbar('screen-recorder');
     const name = ($('filename').value || 'screen').replace(/[^\w-]/g, '_');
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
     handoff?.setBlob(recordingBlob, `${name}_${ts}.${ext}`, ext === 'mp4' ? 'video/mp4' : 'video/webm');
-    log.ok(`录制完成 · ${fmtBytes(recordingBlob.size)} · ${ext.toUpperCase()} · 用左侧「📤 送下一个工具」可直接发到视频处理`);
+    log.ok(Toolkit.T('sr.log.done', { size: fmtBytes(recordingBlob.size), EXT: ext.toUpperCase() }, `录制完成 · ${fmtBytes(recordingBlob.size)} · ${ext.toUpperCase()} · 用左侧「📤 送下一个工具」可直接发到视频处理`));
   }
 
   $('startBtn').addEventListener('click', startRecording);
@@ -844,8 +844,8 @@ Toolkit.injectTopbar('screen-recorder');
     $('livePreview').style.display = 'none';
     $('startBtn').style.display = '';
     $('stopBtn').style.display = 'none';
-    $('statusLabel').textContent = '准备录制';
-    log.warn('已取消框选,屏幕共享停止');
+    $('statusLabel').textContent = Toolkit.T('sr.status.ready', null, '准备录制');
+    log.warn(Toolkit.T('sr.log.cancelFrame', null, '已取消框选,屏幕共享停止'));
   });
   $('frameFullBtn').addEventListener('click', () => {
     // Skip crop, just record the full display
@@ -868,17 +868,17 @@ Toolkit.injectTopbar('screen-recorder');
     $('resultPreview').style.display = 'none';
     $('resultInfo').style.display = 'none';
     $('placeholder').style.display = '';
-    $('statusLabel').textContent = '准备录制';
+    $('statusLabel').textContent = Toolkit.T('sr.status.ready', null, '准备录制');
     $('timer').textContent = '00:00';
     handoff?.clear();
   });
 
   // browser support sanity
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-    log.err('这个浏览器不支持 getDisplayMedia API,请用 Chrome / Edge / Firefox 113+');
+    log.err(Toolkit.T('sr.log.noSupport', null, '这个浏览器不支持 getDisplayMedia API,请用 Chrome / Edge / Firefox 113+'));
     $('startBtn').disabled = true;
   } else {
-    log.ok('屏幕录制器准备好');
+    log.ok(Toolkit.T('sr.log.ready', null, '屏幕录制器准备好'));
   }
 })();
 </script>

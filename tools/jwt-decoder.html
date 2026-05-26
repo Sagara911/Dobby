@@ -152,7 +152,7 @@
   <div class="sidebar">
     <h1>🔑 JWT 解码器</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div data-i18n-html="jwt.localNote" style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
       <strong style="color:var(--accent)">100% 本地</strong> · 解码完全在浏览器,token 不离开你这台机器
     </div>
 
@@ -163,17 +163,17 @@
 
     <h2 data-i18n="jwt.claims.h">常见 claims 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
-      <div><strong>iss</strong>: 签发者</div>
-      <div><strong>sub</strong>: 主体(用户 id)</div>
-      <div><strong>aud</strong>: 目标受众</div>
-      <div><strong>exp</strong>: 过期时间</div>
-      <div><strong>nbf</strong>: 在此之前无效</div>
-      <div><strong>iat</strong>: 签发时间</div>
-      <div><strong>jti</strong>: JWT 唯一 ID</div>
+      <div><strong>iss</strong>: <span data-i18n="jwt.claim.iss">签发者</span></div>
+      <div><strong>sub</strong>: <span data-i18n="jwt.claim.sub">主体(用户 id)</span></div>
+      <div><strong>aud</strong>: <span data-i18n="jwt.claim.aud">目标受众</span></div>
+      <div><strong>exp</strong>: <span data-i18n="jwt.claim.exp">过期时间</span></div>
+      <div><strong>nbf</strong>: <span data-i18n="jwt.claim.nbf">在此之前无效</span></div>
+      <div><strong>iat</strong>: <span data-i18n="jwt.claim.iat">签发时间</span></div>
+      <div><strong>jti</strong>: <span data-i18n="jwt.claim.jti">JWT 唯一 ID</span></div>
     </div>
 
     <h2 data-i18n="common.notes">注意</h2>
-    <div style="font-size:11px; color:var(--muted); line-height:1.6">
+    <div data-i18n="jwt.note.body" style="font-size:11px; color:var(--muted); line-height:1.6">
       Dobby 只解码不验签 — 验签需要服务端密钥,跟「浏览器本地」原则冲突。如果你要验签,用 jwt.io 或本地 jose 库
     </div>
 
@@ -186,7 +186,7 @@
     <div class="jwt-stage">
       <!-- Input -->
       <div class="jwt-input-wrap">
-        <textarea id="input" spellcheck="false" placeholder="粘贴你的 JWT(以 eyJ 开头,3 段用 . 分隔)..."></textarea>
+        <textarea id="input" spellcheck="false" data-i18n-attr="placeholder:jwt.input.ph" placeholder="粘贴你的 JWT(以 eyJ 开头,3 段用 . 分隔)..."></textarea>
       </div>
 
       <!-- Colored token -->
@@ -196,21 +196,21 @@
       <div class="jwt-grid">
         <div class="jwt-pane header">
           <h3>🔴 Header</h3>
-          <pre id="headerOut" class="empty">等待 token 输入</pre>
+          <pre id="headerOut" class="empty" data-i18n="jwt.empty.wait">等待 token 输入</pre>
         </div>
         <div class="jwt-pane payload">
           <h3>🟣 Payload</h3>
-          <pre id="payloadOut" class="empty">等待 token 输入</pre>
+          <pre id="payloadOut" class="empty" data-i18n="jwt.empty.wait">等待 token 输入</pre>
         </div>
         <div class="jwt-pane sig">
           <h3>🔵 Signature</h3>
-          <pre id="sigOut" class="empty">等待 token 输入</pre>
+          <pre id="sigOut" class="empty" data-i18n="jwt.empty.wait">等待 token 输入</pre>
         </div>
       </div>
 
       <!-- Claims summary -->
       <div class="jwt-claims" id="claimsCard" style="display:none">
-        <h3>常用 Claims 解读</h3>
+        <h3 data-i18n="jwt.claims.title">常用 Claims 解读</h3>
         <div id="claimsRows"></div>
       </div>
     </div>
@@ -247,19 +247,20 @@ Toolkit.injectTopbar('jwt-decoder');
   function decode(token) {
     token = (token || '').trim();
     if (!token) {
+      const wait = Toolkit.T('jwt.empty.wait', null, '等待 token 输入');
       $('tokenColored').style.display = 'none';
-      $('headerOut').textContent = '等待 token 输入';
+      $('headerOut').textContent = wait;
       $('headerOut').className = 'empty';
-      $('payloadOut').textContent = '等待 token 输入';
+      $('payloadOut').textContent = wait;
       $('payloadOut').className = 'empty';
-      $('sigOut').textContent = '等待 token 输入';
+      $('sigOut').textContent = wait;
       $('sigOut').className = 'empty';
       $('claimsCard').style.display = 'none';
       return;
     }
     const parts = token.split('.');
     if (parts.length !== 3) {
-      log.err(`格式错: JWT 应有 3 段(用 . 分隔),收到 ${parts.length} 段`);
+      log.err(Toolkit.T('jwt.err.parts', { n: parts.length }, `格式错: JWT 应有 3 段(用 . 分隔),收到 ${parts.length} 段`));
       return;
     }
     const [h, p, s] = parts;
@@ -278,7 +279,7 @@ Toolkit.injectTopbar('jwt-decoder');
       $('headerOut').textContent = hJson ? JSON.stringify(hJson, null, 2) : hStr;
       $('headerOut').className = '';
     } catch (e) {
-      $('headerOut').textContent = '解码失败: ' + e.message;
+      $('headerOut').textContent = Toolkit.T('jwt.err.decode', { msg: e.message }, '解码失败: ' + e.message);
       $('headerOut').className = 'empty';
     }
 
@@ -289,12 +290,12 @@ Toolkit.injectTopbar('jwt-decoder');
       $('payloadOut').textContent = payloadJson ? JSON.stringify(payloadJson, null, 2) : pStr;
       $('payloadOut').className = '';
     } catch (e) {
-      $('payloadOut').textContent = '解码失败: ' + e.message;
+      $('payloadOut').textContent = Toolkit.T('jwt.err.decode', { msg: e.message }, '解码失败: ' + e.message);
       $('payloadOut').className = 'empty';
     }
 
     // signature stays raw (base64url) — it's binary data, not text
-    $('sigOut').textContent = s + '\n\n(签名是原始字节的 base64url,不解码 — 验签需要密钥)';
+    $('sigOut').textContent = s + '\n\n' + Toolkit.T('jwt.sig.note', null, '(签名是原始字节的 base64url,不解码 — 验签需要密钥)');
     $('sigOut').className = '';
 
     // claims interpretation
@@ -314,13 +315,13 @@ Toolkit.injectTopbar('jwt-decoder');
     const diff = ms - now;
     const absS = Math.abs(diff) / 1000;
     let ago;
-    if (absS < 60) ago = Math.round(absS) + ' 秒';
-    else if (absS < 3600) ago = Math.round(absS / 60) + ' 分钟';
-    else if (absS < 86400) ago = Math.round(absS / 3600) + ' 小时';
-    else ago = Math.round(absS / 86400) + ' 天';
+    if (absS < 60) ago = Math.round(absS) + ' ' + Toolkit.T('jwt.unit.sec', null, '秒');
+    else if (absS < 3600) ago = Math.round(absS / 60) + ' ' + Toolkit.T('jwt.unit.min', null, '分钟');
+    else if (absS < 86400) ago = Math.round(absS / 3600) + ' ' + Toolkit.T('jwt.unit.hour', null, '小时');
+    else ago = Math.round(absS / 86400) + ' ' + Toolkit.T('jwt.unit.day', null, '天');
     return {
       iso: d.toISOString().replace('T', ' ').slice(0, 19),
-      relative: diff < 0 ? `${ago}前` : `${ago}后`,
+      relative: diff < 0 ? Toolkit.T('jwt.time.ago', { ago }, `${ago}前`) : Toolkit.T('jwt.time.later', { ago }, `${ago}后`),
       future: diff > 0
     };
   }
@@ -330,13 +331,13 @@ Toolkit.injectTopbar('jwt-decoder');
     const rows = $('claimsRows');
     rows.innerHTML = '';
     const knownClaims = [
-      { k: 'iss', desc: '签发者' },
-      { k: 'sub', desc: '主体(用户)' },
-      { k: 'aud', desc: '受众' },
-      { k: 'iat', desc: '签发时间', isTime: true },
-      { k: 'nbf', desc: '生效时间', isTime: true },
-      { k: 'exp', desc: '过期时间', isTime: true, checkExpired: true },
-      { k: 'jti', desc: '唯一 ID' }
+      { k: 'iss', desc: Toolkit.T('jwt.desc.iss', null, '签发者') },
+      { k: 'sub', desc: Toolkit.T('jwt.desc.sub', null, '主体(用户)') },
+      { k: 'aud', desc: Toolkit.T('jwt.desc.aud', null, '受众') },
+      { k: 'iat', desc: Toolkit.T('jwt.desc.iat', null, '签发时间'), isTime: true },
+      { k: 'nbf', desc: Toolkit.T('jwt.desc.nbf', null, '生效时间'), isTime: true },
+      { k: 'exp', desc: Toolkit.T('jwt.desc.exp', null, '过期时间'), isTime: true, checkExpired: true },
+      { k: 'jti', desc: Toolkit.T('jwt.desc.jti', null, '唯一 ID') }
     ];
     let any = false;
     for (const { k, desc, isTime, checkExpired } of knownClaims) {
@@ -352,7 +353,7 @@ Toolkit.injectTopbar('jwt-decoder');
         if (t) {
           vStr = `${v} (${t.iso})`;
           const expired = checkExpired && !t.future;
-          ago = `<span class="ago${expired ? ' expired' : ''}">${expired ? '⚠️ 已过期 ' : ''}${t.relative}</span>`;
+          ago = `<span class="ago${expired ? ' expired' : ''}">${expired ? '⚠️ ' + Toolkit.T('jwt.expired', null, '已过期') + ' ' : ''}${t.relative}</span>`;
         }
       }
       row.innerHTML = `
@@ -374,7 +375,7 @@ Toolkit.injectTopbar('jwt-decoder');
       $('input').value = text;
       decode(text);
     } catch (e) {
-      log.err('读剪贴板失败: ' + e.message);
+      log.err(Toolkit.T('jwt.err.clip', { msg: e.message }, '读剪贴板失败: ' + e.message));
     }
   });
   $('clearBtn').addEventListener('click', () => {
@@ -402,7 +403,7 @@ Toolkit.injectTopbar('jwt-decoder');
     decode(token);
   });
 
-  log.ok('JWT 解码器准备好,粘贴 token 试试');
+  log.ok(Toolkit.T('jwt.log.ready', null, 'JWT 解码器准备好,粘贴 token 试试'));
 })();
 </script>
 </body>

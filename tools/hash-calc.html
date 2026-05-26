@@ -172,8 +172,8 @@
     <h1>🔐 文件哈希</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入任意文件</p>
-      <p class="hint">大文件用流式分块,内存不爆</p>
+      <p data-i18n="hash.drop.title">📂 拖入任意文件</p>
+      <p class="hint" data-i18n="hash.drop.hint">大文件用流式分块,内存不爆</p>
       <input type="file" id="fileInput" style="display:none" />
     </div>
 
@@ -181,15 +181,15 @@
     <div style="display:flex; flex-direction:column; gap:4px">
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="algoMD5" checked />
-        <span>MD5 (128 bit,弱抗碰撞但常用)</span>
+        <span data-i18n="hash.algo.md5">MD5 (128 bit,弱抗碰撞但常用)</span>
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="algoSHA1" checked />
-        <span>SHA-1 (160 bit,已弱化,Git 默认)</span>
+        <span data-i18n="hash.algo.sha1">SHA-1 (160 bit,已弱化,Git 默认)</span>
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="algoSHA256" checked />
-        <span>SHA-256 (256 bit,通用安全)</span>
+        <span data-i18n="hash.algo.sha256">SHA-256 (256 bit,通用安全)</span>
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="algoSHA384" />
@@ -206,7 +206,7 @@
     <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
     <h2 data-i18n="hash.uses">用途</h2>
-    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6">
+    <div data-i18n-html="hash.uses.body" style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6">
       • 校验下载文件完整性<br>
       • Git LFS / Docker layer 标识<br>
       • 验证服务端给的签名摘要<br>
@@ -222,15 +222,15 @@
     <div class="hash-stage">
       <!-- File area -->
       <div class="hash-text-area" id="fileArea" style="display:none">
-        <h3>📁 文件</h3>
+        <h3 data-i18n="hash.file.h">📁 文件</h3>
         <div class="meta" id="fileMeta">—</div>
       </div>
 
       <!-- Text input -->
       <div class="hash-text-area">
-        <h3>📝 文本输入(也可以直接粘贴)</h3>
-        <textarea id="textInput" spellcheck="false" placeholder="在这里输入或粘贴文本,实时计算哈希..."></textarea>
-        <div class="meta"><span id="textMeta">0 字符 · 0 字节</span></div>
+        <h3 data-i18n="hash.text.h">📝 文本输入(也可以直接粘贴)</h3>
+        <textarea id="textInput" spellcheck="false" data-i18n-attr="placeholder:hash.text.ph" placeholder="在这里输入或粘贴文本,实时计算哈希..."></textarea>
+        <div class="meta"><span id="textMeta" data-i18n="hash.text.empty">0 字符 · 0 字节</span></div>
       </div>
 
       <!-- Results -->
@@ -240,8 +240,8 @@
 
       <!-- Verify -->
       <div class="hash-verify">
-        <h3>校验摘要(粘贴别人给的哈希值)</h3>
-        <input type="text" id="verifyInput" placeholder="粘贴一个 hex 哈希值,自动跟上面所有结果对比" />
+        <h3 data-i18n="hash.verify.h">校验摘要(粘贴别人给的哈希值)</h3>
+        <input type="text" id="verifyInput" data-i18n-attr="placeholder:hash.verify.ph" placeholder="粘贴一个 hex 哈希值,自动跟上面所有结果对比" />
         <div id="verifyResult"></div>
       </div>
     </div>
@@ -339,11 +339,11 @@ Toolkit.injectTopbar('hash-calc');
       if (!$(ALGO_CHECKS[id]).checked) continue;
       const row = document.createElement('div');
       row.className = 'hash-row';
-      const digest = currentDigests[id] || '(计算中...)';
+      const digest = currentDigests[id] || Toolkit.T('hash.computing', null, '(计算中...)');
       row.innerHTML = `
         <div class="algo">${id}</div>
         <div class="digest${currentDigests[id] ? '' : ' computing'}">${digest}</div>
-        <button class="copy" data-algo="${id}">📋 复制</button>
+        <button class="copy" data-algo="${id}">${Toolkit.T('hash.copy', null, '📋 复制')}</button>
       `;
       cont.appendChild(row);
     }
@@ -355,9 +355,9 @@ Toolkit.injectTopbar('hash-calc');
         try {
           await navigator.clipboard.writeText(d);
           b.classList.add('copied');
-          b.textContent = '✓ 已复制';
-          setTimeout(() => { b.classList.remove('copied'); b.textContent = '📋 复制'; }, 1500);
-        } catch (e) { log.err('复制失败'); }
+          b.textContent = Toolkit.T('hash.copied', null, '✓ 已复制');
+          setTimeout(() => { b.classList.remove('copied'); b.textContent = Toolkit.T('hash.copy', null, '📋 复制'); }, 1500);
+        } catch (e) { log.err(Toolkit.T('hash.log.copyFail', null, '复制失败')); }
       });
     });
     checkVerify();
@@ -380,7 +380,7 @@ Toolkit.injectTopbar('hash-calc');
   function handleText(text) {
     const bytes = new TextEncoder().encode(text);
     currentBytes = bytes;
-    $('textMeta').textContent = `${text.length} 字符 · ${bytes.length} 字节`;
+    $('textMeta').textContent = Toolkit.T('hash.meta.text', { chars: text.length, bytes: bytes.length }, `${text.length} 字符 · ${bytes.length} 字节`);
     $('fileArea').style.display = 'none';
     recompute();
   }
@@ -389,7 +389,7 @@ Toolkit.injectTopbar('hash-calc');
     $('fileMeta').innerHTML = `<strong style="color:var(--text)">${file.name}</strong> · ${fmtBytes(file.size)} · ${file.type || 'unknown type'}`;
     $('fileArea').style.display = '';
     $('textInput').value = '';
-    $('textMeta').textContent = '(已切到文件模式)';
+    $('textMeta').textContent = Toolkit.T('hash.meta.fileMode', null, '(已切到文件模式)');
     recompute();
   }
 
@@ -404,7 +404,7 @@ Toolkit.injectTopbar('hash-calc');
     currentBytes = null;
     currentDigests = {};
     $('textInput').value = '';
-    $('textMeta').textContent = '0 字符 · 0 字节';
+    $('textMeta').textContent = Toolkit.T('hash.text.empty', null, '0 字符 · 0 字节');
     $('fileArea').style.display = 'none';
     $('results').innerHTML = '';
     $('verifyInput').value = '';
@@ -419,15 +419,15 @@ Toolkit.injectTopbar('hash-calc');
     const match = Object.entries(currentDigests).find(([algo, d]) => d.toLowerCase() === target);
     if (match) {
       res.className = 'hash-verify-result match';
-      res.textContent = `✓ 匹配 ${match[0]}`;
+      res.textContent = Toolkit.T('hash.verify.match', { algo: match[0] }, `✓ 匹配 ${match[0]}`);
     } else if (Object.keys(currentDigests).length) {
       res.className = 'hash-verify-result nomatch';
-      res.textContent = `✗ 与所有已计算的哈希都不匹配`;
+      res.textContent = Toolkit.T('hash.verify.nomatch', null, '✗ 与所有已计算的哈希都不匹配');
     }
   }
   $('verifyInput').addEventListener('input', checkVerify);
 
-  log.ok('哈希计算器准备好');
+  log.ok(Toolkit.T('hash.log.ready', null, '哈希计算器准备好'));
 })();
 </script>
 </body>

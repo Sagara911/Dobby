@@ -206,70 +206,70 @@
 
     <h2 data-i18n="re.presets">常用模板</h2>
     <select id="presetSelect" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="">— 选一个常用正则 —</option>
-      <option value="email">📧 邮箱</option>
-      <option value="url">🌐 URL (http/https)</option>
-      <option value="ipv4">📡 IPv4</option>
-      <option value="ipv6">📡 IPv6</option>
-      <option value="phone-cn">📞 中国手机号</option>
-      <option value="phone-us">📞 美国电话号</option>
-      <option value="datetime-iso">📅 ISO 日期时间</option>
-      <option value="date">📅 日期 YYYY-MM-DD</option>
-      <option value="hex-color">🎨 hex 颜色 (#RGB / #RRGGBB)</option>
-      <option value="uuid">🆔 UUID v4</option>
-      <option value="zh-name">👤 中文姓名</option>
-      <option value="id-card">🪪 身份证号</option>
-      <option value="postcode-cn">📮 中国邮编</option>
-      <option value="creditcard">💳 信用卡(粗略)</option>
-      <option value="username">📛 用户名 (3-16 字母数字下划线)</option>
-      <option value="password">🔒 密码 (至少 8 位 + 大小写 + 数字)</option>
-      <option value="filename">📄 文件名</option>
-      <option value="leading-ws">⬅️ 行首空白</option>
-      <option value="trailing-ws">➡️ 行尾空白</option>
-      <option value="empty-line">⏎ 空行</option>
-      <option value="quoted-string">"…" 引号字符串</option>
-      <option value="html-tag">&lt;tag&gt; HTML 标签</option>
+      <option value="" data-i18n="re.preset.placeholder">— 选一个常用正则 —</option>
+      <option value="email" data-i18n="re.preset.email">📧 邮箱</option>
+      <option value="url" data-i18n="re.preset.url">🌐 URL (http/https)</option>
+      <option value="ipv4" data-i18n="re.preset.ipv4">📡 IPv4</option>
+      <option value="ipv6" data-i18n="re.preset.ipv6">📡 IPv6</option>
+      <option value="phone-cn" data-i18n="re.preset.phoneCn">📞 中国手机号</option>
+      <option value="phone-us" data-i18n="re.preset.phoneUs">📞 美国电话号</option>
+      <option value="datetime-iso" data-i18n="re.preset.dtIso">📅 ISO 日期时间</option>
+      <option value="date" data-i18n="re.preset.date">📅 日期 YYYY-MM-DD</option>
+      <option value="hex-color" data-i18n="re.preset.hex">🎨 hex 颜色 (#RGB / #RRGGBB)</option>
+      <option value="uuid" data-i18n="re.preset.uuid">🆔 UUID v4</option>
+      <option value="zh-name" data-i18n="re.preset.zhName">👤 中文姓名</option>
+      <option value="id-card" data-i18n="re.preset.idCard">🪪 身份证号</option>
+      <option value="postcode-cn" data-i18n="re.preset.postCn">📮 中国邮编</option>
+      <option value="creditcard" data-i18n="re.preset.cc">💳 信用卡(粗略)</option>
+      <option value="username" data-i18n="re.preset.user">📛 用户名 (3-16 字母数字下划线)</option>
+      <option value="password" data-i18n="re.preset.pwd">🔒 密码 (至少 8 位 + 大小写 + 数字)</option>
+      <option value="filename" data-i18n="re.preset.filename">📄 文件名</option>
+      <option value="leading-ws" data-i18n="re.preset.leadWs">⬅️ 行首空白</option>
+      <option value="trailing-ws" data-i18n="re.preset.trailWs">➡️ 行尾空白</option>
+      <option value="empty-line" data-i18n="re.preset.empty">⏎ 空行</option>
+      <option value="quoted-string" data-i18n="re.preset.quoted">"…" 引号字符串</option>
+      <option value="html-tag" data-i18n="re.preset.html">&lt;tag&gt; HTML 标签</option>
     </select>
 
     <h2 data-i18n="re.flags">Flags 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
-      <div><strong>g</strong>: 全局,找所有匹配</div>
-      <div><strong>i</strong>: 忽略大小写</div>
-      <div><strong>m</strong>: 多行(^ $ 按行)</div>
-      <div><strong>s</strong>: . 匹配换行</div>
-      <div><strong>u</strong>: Unicode</div>
-      <div><strong>y</strong>: 黏性匹配</div>
-      <div><strong>d</strong>: 输出匹配子串索引</div>
+      <div><strong>g</strong>: <span data-i18n="re.flag.g">全局,找所有匹配</span></div>
+      <div><strong>i</strong>: <span data-i18n="re.flag.i">忽略大小写</span></div>
+      <div><strong>m</strong>: <span data-i18n="re.flag.m">多行(^ $ 按行)</span></div>
+      <div><strong>s</strong>: <span data-i18n="re.flag.s">. 匹配换行</span></div>
+      <div><strong>u</strong>: <span data-i18n="re.flag.u">Unicode</span></div>
+      <div><strong>y</strong>: <span data-i18n="re.flag.y">黏性匹配</span></div>
+      <div><strong>d</strong>: <span data-i18n="re.flag.d">输出匹配子串索引</span></div>
     </div>
 
     <h2 data-i18n="re.syntax">语法速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
-      <div>\d 数字 · \D 非数字</div>
-      <div>\w 字母数字 _ · \W 反</div>
-      <div>\s 空白 · \S 非空白</div>
-      <div>^ 行首 · $ 行尾</div>
-      <div>* 零或多 · + 至少一 · ? 零或一</div>
-      <div>{n} 恰 n 次 · {n,} ≥n · {n,m} n到m</div>
-      <div>(?:abc) 非捕获 · (?&lt;name&gt;...) 命名捕获</div>
-      <div>(?=...) 前瞻 · (?!...) 负前瞻</div>
+      <div data-i18n="re.syn.digit">\d 数字 · \D 非数字</div>
+      <div data-i18n="re.syn.word">\w 字母数字 _ · \W 反</div>
+      <div data-i18n="re.syn.space">\s 空白 · \S 非空白</div>
+      <div data-i18n="re.syn.anchor">^ 行首 · $ 行尾</div>
+      <div data-i18n="re.syn.quant">* 零或多 · + 至少一 · ? 零或一</div>
+      <div data-i18n="re.syn.range">{n} 恰 n 次 · {n,} ≥n · {n,m} n到m</div>
+      <div data-i18n="re.syn.group">(?:abc) 非捕获 · (?&lt;name&gt;...) 命名捕获</div>
+      <div data-i18n="re.syn.look">(?=...) 前瞻 · (?!...) 负前瞻</div>
     </div>
 
     <h2 data-i18n="common.actions">动作</h2>
-    <button id="copyRegexBtn" class="secondary">📋 复制完整正则 /pattern/flags</button>
-    <button id="copyJsBtn" class="secondary">📋 复制 JS 代码片段</button>
-    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+    <button id="copyRegexBtn" class="secondary" data-i18n="re.btn.copyRegex">📋 复制完整正则 /pattern/flags</button>
+    <button id="copyJsBtn" class="secondary" data-i18n="re.btn.copyJs">📋 复制 JS 代码片段</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">实时测试正则 · 高亮所有匹配 · 命名捕获组解析</div>
+    <div class="stats" id="stats" data-i18n="re.stats.ready">实时测试正则 · 高亮所有匹配 · 命名捕获组解析</div>
 
     <div class="rx-stage">
       <!-- Pattern + flags input bar -->
       <div class="rx-input-bar">
         <span class="slash">/</span>
-        <input type="text" id="pattern" class="rx-pattern" placeholder="在这里输入正则,例如 \d+" />
+        <input type="text" id="pattern" class="rx-pattern" data-i18n-attr="placeholder:re.pattern.ph" placeholder="在这里输入正则,例如 \d+" />
         <div style="display:flex; align-items:center; gap:6px">
           <span class="slash">/</span>
           <input type="text" id="flags" class="rx-flags-input" value="g" placeholder="flags" />
@@ -283,16 +283,16 @@
 
       <!-- Test input with highlighting overlay -->
       <div class="rx-test-input">
-        <h3>测试文本</h3>
+        <h3 data-i18n="re.testText">测试文本</h3>
         <div class="rx-textarea-wrap">
           <pre class="rx-highlight" id="highlight"></pre>
-          <textarea id="testInput" spellcheck="false" placeholder="在这里粘贴或输入要测试的文本"></textarea>
+          <textarea id="testInput" spellcheck="false" data-i18n-attr="placeholder:re.testInput.ph" placeholder="在这里粘贴或输入要测试的文本"></textarea>
         </div>
       </div>
 
       <!-- Match results -->
       <div class="rx-results">
-        <div class="summary" id="summary">输入正则 + 测试文本</div>
+        <div class="summary" id="summary" data-i18n="re.summary.empty">输入正则 + 测试文本</div>
         <div id="matchList"></div>
       </div>
     </div>
@@ -393,7 +393,7 @@ Toolkit.injectTopbar('regex-tester');
 
     if (!pat) {
       $('highlight').innerHTML = escapeHtml(text);
-      $('summary').textContent = '输入正则';
+      $('summary').textContent = Toolkit.T('re.summary.needPat', null, '输入正则');
       $('summary').className = 'summary';
       $('matchList').innerHTML = '';
       return;
@@ -404,7 +404,7 @@ Toolkit.injectTopbar('regex-tester');
       // ensure 'g' for collecting all matches; we'll honor original flags for behavior
       re = new RegExp(pat, flagsRaw.includes('g') ? flagsRaw : flagsRaw + 'g');
     } catch (e) {
-      $('summary').textContent = '❌ 正则语法错: ' + e.message;
+      $('summary').textContent = '❌ ' + Toolkit.T('re.err.syntax', { msg: e.message }, '正则语法错: ' + e.message);
       $('summary').className = 'summary err';
       $('highlight').innerHTML = escapeHtml(text);
       $('matchList').innerHTML = '';
@@ -418,13 +418,13 @@ Toolkit.injectTopbar('regex-tester');
     while ((m = re.exec(text)) !== null) {
       if (m[0] === '' ) { re.lastIndex++; continue; }
       matches.push({ idx: m.index, text: m[0], groups: m.slice(1), named: m.groups || {} });
-      if (++safety > 10000) { log.warn('停在 10000 匹配 — 限制保护'); break; }
+      if (++safety > 10000) { log.warn(Toolkit.T('re.warn.limit', null, '停在 10000 匹配 — 限制保护')); break; }
     }
 
     // build highlighted output
     if (!matches.length) {
       $('highlight').innerHTML = escapeHtml(text);
-      $('summary').textContent = '0 匹配';
+      $('summary').textContent = Toolkit.T('re.summary.zero', null, '0 匹配');
       $('summary').className = 'summary zero';
       $('matchList').innerHTML = '';
       return;
@@ -440,7 +440,7 @@ Toolkit.injectTopbar('regex-tester');
     $('highlight').innerHTML = html;
 
     // summary
-    $('summary').textContent = `✓ ${matches.length} 个匹配`;
+    $('summary').textContent = '✓ ' + Toolkit.T('re.summary.n', { n: matches.length }, `${matches.length} 个匹配`);
     $('summary').className = 'summary';
 
     // list
@@ -468,7 +468,7 @@ Toolkit.injectTopbar('regex-tester');
       const more = document.createElement('div');
       more.style.color = 'var(--muted)';
       more.style.padding = '6px 0';
-      more.textContent = `… 另有 ${matches.length - 50} 个匹配未显示`;
+      more.textContent = Toolkit.T('re.more', { n: matches.length - 50 }, `… 另有 ${matches.length - 50} 个匹配未显示`);
       list.appendChild(more);
     }
   }
@@ -495,13 +495,13 @@ Toolkit.injectTopbar('regex-tester');
 
   $('copyRegexBtn').addEventListener('click', async () => {
     const re = `/${$('pattern').value}/${$('flags').value}`;
-    try { await navigator.clipboard.writeText(re); log.ok('已复制 ' + re); } catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText(re); log.ok(Toolkit.T('re.log.copied', { v: re }, '已复制 ' + re)); } catch { log.err(Toolkit.T('re.log.copyFail', null, '复制失败')); }
   });
   $('copyJsBtn').addEventListener('click', async () => {
     const pat = $('pattern').value.replace(/`/g, '\\`');
     const flags = $('flags').value;
     const code = `const re = /${pat}/${flags};\nconst matches = [...text.matchAll(re)];`;
-    try { await navigator.clipboard.writeText(code); log.ok('已复制 JS 代码片段'); } catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText(code); log.ok(Toolkit.T('re.log.copiedJs', null, '已复制 JS 代码片段')); } catch { log.err(Toolkit.T('re.log.copyFail', null, '复制失败')); }
   });
   $('clearBtn').addEventListener('click', () => {
     $('pattern').value = '';
@@ -515,7 +515,7 @@ Toolkit.injectTopbar('regex-tester');
   $('presetSelect').value = 'email';
   $('presetSelect').dispatchEvent(new Event('change'));
 
-  log.ok('正则测试器准备好');
+  log.ok(Toolkit.T('re.log.ready', null, '正则测试器准备好'));
 })();
 </script>
 </body>

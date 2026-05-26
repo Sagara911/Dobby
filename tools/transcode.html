@@ -280,12 +280,12 @@
   <div class="sidebar">
     <h1>🔁 万能转码</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="tc.intro">
       <strong style="color:var(--accent)">一站转码</strong> · 拖文件进来,自动认类型,直接给出目标格式 → 一键转完。所有处理在浏览器本地。
     </div>
 
-    <h2>支持的转换</h2>
-    <div class="tx-help">
+    <h2 data-i18n="tc.supported.h">支持的转换</h2>
+    <div class="tx-help" data-i18n-html="tc.supported.body">
       🖼️ <strong>图片</strong>:PNG / JPEG / WebP / AVIF 互转<br/>
       🎬 <strong>视频</strong>:MP4 / WebM 互转<br/>
       🔊 <strong>音频</strong>:任意输入(MP3 / OGG / FLAC / M4A / WAV) → WAV / Opus(WebM)<br/>
@@ -293,8 +293,8 @@
       📄 <strong>其它</strong>:base64 / SVG → PNG(转给对应工具)
     </div>
 
-    <h2>没支持的格式</h2>
-    <div class="tx-help">
+    <h2 data-i18n="tc.unsupported.h">没支持的格式</h2>
+    <div class="tx-help" data-i18n-html="tc.unsupported.body">
       ❌ HEIC / HEIF(浏览器解码受限)<br/>
       ❌ MP3 编码(没装 LAME,要装 ~100KB 首次加载,看反馈再做)<br/>
       ❌ MKV / FLV(浏览器不直接解封装)<br/>
@@ -305,14 +305,14 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">拖任意文件进来,Dobby 自动识别并给出转码选项</div>
+    <div class="stats" id="stats" data-i18n="tc.stats.idle">拖任意文件进来,Dobby 自动识别并给出转码选项</div>
 
     <div class="tx-stage">
       <!-- DROP ZONE -->
       <div class="tx-drop" id="drop">
         <div class="big">🔁</div>
-        <div>拖入或点击选择文件</div>
-        <div class="hint">图片 · 视频 · 音频 · 动图都行,自动识别类型</div>
+        <div data-i18n="tc.drop.title">拖入或点击选择文件</div>
+        <div class="hint" data-i18n="tc.drop.hint">图片 · 视频 · 音频 · 动图都行,自动识别类型</div>
         <input type="file" id="fileInput" style="display:none">
       </div>
 
@@ -323,17 +323,17 @@
           <div class="name" id="srcName">—</div>
           <div class="meta" id="srcMeta">—</div>
         </div>
-        <button class="swap-btn" id="swapBtn">🔄 换一个</button>
+        <button class="swap-btn" id="swapBtn" data-i18n="tc.swap">🔄 换一个</button>
       </div>
 
       <div class="tx-formats" id="fmtCard" style="display:none">
-        <h3 id="fmtTitle">输出格式</h3>
+        <h3 id="fmtTitle" data-i18n="tc.outFmt.h">输出格式</h3>
         <div class="tx-format-grid" id="fmtGrid"></div>
         <div class="tx-options" id="optsRow"></div>
       </div>
 
       <div class="tx-go" id="goRow" style="display:none">
-        <button class="primary" id="goBtn">🚀 开始转码</button>
+        <button class="primary" id="goBtn" data-i18n="tc.go">🚀 开始转码</button>
         <div class="tx-progress" id="progress"><div class="bar" id="progBar"></div></div>
       </div>
 
@@ -348,9 +348,9 @@
         <div class="summary" id="resultSummary"></div>
         <div class="preview" id="resultPreview"></div>
         <div class="tx-result-actions">
-          <button id="downloadBtn">💾 下载</button>
-          <button id="reuseBtn">↻ 当输入再转</button>
-          <button id="clearBtn" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text)">🗑️ 清空</button>
+          <button id="downloadBtn" data-i18n="tc.dl">💾 下载</button>
+          <button id="reuseBtn" data-i18n="tc.reuse">↻ 当输入再转</button>
+          <button id="clearBtn" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text)" data-i18n="common.clear">🗑️ 清空</button>
         </div>
       </div>
     </div>
@@ -376,21 +376,21 @@ Toolkit.injectTopbar('transcode');
 
   // ─── Format catalogs ──────────────────────────────────────────────
   const IMAGE_FORMATS = [
-    { id: 'png',  mime: 'image/png',  ext: 'png',  desc: '无损,带透明' },
-    { id: 'jpeg', mime: 'image/jpeg', ext: 'jpg',  desc: '有损,体积最小' },
-    { id: 'webp', mime: 'image/webp', ext: 'webp', desc: '有损/无损,新一代' },
-    { id: 'avif', mime: 'image/avif', ext: 'avif', desc: '比 WebP 更小' },
+    { id: 'png',  mime: 'image/png',  ext: 'png',  desc: () => Toolkit.T('tc.fmt.png.desc', null, '无损,带透明') },
+    { id: 'jpeg', mime: 'image/jpeg', ext: 'jpg',  desc: () => Toolkit.T('tc.fmt.jpeg.desc', null, '有损,体积最小') },
+    { id: 'webp', mime: 'image/webp', ext: 'webp', desc: () => Toolkit.T('tc.fmt.webp.desc', null, '有损/无损,新一代') },
+    { id: 'avif', mime: 'image/avif', ext: 'avif', desc: () => Toolkit.T('tc.fmt.avif.desc', null, '比 WebP 更小') },
   ];
   const VIDEO_FORMATS = [
-    { id: 'mp4',  mime: 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', ext: 'mp4',  desc: 'H.264 兼容广' },
-    { id: 'mp4h', mime: 'video/mp4;codecs=avc1.640028,mp4a.40.2', ext: 'mp4',  desc: 'H.264 High 体积小' },
-    { id: 'vp9',  mime: 'video/webm;codecs=vp9,opus',             ext: 'webm', desc: 'VP9 + Opus' },
-    { id: 'vp8',  mime: 'video/webm;codecs=vp8,opus',             ext: 'webm', desc: 'VP8 + Opus 老兼容' },
+    { id: 'mp4',  mime: 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', ext: 'mp4',  desc: () => Toolkit.T('tc.fmt.mp4.desc', null, 'H.264 兼容广') },
+    { id: 'mp4h', mime: 'video/mp4;codecs=avc1.640028,mp4a.40.2', ext: 'mp4',  desc: () => Toolkit.T('tc.fmt.mp4h.desc', null, 'H.264 High 体积小') },
+    { id: 'vp9',  mime: 'video/webm;codecs=vp9,opus',             ext: 'webm', desc: () => Toolkit.T('tc.fmt.vp9.desc', null, 'VP9 + Opus') },
+    { id: 'vp8',  mime: 'video/webm;codecs=vp8,opus',             ext: 'webm', desc: () => Toolkit.T('tc.fmt.vp8.desc', null, 'VP8 + Opus 老兼容') },
   ];
   const AUDIO_FORMATS = [
-    { id: 'wav-16', mime: 'audio/wav',         ext: 'wav',  desc: '16-bit PCM 无损' },
-    { id: 'wav-8',  mime: 'audio/wav',         ext: 'wav',  desc: '8-bit 体积减半' },
-    { id: 'opus',   mime: 'audio/webm;codecs=opus', ext: 'webm', desc: '有损,体积最小' },
+    { id: 'wav-16', mime: 'audio/wav',         ext: 'wav',  desc: () => Toolkit.T('tc.fmt.wav16.desc', null, '16-bit PCM 无损') },
+    { id: 'wav-8',  mime: 'audio/wav',         ext: 'wav',  desc: () => Toolkit.T('tc.fmt.wav8.desc', null, '8-bit 体积减半') },
+    { id: 'opus',   mime: 'audio/webm;codecs=opus', ext: 'webm', desc: () => Toolkit.T('tc.fmt.opus.desc', null, '有损,体积最小') },
   ];
 
   // ─── File acceptance ──────────────────────────────────────────────
@@ -408,7 +408,7 @@ Toolkit.injectTopbar('transcode');
     $('resultCard').classList.remove('show');
     $('progress').classList.remove('show');
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('tc.log.load', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
 
     const mode = detectMode(f);
     srcMode = mode;
@@ -424,13 +424,13 @@ Toolkit.injectTopbar('transcode');
       await prepAudio(f);
     } else {
       $('srcIcon').textContent = '❓';
-      $('srcMeta').textContent = (f.type || '未知类型') + ' · ' + fmtBytes(f.size);
+      $('srcMeta').textContent = (f.type || Toolkit.T('tc.unknownType', null, '未知类型')) + ' · ' + fmtBytes(f.size);
       $('fmtCard').style.display = 'none';
       $('goRow').style.display = 'none';
       $('unknownCard').style.display = '';
-      $('unknownTitle').textContent = '这个文件类型 Dobby 不直接支持转码';
+      $('unknownTitle').textContent = Toolkit.T('tc.unsupportedTitle', null, '这个文件类型 Dobby 不直接支持转码');
       $('unknownBody').innerHTML = explainUnknown(f);
-      log.warn('未识别类型: ' + (f.type || f.name.split('.').pop()));
+      log.warn(Toolkit.T('tc.log.unrecognized', { kind: (f.type || f.name.split('.').pop()) }, `未识别类型: ${(f.type || f.name.split('.').pop())}`));
       return;
     }
     $('unknownCard').style.display = 'none';
@@ -453,15 +453,17 @@ Toolkit.injectTopbar('transcode');
   function explainUnknown(f) {
     const ext = (f.name.split('.').pop() || '').toLowerCase();
     if (['heic','heif'].includes(ext)) {
-      return 'HEIC / HEIF 是 Apple 拍照格式,浏览器无法解码。手机里相册导出时改成 JPEG 或 PNG 再来,或用专门的 HEIC → JPEG 工具(没装在 Dobby 里)。';
+      return Toolkit.T('tc.unknown.heic', null, 'HEIC / HEIF 是 Apple 拍照格式,浏览器无法解码。手机里相册导出时改成 JPEG 或 PNG 再来,或用专门的 HEIC → JPEG 工具(没装在 Dobby 里)。');
     }
     if (['mkv','flv','avi'].includes(ext)) {
-      return `${ext.toUpperCase()} 浏览器不直接支持解封装。先用 ffmpeg / HandBrake 转成 MP4 / WebM 再来转码。`;
+      const EXT = ext.toUpperCase();
+      return Toolkit.T('tc.unknown.container', { EXT }, `${EXT} 浏览器不直接支持解封装。先用 ffmpeg / HandBrake 转成 MP4 / WebM 再来转码。`);
     }
     if (['wma','aac'].includes(ext) && f.type === '') {
-      return `${ext.toUpperCase()} 浏览器可能无法解码,试试拖到「🔊 音频压缩」工具,失败的话先用别的工具转 MP3 / WAV 再来。`;
+      const EXT = ext.toUpperCase();
+      return Toolkit.T('tc.unknown.audio', { EXT }, `${EXT} 浏览器可能无法解码,试试拖到「🔊 音频压缩」工具,失败的话先用别的工具转 MP3 / WAV 再来。`);
     }
-    return `Dobby 不认识这个文件类型(扩展名 .${ext} / mime ${f.type || '未知'})。如果你确认这是常见格式(图片 / 视频 / 音频),可能是扩展名错了。`;
+    return Toolkit.T('tc.unknown.generic', { ext, mime: f.type || Toolkit.T('tc.unknownType', null, '未知') }, `Dobby 不认识这个文件类型(扩展名 .${ext} / mime ${f.type || '未知'})。如果你确认这是常见格式(图片 / 视频 / 音频),可能是扩展名错了。`);
   }
 
   // ─── Mode prep: read metadata + show source meta line ──────────────
@@ -470,12 +472,12 @@ Toolkit.injectTopbar('transcode');
     try {
       const bm = await createImageBitmap(f);
       srcMeta = { w: bm.width, h: bm.height };
-      $('srcMeta').textContent = `图片 · ${bm.width}×${bm.height} · ${f.type || 'image/*'} · ${fmtBytes(f.size)}`;
+      $('srcMeta').textContent = Toolkit.T('tc.srcMeta.image', { w: bm.width, h: bm.height, mime: f.type || 'image/*', size: fmtBytes(f.size) }, `图片 · ${bm.width}×${bm.height} · ${f.type || 'image/*'} · ${fmtBytes(f.size)}`);
       // We'll re-decode in processImage; close this one
       bm.close?.();
     } catch (e) {
-      $('srcMeta').textContent = '图片解码失败: ' + e.message;
-      log.err('图片解码失败: ' + e.message);
+      $('srcMeta').textContent = Toolkit.T('tc.imgDecodeFail', { msg: e.message }, `图片解码失败: ${e.message}`);
+      log.err(Toolkit.T('tc.imgDecodeFail', { msg: e.message }, `图片解码失败: ${e.message}`));
     }
   }
 
@@ -486,10 +488,10 @@ Toolkit.injectTopbar('transcode');
     v.src = url; v.muted = true; v.preload = 'metadata';
     await new Promise((resolve, reject) => {
       v.onloadedmetadata = resolve;
-      v.onerror = () => reject(new Error('视频解码失败'));
+      v.onerror = () => reject(new Error(Toolkit.T('tc.videoDecodeFail', null, '视频解码失败')));
     }).catch(e => log.warn(e.message));
     srcMeta = { w: v.videoWidth, h: v.videoHeight, duration: v.duration, url };
-    $('srcMeta').textContent = `视频 · ${v.videoWidth}×${v.videoHeight} · ${v.duration.toFixed(1)}s · ${f.type || 'video/*'} · ${fmtBytes(f.size)}`;
+    $('srcMeta').textContent = Toolkit.T('tc.srcMeta.video', { w: v.videoWidth, h: v.videoHeight, dur: v.duration.toFixed(1), mime: f.type || 'video/*', size: fmtBytes(f.size) }, `视频 · ${v.videoWidth}×${v.videoHeight} · ${v.duration.toFixed(1)}s · ${f.type || 'video/*'} · ${fmtBytes(f.size)}`);
   }
 
   async function prepAudio(f) {
@@ -499,7 +501,8 @@ Toolkit.injectTopbar('transcode');
     a.src = url; a.preload = 'metadata';
     await new Promise((resolve) => { a.onloadedmetadata = resolve; a.onerror = resolve; });
     srcMeta = { duration: a.duration, url };
-    $('srcMeta').textContent = `音频 · ${isFinite(a.duration) ? a.duration.toFixed(1) + 's' : '时长未知'} · ${f.type || 'audio/*'} · ${fmtBytes(f.size)}`;
+    const durStr = isFinite(a.duration) ? a.duration.toFixed(1) + 's' : Toolkit.T('tc.durUnknown', null, '时长未知');
+    $('srcMeta').textContent = Toolkit.T('tc.srcMeta.audio', { dur: durStr, mime: f.type || 'audio/*', size: fmtBytes(f.size) }, `音频 · ${durStr} · ${f.type || 'audio/*'} · ${fmtBytes(f.size)}`);
   }
 
   // ─── Format chooser UI ────────────────────────────────────────────
@@ -514,8 +517,8 @@ Toolkit.injectTopbar('transcode');
       $('fmtCard').style.display = 'none';
       $('goRow').style.display = 'none';
       $('unknownCard').style.display = '';
-      $('unknownTitle').textContent = '🎞️ 这是动图';
-      $('unknownBody').innerHTML = `<a href="gif-tools.html" style="color:var(--accent); text-decoration:underline">→ 用 GIF 工具(可在 GIF ↔ APNG 间转,还能调速 / 缩放 / 优化)</a>,或继续把它当静态图首帧:`;
+      $('unknownTitle').textContent = Toolkit.T('tc.gif.title', null, '🎞️ 这是动图');
+      $('unknownBody').innerHTML = Toolkit.T('tc.gif.body', null, `<a href="gif-tools.html" style="color:var(--accent); text-decoration:underline">→ 用 GIF 工具(可在 GIF ↔ APNG 间转,还能调速 / 缩放 / 优化)</a>,或继续把它当静态图首帧:`);
       // still allow image conversion path on first frame
       return;
     }
@@ -528,10 +531,11 @@ Toolkit.injectTopbar('transcode');
       const srcExt = (srcFile.name.split('.').pop() || '').toLowerCase();
       const isIdentity = (srcMode === 'image' && srcExt === fm.ext && srcFile.type === fm.mime)
         || (srcMode === 'audio' && srcExt === fm.ext);
-      btn.innerHTML = `<div class="ext">${fm.ext.toUpperCase()}</div><div class="desc">${fm.desc}</div>`;
+      const descText = typeof fm.desc === 'function' ? fm.desc() : fm.desc;
+      btn.innerHTML = `<div class="ext">${fm.ext.toUpperCase()}</div><div class="desc">${descText}</div>`;
       if (isIdentity) {
         btn.disabled = true;
-        btn.title = '跟源格式一样,没必要转';
+        btn.title = Toolkit.T('tc.identityTip', null, '跟源格式一样,没必要转');
       }
       btn.addEventListener('click', () => selectFormat(fm.id));
       grid.appendChild(btn);
@@ -552,62 +556,77 @@ Toolkit.injectTopbar('transcode');
       // Quality slider for lossy formats; size-keep options
       const needQuality = ['jpeg', 'webp', 'avif'].includes(id);
       if (needQuality) {
+        const qLabel = Toolkit.T('tc.opt.quality', null, '质量');
+        const mLabel = Toolkit.T('tc.opt.maxDim', null, '最大边 (px, 0=不缩放)');
         row.innerHTML = `
           <div class="field">
-            <label>质量 <span class="val" id="qualityVal">85</span> / 100</label>
+            <label>${qLabel} <span class="val" id="qualityVal">85</span> / 100</label>
             <input type="range" id="quality" min="40" max="100" value="85">
           </div>
           <div class="field">
-            <label>最大边 (px, 0=不缩放)</label>
+            <label>${mLabel}</label>
             <input type="number" id="maxDim" value="0" min="0">
           </div>
         `;
         $('quality').addEventListener('input', e => $('qualityVal').textContent = e.target.value);
       } else {
+        const mLabel = Toolkit.T('tc.opt.maxDim', null, '最大边 (px, 0=不缩放)');
         row.innerHTML = `
           <div class="field">
-            <label>最大边 (px, 0=不缩放)</label>
+            <label>${mLabel}</label>
             <input type="number" id="maxDim" value="0" min="0">
           </div>
         `;
       }
     } else if (srcMode === 'video') {
+      const vL = Toolkit.T('tc.opt.vBitrate', null, '比特率 (Kbps) — 越高越清晰');
+      const aL = Toolkit.T('tc.opt.aBitrate', null, '音频比特率 (Kbps)');
       row.innerHTML = `
         <div class="field">
-          <label>比特率 (Kbps) — 越高越清晰</label>
+          <label>${vL}</label>
           <input type="number" id="vBitrate" value="3000" min="200" max="50000">
         </div>
         <div class="field">
-          <label>音频比特率 (Kbps)</label>
+          <label>${aL}</label>
           <input type="number" id="aBitrate" value="128" min="32" max="320">
         </div>
       `;
     } else if (srcMode === 'audio') {
       if (id === 'opus') {
+        const oL = Toolkit.T('tc.opt.opusBitrate', null, '比特率 (Kbps) — 64 通话音 / 96-128 音乐够');
         row.innerHTML = `
           <div class="field">
-            <label>比特率 (Kbps) — 64 通话音 / 96-128 音乐够</label>
+            <label>${oL}</label>
             <input type="number" id="aBitrate" value="96" min="32" max="320">
           </div>
         `;
       } else {
+        const srL  = Toolkit.T('tc.opt.sampleRate', null, '采样率 (Hz, 0=保持原始)');
+        const chL  = Toolkit.T('tc.opt.channels', null, '声道');
+        const keep = Toolkit.T('tc.opt.keepOrig', null, '保持原始');
+        const sr48 = Toolkit.T('tc.opt.sr48', null, '48000 (高质量)');
+        const sr44 = Toolkit.T('tc.opt.sr44', null, '44100 (CD)');
+        const sr22 = Toolkit.T('tc.opt.sr22', null, '22050 (语音)');
+        const sr16 = Toolkit.T('tc.opt.sr16', null, '16000 (语音/小)');
+        const mono = Toolkit.T('tc.opt.mono', null, '单声道(体积减半)');
+        const ster = Toolkit.T('tc.opt.stereo', null, '立体声');
         row.innerHTML = `
           <div class="field">
-            <label>采样率 (Hz, 0=保持原始)</label>
+            <label>${srL}</label>
             <select id="aSampleRate">
-              <option value="0" selected>保持原始</option>
-              <option value="48000">48000 (高质量)</option>
-              <option value="44100">44100 (CD)</option>
-              <option value="22050">22050 (语音)</option>
-              <option value="16000">16000 (语音/小)</option>
+              <option value="0" selected>${keep}</option>
+              <option value="48000">${sr48}</option>
+              <option value="44100">${sr44}</option>
+              <option value="22050">${sr22}</option>
+              <option value="16000">${sr16}</option>
             </select>
           </div>
           <div class="field">
-            <label>声道</label>
+            <label>${chL}</label>
             <select id="aChannels">
-              <option value="0" selected>保持原始</option>
-              <option value="1">单声道(体积减半)</option>
-              <option value="2">立体声</option>
+              <option value="0" selected>${keep}</option>
+              <option value="1">${mono}</option>
+              <option value="2">${ster}</option>
             </select>
           </div>
         `;
@@ -631,10 +650,10 @@ Toolkit.injectTopbar('transcode');
       else if (srcMode === 'video') await processVideo();
       else if (srcMode === 'audio') await processAudio();
       const dt = ((performance.now() - t0) / 1000).toFixed(2);
-      log.ok(`转码完成 · 用时 ${dt}s · ${fmtBytes(outBlob.size)}`);
+      log.ok(Toolkit.T('tc.log.done', { dt, size: fmtBytes(outBlob.size) }, `转码完成 · 用时 ${dt}s · ${fmtBytes(outBlob.size)}`));
       showResult();
     } catch (e) {
-      log.err('转码失败: ' + e.message);
+      log.err(Toolkit.T('tc.log.failed', { msg: e.message }, `转码失败: ${e.message}`));
       console.error(e);
     } finally {
       $('goBtn').disabled = false;
@@ -658,17 +677,17 @@ Toolkit.injectTopbar('transcode');
     $('progBar').style.width = '50%';
     const quality = parseInt($('quality')?.value || '92', 10) / 100;
     const blob = await new Promise((res, rej) => {
-      canvas.toBlob(b => b ? res(b) : rej(new Error(`${fm.mime} 编码失败 — 浏览器可能不支持 ${fm.id.toUpperCase()}`)),
+      canvas.toBlob(b => b ? res(b) : rej(new Error(Toolkit.T('tc.encodeFail', { mime: fm.mime, ID: fm.id.toUpperCase() }, `${fm.mime} 编码失败 — 浏览器可能不支持 ${fm.id.toUpperCase()}`))),
                     fm.mime, ['jpeg','webp','avif'].includes(fm.id) ? quality : undefined);
     });
     // Magic check
     const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
     if (fm.id === 'png' && !(head[0]===0x89 && head[1]===0x50 && head[2]===0x4E && head[3]===0x47))
-      throw new Error('PNG magic 校验失败');
+      throw new Error(Toolkit.T('tc.magicFail', { fmt: 'PNG' }, 'PNG magic 校验失败'));
     if (fm.id === 'jpeg' && !(head[0]===0xFF && head[1]===0xD8))
-      throw new Error('JPEG magic 校验失败');
+      throw new Error(Toolkit.T('tc.magicFail', { fmt: 'JPEG' }, 'JPEG magic 校验失败'));
     if (fm.id === 'webp' && !(head[8]===0x57 && head[9]===0x45 && head[10]===0x42 && head[11]===0x50))
-      throw new Error('WebP magic 校验失败');
+      throw new Error(Toolkit.T('tc.magicFail', { fmt: 'WebP' }, 'WebP magic 校验失败'));
     outBlob = blob;
     outName = `${baseName(srcFile.name)}.${fm.ext}`;
     $('progBar').style.width = '100%';
@@ -761,7 +780,7 @@ Toolkit.injectTopbar('transcode');
     src.buffer = audioBuffer;
     src.connect(dst);
     const mime = 'audio/webm;codecs=opus';
-    if (!MediaRecorder.isTypeSupported(mime)) throw new Error('浏览器不支持 Opus 编码');
+    if (!MediaRecorder.isTypeSupported(mime)) throw new Error(Toolkit.T('tc.opusUnsupported', null, '浏览器不支持 Opus 编码'));
     const rec = new MediaRecorder(dst.stream, { mimeType: mime, audioBitsPerSecond: bitrate });
     const chunks = [];
     rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
@@ -779,7 +798,7 @@ Toolkit.injectTopbar('transcode');
   async function processVideo() {
     const fm = VIDEO_FORMATS.find(f => f.id === selectedFormat);
     if (!MediaRecorder.isTypeSupported(fm.mime)) {
-      throw new Error(`浏览器不支持 ${fm.ext.toUpperCase()} (${fm.id}) 编码`);
+      throw new Error(Toolkit.T('tc.vUnsupported', { EXT: fm.ext.toUpperCase(), id: fm.id }, `浏览器不支持 ${fm.ext.toUpperCase()} (${fm.id}) 编码`));
     }
     const v = document.createElement('video');
     v.src = srcMeta.url; v.muted = false; v.crossOrigin = 'anonymous';
@@ -800,7 +819,7 @@ Toolkit.injectTopbar('transcode');
       aSrc.connect(dest);
       // Don't connect to ctx.destination so the user doesn't hear loud audio
     } catch (e) {
-      log.warn('音频路由失败,输出可能没声音: ' + e.message);
+      log.warn(Toolkit.T('tc.audioRouteFail', { msg: e.message }, `音频路由失败,输出可能没声音: ${e.message}`));
     }
     const combined = new MediaStream([
       ...canvasStream.getVideoTracks(),
@@ -838,10 +857,10 @@ Toolkit.injectTopbar('transcode');
     // Magic-byte sanity
     const head = new Uint8Array(await outBlob.slice(0, 8).arrayBuffer());
     if (fm.ext === 'webm' && !(head[0]===0x1A && head[1]===0x45 && head[2]===0xDF && head[3]===0xA3))
-      throw new Error('WebM magic 校验失败');
+      throw new Error(Toolkit.T('tc.magicFail', { fmt: 'WebM' }, 'WebM magic 校验失败'));
     // MP4 magic check (ftyp box at offset 4)
     if (fm.ext === 'mp4' && !(head[4]===0x66 && head[5]===0x74 && head[6]===0x79 && head[7]===0x70))
-      log.warn('MP4 magic 校验弱(浏览器有时不会写 ftyp 头),先信浏览器');
+      log.warn(Toolkit.T('tc.mp4MagicWeak', null, 'MP4 magic 校验弱(浏览器有时不会写 ftyp 头),先信浏览器'));
     outName = `${baseName(srcFile.name)}.${fm.ext}`;
     $('progBar').style.width = '100%';
   }
@@ -856,9 +875,10 @@ Toolkit.injectTopbar('transcode');
     const pct = ((1 - ratio) * 100).toFixed(1);
     const sign = ratio < 1 ? '−' : '+';
     const cls = ratio < 1 ? 'saved' : 'grown';
+    const srcLbl = Toolkit.T('tc.result.src', null, '源');
     $('resultSummary').innerHTML =
       `${srcMode === 'image' ? '🖼️' : srcMode === 'video' ? '🎬' : '🔊'} ` +
-      `<b>${outName}</b> · ${fmtBytes(outSize)} · 源 ${fmtBytes(srcSize)} · ` +
+      `<b>${outName}</b> · ${fmtBytes(outSize)} · ${srcLbl} ${fmtBytes(srcSize)} · ` +
       `<span class="${cls}">${sign}${Math.abs(pct)}%</span>`;
     // Preview
     const prev = $('resultPreview');
@@ -908,7 +928,7 @@ Toolkit.injectTopbar('transcode');
     return filename.replace(/\.[^.]+$/, '').replace(/[^\w一-龥-]/g, '_');
   }
 
-  log.ok('万能转码准备好 — 拖个文件进来');
+  log.ok(Toolkit.T('tc.log.ready', null, '万能转码准备好 — 拖个文件进来'));
 })();
 </script>
 </body>

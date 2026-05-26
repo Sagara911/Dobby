@@ -130,19 +130,19 @@
     <h1>🗿 法线贴图</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入高度图</p>
-      <p class="hint">灰度 / 彩色都行<br>白色 = 高,黑色 = 低</p>
+      <p data-i18n="nm.drop.title">📂 拖入高度图</p>
+      <p class="hint" data-i18n-html="nm.drop.hint">灰度 / 彩色都行<br>白色 = 高,黑色 = 低</p>
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
     <h2 data-i18n="common.params">参数</h2>
     <div class="nm-param-grid">
       <label>
-        强度 <span class="val" id="strengthVal">3.0</span>
+        <span data-i18n="nm.strength">强度</span> <span class="val" id="strengthVal">3.0</span>
         <input type="range" id="strength" min="0" max="20" step="0.1" value="3.0" />
       </label>
       <label>
-        模糊预处理 <span class="val" id="blurVal">0</span>
+        <span data-i18n="nm.blur">模糊预处理</span> <span class="val" id="blurVal">0</span>
         <input type="range" id="blur" min="0" max="10" step="0.5" value="0" />
       </label>
     </div>
@@ -150,31 +150,31 @@
     <h2 data-i18n="nm.direction">方向</h2>
     <div style="display:flex; flex-direction:column; gap:4px">
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
-        <input type="checkbox" id="invertR" /> <span>反转红通道(X)</span>
+        <input type="checkbox" id="invertR" /> <span data-i18n="nm.invertR">反转红通道(X)</span>
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
-        <input type="checkbox" id="invertG" /> <span>反转绿通道(Y)<br><span style="color:var(--muted); font-size:10px">DirectX 风格勾这个 / OpenGL 不勾</span></span>
+        <input type="checkbox" id="invertG" /> <span data-i18n-html="nm.invertG">反转绿通道(Y)<br><span style="color:var(--muted); font-size:10px">DirectX 风格勾这个 / OpenGL 不勾</span></span>
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
-        <input type="checkbox" id="invertHeight" /> <span>反转高度(白变低)</span>
+        <input type="checkbox" id="invertHeight" /> <span data-i18n="nm.invertHeight">反转高度(白变低)</span>
       </label>
     </div>
 
     <h2 data-i18n="nm.sourceAs">源图当成</h2>
     <select id="sourceMode" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="luma">亮度(灰度)— 默认,最通用</option>
-      <option value="red">仅 R 通道</option>
-      <option value="green">仅 G 通道</option>
-      <option value="blue">仅 B 通道</option>
-      <option value="alpha">仅 alpha 通道</option>
+      <option value="luma" data-i18n="nm.src.luma">亮度(灰度)— 默认,最通用</option>
+      <option value="red" data-i18n="nm.src.red">仅 R 通道</option>
+      <option value="green" data-i18n="nm.src.green">仅 G 通道</option>
+      <option value="blue" data-i18n="nm.src.blue">仅 B 通道</option>
+      <option value="alpha" data-i18n="nm.src.alpha">仅 alpha 通道</option>
     </select>
 
     <h2 data-i18n="common.export">导出</h2>
-    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>💾 下载法线贴图 PNG</button>
-    <input type="text" id="filename" value="normal" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
+    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled data-i18n="nm.btn.download">💾 下载法线贴图 PNG</button>
+    <input type="text" id="filename" value="normal" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" data-i18n-attr="placeholder:nm.filenamePh" placeholder="文件名">
 
     <h2 data-i18n="common.notes">说明</h2>
-    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7">
+    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7" data-i18n-html="nm.notes">
       用 <strong>Sobel 算子</strong>算高度图的梯度(X 和 Y 方向),用 RGB 编码法线向量:<br>
       • <span style="color:#ff5b5b">R</span> = X 方向<br>
       • <span style="color:#31f59c">G</span> = Y 方向<br>
@@ -186,36 +186,36 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">高度图 → 法线贴图 · 给 2.5D 游戏 / 浮雕材质做光照</div>
+    <div class="stats" id="stats" data-i18n="nm.stats.ready">高度图 → 法线贴图 · 给 2.5D 游戏 / 浮雕材质做光照</div>
 
     <div class="nm-stage">
       <!-- side-by-side panes -->
       <div class="nm-grid">
         <div class="nm-pane">
-          <div class="nm-pane-head">📥 源(高度图)</div>
+          <div class="nm-pane-head" data-i18n="nm.pane.src">📥 源(高度图)</div>
           <div class="nm-canvas-wrap">
             <canvas id="srcCv"></canvas>
-            <div id="srcPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px">
+            <div id="srcPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px" data-i18n-html="nm.srcPlaceholder">
               拖入图片当高度图 →<br><br>
               <span style="font-size:10px">最适合: 浮雕 / 砖墙 / 木纹 / 像素角色轮廓</span>
             </div>
           </div>
         </div>
         <div class="nm-pane">
-          <div class="nm-pane-head">📤 法线贴图</div>
+          <div class="nm-pane-head" data-i18n="nm.pane.dst">📤 法线贴图</div>
           <div class="nm-canvas-wrap">
             <canvas id="dstCv"></canvas>
-            <div id="dstPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px">输出会显示在这里</div>
+            <div id="dstPlaceholder" style="color:var(--muted); font-size:12px; text-align:center; padding:40px" data-i18n="nm.dstPlaceholder">输出会显示在这里</div>
           </div>
         </div>
       </div>
 
       <!-- 3D preview -->
       <div>
-        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">💡 光照预览(鼠标移动改光源方向)</div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px" data-i18n="nm.lightPreview.title">💡 光照预览(鼠标移动改光源方向)</div>
         <div class="nm-preview-3d" id="preview3d">
           <canvas id="lightCv"></canvas>
-          <div class="hint">在这里移动鼠标 → 模拟点光源旋转</div>
+          <div class="hint" data-i18n="nm.lightPreview.hint">在这里移动鼠标 → 模拟点光源旋转</div>
         </div>
       </div>
     </div>
@@ -357,7 +357,7 @@ Toolkit.injectTopbar('normal-map');
     dst.getContext('2d').putImageData(resultImageData, 0, 0);
     $('dstPlaceholder').style.display = 'none';
     $('downloadBtn').disabled = false;
-    log.dim(`生成 ${cw}×${ch} 法线 · ${ms}ms`);
+    log.dim(Toolkit.T('nm.log.generated', { w: cw, h: ch, ms }, `生成 ${cw}×${ch} 法线 · ${ms}ms`));
 
     // also update light preview
     updateLightPreview();
@@ -428,7 +428,7 @@ Toolkit.injectTopbar('normal-map');
         sCv.width = cw; sCv.height = ch;
         sCv.getContext('2d').drawImage(img, 0, 0);
         $('srcPlaceholder').style.display = 'none';
-        log.ok(`加载 ${cw}×${ch}`);
+        log.ok(Toolkit.T('nm.log.loaded', { w: cw, h: ch }, `加载 ${cw}×${ch}`));
         regenerate();
         resolve();
       };
@@ -474,7 +474,7 @@ Toolkit.injectTopbar('normal-map');
   });
   window.addEventListener('resize', updateLightPreview);
 
-  log.ok('法线贴图生成器准备好');
+  log.ok(Toolkit.T('nm.log.ready', null, '法线贴图生成器准备好'));
 })();
 </script>
 </body>

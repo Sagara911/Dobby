@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "dobby-v42",
+      "date": "2026-05-26",
+      "title": "🌐 i18n Phase 3 — 40 个工具的深度翻译,EN 模式不再夹生",
+      "items": [
+        "之前 Phase 2 只翻了 sidebar h2 / 主按钮 / stats 三层皮,深层文字(`<select>` 选项 / 帮助段落 / log 提示 / toast / 错误信息)还是中文。EN 用户切过去一半 UI 仍夹生。**Phase 3 这次把这堆深层全补上**",
+        "覆盖 **40 个工具**(剩余非主翻工具),新增 **~1700 个 zh/en key 对**(整 dict 从 ~590 飙到 2447 个键)。每个工具的 `<option>` 标签 / 提示文 / 状态栏 / 帮助 paragraph / 错误 toast / log 行全部走 `Toolkit.T()` 拿翻译",
+        "**🎬 重灾区翻得最深** — video-toolkit (207 key)、transcode (90)、image-editor / playable-slim 各 89、pdf-tools 85 — 这几个本来就是 `<option>` 大户(编码格式 / 操作模式 / 预设清单)+ log 行密集,现在 EN 模式下完整可读",
+        "**🅰️ pixel-font 深化** — 之前只有 16 key,现在 56 key(按钮 / 快捷键提示 / 导出 toast 全译)",
+        "**Bad Dobby! 错误前缀保留** — 英文模式下错误 toast 仍以 \"Bad Dobby!\" 开头,Dobby 的 voice 不丢。比如 `Bad Dobby! That's not a .json file, please drop another?` ",
+        "占位符规范化 — `${var}` 模板字面量统一改成 `{var}` 形式给 T() 插值,zh / en 占位符名一一对应,不会出现「英文版漏插入数字」的情况",
+        "Group 拆 5 个并行 agent 翻译(image / image-medium / anim-audio / code / image-rest+audit),最后一个 agent 中途 timeout 但 215 个 key 从 git diff 反推全救回来。剩余少量 placeholder text(像 video-toolkit 的 dropzone 提示)走 langchange 钩子刷新"
+      ]
+    },
+    {
       "version": "dobby-v41",
       "date": "2026-05-26",
       "title": "🔁 万能转码 — 一站搞定图片/视频/音频格式转换",

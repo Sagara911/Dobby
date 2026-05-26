@@ -98,27 +98,27 @@
     <h1>🔤 Base64</h1>
 
     <div class="tab-row">
-      <button data-tab="encode" class="active" type="button">📦 编码</button>
-      <button data-tab="decode" type="button">📤 解码</button>
+      <button data-tab="encode" class="active" type="button" data-i18n="b64.tab.encode">📦 编码</button>
+      <button data-tab="decode" type="button" data-i18n="b64.tab.decode">📤 解码</button>
     </div>
 
     <div id="encodePanel">
       <div class="drop-zone" id="dropZone">
-        <p>📂 拖入任意文件</p>
-        <p class="hint">图片 / 字体 / JSON / 二进制都行</p>
+        <p data-i18n="b64.drop.title">📂 拖入任意文件</p>
+        <p class="hint" data-i18n="b64.drop.hint">图片 / 字体 / JSON / 二进制都行</p>
         <input type="file" id="fileInput" style="display:none" />
       </div>
       <h2 data-i18n="b64.encFormat">编码格式</h2>
       <div class="field">
         <select id="encodeFormat">
-          <option value="dataurl">dataURL (带 MIME 前缀, 可直接用)</option>
-          <option value="base64">纯 base64 字符串</option>
-          <option value="binary">二进制 / hex 字节预览</option>
+          <option value="dataurl" data-i18n="b64.fmt.dataurl">dataURL (带 MIME 前缀, 可直接用)</option>
+          <option value="base64" data-i18n="b64.fmt.base64">纯 base64 字符串</option>
+          <option value="binary" data-i18n="b64.fmt.binary">二进制 / hex 字节预览</option>
         </select>
       </div>
       <label class="checkbox">
         <input type="checkbox" id="wrap" />
-        <span>每 76 字符换行 (RFC 标准格式)</span>
+        <span data-i18n="b64.wrap">每 76 字符换行 (RFC 标准格式)</span>
       </label>
 
       <h2 data-i18n="b64.result">结果</h2>
@@ -129,11 +129,11 @@
     <div id="decodePanel" style="display:none">
       <h2 data-i18n="b64.input">输入</h2>
       <div class="field">
-        <label>粘贴 base64 / dataURL</label>
+        <label data-i18n="b64.paste.label">粘贴 base64 / dataURL</label>
         <textarea id="decodeInput" rows="6" style="font-family: ui-monospace, monospace; font-size: 11px;"></textarea>
       </div>
       <div class="field">
-        <label>文件名 (无扩展自动检测)</label>
+        <label data-i18n="b64.decodeName.label">文件名 (无扩展自动检测)</label>
         <input type="text" id="decodeName" value="decoded" />
       </div>
       <button id="decodeBtn" data-i18n="b64.decodeDownload">解码 → 下载</button>
@@ -146,8 +146,8 @@
   <div class="main">
     <div class="stats" id="stats" data-i18n="b64.stats.empty">未加载</div>
     <div>
-      <h2 style="margin-top:0">输出</h2>
-      <textarea id="output" class="output" readonly placeholder="拖入文件后这里显示 base64 / dataURL"></textarea>
+      <h2 style="margin-top:0" data-i18n="common.output">输出</h2>
+      <textarea id="output" class="output" readonly data-i18n-attr="placeholder:b64.output.ph" placeholder="拖入文件后这里显示 base64 / dataURL"></textarea>
       <div class="preview-mini" id="previewBox" style="display:none"></div>
     </div>
   </div>
@@ -188,7 +188,7 @@ Toolkit.injectTopbar('base64');
     // decode textarea would otherwise look broken).
     const encodeTab = document.querySelector('.tab-row button[data-tab="encode"]');
     if (encodeTab && !encodeTab.classList.contains('active')) encodeTab.click();
-    log.dim(`加载 ${lastFile.name} (${fmtBytes(lastFile.size)})...`);
+    log.dim(Toolkit.T('b64.log.loading', { name: lastFile.name, size: fmtBytes(lastFile.size) }, `加载 ${lastFile.name} (${fmtBytes(lastFile.size)})...`));
     await encodeFile(lastFile);
   }
 
@@ -201,7 +201,7 @@ Toolkit.injectTopbar('base64');
       result = Array.from(u8.slice(0, 4096))
         .map(b => b.toString(16).padStart(2, '0'))
         .join(' ');
-      if (u8.length > 4096) result += `\n\n... (${u8.length - 4096} more bytes)`;
+      if (u8.length > 4096) result += '\n\n' + Toolkit.T('b64.moreBytes', { n: u8.length - 4096 }, `... (${u8.length - 4096} more bytes)`);
     } else {
       // base64 encode
       let bin = '';
@@ -215,7 +215,9 @@ Toolkit.injectTopbar('base64');
     }
     lastOutput = result;
     $('output').value = result;
-    $('stats').innerHTML = `<strong>${file.name}</strong> · 原 <strong>${fmtBytes(file.size)}</strong> · 编码后 <strong>${fmtBytes(result.length)}</strong> (+${((result.length - file.size) / file.size * 100).toFixed(1)}%)`;
+    const srcLbl = Toolkit.T('b64.stats.src', null, '原');
+    const encLbl = Toolkit.T('b64.stats.encoded', null, '编码后');
+    $('stats').innerHTML = `<strong>${file.name}</strong> · ${srcLbl} <strong>${fmtBytes(file.size)}</strong> · ${encLbl} <strong>${fmtBytes(result.length)}</strong> (+${((result.length - file.size) / file.size * 100).toFixed(1)}%)`;
     $('copyBtn').disabled = false;
     $('downloadTextBtn').disabled = false;
     // image preview if applicable
@@ -229,19 +231,19 @@ Toolkit.injectTopbar('base64');
     } else {
       $('previewBox').style.display = 'none';
     }
-    log.ok('编码完成');
+    log.ok(Toolkit.T('b64.log.encoded', null, '编码完成'));
   }
 
   $('copyBtn').addEventListener('click', async () => {
     if (!lastOutput) return;
     try {
       await navigator.clipboard.writeText(lastOutput);
-      log.ok('已复制到剪贴板');
+      log.ok(Toolkit.T('b64.log.copied', null, '已复制到剪贴板'));
     } catch (e) {
       // fallback
       $('output').select();
       document.execCommand('copy');
-      log.ok('已复制(使用兼容模式)');
+      log.ok(Toolkit.T('b64.log.copiedCompat', null, '已复制(使用兼容模式)'));
     }
   });
 
@@ -249,7 +251,7 @@ Toolkit.injectTopbar('base64');
     if (!lastOutput || !lastFile) return;
     const name = lastFile.name + '.base64.txt';
     downloadText(lastOutput, name, 'text/plain');
-    log.ok('已下载 ' + name);
+    log.ok(Toolkit.T('b64.log.downloaded', { name }, '已下载 ' + name));
   });
 
   // ----- decode -----
@@ -258,7 +260,7 @@ Toolkit.injectTopbar('base64');
 
   function decodeAndDownload(previewOnly) {
     const raw = $('decodeInput').value.trim();
-    if (!raw) { log.err('Dobby 还没拿到 base64 — 你贴一段?'); return; }
+    if (!raw) { log.err(Toolkit.T('b64.err.noInput', null, 'Dobby 还没拿到 base64 — 你贴一段?')); return; }
     try {
       let b64 = raw, mime = 'application/octet-stream';
       const m = raw.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);
@@ -282,17 +284,17 @@ Toolkit.injectTopbar('base64');
           img.src = URL.createObjectURL(blob);
           box.appendChild(img);
         } else {
-          box.innerHTML = `<div class="muted small">${mime}<br/>${fmtBytes(blob.size)}<br/>(无法预览,请下载)</div>`;
+          box.innerHTML = `<div class="muted small">${mime}<br/>${fmtBytes(blob.size)}<br/>${Toolkit.T('b64.preview.unable', null, '(无法预览,请下载)')}</div>`;
         }
-        log.ok(`解码完成 ${fmtBytes(blob.size)} (${mime})`);
+        log.ok(Toolkit.T('b64.log.decoded', { size: fmtBytes(blob.size), mime }, `解码完成 ${fmtBytes(blob.size)} (${mime})`));
       } else {
         const outName = name + (name.includes('.') ? '' : ext);
         download(blob, outName);
         handoff?.setBlob(blob, outName, mime);
-        log.ok(`已下载 ${name}${ext} (${fmtBytes(blob.size)})`);
+        log.ok(Toolkit.T('b64.log.downloadedFull', { name: `${name}${ext}`, size: fmtBytes(blob.size) }, `已下载 ${name}${ext} (${fmtBytes(blob.size)})`));
       }
     } catch (e) {
-      log.err('解码失败: ' + e.message);
+      log.err(Toolkit.T('b64.err.decode', { msg: e.message }, '解码失败: ' + e.message));
     }
   }
 

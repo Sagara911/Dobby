@@ -232,59 +232,59 @@
   <div class="sidebar">
     <h1>🤖 AI Cutout</h1>
 
-    <div class="compat-note">
+    <div class="compat-note" data-i18n-html="ac.compat">
       <strong>首次使用</strong>需联网下载模型 (≈25-85MB),之后缓存到 IndexedDB 完全离线可用。<br/>
       支持 WebGPU 加速 (Chrome / Edge),退回 WASM 也能跑。
     </div>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片 (可多张 / 文件夹)</p>
-      <p class="hint">PNG / JPG / WebP<br/>批量抠图,模型只加载一次</p>
+      <p data-i18n="ac.drop.title">📂 拖入图片 (可多张 / 文件夹)</p>
+      <p class="hint" data-i18n-html="ac.drop.hint">PNG / JPG / WebP<br/>批量抠图,模型只加载一次</p>
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
     </div>
 
     <h2 data-i18n="ac.model">模型</h2>
     <div class="field">
       <select id="modelSelect">
-        <option value="Xenova/modnet">MODNet (~25MB · 人像 · Apache 2.0 可商用)</option>
-        <option value="briaai/RMBG-1.4">RMBG-1.4 (~85MB · 通用 · 非商用免费)</option>
+        <option value="Xenova/modnet" data-i18n="ac.opt.model.modnet">MODNet (~25MB · 人像 · Apache 2.0 可商用)</option>
+        <option value="briaai/RMBG-1.4" data-i18n="ac.opt.model.rmbg">RMBG-1.4 (~85MB · 通用 · 非商用免费)</option>
       </select>
     </div>
     <div class="field">
-      <label>计算后端</label>
+      <label data-i18n="ac.device.label">计算后端</label>
       <select id="device">
-        <option value="webgpu">WebGPU (推荐, Chrome/Edge 113+)</option>
-        <option value="wasm">WASM (兼容性好, 慢一些)</option>
+        <option value="webgpu" data-i18n="ac.opt.device.webgpu">WebGPU (推荐, Chrome/Edge 113+)</option>
+        <option value="wasm" data-i18n="ac.opt.device.wasm">WASM (兼容性好, 慢一些)</option>
       </select>
     </div>
 
     <h2 data-i18n="ac.postProc">后处理</h2>
     <label class="checkbox">
       <input type="checkbox" id="refine" checked />
-      <span>边缘精修 (Guided Filter)</span>
+      <span data-i18n="ac.refine.label">边缘精修 (Guided Filter)</span>
     </label>
-    <div class="info" style="margin:-4px 0 6px 0">用原图引导,锐化头发/毛发等高频边缘。约 +200-500ms / 张。</div>
+    <div class="info" style="margin:-4px 0 6px 0" data-i18n="ac.refine.info">用原图引导,锐化头发/毛发等高频边缘。约 +200-500ms / 张。</div>
     <label class="checkbox">
       <input type="checkbox" id="decontam" checked />
-      <span>去色溢 (去掉原背景色残留)</span>
+      <span data-i18n="ac.decontam.label">去色溢 (去掉原背景色残留)</span>
     </label>
-    <div class="info" style="margin:-4px 0 6px 0">原图背景颜色与主体反差大时(如绿幕、红底)用上特别明显。</div>
+    <div class="info" style="margin:-4px 0 6px 0" data-i18n="ac.decontam.info">原图背景颜色与主体反差大时(如绿幕、红底)用上特别明显。</div>
     <label class="checkbox">
       <input type="checkbox" id="alphaThreshold" />
-      <span>硬边缘 (alpha 二值化)</span>
+      <span data-i18n="ac.alphaThr.label">硬边缘 (alpha 二值化)</span>
     </label>
     <div class="field">
-      <label>边缘羽化 (px) <span id="featherVal" class="mono">0</span></label>
+      <label data-i18n-html="ac.feather.label">边缘羽化 (px) <span id="featherVal" class="mono">0</span></label>
       <input type="range" id="feather" min="0" max="8" value="0" />
     </div>
 
     <h2 data-i18n="common.output">输出</h2>
-    <div class="field"><label>文件名前缀</label><input type="text" id="filename" value="cutout" /></div>
-    <button id="loadModelBtn">加载模型</button>
-    <button id="processBtn" disabled>开始抠图</button>
-    <button id="downloadBtn" class="secondary" disabled>下载 (单张)</button>
-    <button id="downloadZipBtn" class="secondary" disabled>下载全部 (ZIP)</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <div class="field"><label data-i18n="ac.filename.label">文件名前缀</label><input type="text" id="filename" value="cutout" /></div>
+    <button id="loadModelBtn" data-i18n="ac.btn.loadModel">加载模型</button>
+    <button id="processBtn" disabled data-i18n="ac.btn.process">开始抠图</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="ac.btn.download">下载 (单张)</button>
+    <button id="downloadZipBtn" class="secondary" disabled data-i18n="ac.btn.zip">下载全部 (ZIP)</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="download-stat" id="dlStat"></div>
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
@@ -295,44 +295,44 @@
     <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
-        <div class="label">原图 (点击下方队列切换)</div>
+        <div class="label" data-i18n="ac.label.src">原图 (点击下方队列切换)</div>
         <div class="preview-box" id="srcBox">
-          <div class="preview-empty">拖入图片</div>
+          <div class="preview-empty" data-i18n="ac.empty.src">拖入图片</div>
         </div>
       </div>
       <div class="preview-col">
-        <div class="label">抠图结果 (透明背景) · 跑完后可用笔刷修正</div>
+        <div class="label" data-i18n="ac.label.out">抠图结果 (透明背景) · 跑完后可用笔刷修正</div>
         <div class="brush-toolbar" id="brushToolbar">
           <div class="group">
-            <button type="button" class="mode-btn active" id="brushKeep" title="保留刷 (Q) · 把误删的主体加回来">🖌️ 保留</button>
-            <button type="button" class="mode-btn" id="brushErase" title="擦除刷 (W) · 把多余背景去掉">❌ 擦除</button>
+            <button type="button" class="mode-btn active" id="brushKeep" data-i18n="ac.brush.keep" data-i18n-attr="title:ac.brush.keep.title" title="保留刷 (Q) · 把误删的主体加回来">🖌️ 保留</button>
+            <button type="button" class="mode-btn" id="brushErase" data-i18n="ac.brush.erase" data-i18n-attr="title:ac.brush.erase.title" title="擦除刷 (W) · 把多余背景去掉">❌ 擦除</button>
           </div>
           <div class="sep"></div>
           <div class="group">
-            <label>大小</label>
+            <label data-i18n="ac.brush.size">大小</label>
             <input type="range" id="brushSize" min="6" max="160" value="32" />
             <span class="val" id="brushSizeVal">32</span>
           </div>
           <div class="group">
-            <label>软边</label>
+            <label data-i18n="ac.brush.soft">软边</label>
             <input type="range" id="brushSoft" min="0" max="100" value="50" />
             <span class="val" id="brushSoftVal">50%</span>
           </div>
           <div class="sep"></div>
           <div class="group">
-            <button type="button" class="icon-btn" id="brushUndo" title="撤销上一笔 (Ctrl+Z)">↶ 撤销</button>
-            <button type="button" class="icon-btn" id="brushReset" title="清除所有笔刷修改,回到 AI 原始抠图">🔄 重置</button>
+            <button type="button" class="icon-btn" id="brushUndo" data-i18n="ac.brush.undo" data-i18n-attr="title:ac.brush.undo.title" title="撤销上一笔 (Ctrl+Z)">↶ 撤销</button>
+            <button type="button" class="icon-btn" id="brushReset" data-i18n="ac.brush.reset" data-i18n-attr="title:ac.brush.reset.title" title="清除所有笔刷修改,回到 AI 原始抠图">🔄 重置</button>
           </div>
         </div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">点击"开始抠图"后这里显示结果</div>
+          <div class="preview-empty" data-i18n="ac.empty.out">点击"开始抠图"后这里显示结果</div>
         </div>
       </div>
     </div>
     <div>
       <h2 style="margin-top:0" data-i18n="ac.batchQueue">批量队列</h2>
       <div class="batch-grid" id="batchGrid">
-        <div class="preview-empty">你多扔几张,Dobby 排好队</div>
+        <div class="preview-empty" data-i18n="ac.empty.batch">你多扔几张,Dobby 排好队</div>
       </div>
     </div>
   </div>
@@ -374,9 +374,9 @@ Toolkit.injectTopbar('ai-cutout');
   async function handleFiles(files) {
     if (!files.length) return;
     const imgs = naturalSort(files.filter(f => f.type.startsWith('image/')));
-    if (!imgs.length) { log.err('Bad Dobby! 没看到图片,你再丢一次?'); return; }
+    if (!imgs.length) { log.err(Toolkit.T('ac.log.noImage', null, 'Bad Dobby! 没看到图片,你再丢一次?')); return; }
     log.clear();
-    log.dim(`加载 ${imgs.length} 张图片...`);
+    log.dim(Toolkit.T('ac.log.loading', { n: imgs.length }, `加载 ${imgs.length} 张图片...`));
     items = [];
     for (const f of imgs) {
       try {
@@ -387,16 +387,16 @@ Toolkit.injectTopbar('ai-cutout');
       }
     }
     if (!items.length) return;
-    log.ok(`加载完成 ${items.length} 张`);
+    log.ok(Toolkit.T('ac.log.loaded', { n: items.length }, `加载完成 ${items.length} 张`));
     renderBatchGrid();
     selectItem(0);
-    $('stats').innerHTML = `<strong>${items.length}</strong> 张待处理 · 单图 <strong>${srcBitmap.width}×${srcBitmap.height}</strong>`;
+    $('stats').innerHTML = Toolkit.T('ac.stats.pending', { n: items.length, w: srcBitmap.width, h: srcBitmap.height }, `<strong>${items.length}</strong> 张待处理 · 单图 <strong>${srcBitmap.width}×${srcBitmap.height}</strong>`);
 
     if (model) {
       $('processBtn').disabled = false;
       $('processBtn').click();
     } else {
-      log.dim('自动加载模型,完成后开始批量推理...');
+      log.dim(Toolkit.T('ac.log.autoLoadModel', null, '自动加载模型,完成后开始批量推理...'));
       await loadModel();
       if (model && items.length) {
         $('processBtn').disabled = false;
@@ -408,7 +408,7 @@ Toolkit.injectTopbar('ai-cutout');
   function renderBatchGrid() {
     const grid = $('batchGrid');
     if (!items.length) {
-      grid.innerHTML = '<div class="preview-empty">你多扔几张,Dobby 排好队</div>';
+      grid.innerHTML = '<div class="preview-empty">' + Toolkit.T('ac.empty.batch', null, '你多扔几张,Dobby 排好队') + '</div>';
       return;
     }
     grid.innerHTML = '';
@@ -458,7 +458,7 @@ Toolkit.injectTopbar('ai-cutout');
       $('outBox').appendChild(it.liveCanvas);
       Brush.attachToItem(it);
     } else {
-      $('outBox').innerHTML = '<div class="preview-empty">还未处理</div>';
+      $('outBox').innerHTML = '<div class="preview-empty">' + Toolkit.T('ac.empty.notProcessed', null, '还未处理') + '</div>';
       Brush.detach();
     }
     $('downloadBtn').disabled = !it.outBlob;
@@ -470,7 +470,7 @@ Toolkit.injectTopbar('ai-cutout');
     const wantDevice = $('device').value;
     if (model && modelId === wantId + '@' + wantDevice) return;
     $('loadModelBtn').disabled = true;
-    log.dim(`从 CDN 加载 transformers.js...`);
+    log.dim(Toolkit.T('ac.log.loadingTransformers', null, '从 CDN 加载 transformers.js...'));
     try {
       if (!transformers) {
         transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js');
@@ -478,13 +478,13 @@ Toolkit.injectTopbar('ai-cutout');
       const { AutoModel, AutoProcessor, env } = transformers;
       RawImage = transformers.RawImage;
       env.allowLocalModels = false;
-      log.dim(`加载模型 ${wantId} (${wantDevice})...`);
+      log.dim(Toolkit.T('ac.log.loadingModel', { id: wantId, device: wantDevice }, `加载模型 ${wantId} (${wantDevice})...`));
       const opts = { device: wantDevice, progress_callback: onModelProgress };
       try {
         model = await AutoModel.from_pretrained(wantId, opts);
       } catch (e) {
         if (wantDevice === 'webgpu') {
-          log.warn(`WebGPU 不可用,退回 WASM...`);
+          log.warn(Toolkit.T('ac.log.webgpuFallback', null, 'WebGPU 不可用,退回 WASM...'));
           opts.device = 'wasm';
           model = await AutoModel.from_pretrained(wantId, opts);
         } else throw e;
@@ -492,9 +492,9 @@ Toolkit.injectTopbar('ai-cutout');
       processor = await AutoProcessor.from_pretrained(wantId, { progress_callback: onModelProgress });
       modelId = wantId + '@' + wantDevice;
       $('dlStat').classList.remove('show');
-      log.ok('模型加载完成');
+      log.ok(Toolkit.T('ac.log.modelReady', null, '模型加载完成'));
     } catch (e) {
-      log.err('模型加载失败: ' + e.message);
+      log.err(Toolkit.T('ac.log.modelFail', { msg: e.message }, '模型加载失败: ' + e.message));
       console.error(e);
     } finally {
       $('loadModelBtn').disabled = false;
@@ -535,7 +535,7 @@ Toolkit.injectTopbar('ai-cutout');
     $('processBtn').disabled = true;
     $('downloadZipBtn').disabled = true;
     const pending = items.filter(it => it.status !== 'done');
-    log.dim(`批量推理 ${pending.length} 张...`);
+    log.dim(Toolkit.T('ac.log.batchInfer', { n: pending.length }, `批量推理 ${pending.length} 张...`));
     const t0 = performance.now();
     let success = 0, failed = 0;
     for (let i = 0; i < items.length; i++) {
@@ -560,7 +560,7 @@ Toolkit.injectTopbar('ai-cutout');
     }
     progress.hide();
     const t1 = performance.now();
-    log.ok(`批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`);
+    log.ok(Toolkit.T('ac.log.batchDone', { ok: success, total: items.length, sec: ((t1 - t0) / 1000).toFixed(1) }, `批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`));
     $('processBtn').disabled = false;
     $('downloadZipBtn').disabled = success === 0;
     // single-image case: stash the lone result so handoff dropdown lights up
@@ -1081,7 +1081,7 @@ Toolkit.injectTopbar('ai-cutout');
   $('downloadZipBtn').addEventListener('click', async () => {
     const done = items.filter(it => it.outBlob || it.liveCanvas);
     if (!done.length) return;
-    log.dim(`打包 ZIP (${done.length} 张)...`);
+    log.dim(Toolkit.T('ac.log.zipping', { n: done.length }, `打包 ZIP (${done.length} 张)...`));
     const prefix = ($('filename').value || 'cutout').replace(/[^\w-]/g, '_');
     const files = [];
     for (const it of done) {
@@ -1094,16 +1094,16 @@ Toolkit.injectTopbar('ai-cutout');
     const zip = makeZip(files);
     download(zip, `${prefix}_batch.zip`);
     handoff?.setBlob(zip, `${prefix}_batch.zip`, 'application/zip');
-    log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
+    log.ok(Toolkit.T('ac.log.zipDone', { n: files.length, size: fmtBytes(zip.size) }, `已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`));
   });
 
   $('clearBtn').addEventListener('click', () => {
     items = []; selectedIdx = -1;
     srcBitmap = null; outBlob = null; outCanvas = null;
-    $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">点击"开始抠图"后这里显示结果</div>';
-    $('batchGrid').innerHTML = '<div class="preview-empty">你多扔几张,Dobby 排好队</div>';
-    $('stats').textContent = 'Dobby 待命';
+    $('srcBox').innerHTML = '<div class="preview-empty">' + Toolkit.T('ac.empty.src', null, '拖入图片') + '</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">' + Toolkit.T('ac.empty.out', null, '点击"开始抠图"后这里显示结果') + '</div>';
+    $('batchGrid').innerHTML = '<div class="preview-empty">' + Toolkit.T('ac.empty.batch', null, '你多扔几张,Dobby 排好队') + '</div>';
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('processBtn').disabled = true;
     $('downloadBtn').disabled = true;
     $('downloadZipBtn').disabled = true;

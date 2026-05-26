@@ -127,48 +127,48 @@
     <h1>🩹 去水印</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片</p>
+      <p data-i18n="wr.drop.title">📂 拖入图片</p>
       <p class="hint">PNG / JPG / WebP</p>
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
     <h2 data-i18n="wr.tools">选区工具</h2>
     <div class="mode-row" id="toolModeRow">
-      <button data-tool="brush" class="active" type="button">🖌️ 画刷</button>
-      <button data-tool="rect" type="button">▭ 矩形</button>
+      <button data-tool="brush" class="active" type="button" data-i18n="wr.tool.brush">🖌️ 画刷</button>
+      <button data-tool="rect" type="button" data-i18n="wr.tool.rect">▭ 矩形</button>
     </div>
     <div class="field" id="brushSizeField">
-      <label>画刷大小 <span id="brushSizeVal" class="mono">24</span> px</label>
+      <label data-i18n-html="wr.brushSize.label">画刷大小 <span id="brushSizeVal" class="mono">24</span> px</label>
       <input type="range" id="brushSize" min="4" max="120" value="24" />
     </div>
-    <button id="clearMaskBtn" class="secondary">清除选区</button>
+    <button id="clearMaskBtn" class="secondary" data-i18n="wr.btn.clearMask">清除选区</button>
 
     <h2 data-i18n="wr.algo">算法</h2>
     <div class="field">
       <select id="algoMode">
-        <option value="ai" selected>AI 模型 LaMa (推荐, 首次联网下载 ~200MB)</option>
-        <option value="diffusion">扩散插值 (1970s 算法, 仅纯色背景能凑合)</option>
+        <option value="ai" selected data-i18n="wr.opt.algo.ai">AI 模型 LaMa (推荐, 首次联网下载 ~200MB)</option>
+        <option value="diffusion" data-i18n="wr.opt.algo.diffusion">扩散插值 (1970s 算法, 仅纯色背景能凑合)</option>
       </select>
     </div>
     <div class="field" id="diffusionIterField" style="display:none">
-      <label>扩散迭代次数 <span id="iterVal" class="mono">150</span></label>
+      <label data-i18n-html="wr.iterations.label">扩散迭代次数 <span id="iterVal" class="mono">150</span></label>
       <input type="range" id="iterations" min="20" max="500" value="150" />
     </div>
     <div class="field" id="aiModelField">
-      <label>AI 模型</label>
+      <label data-i18n="wr.aiModel.label">AI 模型</label>
       <select id="aiModelSelect">
-        <option value="Carve/LaMa-ONNX">LaMa (~200MB, Carve mirror)</option>
+        <option value="Carve/LaMa-ONNX" data-i18n="wr.opt.aiModel.lama">LaMa (~200MB, Carve mirror)</option>
       </select>
-      <div class="dim" style="font-size:11px; margin-top:4px; color:var(--muted)">
+      <div class="dim" style="font-size:11px; margin-top:4px; color:var(--muted)" data-i18n="wr.aiModel.info">
         围绕水印区域分块推理,原图分辨率完整保留 — 不再整图缩到 512 再放大
       </div>
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
-    <div class="field"><label>文件名</label><input type="text" id="filename" value="cleaned" /></div>
-    <button id="applyBtn" disabled>应用去水印</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <div class="field"><label data-i18n="common.filename">文件名</label><input type="text" id="filename" value="cleaned" /></div>
+    <button id="applyBtn" disabled data-i18n="wr.btn.apply">应用去水印</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="imageOpt.download">下载</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
     <div class="log" id="log"></div>
@@ -177,18 +177,18 @@
   <div class="main">
     <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="canvas-wrap" id="canvasWrap">
-      <div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>
+      <div class="preview-empty" data-i18n="wr.empty.canvas">拖入图片,然后用画刷涂或矩形框选水印区域</div>
     </div>
     <div>
       <h2 style="margin-top:0" data-i18n="wr.compare">输出对比</h2>
       <div class="preview-pair">
         <div class="preview-col">
-          <div class="label">原图</div>
-          <div class="preview-box" id="origBox"><div class="preview-empty">Dobby 待命</div></div>
+          <div class="label" data-i18n="wr.label.orig">原图</div>
+          <div class="preview-box" id="origBox"><div class="preview-empty" data-i18n="common.idle">Dobby 待命</div></div>
         </div>
         <div class="preview-col">
-          <div class="label">去水印后</div>
-          <div class="preview-box" id="outBox"><div class="preview-empty">Dobby 擦完显示在这里</div></div>
+          <div class="label" data-i18n="wr.label.out">去水印后</div>
+          <div class="preview-box" id="outBox"><div class="preview-empty" data-i18n="wr.empty.out">Dobby 擦完显示在这里</div></div>
         </div>
       </div>
     </div>
@@ -238,9 +238,9 @@ Toolkit.injectTopbar('watermark-remove');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 没看到图片,你再丢一次?'); return; }
+    if (!f.type.startsWith('image/')) { log.err(Toolkit.T('wr.log.noImage', null, 'Bad Dobby! 没看到图片,你再丢一次?')); return; }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('wr.log.loading', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     try {
       const bitmap = await createImageBitmap(f);
       srcBitmap = bitmap;
@@ -249,9 +249,9 @@ Toolkit.injectTopbar('watermark-remove');
       const oc = newCanvas(bitmap.width, bitmap.height);
       oc.getContext('2d').drawImage(bitmap, 0, 0);
       $('origBox').innerHTML = ''; $('origBox').appendChild(oc);
-      $('stats').innerHTML = `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('stats').innerHTML = Toolkit.T('wr.stats.loaded', { w: bitmap.width, h: bitmap.height, size: fmtBytes(f.size) }, `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`);
       $('applyBtn').disabled = false;
-      log.ok('图片加载完成,用画刷或矩形选水印区');
+      log.ok(Toolkit.T('wr.log.loaded', null, '图片加载完成,用画刷或矩形选水印区'));
     } catch (e) {
       log.err(e.message);
     }
@@ -341,7 +341,10 @@ Toolkit.injectTopbar('watermark-remove');
   $('applyBtn').addEventListener('click', async () => {
     if (!srcBitmap || !maskCtx) return;
     const algo = $('algoMode').value;
-    log.dim(`应用 ${algo === 'diffusion' ? '扩散插值' : 'AI 模型'}...`);
+    const algoName = algo === 'diffusion'
+      ? Toolkit.T('wr.algo.diffusion', null, '扩散插值')
+      : Toolkit.T('wr.algo.ai', null, 'AI 模型');
+    log.dim(Toolkit.T('wr.log.applying', { algo: algoName }, `应用 ${algoName}...`));
     $('applyBtn').disabled = true;
     try {
       const w = srcBitmap.width, h = srcBitmap.height;
@@ -355,8 +358,8 @@ Toolkit.injectTopbar('watermark-remove');
         mask[i] = m;
         if (m) maskCount++;
       }
-      if (maskCount === 0) { log.err('Dobby 还不知道擦哪儿 — 你先用画刷或矩形涂个范围'); return; }
-      log.dim(`  mask 像素 ${maskCount} / ${w*h} (${(maskCount/(w*h)*100).toFixed(1)}%)`);
+      if (maskCount === 0) { log.err(Toolkit.T('wr.log.noMask', null, 'Dobby 还不知道擦哪儿 — 你先用画刷或矩形涂个范围')); return; }
+      log.dim(Toolkit.T('wr.log.maskPx', { n: maskCount, total: w*h, pct: (maskCount/(w*h)*100).toFixed(1) }, `  mask 像素 ${maskCount} / ${w*h} (${(maskCount/(w*h)*100).toFixed(1)}%)`));
 
       let result;
       if (algo === 'diffusion') {
@@ -370,7 +373,7 @@ Toolkit.injectTopbar('watermark-remove');
       $('outBox').innerHTML = ''; $('outBox').appendChild(cv);
       $('downloadBtn').disabled = false;
       handoff?.setBlob(outBlob, ($('filename').value || 'cleaned') + '.png');
-      log.ok(`完成 · ${fmtBytes(outBlob.size)}`);
+      log.ok(Toolkit.T('wr.log.done', { size: fmtBytes(outBlob.size) }, `完成 · ${fmtBytes(outBlob.size)}`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -486,9 +489,9 @@ Toolkit.injectTopbar('watermark-remove');
 
   async function aiInpaint(imageData, mask) {
     if (!_aiModel) await loadAiModel();
-    if (!_aiModel) throw new Error('AI 模型Dobby 待命,无法处理');
+    if (!_aiModel) throw new Error(Toolkit.T('wr.err.modelNotReady', null, 'AI 模型未就绪,无法处理'));
     const ort = window.ort;
-    if (!ort) throw new Error('onnxruntime-web Dobby 待命');
+    if (!ort) throw new Error(Toolkit.T('wr.err.ortNotReady', null, 'onnxruntime-web 未就绪'));
     const { width: w, height: h } = imageData;
 
     // 1. find mask bbox
@@ -504,7 +507,7 @@ Toolkit.injectTopbar('watermark-remove');
         }
       }
     }
-    if (maxX < 0) throw new Error('mask 是空的');
+    if (maxX < 0) throw new Error(Toolkit.T('wr.err.emptyMask', null, 'mask 是空的'));
 
     // 2. plan tiles — a stride grid covering bbox + padding, clamped to image
     const startX = Math.max(0, minX - TILE_PAD);
@@ -541,7 +544,7 @@ Toolkit.injectTopbar('watermark-remove');
       if (Math.min(h, startY + TILE_STRIDE * 9999) <= 0) break;
     }
 
-    log.dim(`  mask bbox ${maxX-minX+1}×${maxY-minY+1} @ (${minX},${minY}), ${tiles.length} 块 LaMa 推理`);
+    log.dim(Toolkit.T('wr.log.bbox', { w: maxX-minX+1, h: maxY-minY+1, x: minX, y: minY, n: tiles.length }, `  mask bbox ${maxX-minX+1}×${maxY-minY+1} @ (${minX},${minY}), ${tiles.length} 块 LaMa 推理`));
 
     // 3. result buffer = copy of source (pixels outside mask stay as-is)
     const result = new Uint8ClampedArray(imageData.data);
@@ -553,7 +556,7 @@ Toolkit.injectTopbar('watermark-remove');
       const { x0, y0, x1, y1 } = tiles[ti];
       const tw = x1 - x0, th = y1 - y0;
       progress.set(ti / tiles.length);
-      log.dim(`  tile ${ti+1}/${tiles.length} @ (${x0},${y0}) ${tw}×${th}`);
+      log.dim(Toolkit.T('wr.log.tile', { i: ti+1, total: tiles.length, x: x0, y: y0, w: tw, h: th }, `  tile ${ti+1}/${tiles.length} @ (${x0},${y0}) ${tw}×${th}`));
 
       // crop source tile, resize to 512×512 for model input
       const inCv = newCanvas(TILE, TILE);
@@ -600,7 +603,7 @@ Toolkit.injectTopbar('watermark-remove');
       try { outputs = await _aiModel.run({ image: imgTensor, mask: mskTensor }); }
       catch (e) {
         try { outputs = await _aiModel.run({ img: imgTensor, mask: mskTensor }); }
-        catch (e2) { throw new Error('模型输入接口不匹配: ' + e.message); }
+        catch (e2) { throw new Error(Toolkit.T('wr.err.modelInputMismatch', { msg: e.message }, '模型输入接口不匹配: ' + e.message)); }
       }
       const od = outputs[Object.keys(outputs)[0]].data;
 
@@ -646,7 +649,7 @@ Toolkit.injectTopbar('watermark-remove');
 
   async function loadAiModel() {
     const modelId = $('aiModelSelect').value;
-    log.dim('加载 onnxruntime-web...');
+    log.dim(Toolkit.T('wr.log.loadingOrt', null, '加载 onnxruntime-web...'));
     if (!window.ort) {
       const mod = await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.mjs').catch(async () => {
         // fallback to non-ESM
@@ -660,18 +663,18 @@ Toolkit.injectTopbar('watermark-remove');
       });
       if (mod && mod.default) window.ort = mod.default;
     }
-    if (!window.ort) throw new Error('onnxruntime-web 加载失败');
+    if (!window.ort) throw new Error(Toolkit.T('wr.err.ortLoadFail', null, 'onnxruntime-web 加载失败'));
     const modelUrl = `https://huggingface.co/${modelId}/resolve/main/lama_fp32.onnx`;
-    log.dim(`下载 LaMa 模型 (${modelId})...`);
+    log.dim(Toolkit.T('wr.log.dlModel', { id: modelId }, `下载 LaMa 模型 (${modelId})...`));
     progress.set(0);
     try {
       const session = await window.ort.InferenceSession.create(modelUrl, {
         executionProviders: ['webgpu', 'wasm']
       });
       _aiModel = session;
-      log.ok('LaMa 模型加载完成');
+      log.ok(Toolkit.T('wr.log.modelReady', null, 'LaMa 模型加载完成'));
     } catch (e) {
-      throw new Error('LaMa 模型加载失败 (可能 URL 不对或网络问题): ' + e.message);
+      throw new Error(Toolkit.T('wr.err.modelLoadFail', { msg: e.message }, 'LaMa 模型加载失败 (可能 URL 不对或网络问题): ' + e.message));
     }
     progress.hide();
   }
@@ -684,10 +687,10 @@ Toolkit.injectTopbar('watermark-remove');
 
   $('clearBtn').addEventListener('click', () => {
     srcBitmap = null; srcCanvas = null; maskCanvas = null; outBlob = null;
-    $('canvasWrap').innerHTML = '<div class="preview-empty">拖入图片,然后用画刷涂或矩形框选水印区域</div>';
-    $('origBox').innerHTML = '<div class="preview-empty">Dobby 待命</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">Dobby 擦完显示在这里</div>';
-    $('stats').textContent = 'Dobby 待命';
+    $('canvasWrap').innerHTML = '<div class="preview-empty">' + Toolkit.T('wr.empty.canvas', null, '拖入图片,然后用画刷涂或矩形框选水印区域') + '</div>';
+    $('origBox').innerHTML = '<div class="preview-empty">' + Toolkit.T('common.idle', null, 'Dobby 待命') + '</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">' + Toolkit.T('wr.empty.out', null, 'Dobby 擦完显示在这里') + '</div>';
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.clear();

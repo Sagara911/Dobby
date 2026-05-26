@@ -85,8 +85,8 @@
     <h1>🖼️ Image Editor</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片</p>
-      <p class="hint">
+      <p data-i18n="ie.drop.title">📂 拖入图片</p>
+      <p class="hint" data-i18n-html="ie.drop.hint">
         PNG / JPG / WebP / GIF (单张)<br/>
         一次一个操作,叠加请反复处理
       </p>
@@ -96,13 +96,13 @@
     <h2 data-i18n="common.operation">操作</h2>
     <div class="field">
       <select id="action">
-        <option value="resize">📐 缩放</option>
-        <option value="crop">✂️ 裁剪</option>
-        <option value="rotate">🔄 旋转 / 翻转</option>
-        <option value="text">📝 加文字</option>
-        <option value="pixelate">🧱 像素化</option>
-        <option value="filter">🎚️ 滤镜 / 调色</option>
-        <option value="hsl">🌈 HSL 通道调节</option>
+        <option value="resize" data-i18n="ie.opt.action.resize">📐 缩放</option>
+        <option value="crop" data-i18n="ie.opt.action.crop">✂️ 裁剪</option>
+        <option value="rotate" data-i18n="ie.opt.action.rotate">🔄 旋转 / 翻转</option>
+        <option value="text" data-i18n="ie.opt.action.text">📝 加文字</option>
+        <option value="pixelate" data-i18n="ie.opt.action.pixelate">🧱 像素化</option>
+        <option value="filter" data-i18n="ie.opt.action.filter">🎚️ 滤镜 / 调色</option>
+        <option value="hsl" data-i18n="ie.opt.action.hsl">🌈 HSL 通道调节</option>
       </select>
     </div>
 
@@ -110,7 +110,7 @@
 
     <h2 data-i18n="common.output">输出</h2>
     <div class="field">
-      <label>格式</label>
+      <label data-i18n="ie.format.label">格式</label>
       <select id="format">
         <option value="image/png">PNG</option>
         <option value="image/jpeg">JPEG</option>
@@ -118,38 +118,38 @@
       </select>
     </div>
     <div class="field" id="qualityField">
-      <label>质量 (JPEG / WebP) <span id="qualityVal" class="mono">92</span></label>
+      <label data-i18n-html="ie.quality.label">质量 (JPEG / WebP) <span id="qualityVal" class="mono">92</span></label>
       <input type="range" id="quality" min="1" max="100" value="92" />
     </div>
     <div class="field">
-      <label>文件名</label>
+      <label data-i18n="common.filename">文件名</label>
       <input type="text" id="filename" value="edited" />
     </div>
-    <button id="applyBtn" disabled>应用</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="useAsSourceBtn" class="secondary" disabled>把输出作为新输入</button>
+    <button id="applyBtn" disabled data-i18n="ie.btn.apply">应用</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="imageOpt.download">下载</button>
+    <button id="useAsSourceBtn" class="secondary" disabled data-i18n="ie.btn.useAsSource">把输出作为新输入</button>
     <div class="row" style="margin-top:6px; gap:6px;">
-      <button id="undoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;">↶ 撤销 (Ctrl+Z)</button>
-      <button id="redoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;">↷ 重做 (Ctrl+Y)</button>
+      <button id="undoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;" data-i18n="ie.btn.undo">↶ 撤销 (Ctrl+Z)</button>
+      <button id="redoBtn" class="secondary" disabled style="flex:1; padding:6px 10px; font-size:11px;" data-i18n="ie.btn.redo">↷ 重做 (Ctrl+Y)</button>
     </div>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats" data-i18n="ie.stats.empty">未加载</div>
     <div class="preview-pair">
       <div class="preview-col">
-        <div class="label">原图</div>
+        <div class="label" data-i18n="ie.label.src">原图</div>
         <div class="preview-box" id="srcBox">
-          <div class="preview-empty">拖入图片</div>
+          <div class="preview-empty" data-i18n="ie.empty.src">拖入图片</div>
         </div>
       </div>
       <div class="preview-col">
-        <div class="label">输出</div>
+        <div class="label" data-i18n="ie.label.out">输出</div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">应用操作后这里显示结果</div>
+          <div class="preview-empty" data-i18n="ie.empty.out">应用操作后这里显示结果</div>
         </div>
       </div>
     </div>
@@ -161,7 +161,7 @@
 Toolkit.injectTopbar('image-editor');
 
 (() => {
-  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const { $, makeLogger, attachDropZone, download, newCanvas, canvasToBlob, fmtBytes, T } = Toolkit;
   const log = makeLogger($('log'));
 
   let srcBitmap = null;
@@ -193,7 +193,7 @@ Toolkit.injectTopbar('image-editor');
     cv.getContext('2d').drawImage(srcBitmap, 0, 0);
     $('srcBox').innerHTML = '';
     $('srcBox').appendChild(cv);
-    $('stats').innerHTML = `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`;
+    $('stats').innerHTML = T('ie.stats.history', { w: srcBitmap.width, h: srcBitmap.height, size: fmtBytes(srcSize), cur: cursor + 1, total: history.length }, `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`);
     updateHistoryButtons();
     renderActionControls();
   }
@@ -219,9 +219,9 @@ Toolkit.injectTopbar('image-editor');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('image/')) { log.err('Bad Dobby! 这不是图片文件,你再丢一次?'); return; }
+    if (!f.type.startsWith('image/')) { log.err(T('ie.log.notImage', null, 'Bad Dobby! 这不是图片文件,你再丢一次?')); return; }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(T('ie.log.loading', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     try {
       const bitmap = await createImageBitmap(f);
       srcBitmap = bitmap;
@@ -230,9 +230,9 @@ Toolkit.injectTopbar('image-editor');
       cv.getContext('2d').drawImage(bitmap, 0, 0);
       $('srcBox').innerHTML = '';
       $('srcBox').appendChild(cv);
-      $('stats').innerHTML = `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      $('stats').innerHTML = T('ie.stats.loaded', { w: bitmap.width, h: bitmap.height, size: fmtBytes(f.size) }, `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`);
       $('applyBtn').disabled = false;
-      log.ok('加载完成');
+      log.ok(T('ie.log.loaded', null, '加载完成'));
       // reset history with the initial state
       history.length = 0; cursor = -1;
       pushHistory();
@@ -250,10 +250,10 @@ Toolkit.injectTopbar('image-editor');
     if (action === 'resize') {
       c.innerHTML = `
         <div class="row-fields">
-          <div class="field"><label>宽</label><input type="number" id="newW" value="${w}" min="1" /></div>
-          <div class="field"><label>高</label><input type="number" id="newH" value="${h}" min="1" /></div>
+          <div class="field"><label>${T('ie.label.width', null, '宽')}</label><input type="number" id="newW" value="${w}" min="1" /></div>
+          <div class="field"><label>${T('ie.label.height', null, '高')}</label><input type="number" id="newH" value="${h}" min="1" /></div>
         </div>
-        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>锁定宽高比</span></label>
+        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>${T('ie.label.lockRatio', null, '锁定宽高比')}</span></label>
       `;
       const ratio = w / h;
       $('newW').addEventListener('input', () => { if ($('lockRatio').checked) $('newH').value = Math.round(parseInt($('newW').value, 10) / ratio); });
@@ -265,93 +265,93 @@ Toolkit.injectTopbar('image-editor');
           <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" /></div>
         </div>
         <div class="row-fields">
-          <div class="field"><label>宽</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
-          <div class="field"><label>高</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
+          <div class="field"><label>${T('ie.label.width', null, '宽')}</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
+          <div class="field"><label>${T('ie.label.height', null, '高')}</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
         </div>
       `;
     } else if (action === 'rotate') {
       c.innerHTML = `
         <div class="field">
-          <label>旋转</label>
+          <label>${T('ie.label.rotate', null, '旋转')}</label>
           <select id="rotateAngle">
-            <option value="0">无旋转</option>
-            <option value="90">90° 顺时针</option>
+            <option value="0">${T('ie.opt.angle.0', null, '无旋转')}</option>
+            <option value="90">${T('ie.opt.angle.90', null, '90° 顺时针')}</option>
             <option value="180">180°</option>
-            <option value="270">270° (= 90° 逆时针)</option>
+            <option value="270">${T('ie.opt.angle.270', null, '270° (= 90° 逆时针)')}</option>
           </select>
         </div>
-        <label class="checkbox"><input type="checkbox" id="flipH" /><span>水平翻转</span></label>
-        <label class="checkbox"><input type="checkbox" id="flipV" /><span>垂直翻转</span></label>
+        <label class="checkbox"><input type="checkbox" id="flipH" /><span>${T('ie.label.flipH', null, '水平翻转')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="flipV" /><span>${T('ie.label.flipV', null, '垂直翻转')}</span></label>
       `;
     } else if (action === 'text') {
       c.innerHTML = `
-        <div class="field"><label>文字内容</label><input type="text" id="textContent" value="Hello" /></div>
+        <div class="field"><label>${T('ie.label.textContent', null, '文字内容')}</label><input type="text" id="textContent" value="Hello" /></div>
         <div class="row-fields">
-          <div class="field"><label>字号 (px)</label><input type="number" id="textSize" value="${Math.max(20, Math.round(h / 10))}" min="6" /></div>
-          <div class="field"><label>颜色</label><input type="text" id="textColor" value="#ffffff" /></div>
+          <div class="field"><label>${T('ie.label.textSize', null, '字号 (px)')}</label><input type="number" id="textSize" value="${Math.max(20, Math.round(h / 10))}" min="6" /></div>
+          <div class="field"><label>${T('ie.label.textColor', null, '颜色')}</label><input type="text" id="textColor" value="#ffffff" /></div>
         </div>
-        <div class="field"><label>字体</label>
+        <div class="field"><label>${T('ie.label.textFont', null, '字体')}</label>
           <select id="textFont">
-            <option value="sans-serif">默认无衬线</option>
-            <option value="serif">衬线</option>
-            <option value="monospace">等宽</option>
-            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
-            <option value="'PingFang SC', sans-serif">苹方</option>
-            <option value="Impact, sans-serif">Impact (粗体)</option>
+            <option value="sans-serif">${T('ie.opt.font.sans', null, '默认无衬线')}</option>
+            <option value="serif">${T('ie.opt.font.serif', null, '衬线')}</option>
+            <option value="monospace">${T('ie.opt.font.mono', null, '等宽')}</option>
+            <option value="'Microsoft YaHei', sans-serif">${T('ie.opt.font.yahei', null, '微软雅黑')}</option>
+            <option value="'PingFang SC', sans-serif">${T('ie.opt.font.pingfang', null, '苹方')}</option>
+            <option value="Impact, sans-serif">${T('ie.opt.font.impact', null, 'Impact (粗体)')}</option>
           </select>
         </div>
         <div class="row-fields">
           <div class="field"><label>X (px)</label><input type="number" id="textX" value="${Math.round(w * 0.5)}" /></div>
           <div class="field"><label>Y (px)</label><input type="number" id="textY" value="${Math.round(h * 0.9)}" /></div>
         </div>
-        <div class="field"><label>对齐</label>
+        <div class="field"><label>${T('ie.label.textAlign', null, '对齐')}</label>
           <select id="textAlign">
-            <option value="center">居中</option>
-            <option value="left">左</option>
-            <option value="right">右</option>
+            <option value="center">${T('ie.opt.align.center', null, '居中')}</option>
+            <option value="left">${T('ie.opt.align.left', null, '左')}</option>
+            <option value="right">${T('ie.opt.align.right', null, '右')}</option>
           </select>
         </div>
         <div class="row-fields">
-          <div class="field"><label>描边宽度 (px)</label><input type="number" id="textStroke" value="2" min="0" /></div>
-          <div class="field"><label>描边颜色</label><input type="text" id="textStrokeColor" value="#000000" /></div>
+          <div class="field"><label>${T('ie.label.strokeWidth', null, '描边宽度 (px)')}</label><input type="number" id="textStroke" value="2" min="0" /></div>
+          <div class="field"><label>${T('ie.label.strokeColor', null, '描边颜色')}</label><input type="text" id="textStrokeColor" value="#000000" /></div>
         </div>
       `;
     } else if (action === 'pixelate') {
       c.innerHTML = `
         <div class="field">
-          <label>方块大小 (px) <span id="pixSizeVal" class="mono">8</span></label>
+          <label>${T('ie.label.pixSize', null, '方块大小 (px)')} <span id="pixSizeVal" class="mono">8</span></label>
           <input type="range" id="pixSize" min="2" max="64" value="8" />
         </div>
-        <div class="info">数字越大马赛克越粗</div>
+        <div class="info">${T('ie.info.pixelate', null, '数字越大马赛克越粗')}</div>
       `;
       $('pixSize').addEventListener('input', e => $('pixSizeVal').textContent = e.target.value);
     } else if (action === 'filter') {
       c.innerHTML = `
         <div class="field">
-          <label>预设</label>
+          <label>${T('common.presets', null, '预设')}</label>
           <select id="filterPreset">
-            <option value="none">自定义</option>
-            <option value="original">原始 (重置)</option>
-            <option value="bw">黑白</option>
-            <option value="sepia">怀旧 (Sepia)</option>
-            <option value="cold">冷色</option>
-            <option value="warm">暖色</option>
-            <option value="vivid">高饱和</option>
-            <option value="contrast">高对比</option>
-            <option value="vintage">复古胶片</option>
-            <option value="invert">反相</option>
-            <option value="dramatic">戏剧化</option>
-            <option value="dreamy">梦幻</option>
+            <option value="none">${T('ie.opt.fpreset.custom', null, '自定义')}</option>
+            <option value="original">${T('ie.opt.fpreset.original', null, '原始 (重置)')}</option>
+            <option value="bw">${T('ie.opt.fpreset.bw', null, '黑白')}</option>
+            <option value="sepia">${T('ie.opt.fpreset.sepia', null, '怀旧 (Sepia)')}</option>
+            <option value="cold">${T('ie.opt.fpreset.cold', null, '冷色')}</option>
+            <option value="warm">${T('ie.opt.fpreset.warm', null, '暖色')}</option>
+            <option value="vivid">${T('ie.opt.fpreset.vivid', null, '高饱和')}</option>
+            <option value="contrast">${T('ie.opt.fpreset.contrast', null, '高对比')}</option>
+            <option value="vintage">${T('ie.opt.fpreset.vintage', null, '复古胶片')}</option>
+            <option value="invert">${T('ie.opt.fpreset.invert', null, '反相')}</option>
+            <option value="dramatic">${T('ie.opt.fpreset.dramatic', null, '戏剧化')}</option>
+            <option value="dreamy">${T('ie.opt.fpreset.dreamy', null, '梦幻')}</option>
           </select>
         </div>
-        <label class="checkbox"><input type="checkbox" id="fGray" /><span>灰度</span></label>
-        <label class="checkbox"><input type="checkbox" id="fSepia" /><span>怀旧 (Sepia)</span></label>
-        <label class="checkbox"><input type="checkbox" id="fInvert" /><span>反色</span></label>
-        <div class="field"><label>亮度 <span id="fBriVal" class="mono">100%</span></label><input type="range" id="fBri" min="0" max="200" value="100" /></div>
-        <div class="field"><label>对比度 <span id="fConVal" class="mono">100%</span></label><input type="range" id="fCon" min="0" max="200" value="100" /></div>
-        <div class="field"><label>饱和度 <span id="fSatVal" class="mono">100%</span></label><input type="range" id="fSat" min="0" max="200" value="100" /></div>
-        <div class="field"><label>色相旋转 <span id="fHueVal" class="mono">0°</span></label><input type="range" id="fHue" min="0" max="360" value="0" /></div>
-        <div class="field"><label>模糊 <span id="fBlurVal" class="mono">0px</span></label><input type="range" id="fBlur" min="0" max="20" value="0" /></div>
+        <label class="checkbox"><input type="checkbox" id="fGray" /><span>${T('ie.label.grayscale', null, '灰度')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="fSepia" /><span>${T('ie.opt.fpreset.sepia', null, '怀旧 (Sepia)')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="fInvert" /><span>${T('ie.label.invert', null, '反色')}</span></label>
+        <div class="field"><label>${T('ie.label.brightness', null, '亮度')} <span id="fBriVal" class="mono">100%</span></label><input type="range" id="fBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${T('ie.label.contrast', null, '对比度')} <span id="fConVal" class="mono">100%</span></label><input type="range" id="fCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${T('ie.label.saturation', null, '饱和度')} <span id="fSatVal" class="mono">100%</span></label><input type="range" id="fSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${T('ie.label.hue', null, '色相旋转')} <span id="fHueVal" class="mono">0°</span></label><input type="range" id="fHue" min="0" max="360" value="0" /></div>
+        <div class="field"><label>${T('ie.label.blur', null, '模糊')} <span id="fBlurVal" class="mono">0px</span></label><input type="range" id="fBlur" min="0" max="20" value="0" /></div>
       `;
       const bind = (id, valId, unit) => $(id).addEventListener('input', e => $(valId).textContent = e.target.value + unit);
       bind('fBri', 'fBriVal', '%'); bind('fCon', 'fConVal', '%'); bind('fSat', 'fSatVal', '%');
@@ -385,22 +385,22 @@ Toolkit.injectTopbar('image-editor');
     } else if (action === 'hsl') {
       c.innerHTML = `
         <div class="field">
-          <label>选择色相区间</label>
+          <label>${T('ie.label.hslBand', null, '选择色相区间')}</label>
           <select id="hslBand">
-            <option value="red">红 (0° / 360°)</option>
-            <option value="orange">橙 (30°)</option>
-            <option value="yellow">黄 (60°)</option>
-            <option value="green">绿 (120°)</option>
-            <option value="cyan">青 (180°)</option>
-            <option value="blue">蓝 (240°)</option>
-            <option value="purple">紫 (300°)</option>
-            <option value="all">全部色相</option>
+            <option value="red">${T('ie.opt.band.red', null, '红 (0° / 360°)')}</option>
+            <option value="orange">${T('ie.opt.band.orange', null, '橙 (30°)')}</option>
+            <option value="yellow">${T('ie.opt.band.yellow', null, '黄 (60°)')}</option>
+            <option value="green">${T('ie.opt.band.green', null, '绿 (120°)')}</option>
+            <option value="cyan">${T('ie.opt.band.cyan', null, '青 (180°)')}</option>
+            <option value="blue">${T('ie.opt.band.blue', null, '蓝 (240°)')}</option>
+            <option value="purple">${T('ie.opt.band.purple', null, '紫 (300°)')}</option>
+            <option value="all">${T('ie.opt.band.all', null, '全部色相')}</option>
           </select>
         </div>
-        <div class="field"><label>色相偏移 (H) <span id="hslHVal" class="mono">0°</span></label><input type="range" id="hslH" min="-180" max="180" value="0" /></div>
-        <div class="field"><label>饱和度 (S) <span id="hslSVal" class="mono">0</span></label><input type="range" id="hslS" min="-100" max="100" value="0" /></div>
-        <div class="field"><label>明度 (L) <span id="hslLVal" class="mono">0</span></label><input type="range" id="hslL" min="-100" max="100" value="0" /></div>
-        <div class="info">类似 Lightroom 的 HSL 通道调节,只影响选中色相区间内的像素</div>
+        <div class="field"><label>${T('ie.label.hslH', null, '色相偏移 (H)')} <span id="hslHVal" class="mono">0°</span></label><input type="range" id="hslH" min="-180" max="180" value="0" /></div>
+        <div class="field"><label>${T('ie.label.hslS', null, '饱和度 (S)')} <span id="hslSVal" class="mono">0</span></label><input type="range" id="hslS" min="-100" max="100" value="0" /></div>
+        <div class="field"><label>${T('ie.label.hslL', null, '明度 (L)')} <span id="hslLVal" class="mono">0</span></label><input type="range" id="hslL" min="-100" max="100" value="0" /></div>
+        <div class="info">${T('ie.info.hsl', null, '类似 Lightroom 的 HSL 通道调节,只影响选中色相区间内的像素')}</div>
       `;
       const b = (id, val, suf='') => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
       b('hslH', 'hslHVal', '°'); b('hslS', 'hslSVal'); b('hslL', 'hslLVal');
@@ -410,7 +410,7 @@ Toolkit.injectTopbar('image-editor');
   $('applyBtn').addEventListener('click', async () => {
     if (!srcBitmap) return;
     const action = $('action').value;
-    log.dim(`应用 ${action}...`);
+    log.dim(T('ie.log.applying', { action }, `应用 ${action}...`));
     try {
       const cv = apply(action);
       outBitmap = cv;
@@ -423,7 +423,7 @@ Toolkit.injectTopbar('image-editor');
       $('useAsSourceBtn').disabled = false;
       handoff?.setBlob(outBlob, ($('filename').value || 'edited') + '.' + (fmt === 'image/jpeg' ? 'jpg' : fmt === 'image/webp' ? 'webp' : 'png'), fmt);
       const pct = ((srcSize - outBlob.size) / srcSize * 100);
-      log.ok(`完成 ${cv.width}×${cv.height} · ${fmtBytes(outBlob.size)} (${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%)`);
+      log.ok(T('ie.log.done', { w: cv.width, h: cv.height, size: fmtBytes(outBlob.size), sign: pct >= 0 ? '-' : '+', pct: Math.abs(pct).toFixed(1) }, `完成 ${cv.width}×${cv.height} · ${fmtBytes(outBlob.size)} (${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%)`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -592,19 +592,19 @@ Toolkit.injectTopbar('image-editor');
     cv.getContext('2d').drawImage(srcBitmap, 0, 0);
     $('srcBox').innerHTML = '';
     $('srcBox').appendChild(cv);
-    $('outBox').innerHTML = '<div class="preview-empty">应用下一个操作</div>';
-    $('stats').innerHTML = `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`;
+    $('outBox').innerHTML = '<div class="preview-empty">' + T('ie.empty.applyNext', null, '应用下一个操作') + '</div>';
+    $('stats').innerHTML = T('ie.stats.history', { w: srcBitmap.width, h: srcBitmap.height, size: fmtBytes(srcSize), cur: cursor + 1, total: history.length }, `<strong>${srcBitmap.width}×${srcBitmap.height}</strong> · 当前 <strong>${fmtBytes(srcSize)}</strong> · 历史 ${cursor + 1}/${history.length}`);
     $('downloadBtn').disabled = true;
     $('useAsSourceBtn').disabled = true;
-    log.dim('已把输出作为新输入,可以继续叠加操作 (Ctrl+Z 撤销)');
+    log.dim(T('ie.log.usedAsSource', null, '已把输出作为新输入,可以继续叠加操作 (Ctrl+Z 撤销)'));
     renderActionControls();
   });
 
   $('clearBtn').addEventListener('click', () => {
     srcBitmap = null; outBlob = null; outBitmap = null;
-    $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">应用操作后这里显示结果</div>';
-    $('stats').textContent = '未加载';
+    $('srcBox').innerHTML = '<div class="preview-empty">' + T('ie.empty.src', null, '拖入图片') + '</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">' + T('ie.empty.out', null, '应用操作后这里显示结果') + '</div>';
+    $('stats').textContent = T('ie.stats.empty', null, '未加载');
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;

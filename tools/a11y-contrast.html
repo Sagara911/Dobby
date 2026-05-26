@@ -187,38 +187,38 @@
       <input type="text" id="bgHex" value="#1a1a24" maxlength="7" />
     </div>
 
-    <h2>常见组合 <span style="float:right; font-size:10px; color:var(--muted)">点选</span></h2>
+    <h2><span data-i18n="a11y.combos">常见组合</span> <span style="float:right; font-size:10px; color:var(--muted)" data-i18n="a11y.combos.pick">点选</span></h2>
     <div id="commonCombos" style="display:flex; flex-direction:column; gap:4px"></div>
 
     <h2 data-i18n="common.actions">动作</h2>
-    <button id="swapBtn" class="secondary">↔ 交换前/背景</button>
-    <button id="randomBtn" class="secondary">🎲 随机一对</button>
-    <button id="copyBtn" class="secondary">📋 复制 hex 对</button>
+    <button id="swapBtn" class="secondary" data-i18n="a11y.btn.swap">↔ 交换前/背景</button>
+    <button id="randomBtn" class="secondary" data-i18n="a11y.btn.random">🎲 随机一对</button>
+    <button id="copyBtn" class="secondary" data-i18n="a11y.btn.copy">📋 复制 hex 对</button>
 
     <h2 data-i18n="a11y.previewText">预览文本</h2>
-    <textarea id="previewText" style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; resize:vertical; min-height:60px" placeholder="自定义预览文字">Lorem ipsum dolor sit amet</textarea>
+    <textarea id="previewText" style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; resize:vertical; min-height:60px" data-i18n-attr="placeholder:a11y.previewPh" placeholder="自定义预览文字">Lorem ipsum dolor sit amet</textarea>
 
     <h2 data-i18n="a11y.wcag">WCAG 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
-      <div><strong>AA 普通文本</strong>: ≥ 4.5</div>
-      <div><strong>AA 大字</strong>: ≥ 3.0(≥18pt 或 14pt 加粗)</div>
-      <div><strong>AAA 普通</strong>: ≥ 7.0</div>
-      <div><strong>AAA 大字</strong>: ≥ 4.5</div>
-      <div><strong>非文本</strong>: ≥ 3.0(图标/边框)</div>
+      <div data-i18n-html="a11y.wcag.aaNormal"><strong>AA 普通文本</strong>: ≥ 4.5</div>
+      <div data-i18n-html="a11y.wcag.aaLarge"><strong>AA 大字</strong>: ≥ 3.0(≥18pt 或 14pt 加粗)</div>
+      <div data-i18n-html="a11y.wcag.aaaNormal"><strong>AAA 普通</strong>: ≥ 7.0</div>
+      <div data-i18n-html="a11y.wcag.aaaLarge"><strong>AAA 大字</strong>: ≥ 4.5</div>
+      <div data-i18n-html="a11y.wcag.nonText"><strong>非文本</strong>: ≥ 3.0(图标/边框)</div>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">WCAG 2.1 颜色对比度 + 三种色盲滤镜</div>
+    <div class="stats" id="stats" data-i18n="a11y.stats.ready">WCAG 2.1 颜色对比度 + 三种色盲滤镜</div>
 
     <div class="ax-stage">
       <!-- BIG RATIO + BADGES -->
       <div class="ax-ratio-card">
         <div>
           <div class="ax-ratio-big" id="ratioBig">21:1</div>
-          <div class="ax-ratio-sub" id="ratioSub">对比度</div>
+          <div class="ax-ratio-sub" id="ratioSub" data-i18n="a11y.ratio.label">对比度</div>
         </div>
         <div class="ax-badges" id="badges">
           <!-- populated at runtime -->
@@ -227,15 +227,15 @@
 
       <!-- LIVE PREVIEW -->
       <div class="ax-preview" id="preview">
-        <h3 id="previewH">大标题预览(24px 粗体)</h3>
-        <p id="previewP" style="font-size:18px">大字预览(18pt = 24px,WCAG 大字标准)</p>
-        <p id="previewBody">正文预览(15px)— Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.</p>
-        <p class="small" id="previewSmall">小字预览(12px)— 在低对比度下小字最难读,常用来判断合规底线。</p>
+        <h3 id="previewH" data-i18n="a11y.preview.h">大标题预览(24px 粗体)</h3>
+        <p id="previewP" style="font-size:18px" data-i18n="a11y.preview.large">大字预览(18pt = 24px,WCAG 大字标准)</p>
+        <p id="previewBody" data-i18n="a11y.preview.body">正文预览(15px)— Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.</p>
+        <p class="small" id="previewSmall" data-i18n="a11y.preview.small">小字预览(12px)— 在低对比度下小字最难读,常用来判断合规底线。</p>
       </div>
 
       <!-- COLOR BLINDNESS -->
       <div>
-        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">色盲模拟 (Color Vision Deficiency)</div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px" data-i18n="a11y.cb.title">色盲模拟 (Color Vision Deficiency)</div>
         <div class="ax-cb-grid" id="cbGrid">
           <!-- populated at runtime -->
         </div>
@@ -306,15 +306,19 @@ Toolkit.injectTopbar('a11y-contrast');
     const r = contrastRatio(fg, bg);
     $('ratioBig').textContent = r.toFixed(2) + ':1';
     $('ratioBig').classList.toggle('fail', r < 3);
-    $('ratioSub').textContent = r >= 7 ? '极好,过 AAA' : r >= 4.5 ? '好,过 AA' : r >= 3 ? '勉强,只过 AA 大字' : '低,不合规';
+    $('ratioSub').textContent =
+      r >= 7 ? Toolkit.T('a11y.verdict.aaa', null, '极好,过 AAA')
+      : r >= 4.5 ? Toolkit.T('a11y.verdict.aa', null, '好,过 AA')
+      : r >= 3 ? Toolkit.T('a11y.verdict.aaLargeOnly', null, '勉强,只过 AA 大字')
+      : Toolkit.T('a11y.verdict.fail', null, '低,不合规');
 
     // badges
     const tests = [
-      { label: 'AA 普通文本', need: 4.5 },
-      { label: 'AA 大字',     need: 3.0 },
-      { label: 'AAA 普通',    need: 7.0 },
-      { label: 'AAA 大字',    need: 4.5 },
-      { label: '非文本',      need: 3.0 }
+      { label: Toolkit.T('a11y.test.aaNormal', null, 'AA 普通文本'), need: 4.5 },
+      { label: Toolkit.T('a11y.test.aaLarge', null, 'AA 大字'),     need: 3.0 },
+      { label: Toolkit.T('a11y.test.aaaNormal', null, 'AAA 普通'),    need: 7.0 },
+      { label: Toolkit.T('a11y.test.aaaLarge', null, 'AAA 大字'),    need: 4.5 },
+      { label: Toolkit.T('a11y.test.nonText', null, '非文本'),      need: 3.0 }
     ];
     $('badges').innerHTML = tests.map(t => {
       const pass = r >= t.need;
@@ -338,10 +342,10 @@ Toolkit.injectTopbar('a11y-contrast');
 
     // CB sim
     const types = [
-      { id: 'normal',       name: '正常视觉',       desc: '~92% 人口' },
-      { id: 'protanopia',   name: '红色盲 (1% 男)',  desc: 'Protanopia' },
-      { id: 'deuteranopia', name: '绿色盲 (6% 男)',  desc: 'Deuteranopia' },
-      { id: 'tritanopia',   name: '蓝色盲 (~0.01%)', desc: 'Tritanopia' }
+      { id: 'normal',       name: Toolkit.T('a11y.cb.normal', null, '正常视觉'),       desc: '~92% 人口' },
+      { id: 'protanopia',   name: Toolkit.T('a11y.cb.protanopia', null, '红色盲 (1% 男)'),  desc: 'Protanopia' },
+      { id: 'deuteranopia', name: Toolkit.T('a11y.cb.deuteranopia', null, '绿色盲 (6% 男)'),  desc: 'Deuteranopia' },
+      { id: 'tritanopia',   name: Toolkit.T('a11y.cb.tritanopia', null, '蓝色盲 (~0.01%)'), desc: 'Tritanopia' }
     ];
     $('cbGrid').innerHTML = types.map(t => {
       const cfg = t.id === 'normal' ? fg : applyCB(fg, t.id);
@@ -370,13 +374,13 @@ Toolkit.injectTopbar('a11y-contrast');
 
   // common combos
   const COMBOS = [
-    { fg: '#000000', bg: '#ffffff', n: '黑白' },
-    { fg: '#ffffff', bg: '#1a1a24', n: '白@深蓝 (Dobby)' },
-    { fg: '#0066cc', bg: '#ffffff', n: '链接蓝@白' },
-    { fg: '#fff',    bg: '#1da1f2', n: 'Twitter 蓝' },
-    { fg: '#fff',    bg: '#34a853', n: 'Google 绿' },
-    { fg: '#fff',    bg: '#dc3545', n: 'Bootstrap 红' },
-    { fg: '#444',    bg: '#f5f5f5', n: '低对比灰' }
+    { fg: '#000000', bg: '#ffffff', n: Toolkit.T('a11y.combo.bw', null, '黑白') },
+    { fg: '#ffffff', bg: '#1a1a24', n: Toolkit.T('a11y.combo.whiteOnNavy', null, '白@深蓝 (Dobby)') },
+    { fg: '#0066cc', bg: '#ffffff', n: Toolkit.T('a11y.combo.linkOnWhite', null, '链接蓝@白') },
+    { fg: '#fff',    bg: '#1da1f2', n: Toolkit.T('a11y.combo.twitter', null, 'Twitter 蓝') },
+    { fg: '#fff',    bg: '#34a853', n: Toolkit.T('a11y.combo.google', null, 'Google 绿') },
+    { fg: '#fff',    bg: '#dc3545', n: Toolkit.T('a11y.combo.bootstrap', null, 'Bootstrap 红') },
+    { fg: '#444',    bg: '#f5f5f5', n: Toolkit.T('a11y.combo.lowGray', null, '低对比灰') }
   ];
   $('commonCombos').innerHTML = COMBOS.map((c, i) => `
     <button data-i="${i}" style="text-align:left; padding:5px 8px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px">
@@ -411,12 +415,12 @@ Toolkit.injectTopbar('a11y-contrast');
   });
   $('copyBtn').addEventListener('click', async () => {
     const text = `fg: ${$('fgHex').value}\nbg: ${$('bgHex').value}\ncontrast: ${$('ratioBig').textContent}`;
-    try { await navigator.clipboard.writeText(text); log.ok('已复制 hex 对'); }
-    catch (e) { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText(text); log.ok(Toolkit.T('a11y.log.copied', null, '已复制 hex 对')); }
+    catch (e) { log.err(Toolkit.T('a11y.log.copyFail', null, '复制失败')); }
   });
 
   refresh();
-  log.ok('对比度检查器准备好');
+  log.ok(Toolkit.T('a11y.log.ready', null, '对比度检查器准备好'));
 })();
 </script>
 </body>

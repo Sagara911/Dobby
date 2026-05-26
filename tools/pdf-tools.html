@@ -286,7 +286,7 @@
   <div class="sidebar">
     <h1>📄 PDF 工具包</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="pdf.intro">
       <strong style="color:var(--accent)">100% 本地</strong> · 用 pdf-lib + pdf.js 在浏览器里处理 PDF,不上传任何东西。
     </div>
 
@@ -294,47 +294,47 @@
     <div id="modeHint" style="font-size:12px; color:var(--text); line-height:1.7"></div>
 
     <h2 data-i18n="pdf.merge.tip">合并 · 提示</h2>
-    <div class="pdf-help">拖入多个 PDF,可拖动排序,然后合并成一份。书签 / 表单字段都会保留。</div>
+    <div class="pdf-help" data-i18n="pdf.merge.help">拖入多个 PDF,可拖动排序,然后合并成一份。书签 / 表单字段都会保留。</div>
 
     <h2 data-i18n="pdf.split.tip">拆分 · 提示</h2>
-    <div class="pdf-help">拖入单个 PDF,点页码选要导出的页。可选「单个 ZIP(每页一文件)」或「合并这些页为新 PDF」。</div>
+    <div class="pdf-help" data-i18n="pdf.split.help">拖入单个 PDF,点页码选要导出的页。可选「单个 ZIP(每页一文件)」或「合并这些页为新 PDF」。</div>
 
     <h2 data-i18n="pdf.extract.tip">提图 · 提示</h2>
-    <div class="pdf-help">把每页栅格化为 PNG / JPEG。可调缩放(1×~4×),适合做截图、缩略图、备份。</div>
+    <div class="pdf-help" data-i18n="pdf.extract.help">把每页栅格化为 PNG / JPEG。可调缩放(1×~4×),适合做截图、缩略图、备份。</div>
 
     <h2 data-i18n="pdf.compress.tip">压缩 · 提示</h2>
-    <div class="pdf-help">把每页栅格化为 JPEG 再重新打包,适合扫描件 / 图片密集型 PDF。文本 PDF 会丢失文本可选属性,但体积通常 -60% ~ -85%。</div>
+    <div class="pdf-help" data-i18n="pdf.compress.help">把每页栅格化为 JPEG 再重新打包,适合扫描件 / 图片密集型 PDF。文本 PDF 会丢失文本可选属性,但体积通常 -60% ~ -85%。</div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">PDF 工具包 · 合并 / 拆分 / 提图 / 压缩,全本地</div>
+    <div class="stats" id="stats" data-i18n="pdf.stats.idle">PDF 工具包 · 合并 / 拆分 / 提图 / 压缩,全本地</div>
 
     <div class="pdf-stage">
       <div class="pdf-tabs">
-        <button data-tab="merge" class="active">📚 合并</button>
-        <button data-tab="split">✂️ 拆分</button>
-        <button data-tab="extract">🖼️ 提图</button>
-        <button data-tab="compress">🗜️ 压缩</button>
+        <button data-tab="merge" class="active" data-i18n="pdf.tab.merge">📚 合并</button>
+        <button data-tab="split" data-i18n="pdf.tab.split">✂️ 拆分</button>
+        <button data-tab="extract" data-i18n="pdf.tab.extract">🖼️ 提图</button>
+        <button data-tab="compress" data-i18n="pdf.tab.compress">🗜️ 压缩</button>
       </div>
 
       <!-- MERGE TAB -->
       <div class="pdf-panel active" data-panel="merge">
         <div class="pdf-drop" id="mergeDrop">
           <div class="big">📚</div>
-          <div>拖入多个 PDF 文件 · 或点击选择</div>
+          <div data-i18n="pdf.merge.drop">拖入多个 PDF 文件 · 或点击选择</div>
           <input type="file" id="mergeInput" accept="application/pdf" multiple style="display:none">
         </div>
         <div class="pdf-list" id="mergeList" style="display:none"></div>
         <div class="pdf-action-row">
-          <button class="primary" id="mergeBtn" disabled>合并为一份 PDF</button>
-          <button class="primary" id="mergeClearBtn" style="background:rgba(255,128,128,0.12); border-color:rgba(255,128,128,0.4); color:#ff8080" disabled>清空</button>
+          <button class="primary" id="mergeBtn" disabled data-i18n="pdf.merge.go">合并为一份 PDF</button>
+          <button class="primary" id="mergeClearBtn" style="background:rgba(255,128,128,0.12); border-color:rgba(255,128,128,0.4); color:#ff8080" disabled data-i18n="pdf.clearShort">清空</button>
           <span style="font-size:11px; color:var(--muted)" id="mergeStat"></span>
         </div>
         <div class="pdf-result" id="mergeResult">
           <div class="info" id="mergeResultInfo"></div>
-          <button id="mergeDownload">💾 下载 PDF</button>
+          <button id="mergeDownload" data-i18n="pdf.merge.dl">💾 下载 PDF</button>
         </div>
       </div>
 
@@ -342,32 +342,32 @@
       <div class="pdf-panel" data-panel="split">
         <div class="pdf-drop" id="splitDrop">
           <div class="big">✂️</div>
-          <div>拖入一个 PDF 文件 · 或点击选择</div>
+          <div data-i18n="pdf.split.drop">拖入一个 PDF 文件 · 或点击选择</div>
           <input type="file" id="splitInput" accept="application/pdf" style="display:none">
         </div>
-        <div id="splitLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在加载 PDF...</div>
+        <div id="splitLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span><span data-i18n="pdf.loading">正在加载 PDF...</span></div>
         <div class="pdf-thumbs" id="splitThumbs" style="display:none"></div>
         <div class="pdf-action-row" id="splitActions" style="display:none">
-          <button class="primary" id="splitAllBtn">全选</button>
-          <button class="primary" id="splitNoneBtn">全不选</button>
-          <button class="primary" id="splitInvertBtn">反选</button>
-          <input type="text" id="splitRange" placeholder="或填范围如 1-3,5,7-9" style="flex:1; padding:7px 10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-          <button class="primary" id="splitRangeBtn">应用范围</button>
+          <button class="primary" id="splitAllBtn" data-i18n="pdf.split.all">全选</button>
+          <button class="primary" id="splitNoneBtn" data-i18n="pdf.split.none">全不选</button>
+          <button class="primary" id="splitInvertBtn" data-i18n="pdf.split.invert">反选</button>
+          <input type="text" id="splitRange" placeholder="或填范围如 1-3,5,7-9" style="flex:1; padding:7px 10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" data-i18n-attr="placeholder:pdf.split.rangePh">
+          <button class="primary" id="splitRangeBtn" data-i18n="pdf.split.applyRange">应用范围</button>
         </div>
         <div class="pdf-action-row" id="splitActions2" style="display:none">
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            模式:
+            <span data-i18n="pdf.modeLabel">模式:</span>
             <select id="splitMode" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-              <option value="merged" selected>合并成新 PDF</option>
-              <option value="separate">每页单独 PDF + ZIP</option>
+              <option value="merged" selected data-i18n="pdf.split.merged">合并成新 PDF</option>
+              <option value="separate" data-i18n="pdf.split.separate">每页单独 PDF + ZIP</option>
             </select>
           </label>
-          <button class="primary" id="splitGoBtn" disabled>导出选中页</button>
+          <button class="primary" id="splitGoBtn" disabled data-i18n="pdf.split.go">导出选中页</button>
           <span style="font-size:11px; color:var(--muted)" id="splitStat"></span>
         </div>
         <div class="pdf-result" id="splitResult">
           <div class="info" id="splitResultInfo"></div>
-          <button id="splitDownload">💾 下载</button>
+          <button id="splitDownload" data-i18n="pdf.download">💾 下载</button>
         </div>
       </div>
 
@@ -375,20 +375,20 @@
       <div class="pdf-panel" data-panel="extract">
         <div class="pdf-drop" id="extractDrop">
           <div class="big">🖼️</div>
-          <div>拖入一个 PDF · 把每页栅格化为图片</div>
+          <div data-i18n="pdf.extract.drop">拖入一个 PDF · 把每页栅格化为图片</div>
           <input type="file" id="extractInput" accept="application/pdf" style="display:none">
         </div>
         <div class="pdf-action-row" id="extractOpts" style="display:none">
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            格式:
+            <span data-i18n="pdf.extract.fmtLabel">格式:</span>
             <select id="extractFmt" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-              <option value="png">PNG(无损)</option>
-              <option value="jpeg" selected>JPEG(小)</option>
-              <option value="webp">WebP</option>
+              <option value="png" data-i18n="pdf.extract.fmt.png">PNG(无损)</option>
+              <option value="jpeg" selected data-i18n="pdf.extract.fmt.jpeg">JPEG(小)</option>
+              <option value="webp" data-i18n="pdf.extract.fmt.webp">WebP</option>
             </select>
           </label>
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            缩放:
+            <span data-i18n="pdf.extract.scaleLabel">缩放:</span>
             <select id="extractScale" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
               <option value="1">1×</option>
               <option value="1.5">1.5×</option>
@@ -398,17 +398,17 @@
             </select>
           </label>
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            质量:
+            <span data-i18n="pdf.extract.qLabel">质量:</span>
             <input type="range" id="extractQ" min="40" max="100" value="85" style="width:120px">
             <span id="extractQLabel" style="font-family:ui-monospace, Consolas, monospace; font-size:11px; color:var(--text); min-width:30px">85</span>
           </label>
-          <button class="primary" id="extractGoBtn">栅格化</button>
+          <button class="primary" id="extractGoBtn" data-i18n="pdf.extract.go">栅格化</button>
         </div>
-        <div id="extractLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在栅格化...</div>
+        <div id="extractLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span><span data-i18n="pdf.extract.loading">正在栅格化...</span></div>
         <div class="img-grid" id="extractGrid" style="display:none"></div>
         <div class="pdf-result" id="extractResult">
           <div class="info" id="extractResultInfo"></div>
-          <button id="extractDownload">💾 下载 ZIP</button>
+          <button id="extractDownload" data-i18n="pdf.extract.dl">💾 下载 ZIP</button>
         </div>
       </div>
 
@@ -416,30 +416,30 @@
       <div class="pdf-panel" data-panel="compress">
         <div class="pdf-drop" id="compressDrop">
           <div class="big">🗜️</div>
-          <div>拖入一个 PDF · 重新栅格化压缩</div>
+          <div data-i18n="pdf.compress.drop">拖入一个 PDF · 重新栅格化压缩</div>
           <input type="file" id="compressInput" accept="application/pdf" style="display:none">
         </div>
         <div class="pdf-action-row" id="compressOpts" style="display:none">
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            分辨率:
+            <span data-i18n="pdf.compress.dpiLabel">分辨率:</span>
             <select id="compressScale" style="padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-              <option value="0.75">0.75×(更小)</option>
-              <option value="1" selected>1×(原始)</option>
-              <option value="1.5">1.5×(更清)</option>
+              <option value="0.75" data-i18n="pdf.compress.scale.75">0.75×(更小)</option>
+              <option value="1" selected data-i18n="pdf.compress.scale.1">1×(原始)</option>
+              <option value="1.5" data-i18n="pdf.compress.scale.15">1.5×(更清)</option>
             </select>
           </label>
           <label style="display:flex; align-items:center; gap:6px; font-size:12px">
-            JPEG 质量:
+            <span data-i18n="pdf.compress.qLabel">JPEG 质量:</span>
             <input type="range" id="compressQ" min="40" max="92" value="72" style="width:140px">
             <span id="compressQLabel" style="font-family:ui-monospace, Consolas, monospace; font-size:11px; color:var(--text); min-width:30px">72</span>
           </label>
-          <button class="primary" id="compressGoBtn">开始压缩</button>
+          <button class="primary" id="compressGoBtn" data-i18n="pdf.compress.go">开始压缩</button>
           <span style="font-size:11px; color:var(--muted)" id="compressStat"></span>
         </div>
-        <div id="compressLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span>正在压缩...</div>
+        <div id="compressLoading" class="pdf-loading" style="display:none"><span class="pdf-spin"></span><span data-i18n="pdf.compress.loading">正在压缩...</span></div>
         <div class="pdf-result" id="compressResult">
           <div class="info" id="compressResultInfo"></div>
-          <button id="compressDownload">💾 下载</button>
+          <button id="compressDownload" data-i18n="pdf.download">💾 下载</button>
         </div>
       </div>
     </div>
@@ -491,7 +491,7 @@ Toolkit.injectTopbar('pdf-tools');
   // ─── Tab switching ───
   const tabBtns = $$('.pdf-tabs button');
   const panels = $$('.pdf-panel');
-  const modeHints = {
+  const modeHintFallbacks = {
     merge:    '📚 合并 — 拖入多个 PDF,排序后合并为一份',
     split:    '✂️ 拆分 — 拖入一个 PDF,挑页导出',
     extract:  '🖼️ 提图 — 把 PDF 每页栅格化为图片',
@@ -500,7 +500,7 @@ Toolkit.injectTopbar('pdf-tools');
   function setMode(name) {
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
-    $('modeHint').textContent = modeHints[name];
+    $('modeHint').textContent = Toolkit.T(`pdf.modeHint.${name}`, null, modeHintFallbacks[name]);
   }
   tabBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
   setMode('merge');
@@ -538,11 +538,11 @@ Toolkit.injectTopbar('pdf-tools');
     for (const f of files) {
       const bytes = new Uint8Array(await f.arrayBuffer());
       const pages = await readPagesCount(bytes);
-      if (pages == null) { log.warn(`跳过 ${f.name}: 无法解析(可能加密了)`); continue; }
+      if (pages == null) { log.warn(Toolkit.T('pdf.log.skipParse', { name: f.name }, `跳过 ${f.name}: 无法解析(可能加密了)`)); continue; }
       mergeFiles.push({ file: f, name: f.name, size: f.size, pages, bytes });
     }
     renderMergeList();
-    log.ok(`已添加 ${files.length} 个 PDF · 当前共 ${mergeFiles.length} 个`);
+    log.ok(Toolkit.T('pdf.log.added', { n: files.length, total: mergeFiles.length }, `已添加 ${files.length} 个 PDF · 当前共 ${mergeFiles.length} 个`));
   }
 
   function renderMergeList() {
@@ -557,15 +557,16 @@ Toolkit.injectTopbar('pdf-tools');
     list.style.display = '';
     const totalPages = mergeFiles.reduce((a, b) => a + b.pages, 0);
     const totalSize = mergeFiles.reduce((a, b) => a + b.size, 0);
-    $('mergeStat').textContent = `${mergeFiles.length} 个文件 · ${totalPages} 页 · ${fmtBytes(totalSize)}`;
+    $('mergeStat').textContent = Toolkit.T('pdf.merge.stat', { n: mergeFiles.length, pages: totalPages, size: fmtBytes(totalSize) }, `${mergeFiles.length} 个文件 · ${totalPages} 页 · ${fmtBytes(totalSize)}`);
     $('mergeBtn').disabled = mergeFiles.length < 2;
     $('mergeClearBtn').disabled = false;
 
+    const pagesUnit = Toolkit.T('pdf.unit.pages', null, '页');
     list.innerHTML = mergeFiles.map((f, i) => `
       <div class="item" draggable="true" data-idx="${i}">
         <span class="grip">≡</span>
         <span class="name" title="${f.name}">${f.name}</span>
-        <span class="pages">${f.pages} 页</span>
+        <span class="pages">${f.pages} ${pagesUnit}</span>
         <span class="size">${fmtBytes(f.size)}</span>
         <button class="remove" data-rm="${i}">✕</button>
       </div>
@@ -611,21 +612,21 @@ Toolkit.injectTopbar('pdf-tools');
         const src = await PDFDocument.load(f.bytes, { ignoreEncryption: true });
         const pages = await out.copyPages(src, src.getPageIndices());
         pages.forEach(p => out.addPage(p));
-        log.ok(`合并 ${f.name}(${f.pages} 页)`);
+        log.ok(Toolkit.T('pdf.log.merged1', { name: f.name, pages: f.pages }, `合并 ${f.name}(${f.pages} 页)`));
       }
       const bytes = await out.save();
       mergeBlob = new Blob([bytes], { type: 'application/pdf' });
       // verify magic bytes
       const head = new Uint8Array(await mergeBlob.slice(0, 4).arrayBuffer());
       if (head[0] !== 0x25 || head[1] !== 0x50 || head[2] !== 0x44 || head[3] !== 0x46) {
-        throw new Error('输出文件不是有效的 PDF(magic 校验失败)');
+        throw new Error(Toolkit.T('pdf.err.notPdf', null, '输出文件不是有效的 PDF(magic 校验失败)'));
       }
       const totalPages = mergeFiles.reduce((a, b) => a + b.pages, 0);
-      $('mergeResultInfo').innerHTML = `合成 <b>${mergeFiles.length}</b> 个 PDF · 共 <b>${totalPages}</b> 页 · <b>${fmtBytes(mergeBlob.size)}</b>`;
+      $('mergeResultInfo').innerHTML = Toolkit.T('pdf.merge.info', { n: mergeFiles.length, pages: totalPages, size: fmtBytes(mergeBlob.size) }, `合成 <b>${mergeFiles.length}</b> 个 PDF · 共 <b>${totalPages}</b> 页 · <b>${fmtBytes(mergeBlob.size)}</b>`);
       $('mergeResult').classList.add('show');
-      log.ok(`合并完成 · ${fmtBytes(mergeBlob.size)}`);
+      log.ok(Toolkit.T('pdf.log.mergeDone', { size: fmtBytes(mergeBlob.size) }, `合并完成 · ${fmtBytes(mergeBlob.size)}`));
     } catch (e) {
-      log.err('合并失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.mergeFail', { msg: e.message }, `合并失败: ${e.message}`));
     } finally {
       $('mergeBtn').disabled = false;
     }
@@ -668,10 +669,10 @@ Toolkit.injectTopbar('pdf-tools');
       $('splitThumbs').style.display = '';
       $('splitActions').style.display = '';
       $('splitActions2').style.display = '';
-      log.ok(`已加载 ${f.name} · ${splitDoc.numPages} 页`);
+      log.ok(Toolkit.T('pdf.log.loaded', { name: f.name, pages: splitDoc.numPages }, `已加载 ${f.name} · ${splitDoc.numPages} 页`));
     } catch (e) {
       $('splitLoading').style.display = 'none';
-      log.err('加载 PDF 失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.loadFail', { msg: e.message }, `加载 PDF 失败: ${e.message}`));
     }
   }
 
@@ -712,7 +713,7 @@ Toolkit.injectTopbar('pdf-tools');
   }
 
   function updateSplitStat() {
-    $('splitStat').textContent = `已选 ${splitSelected.size} / ${splitDoc ? splitDoc.numPages : 0} 页`;
+    $('splitStat').textContent = Toolkit.T('pdf.split.stat', { sel: splitSelected.size, total: splitDoc ? splitDoc.numPages : 0 }, `已选 ${splitSelected.size} / ${splitDoc ? splitDoc.numPages : 0} 页`);
     $('splitGoBtn').disabled = splitSelected.size === 0;
   }
 
@@ -757,8 +758,8 @@ Toolkit.injectTopbar('pdf-tools');
         copied.forEach(p => out.addPage(p));
         const bytes = await out.save();
         splitBlob = new Blob([bytes], { type: 'application/pdf' });
-        $('splitResultInfo').innerHTML = `导出 <b>${pages.length}</b> 页为一份 PDF · <b>${fmtBytes(splitBlob.size)}</b>`;
-        log.ok(`拆分(合并模式)完成 · ${pages.length} 页`);
+        $('splitResultInfo').innerHTML = Toolkit.T('pdf.split.infoMerged', { n: pages.length, size: fmtBytes(splitBlob.size) }, `导出 <b>${pages.length}</b> 页为一份 PDF · <b>${fmtBytes(splitBlob.size)}</b>`);
+        log.ok(Toolkit.T('pdf.log.splitMerged', { n: pages.length }, `拆分(合并模式)完成 · ${pages.length} 页`));
       } else {
         const JSZip = await getJSZip();
         const zip = new JSZip();
@@ -771,12 +772,12 @@ Toolkit.injectTopbar('pdf-tools');
         }
         const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
         splitBlob = blob;
-        $('splitResultInfo').innerHTML = `导出 <b>${pages.length}</b> 个单页 PDF · 打包为 ZIP <b>${fmtBytes(blob.size)}</b>`;
-        log.ok(`拆分(单页 ZIP)完成 · ${pages.length} 文件`);
+        $('splitResultInfo').innerHTML = Toolkit.T('pdf.split.infoZip', { n: pages.length, size: fmtBytes(blob.size) }, `导出 <b>${pages.length}</b> 个单页 PDF · 打包为 ZIP <b>${fmtBytes(blob.size)}</b>`);
+        log.ok(Toolkit.T('pdf.log.splitZip', { n: pages.length }, `拆分(单页 ZIP)完成 · ${pages.length} 文件`));
       }
       $('splitResult').classList.add('show');
     } catch (e) {
-      log.err('拆分失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.splitFail', { msg: e.message }, `拆分失败: ${e.message}`));
     } finally {
       $('splitGoBtn').disabled = false;
     }
@@ -830,9 +831,9 @@ Toolkit.injectTopbar('pdf-tools');
       $('extractOpts').style.display = '';
       $('extractGrid').style.display = 'none';
       $('extractResult').classList.remove('show');
-      log.ok(`已加载 ${f.name} · ${extractDoc.numPages} 页 — 设置参数后点「栅格化」`);
+      log.ok(Toolkit.T('pdf.log.extractLoaded', { name: f.name, pages: extractDoc.numPages }, `已加载 ${f.name} · ${extractDoc.numPages} 页 — 设置参数后点「栅格化」`));
     } catch (e) {
-      log.err('加载 PDF 失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.loadFail', { msg: e.message }, `加载 PDF 失败: ${e.message}`));
     }
   }
 
@@ -858,7 +859,7 @@ Toolkit.injectTopbar('pdf-tools');
         canvas.height = vp.height;
         await renderPage(page, canvas.getContext('2d'), vp);
         const blob = await new Promise(res => canvas.toBlob(res, mime, mime === 'image/png' ? undefined : quality));
-        if (!blob) throw new Error(`page ${i} 转换失败`);
+        if (!blob) throw new Error(Toolkit.T('pdf.err.pageConvert', { i }, `page ${i} 转换失败`));
         extractBlobs.push({ name: `${extractSourceName}_p${String(i).padStart(3,'0')}.${ext}`, blob });
 
         const cell = document.createElement('div');
@@ -880,12 +881,12 @@ Toolkit.injectTopbar('pdf-tools');
       extractBlobs.forEach(({ name, blob }) => zip.file(name, blob));
       extractZipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
       const totalSize = extractBlobs.reduce((a, b) => a + b.blob.size, 0);
-      $('extractResultInfo').innerHTML = `共 <b>${extractBlobs.length}</b> 页 · 单图合计 <b>${fmtBytes(totalSize)}</b> · ZIP <b>${fmtBytes(extractZipBlob.size)}</b>`;
+      $('extractResultInfo').innerHTML = Toolkit.T('pdf.extract.info', { n: extractBlobs.length, total: fmtBytes(totalSize), zip: fmtBytes(extractZipBlob.size) }, `共 <b>${extractBlobs.length}</b> 页 · 单图合计 <b>${fmtBytes(totalSize)}</b> · ZIP <b>${fmtBytes(extractZipBlob.size)}</b>`);
       $('extractResult').classList.add('show');
-      log.ok(`栅格化完成 · ${extractBlobs.length} 页`);
+      log.ok(Toolkit.T('pdf.log.extractDone', { n: extractBlobs.length }, `栅格化完成 · ${extractBlobs.length} 页`));
     } catch (e) {
       $('extractLoading').style.display = 'none';
-      log.err('栅格化失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.extractFail', { msg: e.message }, `栅格化失败: ${e.message}`));
     } finally {
       $('extractGoBtn').disabled = false;
     }
@@ -914,11 +915,11 @@ Toolkit.injectTopbar('pdf-tools');
     try {
       compressDoc = await pdfjsLib.getDocument({ data: compressOrigBytes.slice() }).promise;
       $('compressOpts').style.display = '';
-      $('compressStat').textContent = `${compressDoc.numPages} 页 · 原始 ${fmtBytes(compressOrigBytes.byteLength)}`;
+      $('compressStat').textContent = Toolkit.T('pdf.compress.stat', { pages: compressDoc.numPages, size: fmtBytes(compressOrigBytes.byteLength) }, `${compressDoc.numPages} 页 · 原始 ${fmtBytes(compressOrigBytes.byteLength)}`);
       $('compressResult').classList.remove('show');
-      log.ok(`已加载 ${f.name} · ${compressDoc.numPages} 页`);
+      log.ok(Toolkit.T('pdf.log.loaded', { name: f.name, pages: compressDoc.numPages }, `已加载 ${f.name} · ${compressDoc.numPages} 页`));
     } catch (e) {
-      log.err('加载 PDF 失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.loadFail', { msg: e.message }, `加载 PDF 失败: ${e.message}`));
     }
   }
 
@@ -938,11 +939,11 @@ Toolkit.injectTopbar('pdf-tools');
         canvas.height = vp.height;
         await renderPage(page, canvas.getContext('2d'), vp);
         const jpegBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
-        if (!jpegBlob) throw new Error(`page ${i} JPEG 编码失败`);
+        if (!jpegBlob) throw new Error(Toolkit.T('pdf.err.jpegEncode', { i }, `page ${i} JPEG 编码失败`));
         const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
         // verify JPEG magic
         if (jpegBytes[0] !== 0xFF || jpegBytes[1] !== 0xD8) {
-          throw new Error(`page ${i} JPEG magic 校验失败`);
+          throw new Error(Toolkit.T('pdf.err.jpegMagic', { i }, `page ${i} JPEG magic 校验失败`));
         }
         const img = await out.embedJpg(jpegBytes);
         // original page size in points so the resulting PDF keeps the same physical dimensions
@@ -955,18 +956,19 @@ Toolkit.injectTopbar('pdf-tools');
       // magic check
       const head = new Uint8Array(await compressBlob.slice(0, 4).arrayBuffer());
       if (head[0] !== 0x25 || head[1] !== 0x50 || head[2] !== 0x44 || head[3] !== 0x46) {
-        throw new Error('输出文件不是有效的 PDF');
+        throw new Error(Toolkit.T('pdf.err.outputNotPdf', null, '输出文件不是有效的 PDF'));
       }
       const before = compressOrigBytes.byteLength;
       const after = compressBlob.size;
       const ratio = after / before;
       const pct = ((1 - ratio) * 100).toFixed(1);
       const sign = ratio < 1 ? '−' : '+';
-      $('compressResultInfo').innerHTML = `原始 <b>${fmtBytes(before)}</b> → 压缩后 <b>${fmtBytes(after)}</b> · ${sign}<b>${Math.abs(pct)}%</b>${ratio >= 1 ? ' <span style="color:#ffd07a">(原文件已经很小,压缩反而变大 — 直接用原图)</span>' : ''}`;
+      const grownNote = ratio >= 1 ? ' ' + Toolkit.T('pdf.compress.grownNote', null, '<span style="color:#ffd07a">(原文件已经很小,压缩反而变大 — 直接用原图)</span>') : '';
+      $('compressResultInfo').innerHTML = Toolkit.T('pdf.compress.info', { before: fmtBytes(before), after: fmtBytes(after), sign, pct: Math.abs(pct), note: grownNote }, `原始 <b>${fmtBytes(before)}</b> → 压缩后 <b>${fmtBytes(after)}</b> · ${sign}<b>${Math.abs(pct)}%</b>${grownNote}`);
       $('compressResult').classList.add('show');
-      log.ok(`压缩完成 · ${fmtBytes(after)} (${sign}${Math.abs(pct)}%)`);
+      log.ok(Toolkit.T('pdf.log.compressDone', { size: fmtBytes(after), sign, pct: Math.abs(pct) }, `压缩完成 · ${fmtBytes(after)} (${sign}${Math.abs(pct)}%)`));
     } catch (e) {
-      log.err('压缩失败: ' + e.message);
+      log.err(Toolkit.T('pdf.log.compressFail', { msg: e.message }, `压缩失败: ${e.message}`));
     } finally {
       $('compressLoading').style.display = 'none';
       $('compressGoBtn').disabled = false;
@@ -979,7 +981,7 @@ Toolkit.injectTopbar('pdf-tools');
     if (compressBlob) download(compressBlob, `${compressSourceName}_compressed.pdf`);
   });
 
-  log.ok('PDF 工具包准备好(pdf-lib + pdf.js 已加载)');
+  log.ok(Toolkit.T('pdf.log.ready', null, 'PDF 工具包准备好(pdf-lib + pdf.js 已加载)'));
 })();
 </script>
 </body>

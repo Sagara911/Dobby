@@ -437,27 +437,27 @@
       <button id="preset64">64²</button>
       <button id="preset128">128²</button>
     </div>
-    <button id="newCanvasBtn" class="secondary" style="margin-top:8px">🆕 新建画布</button>
+    <button id="newCanvasBtn" class="secondary" style="margin-top:8px" data-i18n="pxed.newCanvas">🆕 新建画布</button>
 
-    <h2>工具 <span class="px-help">(<kbd>P</kbd>铅 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>L</kbd>线 <kbd>R</kbd>框 <kbd>I</kbd>吸)</span></h2>
+    <h2 data-i18n-html="pxed.toolsH">工具 <span class="px-help">(<kbd>P</kbd>铅 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>L</kbd>线 <kbd>R</kbd>框 <kbd>I</kbd>吸)</span></h2>
     <div class="px-tool-grid">
-      <button class="px-tool-btn active" data-tool="pencil"  title="铅笔 (P)">✏️</button>
-      <button class="px-tool-btn"        data-tool="eraser"  title="橡皮 (E)">🩹</button>
-      <button class="px-tool-btn"        data-tool="fill"    title="填充 (F)">🪣</button>
-      <button class="px-tool-btn"        data-tool="line"    title="直线 (L)">📏</button>
-      <button class="px-tool-btn"        data-tool="rect"    title="矩形框 (R)">▢</button>
-      <button class="px-tool-btn"        data-tool="rectFill" title="实心矩形">▣</button>
-      <button class="px-tool-btn"        data-tool="picker"   title="吸色 (I)">💧</button>
-      <button class="px-tool-btn"        data-tool="move"     title="移动 (M)">✋</button>
+      <button class="px-tool-btn active" data-tool="pencil"  title="铅笔 (P)" data-i18n-attr="title:pxed.tool.pencil">✏️</button>
+      <button class="px-tool-btn"        data-tool="eraser"  title="橡皮 (E)" data-i18n-attr="title:pxed.tool.eraser">🩹</button>
+      <button class="px-tool-btn"        data-tool="fill"    title="填充 (F)" data-i18n-attr="title:pxed.tool.fill">🪣</button>
+      <button class="px-tool-btn"        data-tool="line"    title="直线 (L)" data-i18n-attr="title:pxed.tool.line">📏</button>
+      <button class="px-tool-btn"        data-tool="rect"    title="矩形框 (R)" data-i18n-attr="title:pxed.tool.rect">▢</button>
+      <button class="px-tool-btn"        data-tool="rectFill" title="实心矩形" data-i18n-attr="title:pxed.tool.rectFill">▣</button>
+      <button class="px-tool-btn"        data-tool="picker"   title="吸色 (I)" data-i18n-attr="title:pxed.tool.picker">💧</button>
+      <button class="px-tool-btn"        data-tool="move"     title="移动 (M)" data-i18n-attr="title:pxed.tool.move">✋</button>
     </div>
 
-    <h2>笔刷大小 <span id="brushSizeVal" class="mono" style="float:right">1</span> px</h2>
+    <h2><span data-i18n="pxed.brushSize">笔刷大小</span> <span id="brushSizeVal" class="mono" style="float:right">1</span> px</h2>
     <input type="range" id="brushSize" min="1" max="16" value="1" style="width:100%" />
 
     <h2 data-i18n="pxed.mirror">对称镜像</h2>
     <div class="px-mirror-row">
-      <button class="px-mirror-btn" id="mirrorH" title="左右对称">⇋ 水平</button>
-      <button class="px-mirror-btn" id="mirrorV" title="上下对称">⇵ 垂直</button>
+      <button class="px-mirror-btn" id="mirrorH" title="左右对称" data-i18n-attr="title:pxed.mirrorH.title" data-i18n="pxed.mirrorH">⇋ 水平</button>
+      <button class="px-mirror-btn" id="mirrorV" title="上下对称" data-i18n-attr="title:pxed.mirrorV.title" data-i18n="pxed.mirrorV">⇵ 垂直</button>
     </div>
 
     <h2 data-i18n="common.color">颜色</h2>
@@ -467,36 +467,36 @@
     </div>
 
     <div class="px-palette-meta" style="margin-top:10px">
-      <span style="font-size:11px; color:var(--muted)">调色板</span>
+      <span style="font-size:11px; color:var(--muted)" data-i18n="pxed.palette">调色板</span>
       <select id="paletteSelect">
-        <option value="pico8">PICO-8 (16 色)</option>
-        <option value="gameboy">GameBoy (4 色)</option>
-        <option value="nes">NES 风 (32 色)</option>
-        <option value="cga">CGA (16 色)</option>
-        <option value="endesga32">Endesga 32</option>
+        <option value="pico8" data-i18n="pxed.pal.pico8">PICO-8 (16 色)</option>
+        <option value="gameboy" data-i18n="pxed.pal.gameboy">GameBoy (4 色)</option>
+        <option value="nes" data-i18n="pxed.pal.nes">NES 风 (32 色)</option>
+        <option value="cga" data-i18n="pxed.pal.cga">CGA (16 色)</option>
+        <option value="endesga32" data-i18n="pxed.pal.endesga32">Endesga 32</option>
       </select>
     </div>
     <div class="px-palette" id="paletteGrid"></div>
 
     <h2 data-i18n="common.history">历史</h2>
     <div class="px-action-row">
-      <button id="undoBtn">↶ 撤销</button>
-      <button id="redoBtn">↷ 重做</button>
-      <button id="clearBtn">🗑️ 清空</button>
+      <button id="undoBtn" data-i18n="pxed.undo">↶ 撤销</button>
+      <button id="redoBtn" data-i18n="pxed.redo">↷ 重做</button>
+      <button id="clearBtn" data-i18n="common.clear">🗑️ 清空</button>
     </div>
 
     <h2 data-i18n="common.view">视图</h2>
     <div class="px-action-row">
       <button id="zoomIn">🔍+</button>
       <button id="zoomOut">🔍−</button>
-      <button id="zoomFit">⤢ 适配</button>
-      <button id="gridToggle">▦ 网格</button>
+      <button id="zoomFit" data-i18n="pxed.fit">⤢ 适配</button>
+      <button id="gridToggle" data-i18n="pxed.grid">▦ 网格</button>
     </div>
-    <div class="px-help" style="margin-top:6px">
+    <div class="px-help" style="margin-top:6px" data-i18n-html="pxed.kbHelp">
       <kbd>滚轮</kbd> 缩放 · <kbd>Space</kbd>+拖动 平移 · <kbd>Alt</kbd>+点 吸色 · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> 撤销/重做
     </div>
 
-    <h2>导出 PNG <span class="px-help">(当前帧)</span></h2>
+    <h2 data-i18n-html="pxed.exportPngH">导出 PNG <span class="px-help">(当前帧)</span></h2>
     <div class="px-export-grid">
       <button data-scale="1">1×</button>
       <button data-scale="2">2×</button>
@@ -504,24 +504,24 @@
       <button data-scale="8">8×</button>
     </div>
 
-    <h2>导出动画 <span class="px-help">(所有帧)</span></h2>
+    <h2 data-i18n-html="pxed.exportAnimH">导出动画 <span class="px-help">(所有帧)</span></h2>
     <div class="px-action-row">
       <button id="exportGifBtn" style="background:rgba(var(--jade-rgb),0.10); border-color:rgba(var(--jade-rgb),0.4); color:var(--accent)">🎞️ GIF</button>
       <button id="exportApngBtn" style="background:rgba(var(--jade-rgb),0.10); border-color:rgba(var(--jade-rgb),0.4); color:var(--accent)">🎞️ APNG</button>
     </div>
 
-    <input type="text" id="filename" value="pixel" style="margin-top:6px; width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" placeholder="文件名" />
+    <input type="text" id="filename" value="pixel" style="margin-top:6px; width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" placeholder="文件名" data-i18n-attr="placeholder:common.filename" />
 
     <h2 data-i18n="pxed.import">导入</h2>
-    <button id="importBtn" class="secondary" style="width:100%">📂 拖入 PNG / JPG 作为初始画布</button>
+    <button id="importBtn" class="secondary" style="width:100%" data-i18n="pxed.importBtn">📂 拖入 PNG / JPG 作为初始画布</button>
     <input type="file" id="fileInput" accept="image/*" style="display:none" />
-    <div class="px-help">拖入的图片会按当前画布大小缩放(像素邻近,保留硬边)</div>
+    <div class="px-help" data-i18n="pxed.importHelp">拖入的图片会按当前画布大小缩放(像素邻近,保留硬边)</div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">像素画板 · 拖入图或直接画</div>
+    <div class="stats" id="stats" data-i18n="pxed.stats.idle">像素画板 · 拖入图或直接画</div>
     <div class="px-stage" id="stage" style="flex:0 0 auto">
       <div class="px-canvas-wrap" id="canvasWrap">
         <canvas class="onion" id="onionPrevCv"></canvas>
@@ -542,20 +542,20 @@
     <!-- frame animation timeline -->
     <div class="px-timeline" id="timeline">
       <div class="px-timeline-controls">
-        <button id="playBtn" class="primary" title="播放 / 暂停">▶ 播放</button>
+        <button id="playBtn" class="primary" title="播放 / 暂停" data-i18n-attr="title:pxed.play.title" data-i18n="pxed.play">▶ 播放</button>
         <div class="fps-row">
           <span>FPS</span>
           <input type="range" id="fps" min="1" max="30" value="8" />
           <span class="val" id="fpsVal">8</span>
         </div>
-        <button id="onionBtn" title="洋葱皮 — 半透明叠加前一帧和下一帧">🧅 洋葱皮</button>
-        <button id="dupFrameBtn" title="复制当前帧到末尾">📋 复制帧</button>
+        <button id="onionBtn" title="洋葱皮 — 半透明叠加前一帧和下一帧" data-i18n-attr="title:pxed.onion.title" data-i18n="pxed.onion">🧅 洋葱皮</button>
+        <button id="dupFrameBtn" title="复制当前帧到末尾" data-i18n-attr="title:pxed.dupFrame.title" data-i18n="pxed.dupFrame">📋 复制帧</button>
         <div class="gap"></div>
         <span id="frameInfo" style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted)">第 1 / 共 1 帧</span>
       </div>
       <div class="px-timeline-strip" id="frameStrip">
         <!-- frames populated at runtime -->
-        <button class="px-frame-add" id="addFrameBtn" title="加新帧(空白)">+</button>
+        <button class="px-frame-add" id="addFrameBtn" title="加新帧(空白)" data-i18n-attr="title:pxed.addFrame.title">+</button>
       </div>
     </div>
   </div>
@@ -856,7 +856,7 @@ Toolkit.injectTopbar('pixel-editor');
 
   function pickColor(x, y) {
     const c = getPx(x, y);
-    if (c[3] === 0) { log.dim('该位置透明,没颜色'); return; }
+    if (c[3] === 0) { log.dim(Toolkit.T('pxed.log.pickTransparent', null, '该位置透明,没颜色')); return; }
     setFgColor([c[0], c[1], c[2], 255]);
   }
 
@@ -996,7 +996,7 @@ Toolkit.injectTopbar('pixel-editor');
   $('fgHex').addEventListener('change', e => {
     const c = hexToRgba(e.target.value.trim());
     if (c) setFgColor(c);
-    else { e.target.value = rgbaToHex(fgColor); log.err('hex 颜色格式不对'); }
+    else { e.target.value = rgbaToHex(fgColor); log.err(Toolkit.T('pxed.log.badHex', null, 'hex 颜色格式不对')); }
   });
 
   // palette
@@ -1021,7 +1021,7 @@ Toolkit.injectTopbar('pixel-editor');
   // canvas size presets
   function applySize(w, h) {
     if (w === CW && h === CH) return;
-    if (!confirm(`新建画布 ${w}×${h},当前所有帧会清空,继续?`)) return;
+    if (!confirm(Toolkit.T('pxed.confirm.newCanvas', { w, h }, `新建画布 ${w}×${h},当前所有帧会清空,继续?`))) return;
     CW = w; CH = h;
     // wipe all frames + start fresh with one empty frame
     frames = [makeFrame()];
@@ -1045,7 +1045,7 @@ Toolkit.injectTopbar('pixel-editor');
   $('undoBtn').addEventListener('click', undo);
   $('redoBtn').addEventListener('click', redo);
   $('clearBtn').addEventListener('click', () => {
-    if (!confirm('清空当前帧?')) return;
+    if (!confirm(Toolkit.T('pxed.confirm.clearFrame', null, '清空当前帧?'))) return;
     pushUndo();
     pixels.fill(0);
     renderDraw();
@@ -1087,7 +1087,7 @@ Toolkit.injectTopbar('pixel-editor');
       const blob = await canvasToBlob(cv, 'image/png');
       const name = ($('filename').value || 'pixel').replace(/[^\w-]/g, '_');
       download(blob, `${name}_${CW}x${CH}@${scale}x.png`);
-      log.ok(`导出 ${CW * scale}×${CH * scale} PNG`);
+      log.ok(Toolkit.T('pxed.log.exportPng', { w: CW * scale, h: CH * scale }, `导出 ${CW * scale}×${CH * scale} PNG`));
     });
   });
 
@@ -1127,9 +1127,9 @@ Toolkit.injectTopbar('pixel-editor');
       pixels.set(id.data);
       renderDraw();
       refreshFrameThumb(currentFrame);
-      log.ok(`导入 ${bmp.width}×${bmp.height} → ${CW}×${CH}`);
+      log.ok(Toolkit.T('pxed.log.import', { sw: bmp.width, sh: bmp.height, dw: CW, dh: CH }, `导入 ${bmp.width}×${bmp.height} → ${CW}×${CH}`));
     } catch (err) {
-      log.err('导入失败: ' + err.message);
+      log.err(Toolkit.T('pxed.log.importFail', { msg: err.message }, `导入失败: ${err.message}`));
     }
   }
 
@@ -1157,7 +1157,7 @@ Toolkit.injectTopbar('pixel-editor');
         const del = document.createElement('button');
         del.className = 'del-btn';
         del.textContent = '×';
-        del.title = '删除帧';
+        del.title = Toolkit.T('pxed.delFrame.title', null, '删除帧');
         del.addEventListener('click', e => {
           e.stopPropagation();
           deleteFrame(i);
@@ -1168,7 +1168,7 @@ Toolkit.injectTopbar('pixel-editor');
       strip.insertBefore(btn, addBtn);
       refreshFrameThumb(i);
     });
-    $('frameInfo').textContent = `第 ${currentFrame + 1} / 共 ${frames.length} 帧`;
+    $('frameInfo').textContent = Toolkit.T('pxed.frameInfo', { cur: currentFrame + 1, total: frames.length }, `第 ${currentFrame + 1} / 共 ${frames.length} 帧`);
   }
 
   function refreshFrameThumb(i) {
@@ -1192,7 +1192,7 @@ Toolkit.injectTopbar('pixel-editor');
     renderOnionSkin();
     document.querySelectorAll('.px-frame').forEach(b =>
       b.classList.toggle('active', parseInt(b.dataset.idx, 10) === i));
-    $('frameInfo').textContent = `第 ${currentFrame + 1} / 共 ${frames.length} 帧`;
+    $('frameInfo').textContent = Toolkit.T('pxed.frameInfo', { cur: currentFrame + 1, total: frames.length }, `第 ${currentFrame + 1} / 共 ${frames.length} 帧`);
   }
 
   function addFrame(copyCurrent = false) {
@@ -1258,9 +1258,9 @@ Toolkit.injectTopbar('pixel-editor');
 
   function startPlayback() {
     if (playing) return;
-    if (frames.length < 2) { log.dim('只有一帧没法播放,先 + 加几帧'); return; }
+    if (frames.length < 2) { log.dim(Toolkit.T('pxed.log.needFrames', null, '只有一帧没法播放,先 + 加几帧')); return; }
     playing = true;
-    $('playBtn').textContent = '⏸ 暂停';
+    $('playBtn').textContent = Toolkit.T('pxed.pause', null, '⏸ 暂停');
     const fps = parseInt($('fps').value, 10) || 8;
     const interval = 1000 / fps;
     playTimer = setInterval(() => {
@@ -1272,7 +1272,7 @@ Toolkit.injectTopbar('pixel-editor');
     playing = false;
     clearInterval(playTimer);
     playTimer = null;
-    $('playBtn').textContent = '▶ 播放';
+    $('playBtn').textContent = Toolkit.T('pxed.play', null, '▶ 播放');
   }
 
   $('playBtn').addEventListener('click', () => playing ? stopPlayback() : startPlayback());
@@ -1292,7 +1292,7 @@ Toolkit.injectTopbar('pixel-editor');
   async function exportAnimation(format) {
     if (frames.length < 1) return;
     const fps = parseInt($('fps').value, 10) || 8;
-    log.dim(`生成 ${format.toUpperCase()}...`);
+    log.dim(Toolkit.T('pxed.log.building', { fmt: format.toUpperCase() }, `生成 ${format.toUpperCase()}...`));
     try {
       // build the frame array shape AnimEncoders expects: each entry has w/h and a bitmap-like canvas
       const animFrames = frames.map(f => {
@@ -1308,9 +1308,9 @@ Toolkit.injectTopbar('pixel-editor');
       const ext = format === 'gif' ? 'gif' : 'png';
       const finalName = `${name}_${CW}x${CH}_${frames.length}f.${ext}`;
       download(blob, finalName);
-      log.ok(`导出 ${frames.length} 帧 ${format.toUpperCase()} · ${(blob.size / 1024).toFixed(1)} KB`);
+      log.ok(Toolkit.T('pxed.log.exportAnim', { n: frames.length, fmt: format.toUpperCase(), kb: (blob.size / 1024).toFixed(1) }, `导出 ${frames.length} 帧 ${format.toUpperCase()} · ${(blob.size / 1024).toFixed(1)} KB`));
     } catch (e) {
-      log.err(`${format.toUpperCase()} 导出失败: ` + e.message);
+      log.err(Toolkit.T('pxed.log.exportFail', { fmt: format.toUpperCase(), msg: e.message }, `${format.toUpperCase()} 导出失败: ${e.message}`));
       console.error(e);
     }
   }
@@ -1334,7 +1334,7 @@ Toolkit.injectTopbar('pixel-editor');
   renderPalette('pico8');
   setFgColor(fgColor);
   renderTimeline();
-  log.ok('画板准备好,挑个工具开画。多帧动画? 点底部时间轴的 + 加帧');
+  log.ok(Toolkit.T('pxed.log.ready', null, '画板准备好,挑个工具开画。多帧动画? 点底部时间轴的 + 加帧'));
 })();
 </script>
 </body>

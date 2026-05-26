@@ -95,15 +95,15 @@
 
     <h2 data-i18n="tg.type">纹理类型</h2>
     <div class="tx-type-grid" id="typeGrid">
-      <button class="tx-type-btn active" data-t="perlin">🌊 Perlin</button>
-      <button class="tx-type-btn" data-t="fbm">📈 fBm</button>
-      <button class="tx-type-btn" data-t="ridged">🏔️ 山脊</button>
-      <button class="tx-type-btn" data-t="voronoi">🧩 Voronoi</button>
-      <button class="tx-type-btn" data-t="worley">⬢ Worley</button>
-      <button class="tx-type-btn" data-t="checker">▦ 棋盘</button>
-      <button class="tx-type-btn" data-t="brick">🧱 砖墙</button>
-      <button class="tx-type-btn" data-t="stripes">═ 条纹</button>
-      <button class="tx-type-btn" data-t="gradient">🌈 渐变</button>
+      <button class="tx-type-btn active" data-t="perlin" data-i18n="tg.type.perlin">🌊 Perlin</button>
+      <button class="tx-type-btn" data-t="fbm" data-i18n="tg.type.fbm">📈 fBm</button>
+      <button class="tx-type-btn" data-t="ridged" data-i18n="tg.type.ridged">🏔️ 山脊</button>
+      <button class="tx-type-btn" data-t="voronoi" data-i18n="tg.type.voronoi">🧩 Voronoi</button>
+      <button class="tx-type-btn" data-t="worley" data-i18n="tg.type.worley">⬢ Worley</button>
+      <button class="tx-type-btn" data-t="checker" data-i18n="tg.type.checker">▦ 棋盘</button>
+      <button class="tx-type-btn" data-t="brick" data-i18n="tg.type.brick">🧱 砖墙</button>
+      <button class="tx-type-btn" data-t="stripes" data-i18n="tg.type.stripes">═ 条纹</button>
+      <button class="tx-type-btn" data-t="gradient" data-i18n="tg.type.gradient">🌈 渐变</button>
     </div>
 
     <h2 data-i18n="common.size">尺寸</h2>
@@ -127,47 +127,47 @@
     <h2 data-i18n="common.color">颜色</h2>
     <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">
       <input type="color" id="color1" value="#000000" style="width:40px; height:32px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; padding:0">
-      <span style="color:var(--muted); font-size:11px">低</span>
+      <span style="color:var(--muted); font-size:11px" data-i18n="tg.low">低</span>
       <input type="color" id="color2" value="#ffffff" style="width:40px; height:32px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; padding:0">
-      <span style="color:var(--muted); font-size:11px">高</span>
+      <span style="color:var(--muted); font-size:11px" data-i18n="tg.high">高</span>
     </div>
     <select id="colormap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="2tone">两色渐变(默认)</option>
-      <option value="grayscale">灰度(标准高度图)</option>
-      <option value="viridis">Viridis(色谱图)</option>
-      <option value="fire">火焰(黑→红→黄→白)</option>
-      <option value="ice">冰(黑→蓝→白)</option>
-      <option value="terrain">地形(蓝→绿→棕→白)</option>
+      <option value="2tone" data-i18n="tg.cmap.2tone">两色渐变(默认)</option>
+      <option value="grayscale" data-i18n="tg.cmap.grayscale">灰度(标准高度图)</option>
+      <option value="viridis" data-i18n="tg.cmap.viridis">Viridis(色谱图)</option>
+      <option value="fire" data-i18n="tg.cmap.fire">火焰(黑→红→黄→白)</option>
+      <option value="ice" data-i18n="tg.cmap.ice">冰(黑→蓝→白)</option>
+      <option value="terrain" data-i18n="tg.cmap.terrain">地形(蓝→绿→棕→白)</option>
     </select>
 
     <h2 data-i18n="tg.tileable">瓦片(tileable)</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="tileable" />
-      <span>无缝拼接</span>
+      <span data-i18n="tg.seamless">无缝拼接</span>
     </label>
-    <div style="font-size:10px; color:var(--muted); margin-top:4px">勾上后,Perlin/fBm 类纹理边界可无缝重复(对 voronoi/checker 无影响)</div>
+    <div style="font-size:10px; color:var(--muted); margin-top:4px" data-i18n="tg.tileable.note">勾上后,Perlin/fBm 类纹理边界可无缝重复(对 voronoi/checker 无影响)</div>
 
     <h2 data-i18n="common.export">导出</h2>
-    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit">💾 下载 PNG</button>
-    <input type="text" id="filename" value="texture" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
+    <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" data-i18n="tg.btn.download">💾 下载 PNG</button>
+    <input type="text" id="filename" value="texture" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" data-i18n-attr="placeholder:tg.filenamePh" placeholder="文件名">
 
     <h2 data-i18n="tg.sendTo">送往</h2>
-    <div style="font-size:10px; color:var(--muted); line-height:1.5">输出可以直接喂给 <a href="normal-map.html" style="color:var(--accent)">法线贴图</a> 当高度图,或 <a href="png-crusher.html" style="color:var(--accent)">深度压缩</a> 减体积</div>
+    <div style="font-size:10px; color:var(--muted); line-height:1.5" data-i18n-html="tg.sendTo.body">输出可以直接喂给 <a href="normal-map.html" style="color:var(--accent)">法线贴图</a> 当高度图,或 <a href="png-crusher.html" style="color:var(--accent)">深度压缩</a> 减体积</div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Perlin / Voronoi / 砖墙 等程序化噪声,游戏背景 / 地形 / 高度图</div>
+    <div class="stats" id="stats" data-i18n="tg.stats.ready">Perlin / Voronoi / 砖墙 等程序化噪声,游戏背景 / 地形 / 高度图</div>
 
     <div class="tx-stage">
       <div class="tx-canvas-wrap">
         <canvas id="cv" width="256" height="256"></canvas>
       </div>
       <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 14px; font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap">
-        <div>当前: <span id="metaType" style="color:var(--text)">Perlin</span></div>
-        <div>尺寸: <span id="metaSize" style="color:var(--text)">256×256</span></div>
-        <div>生成耗时: <span id="metaTime" style="color:var(--text)">—</span></div>
+        <div><span data-i18n="tg.meta.cur">当前</span>: <span id="metaType" style="color:var(--text)">Perlin</span></div>
+        <div><span data-i18n="tg.meta.size">尺寸</span>: <span id="metaSize" style="color:var(--text)">256×256</span></div>
+        <div><span data-i18n="tg.meta.time">生成耗时</span>: <span id="metaTime" style="color:var(--text)">—</span></div>
       </div>
     </div>
   </div>
@@ -315,33 +315,34 @@ Toolkit.injectTopbar('texture-gen');
   // ============================================================
   let currentType = 'perlin';
   let params = {};
+  const T = Toolkit.T;
   const TYPE_DEFS = {
-    perlin:   { params: [{ k: 'freq', label: '频率', min: 1, max: 32, step: 0.5, def: 4 }] },
+    perlin:   { params: [{ k: 'freq', label: T('tg.p.freq', null, '频率'), min: 1, max: 32, step: 0.5, def: 4 }] },
     fbm:      { params: [
-                  { k: 'freq', label: '频率', min: 1, max: 16, step: 0.5, def: 4 },
-                  { k: 'octaves', label: '倍频数', min: 1, max: 8, step: 1, def: 5 },
-                  { k: 'lacunarity', label: '间隙度', min: 1.5, max: 3, step: 0.1, def: 2 },
-                  { k: 'persistence', label: '持续度', min: 0.1, max: 0.9, step: 0.05, def: 0.5 }
+                  { k: 'freq', label: T('tg.p.freq', null, '频率'), min: 1, max: 16, step: 0.5, def: 4 },
+                  { k: 'octaves', label: T('tg.p.octaves', null, '倍频数'), min: 1, max: 8, step: 1, def: 5 },
+                  { k: 'lacunarity', label: T('tg.p.lacunarity', null, '间隙度'), min: 1.5, max: 3, step: 0.1, def: 2 },
+                  { k: 'persistence', label: T('tg.p.persistence', null, '持续度'), min: 0.1, max: 0.9, step: 0.05, def: 0.5 }
                 ] },
     ridged:   { params: [
-                  { k: 'freq', label: '频率', min: 1, max: 16, step: 0.5, def: 4 },
-                  { k: 'octaves', label: '倍频数', min: 1, max: 8, step: 1, def: 5 }
+                  { k: 'freq', label: T('tg.p.freq', null, '频率'), min: 1, max: 16, step: 0.5, def: 4 },
+                  { k: 'octaves', label: T('tg.p.octaves', null, '倍频数'), min: 1, max: 8, step: 1, def: 5 }
                 ] },
-    voronoi:  { params: [{ k: 'count', label: '点数', min: 5, max: 200, step: 1, def: 30 }] },
-    worley:   { params: [{ k: 'count', label: '点数', min: 5, max: 200, step: 1, def: 40 }] },
-    checker:  { params: [{ k: 'cells', label: '格子数', min: 2, max: 32, step: 1, def: 8 }] },
+    voronoi:  { params: [{ k: 'count', label: T('tg.p.points', null, '点数'), min: 5, max: 200, step: 1, def: 30 }] },
+    worley:   { params: [{ k: 'count', label: T('tg.p.points', null, '点数'), min: 5, max: 200, step: 1, def: 40 }] },
+    checker:  { params: [{ k: 'cells', label: T('tg.p.cells', null, '格子数'), min: 2, max: 32, step: 1, def: 8 }] },
     brick:    { params: [
-                  { k: 'bw', label: '砖宽', min: 16, max: 128, step: 4, def: 48 },
-                  { k: 'bh', label: '砖高', min: 8, max: 64, step: 2, def: 24 },
-                  { k: 'mortar', label: '砖缝', min: 1, max: 8, step: 1, def: 3 }
+                  { k: 'bw', label: T('tg.p.brickW', null, '砖宽'), min: 16, max: 128, step: 4, def: 48 },
+                  { k: 'bh', label: T('tg.p.brickH', null, '砖高'), min: 8, max: 64, step: 2, def: 24 },
+                  { k: 'mortar', label: T('tg.p.mortar', null, '砖缝'), min: 1, max: 8, step: 1, def: 3 }
                 ] },
     stripes:  { params: [
-                  { k: 'count', label: '条数', min: 2, max: 64, step: 1, def: 8 },
-                  { k: 'angle', label: '角度°', min: 0, max: 180, step: 5, def: 0 }
+                  { k: 'count', label: T('tg.p.stripes', null, '条数'), min: 2, max: 64, step: 1, def: 8 },
+                  { k: 'angle', label: T('tg.p.angle', null, '角度°'), min: 0, max: 180, step: 5, def: 0 }
                 ] },
     gradient: { params: [
-                  { k: 'angle', label: '角度°', min: 0, max: 360, step: 5, def: 90 },
-                  { k: 'curve', label: '曲线', min: 0.2, max: 5, step: 0.1, def: 1 }
+                  { k: 'angle', label: T('tg.p.angle', null, '角度°'), min: 0, max: 360, step: 5, def: 90 },
+                  { k: 'curve', label: T('tg.p.curve', null, '曲线'), min: 0.2, max: 5, step: 0.1, def: 1 }
                 ] }
   };
 
@@ -529,7 +530,7 @@ Toolkit.injectTopbar('texture-gen');
 
   renderParams();
   generate();
-  log.ok('纹理生成器准备好');
+  log.ok(Toolkit.T('tg.log.ready', null, '纹理生成器准备好'));
 })();
 </script>
 </body>

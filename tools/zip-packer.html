@@ -123,24 +123,24 @@
     <h1>📦 ZIP 打包</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入文件或文件夹</p>
-      <p class="hint">任意类型,可多选;支持拖整个文件夹</p>
+      <p data-i18n="zip.drop.title">📂 拖入文件或文件夹</p>
+      <p class="hint" data-i18n="zip.drop.hint">任意类型,可多选;支持拖整个文件夹</p>
       <input type="file" id="fileInput" multiple style="display:none" />
       <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none" />
     </div>
     <div style="display:flex; gap:6px; margin-top:6px">
-      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件</button>
-      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件夹</button>
+      <button id="addFilesBtn" class="secondary" style="flex:1; font-size:11px" data-i18n="zip.addFiles">+ 加文件</button>
+      <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px" data-i18n="zip.addFolder">+ 加文件夹</button>
     </div>
 
     <h2 data-i18n="zip.params">压缩参数</h2>
     <div class="field">
-      <label>压缩级别 <span id="levelVal" class="mono">9</span></label>
+      <label><span data-i18n="zip.level">压缩级别</span> <span id="levelVal" class="mono">9</span></label>
       <input type="range" id="level" min="0" max="9" value="9" />
     </div>
-    <div class="level-info" id="levelInfo">最高 (9) · deflate 最强,慢一些但最小</div>
+    <div class="level-info" id="levelInfo" data-i18n="zip.level.9">最高 (9) · deflate 最强,慢一些但最小</div>
 
-    <label class="checkbox"><input type="checkbox" id="keepPaths" checked /><span>保留文件夹层级结构</span></label>
+    <label class="checkbox"><input type="checkbox" id="keepPaths" checked /><span data-i18n="zip.keepPaths">保留文件夹层级结构</span></label>
 
     <h2 data-i18n="common.export">导出</h2>
     <div class="field">
@@ -156,9 +156,9 @@
 
   <div class="main">
     <div class="stats" id="stats" data-i18n="zip.stats.empty">Dobby 手里还没文件</div>
-    <div class="info" style="margin-bottom:8px">Dobby 就在你本机打包 · Dobby 不上传 · Dobby 不偷看 · 引擎:fflate (deflate)</div>
+    <div class="info" style="margin-bottom:8px" data-i18n="zip.info.local">Dobby 就在你本机打包 · Dobby 不上传 · Dobby 不偷看 · 引擎:fflate (deflate)</div>
     <div class="file-list" id="fileList">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢文件进来,Dobby 给列清楚</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)" data-i18n="zip.list.empty">你丢文件进来,Dobby 给列清楚</div>
     </div>
   </div>
 </div>
@@ -178,16 +178,16 @@ Toolkit.injectTopbar('zip-packer');
   let fflateMod = null;
 
   const LEVEL_HINTS = [
-    'STORE (0) · 不压缩,只把文件拼起来,最快但体积 = 原始总和',
-    '极快 (1) · 几乎不压缩,适合已经压缩过的素材 (JPG/MP4/MP3)',
-    '快 (2) · 速度优先',
-    '快 (3) · 速度优先',
-    '标准 (4) · 平衡',
-    '标准 (5) · 平衡',
-    '标准 (6) · zlib 默认',
-    '强 (7) · 偏向体积',
-    '强 (8) · 偏向体积',
-    '最高 (9) · deflate 最强,慢一些但最小'
+    Toolkit.T('zip.level.0', null, 'STORE (0) · 不压缩,只把文件拼起来,最快但体积 = 原始总和'),
+    Toolkit.T('zip.level.1', null, '极快 (1) · 几乎不压缩,适合已经压缩过的素材 (JPG/MP4/MP3)'),
+    Toolkit.T('zip.level.2', null, '快 (2) · 速度优先'),
+    Toolkit.T('zip.level.3', null, '快 (3) · 速度优先'),
+    Toolkit.T('zip.level.4', null, '标准 (4) · 平衡'),
+    Toolkit.T('zip.level.5', null, '标准 (5) · 平衡'),
+    Toolkit.T('zip.level.6', null, '标准 (6) · zlib 默认'),
+    Toolkit.T('zip.level.7', null, '强 (7) · 偏向体积'),
+    Toolkit.T('zip.level.8', null, '强 (8) · 偏向体积'),
+    Toolkit.T('zip.level.9', null, '最高 (9) · deflate 最强,慢一些但最小')
   ];
 
   attachDropZone($('dropZone'), $('fileInput'), addFiles);
@@ -226,7 +226,7 @@ Toolkit.injectTopbar('zip-packer');
       files.push({ name: f.name, path, file: f, size: f.size });
       added++;
     }
-    if (added) log.dim(`+ ${added} 个文件`);
+    if (added) log.dim(Toolkit.T('zip.log.added', { n: added }, `+ ${added} 个文件`));
     renderList();
     $('packBtn').disabled = files.length === 0;
   }
@@ -234,8 +234,8 @@ Toolkit.injectTopbar('zip-packer');
   function renderList() {
     const host = $('fileList');
     if (!files.length) {
-      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢文件进来,Dobby 给列清楚</div>';
-      $('stats').textContent = 'Dobby 手里还没文件';
+      host.innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('zip.list.empty', null, '你丢文件进来,Dobby 给列清楚')}</div>`;
+      $('stats').textContent = Toolkit.T('zip.stats.empty', null, 'Dobby 手里还没文件');
       return;
     }
     const totalSize = files.reduce((a, b) => a + b.size, 0);
@@ -253,7 +253,7 @@ Toolkit.injectTopbar('zip-packer');
         <span class="size">${fmtBytes(f.size)}</span>
         <span class="size">${f.packedSize != null ? fmtBytes(f.packedSize) : '—'}</span>
         <span class="pct ${f.packedSize == null ? 'pending' : ''}">${pctTxt}</span>
-        <button class="remove" title="移除" data-idx="${i}">×</button>
+        <button class="remove" title="${Toolkit.T('zip.remove', null, '移除')}" data-idx="${i}">×</button>
       `;
       // 5th column rendered after the grid spec? Adjust: grid is 4 cols, we have 5 children plus button.
       // Let's adjust grid in CSS by appending button outside.
@@ -265,9 +265,14 @@ Toolkit.injectTopbar('zip-packer');
       renderList();
       $('packBtn').disabled = files.length === 0;
     }));
+    const filesLbl = Toolkit.T('zip.unit.files', null, '个文件');
+    const srcLbl = Toolkit.T('zip.lbl.src', null, '原');
+    const packedLbl = Toolkit.T('zip.lbl.packed', null, '压缩后');
+    const savedLbl = Toolkit.T('zip.lbl.saved', null, '节省');
+    const totalLbl = Toolkit.T('zip.lbl.total', null, '总');
     $('stats').innerHTML = packed
-      ? `<strong>${files.length}</strong> 个文件 · 原 <strong>${fmtBytes(totalSize)}</strong> → 压缩后 <strong style="color:var(--jade)">${fmtBytes(totalPacked)}</strong> · 节省 <strong style="color:var(--jade)">${((1 - totalPacked / totalSize) * 100).toFixed(1)}%</strong>`
-      : `<strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+      ? `<strong>${files.length}</strong> ${filesLbl} · ${srcLbl} <strong>${fmtBytes(totalSize)}</strong> → ${packedLbl} <strong style="color:var(--jade)">${fmtBytes(totalPacked)}</strong> · ${savedLbl} <strong style="color:var(--jade)">${((1 - totalPacked / totalSize) * 100).toFixed(1)}%</strong>`
+      : `<strong>${files.length}</strong> ${filesLbl} · ${totalLbl} <strong>${fmtBytes(totalSize)}</strong>`;
   }
 
   $('packBtn').addEventListener('click', async () => {
@@ -278,10 +283,10 @@ Toolkit.injectTopbar('zip-packer');
     const level = parseInt($('level').value, 10);
     const keepPaths = $('keepPaths').checked;
     log.clear();
-    log.dim(`加载 fflate (首次联网 ~30KB)...`);
+    log.dim(Toolkit.T('zip.log.loadLib', null, '加载 fflate (首次联网 ~30KB)...'));
     try {
       if (!fflateMod) fflateMod = await import('https://esm.sh/fflate@0.8.2');
-      log.dim(`读取 ${files.length} 个文件...`);
+      log.dim(Toolkit.T('zip.log.reading', { n: files.length }, `读取 ${files.length} 个文件...`));
       // read all into memory
       const data = {};
       const totalSize = files.reduce((a, b) => a + b.size, 0);
@@ -303,7 +308,7 @@ Toolkit.injectTopbar('zip-packer');
         readSoFar += f.size;
         // unused, but kept for future progress
       }
-      log.dim(`压缩级别 ${level} · 打包...`);
+      log.dim(Toolkit.T('zip.log.packing', { level }, `压缩级别 ${level} · 打包...`));
       const t0 = performance.now();
       const zipped = await new Promise((resolve, reject) => {
         fflateMod.zip(data, { level }, (err, out) => err ? reject(err) : resolve(out));
@@ -320,7 +325,7 @@ Toolkit.injectTopbar('zip-packer');
       $('downloadBtn').disabled = false;
       handoff?.setBlob(outBlob, ($('filename').value || 'archive') + '.zip');
       const pct = ((1 - packedTotal / totalSize) * 100).toFixed(1);
-      log.ok(`完成 · ${fmtBytes(packedTotal)} · 压缩率 ${pct}% · 耗时 ${((t1 - t0) / 1000).toFixed(2)}s`);
+      log.ok(Toolkit.T('zip.log.done', { size: fmtBytes(packedTotal), pct, t: ((t1 - t0) / 1000).toFixed(2) }, `完成 · ${fmtBytes(packedTotal)} · 压缩率 ${pct}% · 耗时 ${((t1 - t0) / 1000).toFixed(2)}s`));
     } catch (e) {
       log.err(e.message);
       console.error(e);

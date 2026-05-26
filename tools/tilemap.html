@@ -208,8 +208,8 @@
     <h1>🗺️ Tilemap 编辑器</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 tileset PNG</p>
-      <p class="hint">先拖入 tileset 才能开画地图</p>
+      <p data-i18n="tm.drop.title">📂 拖入 tileset PNG</p>
+      <p class="hint" data-i18n="tm.drop.hint">先拖入 tileset 才能开画地图</p>
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
@@ -230,46 +230,46 @@
       <input type="number" id="mapW" value="20" min="1" max="256" />
       <input type="number" id="mapH" value="15" min="1" max="256" />
     </div>
-    <button id="resizeMapBtn" class="secondary" style="margin-top:4px">🔄 应用地图尺寸</button>
+    <button id="resizeMapBtn" class="secondary" style="margin-top:4px" data-i18n="tm.btn.applyMap">🔄 应用地图尺寸</button>
 
     <h2 data-i18n="tm.curTile">当前 tile</h2>
     <div class="tm-selected-tile">
       <canvas id="selectedTileCv" width="32" height="32" style="width:32px; height:32px"></canvas>
       <div>
-        <div id="selectedTileIdx" style="color:var(--text); font-family:ui-monospace,Consolas,monospace">— 未选</div>
-        <div class="tm-help" style="margin:0">点上方 tileset 选 tile</div>
+        <div id="selectedTileIdx" style="color:var(--text); font-family:ui-monospace,Consolas,monospace" data-i18n="tm.tile.unselected">— 未选</div>
+        <div class="tm-help" style="margin:0" data-i18n="tm.tile.hint">点上方 tileset 选 tile</div>
       </div>
     </div>
 
-    <h2>工具 <span class="tm-help">(<kbd>B</kbd>笔 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>R</kbd>矩)</span></h2>
+    <h2><span data-i18n="tm.toolsLabel">工具</span> <span class="tm-help" data-i18n-html="tm.toolsKbd">(<kbd>B</kbd>笔 <kbd>E</kbd>橡 <kbd>F</kbd>填 <kbd>R</kbd>矩)</span></h2>
     <div class="tm-tool-grid">
-      <button class="tm-tool-btn active" data-tool="pencil" title="铅笔 (B)">✏️</button>
-      <button class="tm-tool-btn"        data-tool="eraser" title="橡皮 (E)">🩹</button>
-      <button class="tm-tool-btn"        data-tool="fill"   title="填充 (F)">🪣</button>
-      <button class="tm-tool-btn"        data-tool="rect"   title="矩形填充 (R)">▣</button>
+      <button class="tm-tool-btn active" data-tool="pencil" data-i18n-attr="title:tm.tool.pencilTitle" title="铅笔 (B)">✏️</button>
+      <button class="tm-tool-btn"        data-tool="eraser" data-i18n-attr="title:tm.tool.eraserTitle" title="橡皮 (E)">🩹</button>
+      <button class="tm-tool-btn"        data-tool="fill"   data-i18n-attr="title:tm.tool.fillTitle" title="填充 (F)">🪣</button>
+      <button class="tm-tool-btn"        data-tool="rect"   data-i18n-attr="title:tm.tool.rectTitle" title="矩形填充 (R)">▣</button>
     </div>
 
     <h2 data-i18n="common.history">历史</h2>
     <div class="tm-action-row">
-      <button id="undoBtn">↶ 撤销</button>
-      <button id="redoBtn">↷ 重做</button>
-      <button id="clearMapBtn">🗑️ 清空</button>
+      <button id="undoBtn" data-i18n="tm.btn.undo">↶ 撤销</button>
+      <button id="redoBtn" data-i18n="tm.btn.redo">↷ 重做</button>
+      <button id="clearMapBtn" data-i18n="tm.btn.clear">🗑️ 清空</button>
     </div>
 
     <h2 data-i18n="common.view">视图</h2>
     <div class="tm-action-row">
       <button id="zoomIn">🔍+</button>
       <button id="zoomOut">🔍−</button>
-      <button id="gridToggle">▦ 网格</button>
+      <button id="gridToggle" data-i18n="tm.btn.grid">▦ 网格</button>
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
     <div class="tm-export-grid">
-      <button id="exportJson">📄 JSON (Tiled)</button>
-      <button id="exportPng">🖼️ 平摊 PNG</button>
+      <button id="exportJson" data-i18n="tm.btn.exportJson">📄 JSON (Tiled)</button>
+      <button id="exportPng" data-i18n="tm.btn.exportPng">🖼️ 平摊 PNG</button>
     </div>
-    <input type="text" id="filename" value="tilemap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名" />
-    <div class="tm-help" style="margin-top:6px">
+    <input type="text" id="filename" value="tilemap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名" data-i18n-attr="placeholder:common.filename" />
+    <div class="tm-help" style="margin-top:6px" data-i18n-html="tm.jsonNote">
       JSON 格式: <code>{width, height, tilewidth, tileheight, data: [N×W*H]}</code><br/>
       data 数组里 0 = 空,1+ = tileset 行优先索引 (Tiled 兼容)
     </div>
@@ -278,14 +278,14 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">先拖入 tileset PNG · 然后选 tile 在地图上画</div>
+    <div class="stats" id="stats" data-i18n="tm.stats.intro">先拖入 tileset PNG · 然后选 tile 在地图上画</div>
 
     <div class="tm-main">
       <!-- TILESET PANEL -->
       <div class="tm-panel">
         <div class="tm-panel-head">
-          <span>Tileset(点选 tile)</span>
-          <span id="tilesetMeta" class="mono" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">未加载</span>
+          <span data-i18n="tm.tilesetHead">Tileset(点选 tile)</span>
+          <span id="tilesetMeta" class="mono" style="font-family:ui-monospace,Consolas,monospace; font-size:10px" data-i18n="tm.notLoaded">未加载</span>
         </div>
         <div class="tm-tileset-stage" id="tilesetStage">
           <div class="tm-canvas-wrap" id="tilesetWrap" style="display:none">
@@ -293,7 +293,7 @@
             <canvas class="overlay" id="tilesetGridCv"></canvas>
             <canvas class="overlay" id="tilesetSelCv"></canvas>
           </div>
-          <div id="tilesetEmpty" style="padding:60px; text-align:center; color:var(--muted); font-size:13px">
+          <div id="tilesetEmpty" style="padding:60px; text-align:center; color:var(--muted); font-size:13px" data-i18n="tm.tilesetEmpty">
             🗺️ 拖入 tileset PNG 开始
           </div>
         </div>
@@ -302,7 +302,7 @@
       <!-- MAP PANEL -->
       <div class="tm-panel" style="flex:1; min-height:0; display:flex; flex-direction:column">
         <div class="tm-panel-head">
-          <span>地图</span>
+          <span data-i18n="tm.mapHead">地图</span>
           <span id="mapMeta" class="mono" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">20×15 tiles</span>
         </div>
         <div class="tm-map-stage" id="mapStage" style="flex:1">
@@ -429,7 +429,7 @@ Toolkit.injectTopbar('tilemap');
     });
     renderMap();
     renderMapGrid();
-    $('mapMeta').textContent = `${mapW}×${mapH} tiles · ${pxW}×${pxH} px`;
+    $('mapMeta').textContent = Toolkit.T('tm.mapMeta', { w: mapW, h: mapH, pxW, pxH }, `${mapW}×${mapH} tiles · ${pxW}×${pxH} px`);
   }
   function renderMap() {
     const ctx = mapCv.getContext('2d');
@@ -488,7 +488,7 @@ Toolkit.injectTopbar('tilemap');
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (selectedTile < 0 || !tilesetBitmap) {
-      $('selectedTileIdx').textContent = '— 未选';
+      $('selectedTileIdx').textContent = Toolkit.T('tm.tile.unselected', null, '— 未选');
       return;
     }
     const tx = (selectedTile % tilesetCols) * tileW;
@@ -565,7 +565,7 @@ Toolkit.injectTopbar('tilemap');
   function applyToolDown(cx, cy) {
     const idx = tool === 'eraser' ? 0 : (selectedTile + 1);
     if (selectedTile < 0 && tool !== 'eraser') {
-      log.dim('先在上面 tileset 里选一个 tile');
+      log.dim(Toolkit.T('tm.log.pickTile', null, '先在上面 tileset 里选一个 tile'));
       return;
     }
     if (tool === 'fill') {
@@ -608,7 +608,7 @@ Toolkit.injectTopbar('tilemap');
   }
 
   mapCv.addEventListener('pointerdown', e => {
-    if (!tilesetBitmap) { log.dim('先拖入 tileset'); return; }
+    if (!tilesetBitmap) { log.dim(Toolkit.T('tm.log.dropTileset', null, '先拖入 tileset')); return; }
     const { x, y } = eventToCell(e);
     drawing = true;
     lastCellX = x; lastCellY = y;
@@ -658,7 +658,7 @@ Toolkit.injectTopbar('tilemap');
   $('undoBtn').addEventListener('click', undo);
   $('redoBtn').addEventListener('click', redo);
   $('clearMapBtn').addEventListener('click', () => {
-    if (!confirm('清空整个地图?')) return;
+    if (!confirm(Toolkit.T('tm.confirm.clearMap', null, '清空整个地图?'))) return;
     pushUndo();
     mapData.fill(0);
     renderMap();
@@ -680,14 +680,14 @@ Toolkit.injectTopbar('tilemap');
 
   // tile size presets
   function setTileSize(w, h) {
-    if (!confirm(`Tile 尺寸改 ${w}×${h}? 当前 tileset 会按新尺寸重新切分,地图会清空`)) return;
+    if (!confirm(Toolkit.T('tm.confirm.resizeTile', { w, h }, `Tile 尺寸改 ${w}×${h}? 当前 tileset 会按新尺寸重新切分,地图会清空`))) return;
     tileW = w; tileH = h;
     $('tileW').value = w; $('tileH').value = h;
     if (tilesetBitmap) {
       tilesetCols = Math.floor(tilesetBitmap.width / tileW);
       tilesetRows = Math.floor(tilesetBitmap.height / tileH);
       tilesetTileCount = tilesetCols * tilesetRows;
-      $('tilesetMeta').textContent = `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个)`;
+      $('tilesetMeta').textContent = Toolkit.T('tm.tilesetMetaShort', { cols: tilesetCols, rows: tilesetRows, n: tilesetTileCount }, `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个)`);
     }
     selectedTile = -1;
     mapData = new Int32Array(mapW * mapH);
@@ -708,7 +708,7 @@ Toolkit.injectTopbar('tilemap');
     const w = Math.max(1, Math.min(256, parseInt($('mapW').value, 10) || 20));
     const h = Math.max(1, Math.min(256, parseInt($('mapH').value, 10) || 15));
     if (w === mapW && h === mapH) return;
-    if (!confirm(`地图改成 ${w}×${h} tiles? 越界的格子会被裁掉,扩出来的格子是空的`)) return;
+    if (!confirm(Toolkit.T('tm.confirm.resizeMap', { w, h }, `地图改成 ${w}×${h} tiles? 越界的格子会被裁掉,扩出来的格子是空的`))) return;
     pushUndo();
     const newData = new Int32Array(w * h);
     for (let y = 0; y < Math.min(h, mapH); y++)
@@ -729,17 +729,17 @@ Toolkit.injectTopbar('tilemap');
       tilesetCols = Math.floor(bmp.width / tileW);
       tilesetRows = Math.floor(bmp.height / tileH);
       tilesetTileCount = tilesetCols * tilesetRows;
-      $('tilesetMeta').textContent = `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个) · 源图 ${bmp.width}×${bmp.height}`;
+      $('tilesetMeta').textContent = Toolkit.T('tm.tilesetMetaFull', { cols: tilesetCols, rows: tilesetRows, n: tilesetTileCount, w: bmp.width, h: bmp.height }, `${tilesetCols}×${tilesetRows} tiles (${tilesetTileCount} 个) · 源图 ${bmp.width}×${bmp.height}`);
       $('tilesetEmpty').style.display = 'none';
       $('tilesetWrap').style.display = '';
       fitTilesetCanvas();
-      log.ok(`tileset 已加载 · ${tilesetCols}×${tilesetRows} = ${tilesetTileCount} 个 tile`);
+      log.ok(Toolkit.T('tm.log.tilesetLoaded', { cols: tilesetCols, rows: tilesetRows, n: tilesetTileCount }, `tileset 已加载 · ${tilesetCols}×${tilesetRows} = ${tilesetTileCount} 个 tile`));
       // auto-select first tile
       selectedTile = 0;
       renderTilesetSelection();
       renderSelectedThumb();
     } catch (e) {
-      log.err('tileset 加载失败: ' + e.message);
+      log.err(Toolkit.T('tm.err.tilesetLoad', { msg: e.message }, 'tileset 加载失败: ' + e.message));
     }
   }
   attachDropZone($('dropZone'), $('fileInput'), files => files[0] && loadTileset(files[0]));
@@ -775,10 +775,10 @@ Toolkit.injectTopbar('tilemap');
     };
     const name = ($('filename').value || 'tilemap').replace(/[^\w-]/g, '_');
     downloadJson(out, name + '.json');
-    log.ok(`导出 ${mapW}×${mapH} JSON (Tiled 兼容)`);
+    log.ok(Toolkit.T('tm.log.exportedJson', { w: mapW, h: mapH }, `导出 ${mapW}×${mapH} JSON (Tiled 兼容)`));
   });
   $('exportPng').addEventListener('click', async () => {
-    if (!tilesetBitmap) { log.err('先拖入 tileset'); return; }
+    if (!tilesetBitmap) { log.err(Toolkit.T('tm.log.dropTileset', null, '先拖入 tileset')); return; }
     const cv = newCanvas(mapW * tileW, mapH * tileH);
     const ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false;
@@ -795,7 +795,7 @@ Toolkit.injectTopbar('tilemap');
     const blob = await canvasToBlob(cv, 'image/png');
     const name = ($('filename').value || 'tilemap').replace(/[^\w-]/g, '_');
     download(blob, name + `_${mapW * tileW}x${mapH * tileH}.png`);
-    log.ok(`导出 ${cv.width}×${cv.height} 平摊 PNG`);
+    log.ok(Toolkit.T('tm.log.exportedPng', { w: cv.width, h: cv.height }, `导出 ${cv.width}×${cv.height} 平摊 PNG`));
   });
 
   // handoff — let users send the tilemap PNG to other tools
@@ -805,7 +805,7 @@ Toolkit.injectTopbar('tilemap');
   //   Init
   // ============================================================
   fitMapCanvas();
-  log.ok('准备好,拖入 tileset 开始画地图');
+  log.ok(Toolkit.T('tm.log.ready', null, '准备好,拖入 tileset 开始画地图'));
 })();
 </script>
 </body>

@@ -302,8 +302,8 @@
     <h1>🎨 Color Tools</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入图片(可多选)</p>
-      <p class="hint">PNG / JPG / WebP · 多张图同参数批量处理</p>
+      <p data-i18n="ct.drop.title">📂 拖入图片(可多选)</p>
+      <p class="hint" data-i18n="ct.drop.hint">PNG / JPG / WebP · 多张图同参数批量处理</p>
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
     </div>
 
@@ -312,12 +312,12 @@
     <h2 data-i18n="ct.tools">工具</h2>
     <div class="field">
       <select id="action">
-        <option value="transparent">🌫️ 抠图 (Color → Transparent)</option>
-        <option value="brush">🖌️ 笔刷修补 (手动涂抹)</option>
-        <option value="replace">🎨 颜色替换 (HSL 色相偏移)</option>
-        <option value="picker">👁️ 取色器</option>
-        <option value="palette">🎨 主色调提取</option>
-        <option value="quantize">📉 减色 (Quantize)</option>
+        <option value="transparent" data-i18n="ct.opt.action.transparent">🌫️ 抠图 (Color → Transparent)</option>
+        <option value="brush" data-i18n="ct.opt.action.brush">🖌️ 笔刷修补 (手动涂抹)</option>
+        <option value="replace" data-i18n="ct.opt.action.replace">🎨 颜色替换 (HSL 色相偏移)</option>
+        <option value="picker" data-i18n="ct.opt.action.picker">👁️ 取色器</option>
+        <option value="palette" data-i18n="ct.opt.action.palette">🎨 主色调提取</option>
+        <option value="quantize" data-i18n="ct.opt.action.quantize">📉 减色 (Quantize)</option>
       </select>
     </div>
 
@@ -325,16 +325,16 @@
 
     <h2 data-i18n="common.output">输出</h2>
     <div class="field">
-      <label>文件名</label>
+      <label data-i18n="common.filename">文件名</label>
       <input type="text" id="filename" value="output" />
     </div>
-    <button id="applyBtn" disabled>应用 (当前图)</button>
-    <button id="batchPreviewBtn" class="secondary" disabled style="display:none">👁 预览所有调色结果</button>
+    <button id="applyBtn" disabled data-i18n="ct.btn.applyCurrent">应用 (当前图)</button>
+    <button id="batchPreviewBtn" class="secondary" disabled style="display:none" data-i18n="ct.btn.batchPreview">👁 预览所有调色结果</button>
     <button id="batchApplyBtn" disabled style="display:none; background: rgba(var(--jade-rgb), 0.18); border:1px solid rgba(var(--jade-rgb), 0.5); color: var(--jade)">📦 批量应用全部 N 张 (生成 ZIP 送下一个工具)</button>
-    <button id="batchDownloadZipBtn" class="secondary" disabled style="display:none">💾 下载批量 ZIP</button>
-    <button id="downloadBtn" class="secondary" disabled>下载图片</button>
-    <button id="downloadPaletteBtn" class="secondary" disabled>下载调色板</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="batchDownloadZipBtn" class="secondary" disabled style="display:none" data-i18n="ct.btn.batchDownloadZip">💾 下载批量 ZIP</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="ct.btn.downloadImg">下载图片</button>
+    <button id="downloadPaletteBtn" class="secondary" disabled data-i18n="ct.btn.downloadPalette">下载调色板</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
@@ -343,48 +343,48 @@
     <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
-        <div class="label">原图 (取色模式下点击采样)</div>
+        <div class="label" data-i18n="ct.label.src">原图 (取色模式下点击采样)</div>
         <div class="preview-box" id="srcBox">
-          <div class="preview-empty">拖入图片</div>
+          <div class="preview-empty" data-i18n="ct.empty.src">拖入图片</div>
         </div>
       </div>
       <div class="preview-col">
-        <div class="label">输出</div>
+        <div class="label" data-i18n="ct.label.out">输出</div>
         <div id="brushPanel">
           <div class="group">
-            <button type="button" class="mode-btn active" id="brushModeErase" title="擦除 (Q) · 涂哪儿哪儿变透明">🧽 擦除</button>
-            <button type="button" class="mode-btn" id="brushModeKeep" title="保留 (W) · 把原图涂回来">✨ 保留</button>
+            <button type="button" class="mode-btn active" id="brushModeErase" data-i18n="ct.brush.erase" data-i18n-attr="title:ct.brush.erase.title" title="擦除 (Q) · 涂哪儿哪儿变透明">🧽 擦除</button>
+            <button type="button" class="mode-btn" id="brushModeKeep" data-i18n="ct.brush.keep" data-i18n-attr="title:ct.brush.keep.title" title="保留 (W) · 把原图涂回来">✨ 保留</button>
           </div>
           <div class="sep"></div>
           <div class="group">
-            <label>大小</label>
+            <label data-i18n="ct.brush.size">大小</label>
             <input type="range" id="brushSize" min="2" max="200" value="30" />
             <span class="val" id="brushSizeVal">30</span>
           </div>
           <div class="group">
-            <label>硬度</label>
+            <label data-i18n="ct.brush.hardness">硬度</label>
             <input type="range" id="brushHard" min="0" max="100" value="80" />
             <span class="val" id="brushHardVal">80%</span>
           </div>
           <div class="sep"></div>
           <div class="group">
-            <button type="button" class="icon-btn" id="brushUndo" title="撤销上一笔 (Ctrl+Z)">↶ 撤销</button>
-            <button type="button" class="icon-btn" id="brushReset" title="重置回原图">🔄 重置</button>
+            <button type="button" class="icon-btn" id="brushUndo" data-i18n="ct.brush.undo" data-i18n-attr="title:ct.brush.undo.title" title="撤销上一笔 (Ctrl+Z)">↶ 撤销</button>
+            <button type="button" class="icon-btn" id="brushReset" data-i18n="ct.brush.reset" data-i18n-attr="title:ct.brush.reset.title" title="重置回原图">🔄 重置</button>
           </div>
         </div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">Dobby 干完显示在这里</div>
+          <div class="preview-empty" data-i18n="ct.empty.out">Dobby 干完显示在这里</div>
         </div>
       </div>
     </div>
     <div id="paletteOut" style="display:none">
-      <h2 style="margin-top:0">提取的颜色 <span class="muted small">(点击复制)</span></h2>
+      <h2 style="margin-top:0" data-i18n-html="ct.palette.h">提取的颜色 <span class="muted small">(点击复制)</span></h2>
       <div class="swatch-row" id="swatches"></div>
     </div>
 
     <div id="batchPreviewArea" style="display:none; margin-top:16px">
       <h2 style="margin-top:0; display:flex; align-items:center; gap:8px">
-        批量预览
+        <span data-i18n="ct.batchPreview.h">批量预览</span>
         <span id="batchPreviewMeta" style="font-size:11px; color:var(--muted); font-weight:400"></span>
       </h2>
       <div id="batchPreviewGrid"></div>
@@ -397,7 +397,7 @@
 Toolkit.injectTopbar('color-tools');
 
 (() => {
-  const { $, makeLogger, attachDropZone, download, downloadText, downloadJson, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const { $, makeLogger, attachDropZone, download, downloadText, downloadJson, newCanvas, canvasToBlob, fmtBytes, T } = Toolkit;
   const log = makeLogger($('log'));
 
   let srcBitmap = null;
@@ -422,10 +422,13 @@ Toolkit.injectTopbar('color-tools');
     if (!files.length) return;
     // filter to image files only
     files = [...files].filter(f => f.type.startsWith('image/'));
-    if (!files.length) { log.err('Bad Dobby! 没看到图片,你再丢一次?'); return; }
+    if (!files.length) { log.err(T('ct.log.noImage', null, 'Bad Dobby! 没看到图片,你再丢一次?')); return; }
     log.clear();
     const f = files[0];
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})${files.length > 1 ? ` + 另外 ${files.length - 1} 张` : ''}...`);
+    const extraNote = files.length > 1
+      ? T('ct.log.plusN', { n: files.length - 1 }, ` + 另外 ${files.length - 1} 张`)
+      : '';
+    log.dim(T('ct.log.loadingFile', { name: f.name, size: fmtBytes(f.size), extra: extraNote }, `加载 ${f.name} (${fmtBytes(f.size)})${extraNote}...`));
     try {
       const bitmap = await createImageBitmap(f);
       srcBitmap = bitmap;
@@ -440,11 +443,13 @@ Toolkit.injectTopbar('color-tools');
       renderBatchList();
       const totalSize = files.reduce((a, b) => a + b.size, 0);
       $('stats').innerHTML = files.length > 1
-        ? `<strong>${files.length}</strong> 张 · 第一张 <strong>${bitmap.width}×${bitmap.height}</strong> · 共 <strong>${fmtBytes(totalSize)}</strong>`
-        : `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+        ? T('ct.stats.batch', { n: files.length, w: bitmap.width, h: bitmap.height, size: fmtBytes(totalSize) }, `<strong>${files.length}</strong> 张 · 第一张 <strong>${bitmap.width}×${bitmap.height}</strong> · 共 <strong>${fmtBytes(totalSize)}</strong>`)
+        : T('ct.stats.single', { w: bitmap.width, h: bitmap.height, size: fmtBytes(f.size) }, `<strong>${bitmap.width}×${bitmap.height}</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`);
       $('applyBtn').disabled = false;
       updateBatchBtn();
-      log.ok(files.length > 1 ? `加载完成 · ${files.length} 张` : '加载完成');
+      log.ok(files.length > 1
+        ? T('ct.log.loadedN', { n: files.length }, `加载完成 · ${files.length} 张`)
+        : T('ct.log.loaded', null, '加载完成'));
       renderActionControls();
     } catch (e) {
       log.err(e.message);
@@ -459,7 +464,7 @@ Toolkit.injectTopbar('color-tools');
       <div class="batch-row${i === 0 ? ' preview' : ''}">
         <span class="name" title="${f.name}">${i === 0 ? '👁 ' : ''}${f.name}</span>
         <span class="size">${fmtBytes(f.size)}</span>
-        <button class="rm" data-idx="${i}" title="移除">×</button>
+        <button class="rm" data-idx="${i}" title="${T('ct.batchRow.remove', null, '移除')}">×</button>
       </div>
     `).join('');
     host.querySelectorAll('.rm').forEach(b => b.addEventListener('click', async () => {
@@ -480,9 +485,9 @@ Toolkit.injectTopbar('color-tools');
       }
       if (batchFiles.length === 0) {
         srcBitmap = null; srcCanvas = null; srcImageData = null;
-        $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
+        $('srcBox').innerHTML = '<div class="preview-empty">' + T('ct.empty.src', null, '拖入图片') + '</div>';
         $('applyBtn').disabled = true;
-        $('stats').textContent = 'Dobby 待命';
+        $('stats').textContent = T('common.idle', null, 'Dobby 待命');
       }
       renderBatchList();
       updateBatchBtn();
@@ -500,13 +505,15 @@ Toolkit.injectTopbar('color-tools');
     btn.style.display = isBatch ? '' : 'none';
     btn.disabled = !eligible;
     btn.textContent = eligible
-      ? `📦 批量应用全部 ${batchFiles.length} 张 (生成 ZIP 送下一个工具)`
-      : `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`;
+      ? T('ct.batchBtn.ok', { n: batchFiles.length }, `📦 批量应用全部 ${batchFiles.length} 张 (生成 ZIP 送下一个工具)`)
+      : T('ct.batchBtn.notSupported', { action }, `📦 ${action} 不支持批量(改用 抠图/颜色替换/减色)`);
     // Make it crystal clear that the single-apply button only handles the
     // currently-previewed image in batch mode — users were clicking it
     // expecting it to "accumulate" and the handoff was only carrying the
     // last image. Now the label literally says "仅当前图".
-    if (applyBtn) applyBtn.textContent = isBatch ? '应用 (仅当前图,不批量)' : '应用 (当前图)';
+    if (applyBtn) applyBtn.textContent = isBatch
+      ? T('ct.btn.applyCurrentInBatch', null, '应用 (仅当前图,不批量)')
+      : T('ct.btn.applyCurrent', null, '应用 (当前图)');
     previewBtn.style.display = isBatch ? '' : 'none';
     previewBtn.disabled = !eligible;
     dlBtn.style.display = isBatch ? '' : 'none';
@@ -534,14 +541,14 @@ Toolkit.injectTopbar('color-tools');
     if (action === 'transparent') {
       const inp = $('targetColor');
       if (inp) inp.value = rgbToHex(r, g, b);
-      log.dim(`采样位置 (${x}, ${y}) → ${rgbToHex(r, g, b)}`);
+      log.dim(T('ct.log.sample', { x, y, hex: rgbToHex(r, g, b) }, `采样位置 (${x}, ${y}) → ${rgbToHex(r, g, b)}`));
     } else if (action === 'replace') {
       const inp = $('srcColor');
       if (inp) {
         inp.value = rgbToHex(r, g, b);
         inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
-      log.dim(`源色采样 (${x}, ${y}) → ${rgbToHex(r, g, b)}`);
+      log.dim(T('ct.log.sampleSrc', { x, y, hex: rgbToHex(r, g, b) }, `源色采样 (${x}, ${y}) → ${rgbToHex(r, g, b)}`));
     } else if (action === 'picker') {
       showPickedColor(r, g, b, a);
     }
@@ -553,11 +560,12 @@ Toolkit.injectTopbar('color-tools');
     const hex = rgbToHex(r, g, b);
     const hsl = rgbToHsl(r, g, b);
     display.style.setProperty('--current-color', `rgba(${r}, ${g}, ${b}, ${(a/255).toFixed(2)})`);
-    $('pickerVals').innerHTML = `
+    const alphaPart = a < 255 ? ', α=' + a : '';
+    $('pickerVals').innerHTML = T('ct.picker.vals', { hex, r, g, b, alpha: alphaPart, h: hsl.h, s: hsl.s, l: hsl.l }, `
       <strong>HEX</strong>  ${hex}<br>
-      <strong>RGB</strong>  ${r}, ${g}, ${b}${a < 255 ? ', α=' + a : ''}<br>
+      <strong>RGB</strong>  ${r}, ${g}, ${b}${alphaPart}<br>
       <strong>HSL</strong>  ${hsl.h}°, ${hsl.s}%, ${hsl.l}%
-    `;
+    `);
     lastPalette = [{ r, g, b, hex }];
   }
 
@@ -579,23 +587,23 @@ Toolkit.injectTopbar('color-tools');
       $('srcBox').classList.add('pickable');
       c.innerHTML = `
         <div class="field">
-          <label>目标颜色 (Hex)</label>
+          <label>${T('ct.label.targetColor', null, '目标颜色 (Hex)')}</label>
           <input type="text" id="targetColor" value="#ffffff" />
         </div>
         <div class="field">
-          <label>容差 (0=精确,255=全部) <span id="tolVal" class="mono">30</span></label>
+          <label>${T('ct.label.tolerance', null, '容差 (0=精确,255=全部)')} <span id="tolVal" class="mono">30</span></label>
           <input type="range" id="tolerance" min="0" max="200" value="30" />
         </div>
-        <label class="checkbox"><input type="checkbox" id="autoCorner" /><span>用左上角像素作为目标</span></label>
-        <label class="checkbox"><input type="checkbox" id="edgeOnly" /><span>仅删除"画面外"背景 (flood-fill,画面内同色不动)</span></label>
-        <div class="info">点击左侧原图采样目标色,或手动输入 hex / 勾选自动取角<br>勾"仅删除画面外背景":从四边开始填,只清边缘连通的同色块 — 适合主体里有同色细节的图(比如白底+白色高光)</div>
+        <label class="checkbox"><input type="checkbox" id="autoCorner" /><span>${T('ct.label.autoCorner', null, '用左上角像素作为目标')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="edgeOnly" /><span>${T('ct.label.edgeOnly', null, '仅删除"画面外"背景 (flood-fill,画面内同色不动)')}</span></label>
+        <div class="info">${T('ct.info.transparent', null, '点击左侧原图采样目标色,或手动输入 hex / 勾选自动取角<br>勾"仅删除画面外背景":从四边开始填,只清边缘连通的同色块 — 适合主体里有同色细节的图(比如白底+白色高光)')}</div>
       `;
       $('tolerance').addEventListener('input', e => $('tolVal').textContent = e.target.value);
     } else if (action === 'brush') {
       // Brush controls live in the inline #brushPanel above outBox (so the
       // same toolbar is shared with the 🌫️ 抠图 → brush-refine flow).
       c.innerHTML = `
-        <div class="info">直接在右侧输出预览上涂改<br>工具栏在预览图上方:🧽 擦除 / ✨ 保留 / 大小 / 硬度 / 撤销 / 重置</div>
+        <div class="info">${T('ct.info.brush', null, '直接在右侧输出预览上涂改<br>工具栏在预览图上方:🧽 擦除 / ✨ 保留 / 大小 / 硬度 / 撤销 / 重置')}</div>
       `;
       showBrushPanel();
       initBrush();
@@ -603,50 +611,50 @@ Toolkit.injectTopbar('color-tools');
       $('srcBox').classList.add('pickable');
       c.innerHTML = `
         <div class="field">
-          <label>源颜色 (要替换掉的)</label>
+          <label>${T('ct.label.srcColor', null, '源颜色 (要替换掉的)')}</label>
           <input type="text" id="srcColor" value="#00ff00" />
         </div>
         <div class="field">
-          <label>目标颜色 (替换成的新色)</label>
+          <label>${T('ct.label.dstColor', null, '目标颜色 (替换成的新色)')}</label>
           <input type="text" id="dstColor" value="#ff00ff" />
         </div>
         <div class="field">
-          <label>容差 (色相距离) <span id="repTolVal" class="mono">40</span>°</label>
+          <label>${T('ct.label.repTol', null, '容差 (色相距离)')} <span id="repTolVal" class="mono">40</span>°</label>
           <input type="range" id="repTol" min="5" max="180" value="40" />
         </div>
         <div class="field">
-          <label>羽化 (px) <span id="repFeatherVal" class="mono">0</span></label>
+          <label>${T('ct.label.repFeather', null, '羽化 (px)')} <span id="repFeatherVal" class="mono">0</span></label>
           <input type="range" id="repFeather" min="0" max="6" value="0" />
         </div>
-        <div class="info">点原图采样源色;算法在 HSL 空间做色相偏移,保留原图明暗(适合 sprite 换色)</div>
+        <div class="info">${T('ct.info.replace', null, '点原图采样源色;算法在 HSL 空间做色相偏移,保留原图明暗(适合 sprite 换色)')}</div>
       `;
       $('repTol').addEventListener('input', e => $('repTolVal').textContent = e.target.value);
       $('repFeather').addEventListener('input', e => $('repFeatherVal').textContent = e.target.value);
     } else if (action === 'picker') {
       $('srcBox').classList.add('pickable');
       c.innerHTML = `
-        <div class="info">点击左侧原图任意位置取色</div>
+        <div class="info">${T('ct.info.picker', null, '点击左侧原图任意位置取色')}</div>
         <div class="color-info">
           <div class="swatch-big" id="pickerDisplay" style="--current-color:transparent"></div>
-          <div class="values" id="pickerVals">点击图像采样</div>
+          <div class="values" id="pickerVals">${T('ct.picker.empty', null, '点击图像采样')}</div>
         </div>
       `;
     } else if (action === 'palette') {
       c.innerHTML = `
         <div class="field">
-          <label>主色数量 <span id="paletteNVal" class="mono">8</span></label>
+          <label>${T('ct.label.paletteN', null, '主色数量')} <span id="paletteNVal" class="mono">8</span></label>
           <input type="range" id="paletteN" min="2" max="32" value="8" />
         </div>
-        <div class="info">用中位切分从图像中提取最具代表性的颜色</div>
+        <div class="info">${T('ct.info.palette', null, '用中位切分从图像中提取最具代表性的颜色')}</div>
       `;
       $('paletteN').addEventListener('input', e => $('paletteNVal').textContent = e.target.value);
     } else if (action === 'quantize') {
       c.innerHTML = `
         <div class="field">
-          <label>目标色数 <span id="quantNVal" class="mono">32</span></label>
+          <label>${T('ct.label.quantN', null, '目标色数')} <span id="quantNVal" class="mono">32</span></label>
           <input type="range" id="quantN" min="2" max="256" value="32" />
         </div>
-        <div class="info">用提取的调色板重映射所有像素,可用于减少 PNG 体积或做卡通化效果</div>
+        <div class="info">${T('ct.info.quantize', null, '用提取的调色板重映射所有像素,可用于减少 PNG 体积或做卡通化效果')}</div>
       `;
       $('quantN').addEventListener('input', e => $('quantNVal').textContent = e.target.value);
     }
@@ -733,7 +741,7 @@ Toolkit.injectTopbar('color-tools');
     });
     $('brushUndo').addEventListener('click', () => {
       const prev = history.pop();
-      if (!prev) { log.dim('没有可撤销的步骤'); return; }
+      if (!prev) { log.dim(T('ct.log.noUndo', null, '没有可撤销的步骤')); return; }
       ctx.putImageData(prev, 0, 0);
       finalizeStroke(false);
     });
@@ -742,7 +750,7 @@ Toolkit.injectTopbar('color-tools');
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(srcBitmap, 0, 0);
       finalizeStroke();
-      log.dim('已重置为原图');
+      log.dim(T('ct.log.resetSrc', null, '已重置为原图'));
     });
 
     function updateCursorSize() {
@@ -883,15 +891,15 @@ Toolkit.injectTopbar('color-tools');
     // remind them that the batch button exists. handoff would only carry the
     // last single-applied image otherwise — that confused at least one user.
     if (batchFiles.length > 1 && BATCH_ACTIONS.has(action)) {
-      log.warn(`提示: 加载了 ${batchFiles.length} 张图。点上面绿色的「📦 批量应用全部 ${batchFiles.length} 张」按钮把全部处理 + 打 ZIP 一起送下一个工具,这个「应用 (仅当前图)」只处理当前预览的一张`);
+      log.warn(T('ct.log.batchHint', { n: batchFiles.length }, `提示: 加载了 ${batchFiles.length} 张图。点上面绿色的「📦 批量应用全部 ${batchFiles.length} 张」按钮把全部处理 + 打 ZIP 一起送下一个工具,这个「应用 (仅当前图)」只处理当前预览的一张`));
     }
-    log.dim(`应用 ${action}...`);
+    log.dim(T('ct.log.applying', { action }, `应用 ${action}...`));
     $('paletteOut').style.display = 'none';
     $('downloadPaletteBtn').disabled = true;
     try {
       if (action === 'transparent') await applyTransparent();
       else if (action === 'replace') await applyReplace();
-      else if (action === 'picker') log.dim('取色器无需点击应用,直接点击原图采样');
+      else if (action === 'picker') log.dim(T('ct.log.pickerNoApply', null, '取色器无需点击应用,直接点击原图采样'));
       else if (action === 'palette') await applyPalette();
       else if (action === 'quantize') await applyQuantize();
     } catch (e) {
@@ -913,7 +921,7 @@ Toolkit.injectTopbar('color-tools');
     } else {
       const hex = $('targetColor').value;
       target = hexToRgb(hex);
-      if (!target) { log.err('无效 hex'); return; }
+      if (!target) { log.err(T('ct.err.badHex', null, '无效 hex')); return; }
     }
     const tol = parseInt($('tolerance').value, 10);
     const tol2 = tol * tol * 3;
@@ -941,7 +949,8 @@ Toolkit.injectTopbar('color-tools');
     $('outBox').appendChild(cv);
     $('downloadBtn').disabled = false;
     handoff?.setBlob(outBlob, ($('filename').value || 'output') + '.png');
-    log.ok(`抠掉 ${count} / ${d.length / 4} 像素 (${(count / (d.length/4) * 100).toFixed(1)}%)${edgeOnly ? ' · 仅边缘连通' : ''} · 输出 ${fmtBytes(outBlob.size)}`);
+    const edgeNote = edgeOnly ? T('ct.log.edgeOnly', null, ' · 仅边缘连通') : '';
+    log.ok(T('ct.log.cutDone', { n: count, total: d.length / 4, pct: (count / (d.length/4) * 100).toFixed(1), edge: edgeNote, size: fmtBytes(outBlob.size) }, `抠掉 ${count} / ${d.length / 4} 像素 (${(count / (d.length/4) * 100).toFixed(1)}%)${edgeNote} · 输出 ${fmtBytes(outBlob.size)}`));
     // ── follow-up: bring up the brush so the user can clean up残留 / 补回主体 ──
     // initBrush() inherits the output canvas (line ~596 check matches dims),
     // so brushing continues from where color-key left off rather than from
@@ -960,7 +969,7 @@ Toolkit.injectTopbar('color-tools');
     const d = img.data;
     const src = hexToRgb($('srcColor').value);
     const dst = hexToRgb($('dstColor').value);
-    if (!src || !dst) { log.err('源色或目标色 hex 无效'); return; }
+    if (!src || !dst) { log.err(T('ct.err.badHexSrcDst', null, '源色或目标色 hex 无效')); return; }
     const tol = parseInt($('repTol').value, 10);   // hue tolerance in degrees
     const feather = parseInt($('repFeather').value, 10);
     const srcHsl = rgbToHsl(src.r, src.g, src.b);
@@ -1001,7 +1010,7 @@ Toolkit.injectTopbar('color-tools');
     $('outBox').appendChild(outCv);
     $('downloadBtn').disabled = false;
     handoff?.setBlob(outBlob, ($('filename').value || 'output') + '.png');
-    log.ok(`替换 ${changed} / ${d.length / 4} 像素 · 色相偏移 ${hueShift.toFixed(0)}°`);
+    log.ok(T('ct.log.replaceDone', { n: changed, total: d.length / 4, hue: hueShift.toFixed(0) }, `替换 ${changed} / ${d.length / 4} 像素 · 色相偏移 ${hueShift.toFixed(0)}°`));
   }
 
   function hslToRgb(h, s, l) {
@@ -1032,7 +1041,7 @@ Toolkit.injectTopbar('color-tools');
     renderSwatches(palette);
     $('paletteOut').style.display = 'block';
     $('downloadPaletteBtn').disabled = false;
-    log.ok(`提取 ${palette.length} 种主色`);
+    log.ok(T('ct.log.paletteDone', { n: palette.length }, `提取 ${palette.length} 种主色`));
   }
 
   async function applyQuantize() {
@@ -1064,7 +1073,7 @@ Toolkit.injectTopbar('color-tools');
     renderSwatches(palette);
     $('paletteOut').style.display = 'block';
     $('downloadPaletteBtn').disabled = false;
-    log.ok(`减色到 ${palette.length} 色 · 输出 ${fmtBytes(outBlob.size)}`);
+    log.ok(T('ct.log.quantDone', { n: palette.length, size: fmtBytes(outBlob.size) }, `减色到 ${palette.length} 色 · 输出 ${fmtBytes(outBlob.size)}`));
   }
 
   function renderSwatches(palette) {
@@ -1183,7 +1192,7 @@ Toolkit.injectTopbar('color-tools');
     const ctx = cv.getContext('2d');
     lastPalette.forEach((p, i) => { ctx.fillStyle = p.hex; ctx.fillRect(i * 64, 0, 64, 64); });
     canvasToBlob(cv, 'image/png').then(blob => download(blob, name + '.png'));
-    log.ok('已导出 palette.css + palette.json + palette.png');
+    log.ok(T('ct.log.paletteExported', null, '已导出 palette.css + palette.json + palette.png'));
   });
 
   $('clearBtn').addEventListener('click', () => {
@@ -1195,10 +1204,10 @@ Toolkit.injectTopbar('color-tools');
     $('batchDownloadZipBtn').disabled = true;
     renderBatchList();
     updateBatchBtn();
-    $('srcBox').innerHTML = '<div class="preview-empty">拖入图片</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">Dobby 干完显示在这里</div>';
+    $('srcBox').innerHTML = '<div class="preview-empty">' + T('ct.empty.src', null, '拖入图片') + '</div>';
+    $('outBox').innerHTML = '<div class="preview-empty">' + T('ct.empty.out', null, 'Dobby 干完显示在这里') + '</div>';
     $('paletteOut').style.display = 'none';
-    $('stats').textContent = 'Dobby 待命';
+    $('stats').textContent = T('common.idle', null, 'Dobby 待命');
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
@@ -1211,14 +1220,14 @@ Toolkit.injectTopbar('color-tools');
   $('batchPreviewBtn').addEventListener('click', async () => {
     if (!batchFiles.length) return;
     const action = $('action').value;
-    if (!BATCH_ACTIONS.has(action)) { log.err(`${action} 不支持批量预览`); return; }
+    if (!BATCH_ACTIONS.has(action)) { log.err(T('ct.err.noBatchPreview', { action }, `${action} 不支持批量预览`)); return; }
     $('batchPreviewBtn').disabled = true;
-    log.dim(`生成预览 · ${batchFiles.length} 张...`);
+    log.dim(T('ct.log.previewGen', { n: batchFiles.length }, `生成预览 · ${batchFiles.length} 张...`));
     try {
       const area = $('batchPreviewArea');
       const grid = $('batchPreviewGrid');
       area.style.display = '';
-      grid.innerHTML = `<div style="grid-column:1/-1; padding:16px; text-align:center; color:var(--muted); font-size:12px">🧦 Dobby 调色中...</div>`;
+      grid.innerHTML = `<div style="grid-column:1/-1; padding:16px; text-align:center; color:var(--muted); font-size:12px">${T('ct.previewLoading', null, '🧦 Dobby 调色中...')}</div>`;
       const t0 = performance.now();
       const tiles = [];
       for (let i = 0; i < batchFiles.length; i++) {
@@ -1267,8 +1276,8 @@ Toolkit.injectTopbar('color-tools');
         grid.appendChild(tile);
       }
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
-      $('batchPreviewMeta').textContent = `${tiles.length} 张 · ${dt}s · 改参数后再点一次刷新`;
-      log.ok(`预览完成 · ${tiles.length} 张 · ${dt}s`);
+      $('batchPreviewMeta').textContent = T('ct.previewMeta', { n: tiles.length, sec: dt }, `${tiles.length} 张 · ${dt}s · 改参数后再点一次刷新`);
+      log.ok(T('ct.log.previewDone', { n: tiles.length, sec: dt }, `预览完成 · ${tiles.length} 张 · ${dt}s`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -1281,13 +1290,13 @@ Toolkit.injectTopbar('color-tools');
   $('batchApplyBtn').addEventListener('click', async () => {
     if (!batchFiles.length) return;
     const action = $('action').value;
-    if (!BATCH_ACTIONS.has(action)) { log.err(`${action} 不支持批量`); return; }
+    if (!BATCH_ACTIONS.has(action)) { log.err(T('ct.err.noBatch', { action }, `${action} 不支持批量`)); return; }
     $('batchApplyBtn').disabled = true;
     $('applyBtn').disabled = true;
-    log.dim(`批量 ${action} · ${batchFiles.length} 张...`);
+    log.dim(T('ct.log.batchRunning', { action, n: batchFiles.length }, `批量 ${action} · ${batchFiles.length} 张...`));
     try {
       if (!fflateMod) {
-        log.dim('  加载 fflate (首次联网)...');
+        log.dim(T('ct.log.loadingFflate', null, '  加载 fflate (首次联网)...'));
         fflateMod = await import('https://esm.sh/fflate@0.8.2');
       }
       const zipData = {};
@@ -1321,14 +1330,14 @@ Toolkit.injectTopbar('color-tools');
           totalIn += file.size;
           totalOut += blob.size;
           bm.close?.();
-          log.dim(`  [${i+1}/${batchFiles.length}] ${file.name} → ${fmtBytes(blob.size)}`);
+          log.dim(T('ct.log.batchItem', { i: i+1, total: batchFiles.length, name: file.name, size: fmtBytes(blob.size) }, `  [${i+1}/${batchFiles.length}] ${file.name} → ${fmtBytes(blob.size)}`));
           // yield to UI between large images
           if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
         } catch (err) {
-          log.warn(`  ${file.name} 失败: ${err.message}`);
+          log.warn(T('ct.log.batchItemFail', { name: file.name, msg: err.message }, `  ${file.name} 失败: ${err.message}`));
         }
       }
-      log.dim('打包 ZIP...');
+      log.dim(T('ct.log.zipping', null, '打包 ZIP...'));
       const zipped = await new Promise((rs, rj) => fflateMod.zip(zipData, (err, out) => err ? rj(err) : rs(out)));
       const zipBlob = new Blob([zipped], { type: 'application/zip' });
       const outName = ($('filename').value || 'batch') + '.zip';
@@ -1336,8 +1345,8 @@ Toolkit.injectTopbar('color-tools');
       batchOutName = outName;
       $('batchDownloadZipBtn').disabled = false;
       handoff?.setBlob(zipBlob, outName, 'application/zip');
-      log.ok(`完成 · ${Object.keys(zipData).length} 张 · 原 ${fmtBytes(totalIn)} → ${fmtBytes(totalOut)} → ZIP ${fmtBytes(zipBlob.size)}`);
-      log.dim('点 "💾 下载批量 ZIP" 保存,或点 "📤 发送到下一个工具"');
+      log.ok(T('ct.log.batchDone', { n: Object.keys(zipData).length, srcSize: fmtBytes(totalIn), outSize: fmtBytes(totalOut), zipSize: fmtBytes(zipBlob.size) }, `完成 · ${Object.keys(zipData).length} 张 · 原 ${fmtBytes(totalIn)} → ${fmtBytes(totalOut)} → ZIP ${fmtBytes(zipBlob.size)}`));
+      log.dim(T('ct.log.batchHowToGet', null, '点 "💾 下载批量 ZIP" 保存,或点 "📤 发送到下一个工具"'));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -1350,7 +1359,7 @@ Toolkit.injectTopbar('color-tools');
   $('batchDownloadZipBtn').addEventListener('click', () => {
     if (!batchOutBlob || !batchOutName) return;
     download(batchOutBlob, batchOutName);
-    log.dim(`已下载 ${batchOutName}`);
+    log.dim(T('ct.log.zipDownloaded', { name: batchOutName }, `已下载 ${batchOutName}`));
   });
 
   // ===== shared transforms (used by both single apply and batch) =====
@@ -1362,7 +1371,7 @@ Toolkit.injectTopbar('color-tools');
     else {
       const hex = $('targetColor').value;
       target = hexToRgb(hex);
-      if (!target) throw new Error('目标色 hex 无效');
+      if (!target) throw new Error(T('ct.err.badTargetHex', null, '目标色 hex 无效'));
     }
     const tol = parseInt($('tolerance').value, 10);
     const tol2 = tol * tol * 3;
@@ -1417,7 +1426,7 @@ Toolkit.injectTopbar('color-tools');
     const d = img.data;
     const src = hexToRgb($('srcColor').value);
     const dst = hexToRgb($('dstColor').value);
-    if (!src || !dst) throw new Error('源色或目标色 hex 无效');
+    if (!src || !dst) throw new Error(T('ct.err.badHexSrcDst', null, '源色或目标色 hex 无效'));
     const tol = parseInt($('repTol').value, 10);
     const feather = parseInt($('repFeather').value, 10);
     const srcHsl = rgbToHsl(src.r, src.g, src.b);

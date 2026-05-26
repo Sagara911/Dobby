@@ -199,67 +199,67 @@
   <div class="sidebar">
     <h1>👁️ OCR 图转文字</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="ocr.localNote">
       <strong style="color:var(--accent)">100% 本地</strong> · Tesseract.js + WASM 在你浏览器里跑识别。第一次跑要下模型(英文 ~2 MB,中文 ~15 MB),之后就缓存。
     </div>
 
     <h2 data-i18n="ocr.lang">语言</h2>
     <select id="lang" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="eng">🇬🇧 English</option>
-      <option value="chi_sim" selected>🇨🇳 简体中文</option>
-      <option value="chi_tra">🇭🇰 繁体中文</option>
-      <option value="chi_sim+eng">🇨🇳 简中 + 英文(混排)</option>
-      <option value="chi_tra+eng">🇭🇰 繁中 + 英文(混排)</option>
+      <option value="chi_sim" selected data-i18n="ocr.opt.lang.chiSim">🇨🇳 简体中文</option>
+      <option value="chi_tra" data-i18n="ocr.opt.lang.chiTra">🇭🇰 繁体中文</option>
+      <option value="chi_sim+eng" data-i18n="ocr.opt.lang.chiSimEng">🇨🇳 简中 + 英文(混排)</option>
+      <option value="chi_tra+eng" data-i18n="ocr.opt.lang.chiTraEng">🇭🇰 繁中 + 英文(混排)</option>
       <option value="jpn">🇯🇵 日本語</option>
       <option value="kor">🇰🇷 한국어</option>
     </select>
-    <div class="ocr-help">选错语言识别会大错。中英混排选「简中+英文」。</div>
+    <div class="ocr-help" data-i18n="ocr.lang.help">选错语言识别会大错。中英混排选「简中+英文」。</div>
 
     <h2 data-i18n="ocr.prep">预处理</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="prepGray" checked />
-      <span>灰度化</span>
+      <span data-i18n="ocr.prep.gray">灰度化</span>
     </label>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:6px">
       <input type="checkbox" id="prepContrast" />
-      <span>增强对比度(扫描件 / 模糊照片)</span>
+      <span data-i18n="ocr.prep.contrast">增强对比度(扫描件 / 模糊照片)</span>
     </label>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-top:6px">
       <input type="checkbox" id="prepInvert" />
-      <span>反色(白字黑底图)</span>
+      <span data-i18n="ocr.prep.invert">反色(白字黑底图)</span>
     </label>
 
     <h2 data-i18n="common.display">显示</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="showBoxes" checked />
-      <span>左侧叠加单词框</span>
+      <span data-i18n="ocr.show.boxes">左侧叠加单词框</span>
     </label>
 
     <h2 data-i18n="ocr.usage">用法</h2>
     <ol style="padding-left:20px; font-size:11px; color:var(--text-soft); line-height:1.8">
-      <li>拖入或粘贴图片(JPG / PNG / WebP)</li>
-      <li>选语言、可选预处理</li>
-      <li>点「识别」,等模型下载 + 推理</li>
-      <li>右侧可复制 / 下载 .txt</li>
+      <li data-i18n="ocr.usage.1">拖入或粘贴图片(JPG / PNG / WebP)</li>
+      <li data-i18n="ocr.usage.2">选语言、可选预处理</li>
+      <li data-i18n="ocr.usage.3">点「识别」,等模型下载 + 推理</li>
+      <li data-i18n="ocr.usage.4">右侧可复制 / 下载 .txt</li>
     </ol>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">OCR · Tesseract.js v5 · 全本地推理</div>
+    <div class="stats" id="stats" data-i18n="ocr.stats.banner">OCR · Tesseract.js v5 · 全本地推理</div>
 
     <div class="ocr-stage">
       <!-- LEFT: image -->
       <div class="ocr-pane">
         <div class="ocr-pane-head">
-          <span>原图</span>
+          <span data-i18n="ocr.pane.src">原图</span>
           <span class="ocr-stats" id="imgStats"></span>
         </div>
         <div class="ocr-pane-body">
           <div class="ocr-drop" id="drop">
             <div class="big">👁️</div>
-            <div>拖入 / 粘贴 / 点击 选图片</div>
+            <div data-i18n="ocr.drop.title">拖入 / 粘贴 / 点击 选图片</div>
             <div style="font-size:11px; margin-top:8px; color:var(--muted)">JPG / PNG / WebP / BMP</div>
             <input type="file" id="fileInput" accept="image/*" style="display:none">
           </div>
@@ -269,8 +269,8 @@
           </div>
         </div>
         <div class="ocr-controls">
-          <button id="runBtn" disabled>识别</button>
-          <button id="clearBtn" disabled>清空</button>
+          <button id="runBtn" disabled data-i18n="ocr.btn.run">识别</button>
+          <button id="clearBtn" disabled data-i18n="common.clearShort">清空</button>
           <div class="stretch"></div>
           <div class="ocr-stats" id="durStats"></div>
         </div>
@@ -279,21 +279,21 @@
       <!-- RIGHT: text -->
       <div class="ocr-pane">
         <div class="ocr-pane-head">
-          <span>识别结果</span>
+          <span data-i18n="ocr.pane.result">识别结果</span>
           <span class="ocr-stats" id="confStats"></span>
         </div>
         <div class="ocr-progress" id="progress">
-          <span id="progStage">准备中...</span>
+          <span id="progStage" data-i18n="ocr.progress.preparing">准备中...</span>
           <div class="bar"><div class="fill" id="progFill"></div></div>
         </div>
         <div class="ocr-pane-body">
           <div class="ocr-text" id="textOut">
-            <div class="ocr-text-empty">这里会显示识别结果<br/>左侧拖入图片后点「识别」</div>
+            <div class="ocr-text-empty" data-i18n-html="ocr.empty.text">这里会显示识别结果<br/>左侧拖入图片后点「识别」</div>
           </div>
         </div>
         <div class="ocr-controls">
-          <button id="copyBtn" disabled>📋 复制</button>
-          <button id="downloadBtn" disabled>💾 下载 .txt</button>
+          <button id="copyBtn" disabled data-i18n="ocr.btn.copy">📋 复制</button>
+          <button id="downloadBtn" disabled data-i18n="ocr.btn.downloadTxt">💾 下载 .txt</button>
         </div>
       </div>
     </div>
@@ -307,7 +307,7 @@ import Tesseract from 'https://esm.sh/tesseract.js@5.1.1';
 Toolkit.injectTopbar('ocr-tool');
 
 (() => {
-  const { $, makeLogger, download, fmtBytes } = Toolkit;
+  const { $, makeLogger, download, fmtBytes, T } = Toolkit;
   const log = makeLogger($('log'));
 
   let currentBlob = null;     // original drop
@@ -346,7 +346,7 @@ Toolkit.injectTopbar('ocr-tool');
     try {
       currentBitmap = await createImageBitmap(blob);
     } catch (e) {
-      log.err('图片解码失败: ' + e.message);
+      log.err(T('ocr.log.decodeFail', { msg: e.message }, '图片解码失败: ' + e.message));
       return;
     }
     currentBlob = blob;
@@ -358,12 +358,12 @@ Toolkit.injectTopbar('ocr-tool');
     $('runBtn').disabled = false;
     $('clearBtn').disabled = false;
     $('boxOverlay').innerHTML = '';
-    $('textOut').innerHTML = '<div class="ocr-text-empty">点「识别」开始 OCR</div>';
+    $('textOut').innerHTML = '<div class="ocr-text-empty">' + T('ocr.empty.clickRun', null, '点「识别」开始 OCR') + '</div>';
     $('confStats').textContent = '';
     $('durStats').textContent = '';
     $('copyBtn').disabled = true;
     $('downloadBtn').disabled = true;
-    log.ok(`已加载 ${blob.name || '图片'} (${currentBitmap.width}×${currentBitmap.height})`);
+    log.ok(T('ocr.log.loaded', { name: blob.name || T('ocr.fallback.image', null, '图片'), w: currentBitmap.width, h: currentBitmap.height }, `已加载 ${blob.name || '图片'} (${currentBitmap.width}×${currentBitmap.height})`));
   }
 
   function clearAll() {
@@ -377,7 +377,7 @@ Toolkit.injectTopbar('ocr-tool');
     $('runBtn').disabled = true;
     $('clearBtn').disabled = true;
     $('boxOverlay').innerHTML = '';
-    $('textOut').innerHTML = '<div class="ocr-text-empty">这里会显示识别结果<br/>左侧拖入图片后点「识别」</div>';
+    $('textOut').innerHTML = '<div class="ocr-text-empty">' + T('ocr.empty.text', null, '这里会显示识别结果<br/>左侧拖入图片后点「识别」') + '</div>';
     $('confStats').textContent = '';
     $('durStats').textContent = '';
     $('copyBtn').disabled = true;
@@ -425,7 +425,7 @@ Toolkit.injectTopbar('ocr-tool');
   async function ensureWorker(lang) {
     if (worker && workerLang === lang) return worker;
     if (worker) { try { await worker.terminate(); } catch(_) {} worker = null; }
-    setProgress('加载模型 + 初始化 worker', 0);
+    setProgress(T('ocr.progress.initWorker', null, '加载模型 + 初始化 worker'), 0);
     worker = await Tesseract.createWorker(lang, 1, {
       logger: m => {
         if (m.status && m.progress != null) {
@@ -447,11 +447,11 @@ Toolkit.injectTopbar('ocr-tool');
 
   function translateStage(s) {
     const m = {
-      'loading tesseract core': '加载 OCR 内核',
-      'initializing tesseract': '初始化',
-      'loading language traineddata': '下载语言模型',
-      'initializing api': '准备 API',
-      'recognizing text': '识别文字',
+      'loading tesseract core': T('ocr.stage.loadCore', null, '加载 OCR 内核'),
+      'initializing tesseract': T('ocr.stage.initTess', null, '初始化'),
+      'loading language traineddata': T('ocr.stage.dlLang', null, '下载语言模型'),
+      'initializing api': T('ocr.stage.initApi', null, '准备 API'),
+      'recognizing text': T('ocr.stage.recognize', null, '识别文字'),
     };
     return m[s] || s;
   }
@@ -469,7 +469,7 @@ Toolkit.injectTopbar('ocr-tool');
       // accepts ImageBitmap, Canvas, File, HTMLImageElement etc.
       const input = preprocess(currentBitmap);
 
-      setProgress('识别文字', 0);
+      setProgress(T('ocr.stage.recognize', null, '识别文字'), 0);
       const result = await w.recognize(input);
       hideProgress();
 
@@ -483,7 +483,7 @@ Toolkit.injectTopbar('ocr-tool');
         $('copyBtn').disabled = false;
         $('downloadBtn').disabled = false;
       } else {
-        $('textOut').innerHTML = '<div class="ocr-text-empty">没识别出文字<br/>试试换种语言或开预处理</div>';
+        $('textOut').innerHTML = '<div class="ocr-text-empty">' + T('ocr.empty.noText', null, '没识别出文字<br/>试试换种语言或开预处理') + '</div>';
         $('copyBtn').disabled = true;
         $('downloadBtn').disabled = true;
       }
@@ -491,16 +491,16 @@ Toolkit.injectTopbar('ocr-tool');
       // Conf + duration
       const dt = ((performance.now() - t0) / 1000).toFixed(2);
       const wordCount = (result.data.words || []).length;
-      $('confStats').innerHTML = `平均置信度 <span class="v">${conf?.toFixed?.(1) ?? '?'}</span>%  ·  ${wordCount} 词`;
-      $('durStats').innerHTML = `用时 <span class="v">${dt}s</span>`;
+      $('confStats').innerHTML = T('ocr.stats.conf', { conf: conf?.toFixed?.(1) ?? '?', n: wordCount }, `平均置信度 <span class="v">${conf?.toFixed?.(1) ?? '?'}</span>%  ·  ${wordCount} 词`);
+      $('durStats').innerHTML = T('ocr.stats.dur', { sec: dt }, `用时 <span class="v">${dt}s</span>`);
 
       // Boxes overlay
       drawWordBoxes(result.data.words || []);
 
-      log.ok(`识别完成 · ${wordCount} 词 · ${dt}s · 置信度 ${conf?.toFixed?.(1) ?? '?'}%`);
+      log.ok(T('ocr.log.done', { n: wordCount, sec: dt, conf: conf?.toFixed?.(1) ?? '?' }, `识别完成 · ${wordCount} 词 · ${dt}s · 置信度 ${conf?.toFixed?.(1) ?? '?'}%`));
     } catch (e) {
       hideProgress();
-      log.err('识别失败: ' + e.message);
+      log.err(T('ocr.log.failed', { msg: e.message }, '识别失败: ' + e.message));
       console.error(e);
     } finally {
       $('runBtn').disabled = false;
@@ -556,9 +556,9 @@ Toolkit.injectTopbar('ocr-tool');
     if (!currentText) return;
     try {
       await navigator.clipboard.writeText(currentText);
-      log.ok('已复制到剪贴板');
+      log.ok(T('ocr.log.copied', null, '已复制到剪贴板'));
     } catch (e) {
-      log.warn('复制失败: ' + e.message);
+      log.warn(T('ocr.log.copyFail', { msg: e.message }, '复制失败: ' + e.message));
     }
   });
   $('downloadBtn').addEventListener('click', () => {
@@ -567,7 +567,7 @@ Toolkit.injectTopbar('ocr-tool');
     download(blob, `ocr_${new Date().toISOString().slice(0,10)}.txt`);
   });
 
-  log.ok('OCR 工具准备好(首次运行会下载语言模型)');
+  log.ok(T('ocr.log.ready', null, 'OCR 工具准备好(首次运行会下载语言模型)'));
 })();
 </script>
 </body>

@@ -83,62 +83,62 @@
     <h1>🎭 Lottie 工具</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 Lottie JSON</p>
-      <p class="hint">单文件 · 通常是 .json (After Effects + Bodymovin 导出)</p>
+      <p data-i18n="lt.drop.title">📂 拖入 Lottie JSON</p>
+      <p class="hint" data-i18n="lt.drop.hint">单文件 · 通常是 .json (After Effects + Bodymovin 导出)</p>
       <input type="file" id="fileInput" accept=".json,application/json" style="display:none" />
     </div>
 
     <h2 data-i18n="lt.optimize">优化</h2>
     <div class="field">
-      <label>小数精度 <span id="precVal" class="mono">2</span></label>
+      <label><span data-i18n="lt.precision">小数精度</span> <span id="precVal" class="mono">2</span></label>
       <input type="range" id="precision" min="0" max="5" value="2" />
-      <div class="info" style="margin-top:2px">Lottie 数值常带 10+ 位小数。精度=2 视觉无差,体积可降 50%~80%</div>
+      <div class="info" style="margin-top:2px" data-i18n="lt.precision.hint">Lottie 数值常带 10+ 位小数。精度=2 视觉无差,体积可降 50%~80%</div>
     </div>
-    <label class="checkbox"><input type="checkbox" id="optStripMeta" checked /><span>移除 meta / nm / mn 等编辑器元数据</span></label>
-    <label class="checkbox"><input type="checkbox" id="optStripHidden" checked /><span>移除隐藏图层 (hd: true)</span></label>
-    <button id="optimizeBtn" disabled>✨ 优化并预览</button>
-    <button id="downloadJsonBtn" class="secondary" disabled>💾 下载优化 JSON</button>
+    <label class="checkbox"><input type="checkbox" id="optStripMeta" checked /><span data-i18n="lt.stripMeta">移除 meta / nm / mn 等编辑器元数据</span></label>
+    <label class="checkbox"><input type="checkbox" id="optStripHidden" checked /><span data-i18n="lt.stripHidden">移除隐藏图层 (hd: true)</span></label>
+    <button id="optimizeBtn" disabled data-i18n="lt.btn.optimize">✨ 优化并预览</button>
+    <button id="downloadJsonBtn" class="secondary" disabled data-i18n="lt.btn.dlJson">💾 下载优化 JSON</button>
 
     <h2 data-i18n="lt.exportAnim">导出为动图</h2>
     <div class="field">
-      <label>导出 FPS</label>
+      <label data-i18n="lt.expFps">导出 FPS</label>
       <input type="number" id="exportFps" value="30" min="1" max="60" />
     </div>
     <div class="field">
-      <label>导出尺寸最大边 (px)</label>
+      <label data-i18n="lt.expMaxDim">导出尺寸最大边 (px)</label>
       <input type="number" id="exportMaxDim" value="512" min="64" max="2048" />
     </div>
-    <button id="exportApngBtn" class="secondary" disabled>🎬 转 APNG (高质动图)</button>
-    <button id="exportGifBtn" class="secondary" disabled>🎞 转 GIF (兼容性最好)</button>
+    <button id="exportApngBtn" class="secondary" disabled data-i18n="lt.btn.apng">🎬 转 APNG (高质动图)</button>
+    <button id="exportGifBtn" class="secondary" disabled data-i18n="lt.btn.gif">🎞 转 GIF (兼容性最好)</button>
 
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats" data-i18n="lt.stats.empty">未加载</div>
     <div class="lottie-preview" id="previewBox">
-      <div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 Lottie JSON 后这里播放预览</div>
+      <div class="preview-empty" style="text-align:center; color: var(--muted)" data-i18n="lt.preview.empty">拖入 Lottie JSON 后这里播放预览</div>
     </div>
     <div class="metric-grid" id="metrics" style="display:none">
       <div class="metric-card">
-        <div class="label">体积</div>
+        <div class="label" data-i18n="lt.metric.size">体积</div>
         <div class="value" id="mSize">—</div>
         <div class="sub" id="mSizeSub">—</div>
       </div>
       <div class="metric-card">
-        <div class="label">尺寸 / 时长</div>
+        <div class="label" data-i18n="lt.metric.dim">尺寸 / 时长</div>
         <div class="value" id="mDim">—</div>
         <div class="sub" id="mDimSub">—</div>
       </div>
       <div class="metric-card">
-        <div class="label">帧数 / 源 FPS</div>
+        <div class="label" data-i18n="lt.metric.frames">帧数 / 源 FPS</div>
         <div class="value" id="mFrames">—</div>
         <div class="sub" id="mFramesSub">—</div>
       </div>
       <div class="metric-card">
-        <div class="label">图层数</div>
+        <div class="label" data-i18n="lt.metric.layers">图层数</div>
         <div class="value" id="mLayers">—</div>
         <div class="sub" id="mLayersSub">—</div>
       </div>
@@ -168,27 +168,27 @@ Toolkit.injectTopbar('lottie-tools');
 
   async function ensureLottie() {
     if (lottieMod) return lottieMod;
-    log.dim('加载 lottie-web (首次联网 ~150 KB)...');
+    log.dim(Toolkit.T('lt.log.loadingLottie', null, '加载 lottie-web (首次联网 ~150 KB)...'));
     const mod = await import('https://esm.sh/lottie-web@5.12.2');
     lottieMod = mod.default || mod;
-    log.ok('lottie-web 就绪');
+    log.ok(Toolkit.T('lt.log.lottieReady', null, 'lottie-web 就绪'));
     return lottieMod;
   }
 
   async function loadFile(file) {
     if (!file) return;
     if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
-      log.err('Bad Dobby! 这不是 .json 文件,你再丢一次?');
+      log.err(Toolkit.T('lt.err.notJson', null, 'Bad Dobby! 这不是 .json 文件,你再丢一次?'));
       return;
     }
     log.clear();
-    log.dim(`加载 ${file.name} (${fmtBytes(file.size)})...`);
+    log.dim(Toolkit.T('lt.log.loadingFile', { name: file.name, size: fmtBytes(file.size) }, `加载 ${file.name} (${fmtBytes(file.size)})...`));
     try {
       const text = await file.text();
       const json = JSON.parse(text);
       // basic Lottie shape check: must have layers + frame range
       if (!Array.isArray(json.layers) || typeof json.fr !== 'number') {
-        throw new Error('不是合法 Lottie JSON (缺 layers / fr 字段)');
+        throw new Error(Toolkit.T('lt.err.badLottie', null, '不是合法 Lottie JSON (缺 layers / fr 字段)'));
       }
       sourceJson = json;
       sourceText = text;
@@ -198,7 +198,7 @@ Toolkit.injectTopbar('lottie-tools');
       $('downloadJsonBtn').disabled = true;
       $('exportApngBtn').disabled = false;
       $('exportGifBtn').disabled = false;
-      log.ok(`Lottie 加载完成`);
+      log.ok(Toolkit.T('lt.log.loadOk', null, 'Lottie 加载完成'));
       await renderPreview(json);
       updateMetrics();
     } catch (e) {
@@ -242,8 +242,8 @@ Toolkit.injectTopbar('lottie-tools');
       ? `${fmtBytes(beforeBytes)} → ${fmtBytes(afterBytes)}`
       : fmtBytes(beforeBytes);
     $('mSizeSub').textContent = afterBytes !== null
-      ? `节省 ${((1 - afterBytes / beforeBytes) * 100).toFixed(1)}%`
-      : '未优化';
+      ? Toolkit.T('lt.metric.saved', { pct: ((1 - afterBytes / beforeBytes) * 100).toFixed(1) }, `节省 ${((1 - afterBytes / beforeBytes) * 100).toFixed(1)}%`)
+      : Toolkit.T('lt.metric.notOptimized', null, '未优化');
     const w = sourceJson.w || 0, h = sourceJson.h || 0;
     const totalFrames = (sourceJson.op || 0) - (sourceJson.ip || 0);
     const fr = sourceJson.fr || 30;
@@ -251,12 +251,13 @@ Toolkit.injectTopbar('lottie-tools');
     $('mDim').textContent = `${w}×${h}`;
     $('mDimSub').textContent = `${duration.toFixed(2)}s`;
     $('mFrames').textContent = totalFrames;
-    $('mFramesSub').textContent = `源 ${fr} FPS`;
+    $('mFramesSub').textContent = Toolkit.T('lt.metric.srcFps', { fr }, `源 ${fr} FPS`);
     const layerCount = countLayers(sourceJson.layers);
     $('mLayers').textContent = layerCount;
-    $('mLayersSub').textContent = '含嵌套';
+    $('mLayersSub').textContent = Toolkit.T('lt.metric.nested', null, '含嵌套');
     $('metrics').style.display = '';
-    $('stats').innerHTML = `<strong>${sourceJson.nm || sourceJson.fileName || '(unnamed)'}</strong> · ${w}×${h} · ${totalFrames} 帧 @ ${fr} FPS · ${fmtBytes(beforeBytes)}`;
+    const tFrames = Toolkit.T('lt.stats.frames', null, '帧');
+    $('stats').innerHTML = `<strong>${sourceJson.nm || sourceJson.fileName || '(unnamed)'}</strong> · ${w}×${h} · ${totalFrames} ${tFrames} @ ${fr} FPS · ${fmtBytes(beforeBytes)}`;
   }
 
   function reducePrecision(obj, decimals) {
@@ -302,7 +303,7 @@ Toolkit.injectTopbar('lottie-tools');
       const decimals = parseInt($('precision').value, 10);
       const stripMetaFlag = $('optStripMeta').checked;
       const stripHidden = $('optStripHidden').checked;
-      log.dim(`优化中: 精度=${decimals}, 元数据=${stripMetaFlag}, 隐藏图层=${stripHidden}...`);
+      log.dim(Toolkit.T('lt.log.optimizing', { decimals, meta: stripMetaFlag, hidden: stripHidden }, `优化中: 精度=${decimals}, 元数据=${stripMetaFlag}, 隐藏图层=${stripHidden}...`));
       // Deep clone first so the source stays pristine for re-runs
       const cloned = JSON.parse(JSON.stringify(sourceJson));
       stripMeta(cloned, { stripMeta: stripMetaFlag, stripHidden });
@@ -310,11 +311,16 @@ Toolkit.injectTopbar('lottie-tools');
       const text = JSON.stringify(reduced);
       // Sanity: the optimized JSON must still parse + render
       const reparsed = JSON.parse(text);
-      if (!Array.isArray(reparsed.layers)) throw new Error('优化后 JSON 损坏 (layers 丢失)');
+      if (!Array.isArray(reparsed.layers)) throw new Error(Toolkit.T('lt.err.optBroken', null, '优化后 JSON 损坏 (layers 丢失)'));
       optimizedJson = reparsed;
       optimizedText = text;
       $('downloadJsonBtn').disabled = false;
-      log.ok(`优化完成 · ${fmtBytes(sourceText.length)} → ${fmtBytes(text.length)} (节省 ${((1 - text.length / sourceText.length) * 100).toFixed(1)}%)`);
+      {
+        const before = fmtBytes(sourceText.length);
+        const after = fmtBytes(text.length);
+        const pct = ((1 - text.length / sourceText.length) * 100).toFixed(1);
+        log.ok(Toolkit.T('lt.log.optDone', { before, after, pct }, `优化完成 · ${before} → ${after} (节省 ${pct}%)`));
+      }
       await renderPreview(reparsed);
       updateMetrics();
       // Hand off optimized JSON
@@ -375,12 +381,12 @@ Toolkit.injectTopbar('lottie-tools');
       tempAnim.goToAndStop(srcFrame, true);
       await new Promise(r => requestAnimationFrame(r));
       const cv = host.querySelector('canvas');
-      if (!cv) throw new Error('Lottie canvas 渲染器未生成 canvas');
+      if (!cv) throw new Error(Toolkit.T('lt.err.noCanvas', null, 'Lottie canvas 渲染器未生成 canvas'));
       const copy = document.createElement('canvas');
       copy.width = outW; copy.height = outH;
       copy.getContext('2d').drawImage(cv, 0, 0, outW, outH);
       frames.push({ bitmap: copy, w: outW, h: outH });
-      if (i % 5 === 0) log.dim(`  渲染帧 ${i + 1}/${exportTotal}...`);
+      if (i % 5 === 0) log.dim(Toolkit.T('lt.log.renderFrame', { i: i + 1, total: exportTotal }, `  渲染帧 ${i + 1}/${exportTotal}...`));
     }
     try { tempAnim.destroy(); } catch (_) {}
     host.remove();
@@ -393,11 +399,11 @@ Toolkit.injectTopbar('lottie-tools');
     try {
       const fps = parseInt($('exportFps').value, 10) || 30;
       const maxDim = parseInt($('exportMaxDim').value, 10) || 512;
-      log.dim(`渲染 Lottie → APNG (FPS=${fps}, max=${maxDim})...`);
+      log.dim(Toolkit.T('lt.log.renderApng', { fps, max: maxDim }, `渲染 Lottie → APNG (FPS=${fps}, max=${maxDim})...`));
       const { frames } = await renderFrames(fps, maxDim);
-      log.dim(`编码 APNG (${frames.length} 帧)...`);
+      log.dim(Toolkit.T('lt.log.encApng', { n: frames.length }, `编码 APNG (${frames.length} 帧)...`));
       const blob = await AnimEncoders.buildApng(frames, { fps, loop: 0 });
-      log.ok(`APNG 完成 ${fmtBytes(blob.size)}`);
+      log.ok(Toolkit.T('lt.log.apngDone', { size: fmtBytes(blob.size) }, `APNG 完成 ${fmtBytes(blob.size)}`));
       download(blob, 'lottie-anim.apng');
       handoff?.setBlob(blob, 'lottie-anim.apng', 'image/png');
     } catch (e) {
@@ -414,11 +420,11 @@ Toolkit.injectTopbar('lottie-tools');
     try {
       const fps = parseInt($('exportFps').value, 10) || 30;
       const maxDim = parseInt($('exportMaxDim').value, 10) || 512;
-      log.dim(`渲染 Lottie → GIF (FPS=${fps}, max=${maxDim})...`);
+      log.dim(Toolkit.T('lt.log.renderGif', { fps, max: maxDim }, `渲染 Lottie → GIF (FPS=${fps}, max=${maxDim})...`));
       const { frames } = await renderFrames(fps, maxDim);
-      log.dim(`编码 GIF (${frames.length} 帧)...`);
+      log.dim(Toolkit.T('lt.log.encGif', { n: frames.length }, `编码 GIF (${frames.length} 帧)...`));
       const blob = await AnimEncoders.buildGif(frames, { fps, loop: 0, paletteMode: 'median' });
-      log.ok(`GIF 完成 ${fmtBytes(blob.size)}`);
+      log.ok(Toolkit.T('lt.log.gifDone', { size: fmtBytes(blob.size) }, `GIF 完成 ${fmtBytes(blob.size)}`));
       download(blob, 'lottie-anim.gif');
       handoff?.setBlob(blob, 'lottie-anim.gif', 'image/gif');
     } catch (e) {
@@ -433,9 +439,9 @@ Toolkit.injectTopbar('lottie-tools');
     sourceJson = null; sourceText = '';
     optimizedJson = null; optimizedText = '';
     if (anim) { try { anim.destroy(); } catch (_) {} anim = null; }
-    $('previewBox').innerHTML = '<div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 Lottie JSON 后这里播放预览</div>';
+    $('previewBox').innerHTML = `<div class="preview-empty" style="text-align:center; color: var(--muted)">${Toolkit.T('lt.preview.empty', null, '拖入 Lottie JSON 后这里播放预览')}</div>`;
     $('metrics').style.display = 'none';
-    $('stats').textContent = '未加载';
+    $('stats').textContent = Toolkit.T('lt.stats.empty', null, '未加载');
     $('optimizeBtn').disabled = true;
     $('downloadJsonBtn').disabled = true;
     $('exportApngBtn').disabled = true;

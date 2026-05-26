@@ -126,13 +126,13 @@
 
     <div class="ab-drops">
       <div class="drop-zone" id="dropA">
-        <p>📂 A (原图)</p>
-        <p class="hint">拖入或点击</p>
+        <p data-i18n="idiff.drop.a">📂 A (原图)</p>
+        <p class="hint" data-i18n="idiff.drop.hint1">拖入或点击</p>
         <input type="file" id="fileA" accept="image/*" style="display:none" />
       </div>
       <div class="drop-zone" id="dropB">
-        <p>📂 B (新图)</p>
-        <p class="hint">压缩后 / 编辑后</p>
+        <p data-i18n="idiff.drop.b">📂 B (新图)</p>
+        <p class="hint" data-i18n="idiff.drop.hint2">压缩后 / 编辑后</p>
         <input type="file" id="fileB" accept="image/*" style="display:none" />
       </div>
     </div>
@@ -142,61 +142,61 @@
     <h2 data-i18n="idiff.viewMode">显示模式</h2>
     <div class="field">
       <select id="viewMode">
-        <option value="slider" selected>🎚 滑动对比 (A | B)</option>
-        <option value="sxs">⬌ 并列</option>
-        <option value="heatmap">🌡 差异热图</option>
-        <option value="diffOnly">🎭 仅差异 (减出来的图)</option>
+        <option value="slider" selected data-i18n="idiff.mode.slider">🎚 滑动对比 (A | B)</option>
+        <option value="sxs" data-i18n="idiff.mode.sxs">⬌ 并列</option>
+        <option value="heatmap" data-i18n="idiff.mode.heatmap">🌡 差异热图</option>
+        <option value="diffOnly" data-i18n="idiff.mode.diffOnly">🎭 仅差异 (减出来的图)</option>
       </select>
     </div>
     <div class="field" id="threshField">
-      <label>差异阈值 <span id="threshVal" class="mono">5</span></label>
+      <label><span data-i18n="idiff.threshold">差异阈值</span> <span id="threshVal" class="mono">5</span></label>
       <input type="range" id="thresh" min="0" max="50" value="5" />
-      <div class="info" style="margin-top:2px">小于阈值的像素不计入"变化像素"百分比 (常见 JPEG 噪点 1-3)</div>
+      <div class="info" style="margin-top:2px" data-i18n="idiff.threshNote">小于阈值的像素不计入"变化像素"百分比 (常见 JPEG 噪点 1-3)</div>
     </div>
 
     <h2 data-i18n="idiff.compare">对比</h2>
-    <button id="diffBtn" disabled>开始对比</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="diffBtn" disabled data-i18n="idiff.btn.diff">开始对比</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加入图片</div>
+    <div class="stats" id="stats" data-i18n="idiff.stats.empty">未加入图片</div>
     <div id="warning"></div>
     <div class="preview-area" id="previewBox">
-      <div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 A + B 两张图后点"开始对比"</div>
+      <div class="preview-empty" style="text-align:center; color: var(--muted)" data-i18n="idiff.preview.empty">拖入 A + B 两张图后点"开始对比"</div>
     </div>
     <div class="metric-grid" id="metrics" style="display:none">
       <div class="metric-card">
-        <div class="label">A 体积 / B 体积</div>
+        <div class="label" data-i18n="idiff.m.size">A 体积 / B 体积</div>
         <div class="value" id="mSize">—</div>
         <div class="sub" id="mSizeSub">—</div>
       </div>
       <div class="metric-card">
-        <div class="label">分辨率</div>
+        <div class="label" data-i18n="idiff.m.dim">分辨率</div>
         <div class="value" id="mDim">—</div>
         <div class="sub" id="mDimSub">—</div>
       </div>
       <div class="metric-card">
-        <div class="label">变化像素</div>
+        <div class="label" data-i18n="idiff.m.changed">变化像素</div>
         <div class="value" id="mChanged">—</div>
-        <div class="sub" id="mChangedSub">阈值以上 / 总像素</div>
+        <div class="sub" id="mChangedSub" data-i18n="idiff.m.changedSub">阈值以上 / 总像素</div>
       </div>
       <div class="metric-card">
-        <div class="label">平均 Δ / 最大 Δ</div>
+        <div class="label" data-i18n="idiff.m.delta">平均 Δ / 最大 Δ</div>
         <div class="value" id="mDelta">—</div>
-        <div class="sub">8-bit luma 距离</div>
+        <div class="sub" data-i18n="idiff.m.deltaSub">8-bit luma 距离</div>
       </div>
       <div class="metric-card">
         <div class="label">PSNR</div>
         <div class="value" id="mPsnr">—</div>
-        <div class="sub" id="mPsnrSub">越高越好;40 dB+ 几乎肉眼无差</div>
+        <div class="sub" id="mPsnrSub" data-i18n="idiff.m.psnrSub">越高越好;40 dB+ 几乎肉眼无差</div>
       </div>
       <div class="metric-card">
         <div class="label">SSIM</div>
         <div class="value" id="mSsim">—</div>
-        <div class="sub" id="mSsimSub">越接近 1 越好;0.95+ 视觉接近原图</div>
+        <div class="sub" id="mSsimSub" data-i18n="idiff.m.ssimSub">越接近 1 越好;0.95+ 视觉接近原图</div>
       </div>
     </div>
   </div>
@@ -224,10 +224,10 @@ Toolkit.injectTopbar('image-diff');
     A = B = null;
     $('thumbA').innerHTML = '';
     $('thumbB').innerHTML = '';
-    $('previewBox').innerHTML = '<div class="preview-empty" style="text-align:center; color: var(--muted)">拖入 A + B 两张图后点"开始对比"</div>';
+    $('previewBox').innerHTML = `<div class="preview-empty" style="text-align:center; color: var(--muted)">${Toolkit.T('idiff.preview.empty', null, '拖入 A + B 两张图后点"开始对比"')}</div>`;
     $('metrics').style.display = 'none';
     $('warning').innerHTML = '';
-    $('stats').textContent = '未加入图片';
+    $('stats').textContent = Toolkit.T('idiff.stats.empty', null, '未加入图片');
     $('diffBtn').disabled = true;
     $('fileA').value = '';
     $('fileB').value = '';
@@ -243,11 +243,11 @@ Toolkit.injectTopbar('image-diff');
       if (side === 'A') A = side_obj; else B = side_obj;
       renderThumb(side, side_obj);
       updateStats();
-      log.dim(`加载 ${side}: ${file.name} · ${bitmap.width}×${bitmap.height} · ${fmtBytes(file.size)}`);
+      log.dim(Toolkit.T('idiff.log.loaded', { side, name: file.name, w: bitmap.width, h: bitmap.height, size: fmtBytes(file.size) }, `加载 ${side}: ${file.name} · ${bitmap.width}×${bitmap.height} · ${fmtBytes(file.size)}`));
       $('diffBtn').disabled = !(A && B);
       if (A && B) render();
     } catch (e) {
-      log.err(`${side} 加载失败: ${e.message}`);
+      log.err(Toolkit.T('idiff.log.loadFail', { side, msg: e.message }, `${side} 加载失败: ${e.message}`));
     }
   }
 
@@ -273,9 +273,9 @@ Toolkit.injectTopbar('image-diff');
     const parts = [];
     if (A) parts.push(`A: ${A.w}×${A.h} ${fmtBytes(A.size)}`);
     if (B) parts.push(`B: ${B.w}×${B.h} ${fmtBytes(B.size)}`);
-    $('stats').textContent = parts.length ? parts.join('  ·  ') : '未加入图片';
+    $('stats').textContent = parts.length ? parts.join('  ·  ') : Toolkit.T('idiff.stats.empty', null, '未加入图片');
     $('warning').innerHTML = (A && B && (A.w !== B.w || A.h !== B.h))
-      ? '<div class="warning">⚠ A 和 B 分辨率不一致, 像素级指标会被强行缩放对齐, 结果仅供参考</div>'
+      ? `<div class="warning">${Toolkit.T('idiff.warn.dimMismatch', null, '⚠ A 和 B 分辨率不一致, 像素级指标会被强行缩放对齐, 结果仅供参考')}</div>`
       : '';
   }
 
@@ -422,24 +422,26 @@ Toolkit.injectTopbar('image-diff');
     const ratio = B.size / A.size;
     $('mSize').textContent = `${fmtBytes(A.size)} → ${fmtBytes(B.size)}`;
     $('mSizeSub').textContent = ratio < 1
-      ? `节省 ${((1 - ratio) * 100).toFixed(1)}%`
-      : `增大 ${((ratio - 1) * 100).toFixed(1)}%`;
+      ? Toolkit.T('idiff.saved', { pct: ((1 - ratio) * 100).toFixed(1) }, `节省 ${((1 - ratio) * 100).toFixed(1)}%`)
+      : Toolkit.T('idiff.grew', { pct: ((ratio - 1) * 100).toFixed(1) }, `增大 ${((ratio - 1) * 100).toFixed(1)}%`);
     $('mDim').textContent = (A.w === B.w && A.h === B.h)
       ? `${A.w}×${A.h}`
       : `${A.w}×${A.h} vs ${B.w}×${B.h}`;
-    $('mDimSub').textContent = (A.w === B.w && A.h === B.h) ? '一致' : '⚠ 尺寸不同, 已对齐到较小者';
+    $('mDimSub').textContent = (A.w === B.w && A.h === B.h)
+      ? Toolkit.T('idiff.dimSame', null, '一致')
+      : Toolkit.T('idiff.dimDiff', null, '⚠ 尺寸不同, 已对齐到较小者');
     $('mChanged').textContent = `${m.changedPct.toFixed(2)}%`;
-    $('mChangedSub').textContent = `${m.changedCount.toLocaleString()} / ${m.totalPixels.toLocaleString()} px (阈值 ${threshold})`;
+    $('mChangedSub').textContent = Toolkit.T('idiff.changedDetail', { c: m.changedCount.toLocaleString(), t: m.totalPixels.toLocaleString(), th: threshold }, `${m.changedCount.toLocaleString()} / ${m.totalPixels.toLocaleString()} px (阈值 ${threshold})`);
     $('mDelta').textContent = `${m.meanAbsDelta.toFixed(2)} / ${m.maxDelta.toFixed(0)}`;
     $('mPsnr').textContent = isFinite(m.psnr) ? `${m.psnr.toFixed(2)} dB` : '∞ dB';
     $('mPsnrSub').textContent = isFinite(m.psnr)
-      ? (m.psnr > 40 ? '✓ 高质量' : m.psnr > 30 ? '一般' : '可见损伤')
-      : '完全一致';
+      ? (m.psnr > 40 ? Toolkit.T('idiff.psnr.hi', null, '✓ 高质量') : m.psnr > 30 ? Toolkit.T('idiff.psnr.mid', null, '一般') : Toolkit.T('idiff.psnr.lo', null, '可见损伤'))
+      : Toolkit.T('idiff.psnr.eq', null, '完全一致');
     $('mSsim').textContent = ssim.toFixed(4);
-    $('mSsimSub').textContent = ssim > 0.95 ? '✓ 视觉接近原图'
-                              : ssim > 0.90 ? '轻微差异'
-                              : ssim > 0.75 ? '明显差异'
-                              : '严重差异';
+    $('mSsimSub').textContent = ssim > 0.95 ? Toolkit.T('idiff.ssim.hi', null, '✓ 视觉接近原图')
+                              : ssim > 0.90 ? Toolkit.T('idiff.ssim.mid', null, '轻微差异')
+                              : ssim > 0.75 ? Toolkit.T('idiff.ssim.lo', null, '明显差异')
+                              : Toolkit.T('idiff.ssim.bad', null, '严重差异');
     $('metrics').style.display = '';
 
     // Preview area
@@ -447,15 +449,15 @@ Toolkit.injectTopbar('image-diff');
     const host = $('previewBox');
     host.innerHTML = '';
     if (mode === 'slider') {
-      makeCompareSlider(host, sample.cvA, sample.cvB, { leftLabel: 'A 原图', rightLabel: 'B 新图' });
+      makeCompareSlider(host, sample.cvA, sample.cvB, { leftLabel: Toolkit.T('idiff.label.aOrig', null, 'A 原图'), rightLabel: Toolkit.T('idiff.label.bNew', null, 'B 新图') });
     } else if (mode === 'sxs') {
       const wrap = document.createElement('div');
       wrap.className = 'sxs-pair';
       const colA = document.createElement('div');
-      colA.innerHTML = '<div class="label">A 原图</div>';
+      colA.innerHTML = `<div class="label">${Toolkit.T('idiff.label.aOrig', null, 'A 原图')}</div>`;
       colA.appendChild(sample.cvA);
       const colB = document.createElement('div');
-      colB.innerHTML = '<div class="label">B 新图</div>';
+      colB.innerHTML = `<div class="label">${Toolkit.T('idiff.label.bNew', null, 'B 新图')}</div>`;
       colB.appendChild(sample.cvB);
       wrap.appendChild(colA);
       wrap.appendChild(colB);
@@ -466,7 +468,7 @@ Toolkit.injectTopbar('image-diff');
       host.appendChild(makeDiffOnly(sample.dataA, sample.dataB, sample.w, sample.h));
     }
 
-    log.ok(`对比完成 · ${dt.toFixed(0)} ms · PSNR ${isFinite(m.psnr) ? m.psnr.toFixed(2) + ' dB' : '∞'} · SSIM ${ssim.toFixed(4)}`);
+    log.ok(Toolkit.T('idiff.log.done', { ms: dt.toFixed(0), psnr: isFinite(m.psnr) ? m.psnr.toFixed(2) + ' dB' : '∞', ssim: ssim.toFixed(4) }, `对比完成 · ${dt.toFixed(0)} ms · PSNR ${isFinite(m.psnr) ? m.psnr.toFixed(2) + ' dB' : '∞'} · SSIM ${ssim.toFixed(4)}`));
   }
 })();
 </script>

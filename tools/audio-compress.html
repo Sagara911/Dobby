@@ -72,68 +72,68 @@
     <h1>🔊 音频压缩</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入音频</p>
-      <p class="hint">MP3 / OGG / WAV / M4A / FLAC<br/>浏览器原生解码</p>
+      <p data-i18n="audc.drop.title">📂 拖入音频</p>
+      <p class="hint" data-i18n-html="audc.drop.hint">MP3 / OGG / WAV / M4A / FLAC<br/>浏览器原生解码</p>
       <input type="file" id="fileInput" accept="audio/*" style="display:none" />
     </div>
 
     <h2 data-i18n="common.process">处理</h2>
     <div class="field">
-      <label>采样率</label>
+      <label data-i18n="audc.sampleRate">采样率</label>
       <select id="sampleRate">
-        <option value="0">保持原始</option>
-        <option value="48000">48000 Hz (高质量)</option>
-        <option value="44100">44100 Hz (CD)</option>
+        <option value="0" data-i18n="audc.sr.keep">保持原始</option>
+        <option value="48000" data-i18n="audc.sr.48k">48000 Hz (高质量)</option>
+        <option value="44100" data-i18n="audc.sr.44k">44100 Hz (CD)</option>
         <option value="32000">32000 Hz</option>
-        <option value="22050" selected>22050 Hz (语音/playable 推荐)</option>
-        <option value="16000">16000 Hz (语音)</option>
-        <option value="11025">11025 Hz (极小)</option>
-        <option value="8000">8000 Hz (电话)</option>
+        <option value="22050" selected data-i18n="audc.sr.22k">22050 Hz (语音/playable 推荐)</option>
+        <option value="16000" data-i18n="audc.sr.16k">16000 Hz (语音)</option>
+        <option value="11025" data-i18n="audc.sr.11k">11025 Hz (极小)</option>
+        <option value="8000" data-i18n="audc.sr.8k">8000 Hz (电话)</option>
       </select>
     </div>
     <div class="field">
-      <label>声道</label>
+      <label data-i18n="audc.channels">声道</label>
       <select id="channels">
-        <option value="0">保持原始</option>
-        <option value="1" selected>单声道 (体积减半)</option>
-        <option value="2">立体声</option>
+        <option value="0" data-i18n="audc.ch.keep">保持原始</option>
+        <option value="1" selected data-i18n="audc.ch.mono">单声道 (体积减半)</option>
+        <option value="2" data-i18n="audc.ch.stereo">立体声</option>
       </select>
     </div>
 
     <h2 data-i18n="audc.trim">时间裁剪</h2>
     <div class="field">
-      <label>起始 (秒) <span id="startVal" class="mono">0</span></label>
+      <label><span data-i18n="audc.startSec">起始 (秒)</span> <span id="startVal" class="mono">0</span></label>
       <input type="range" id="startTime" min="0" max="100" step="0.1" value="0" />
     </div>
     <div class="field">
-      <label>结束 (秒) <span id="endVal" class="mono">0</span></label>
+      <label><span data-i18n="audc.endSec">结束 (秒)</span> <span id="endVal" class="mono">0</span></label>
       <input type="range" id="endTime" min="0" max="100" step="0.1" value="0" />
     </div>
     <div class="field-row">
       <div class="field">
-        <label>淡入 (秒)</label>
+        <label data-i18n="audc.fadeIn">淡入 (秒)</label>
         <input type="number" id="fadeIn" value="0" min="0" step="0.1" />
       </div>
       <div class="field">
-        <label>淡出 (秒)</label>
+        <label data-i18n="audc.fadeOut">淡出 (秒)</label>
         <input type="number" id="fadeOut" value="0" min="0" step="0.1" />
       </div>
     </div>
 
     <h2 data-i18n="common.output">输出</h2>
     <div class="field">
-      <label>格式</label>
+      <label data-i18n="audc.format">格式</label>
       <select id="outFormat">
-        <option value="wav-16">WAV (16-bit PCM, 无损)</option>
-        <option value="wav-8">WAV (8-bit, 体积减半)</option>
-        <option value="webm-opus">WebM / Opus (有损, 体积最小)</option>
+        <option value="wav-16" data-i18n="audc.fmt.wav16">WAV (16-bit PCM, 无损)</option>
+        <option value="wav-8" data-i18n="audc.fmt.wav8">WAV (8-bit, 体积减半)</option>
+        <option value="webm-opus" data-i18n="audc.fmt.opus">WebM / Opus (有损, 体积最小)</option>
       </select>
     </div>
-    <div class="field"><label>文件名</label><input type="text" id="filename" value="audio" /></div>
+    <div class="field"><label data-i18n="common.filename">文件名</label><input type="text" id="filename" value="audio" /></div>
 
-    <button id="processBtn" disabled>开始处理</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="processBtn" disabled data-i18n="audc.btn.process">开始处理</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="audc.btn.download">下载</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
     <div class="log" id="log"></div>
@@ -143,15 +143,15 @@
     <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="compare-stats">
       <div class="item">
-        <div class="label">原文件</div>
+        <div class="label" data-i18n="audc.lbl.origFile">原文件</div>
         <div class="value" id="origStat">—</div>
       </div>
       <div class="item">
-        <div class="label">输出</div>
+        <div class="label" data-i18n="common.output">输出</div>
         <div class="value" id="outStat">—</div>
       </div>
       <div class="item">
-        <div class="label">瘦身</div>
+        <div class="label" data-i18n="audc.lbl.savings">瘦身</div>
         <div class="value" id="savingsStat">—</div>
       </div>
     </div>
@@ -250,9 +250,9 @@ Toolkit.injectTopbar('audio-compress');
   async function handleFiles(files) {
     if (!files.length) return;
     const f = files[0];
-    if (!f.type.startsWith('audio/')) { log.err('Bad Dobby! 这不是音频文件,你再丢一次?'); return; }
+    if (!f.type.startsWith('audio/')) { log.err(Toolkit.T('audc.err.notAudio', null, 'Bad Dobby! 这不是音频文件,你再丢一次?')); return; }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('audc.log.loading', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     try {
       srcFile = f;
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -268,15 +268,19 @@ Toolkit.injectTopbar('audio-compress');
       const decodedSr = srcBuffer.sampleRate;
       const origSr = origInfo?.sr;
       const resampled = origSr && origSr !== decodedSr;
+      const decodedNote = Toolkit.T('audc.stats.decodedNote', { sr: decodedSr }, `(浏览器解码至 ${decodedSr} Hz)`);
       const srHtml = resampled
-        ? `<strong>${origSr}</strong> Hz <span style="color:var(--muted)">(浏览器解码至 ${decodedSr} Hz)</span>`
+        ? `<strong>${origSr}</strong> Hz <span style="color:var(--muted)">${decodedNote}</span>`
         : `<strong>${decodedSr}</strong> Hz`;
       const fmtTag = origInfo?.format ? ` · ${origInfo.format}` : '';
-      $('stats').innerHTML = `<strong>${d.toFixed(2)}s</strong> · <strong>${srcBuffer.numberOfChannels}</strong> 声道 · ${srHtml}${fmtTag} · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+      const chLbl = Toolkit.T('audc.stats.channels', null, '声道');
+      const origLbl = Toolkit.T('audc.stats.origFile', null, '原文件');
+      $('stats').innerHTML = `<strong>${d.toFixed(2)}s</strong> · <strong>${srcBuffer.numberOfChannels}</strong> ${chLbl} · ${srHtml}${fmtTag} · ${origLbl} <strong>${fmtBytes(f.size)}</strong>`;
       $('origPlayer').src = URL.createObjectURL(f);
       drawWaveform(srcBuffer);
       $('processBtn').disabled = false;
-      log.ok(`解码完成: ${d.toFixed(2)}s × ${srcBuffer.numberOfChannels}ch @ ${decodedSr}Hz${resampled ? ` (原 ${origSr}Hz)` : ''}`);
+      const suffix = resampled ? Toolkit.T('audc.log.origSr', { sr: origSr }, ` (原 ${origSr}Hz)`) : '';
+      log.ok(Toolkit.T('audc.log.decoded', { d: d.toFixed(2), ch: srcBuffer.numberOfChannels, sr: decodedSr, suffix }, `解码完成: ${d.toFixed(2)}s × ${srcBuffer.numberOfChannels}ch @ ${decodedSr}Hz${suffix}`));
     } catch (e) {
       log.err(e.message);
     }
@@ -314,7 +318,7 @@ Toolkit.injectTopbar('audio-compress');
   $('processBtn').addEventListener('click', async () => {
     if (!srcBuffer) return;
     $('processBtn').disabled = true;
-    log.dim('🧦 Dobby 干活中...');
+    log.dim(Toolkit.T('audc.log.working', null, '🧦 Dobby 干活中...'));
     try {
       const targetRate = parseInt($('sampleRate').value, 10) || srcBuffer.sampleRate;
       const targetCh = parseInt($('channels').value, 10) || srcBuffer.numberOfChannels;
@@ -322,7 +326,7 @@ Toolkit.injectTopbar('audio-compress');
       const end = parseFloat($('endTime').value);
       const fadeIn = parseFloat($('fadeIn').value);
       const fadeOut = parseFloat($('fadeOut').value);
-      if (end <= start) throw new Error('结束时间必须大于起始时间');
+      if (end <= start) throw new Error(Toolkit.T('audc.err.endBeforeStart', null, '结束时间必须大于起始时间'));
 
       // 1. trim + resample using OfflineAudioContext
       const offline = new OfflineAudioContext(
@@ -374,15 +378,15 @@ Toolkit.injectTopbar('audio-compress');
       // Sanity-check the produced blob before exposing it. Silent failures
       // here used to ship a 0-byte file to the user; now we throw loudly so
       // the log shows what went wrong instead of an empty download.
-      if (!blob || blob.size === 0) throw new Error('编码输出为空 (可能是音轨为静音或浏览器拒绝录制)');
+      if (!blob || blob.size === 0) throw new Error(Toolkit.T('audc.err.emptyOutput', null, '编码输出为空 (可能是音轨为静音或浏览器拒绝录制)'));
       const headBuf = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
       if (outExt === 'wav') {
         const okRiff = headBuf[0]===0x52 && headBuf[1]===0x49 && headBuf[2]===0x46 && headBuf[3]===0x46;
         const okWave = headBuf[8]===0x57 && headBuf[9]===0x41 && headBuf[10]===0x56 && headBuf[11]===0x45;
-        if (!okRiff || !okWave || blob.size < 64) throw new Error('输出 WAV 校验失败 — header 不正确');
+        if (!okRiff || !okWave || blob.size < 64) throw new Error(Toolkit.T('audc.err.badWav', null, '输出 WAV 校验失败 — header 不正确'));
       } else if (outExt === 'webm') {
         const okEbml = headBuf[0]===0x1A && headBuf[1]===0x45 && headBuf[2]===0xDF && headBuf[3]===0xA3;
-        if (!okEbml || blob.size < 512) throw new Error('输出 WebM 校验失败 — 录制可能为空');
+        if (!okEbml || blob.size < 512) throw new Error(Toolkit.T('audc.err.badWebm', null, '输出 WebM 校验失败 — 录制可能为空'));
       }
       outBlob = blob;
       $('outStat').textContent = fmtBytes(blob.size);
@@ -393,7 +397,8 @@ Toolkit.injectTopbar('audio-compress');
       $('downloadBtn').disabled = false;
       const fname = ($('filename')?.value || 'audio').replace(/[^\w-]/g, '_') + '.' + outExt;
       handoff?.setBlob(blob, fname, blob.type || (outExt === 'wav' ? 'audio/wav' : 'audio/webm'));
-      log.ok(`处理完成 ${fmtBytes(blob.size)} (${(pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1)}%)`);
+      const pctStr = (pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1) + '%';
+      log.ok(Toolkit.T('audc.log.done', { size: fmtBytes(blob.size), pct: pctStr }, `处理完成 ${fmtBytes(blob.size)} (${pctStr})`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -453,7 +458,7 @@ Toolkit.injectTopbar('audio-compress');
   // ===== WebM/Opus via MediaRecorder =====
   async function encodeWebmOpus(audioBuf) {
     if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      throw new Error('当前浏览器不支持 audio/webm;codecs=opus');
+      throw new Error(Toolkit.T('audc.err.opusUnsupported', null, '当前浏览器不支持 audio/webm;codecs=opus'));
     }
     // play audioBuf into a destination and record
     const ctx = new AudioContext({ sampleRate: audioBuf.sampleRate });
@@ -483,7 +488,7 @@ Toolkit.injectTopbar('audio-compress');
   $('clearBtn').addEventListener('click', () => {
     srcBuffer = null; srcFile = null; outBlob = null;
     ['origStat','outStat','savingsStat'].forEach(id => $(id).textContent = '—');
-    $('stats').textContent = 'Dobby 待命';
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('origPlayer').src = ''; $('outPlayer').src = '';
     $('waveform').getContext('2d').clearRect(0, 0, 800, 120);
     $('processBtn').disabled = true;

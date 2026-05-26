@@ -122,32 +122,32 @@
   <div class="sidebar">
     <h1>📷 EXIF 查看/清除</h1>
 
-    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px">
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="exif.localOnly">
       <strong style="color:var(--accent)">完全本地</strong> · 你的照片不离开浏览器,EXIF 解析 + 清除都在本地完成
     </div>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入照片</p>
-      <p class="hint">JPEG / TIFF<br>(PNG 一般没有 EXIF)</p>
+      <p data-i18n="exif.drop.title">📂 拖入照片</p>
+      <p class="hint" data-i18n-html="exif.drop.hint">JPEG / TIFF<br>(PNG 一般没有 EXIF)</p>
       <input type="file" id="fileInput" accept="image/jpeg,image/tiff,image/jpg" style="display:none" />
     </div>
 
     <h2 data-i18n="common.actions">动作</h2>
-    <button id="cleanBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>🧹 下载干净版(清掉 EXIF)</button>
-    <button id="clearBtn" class="secondary" style="margin-top:6px">🗑️ 清空</button>
+    <button id="cleanBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled data-i18n="exif.btn.clean">🧹 下载干净版(清掉 EXIF)</button>
+    <button id="clearBtn" class="secondary" style="margin-top:6px" data-i18n="exif.btn.clear">🗑️ 清空</button>
 
     <h2 data-i18n="exif.privacy">常见隐私字段</h2>
     <div style="background:rgba(245,91,91,0.06); border:1px solid rgba(245,91,91,0.3); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
-      <div style="color:#ff8080"><strong>GPS</strong>: 经纬度坐标(最敏感)</div>
-      <div>DateTime: 拍摄时间</div>
-      <div>Make / Model: 相机型号</div>
-      <div>Software: 编辑软件</div>
-      <div>Artist / Copyright: 作者信息</div>
-      <div>ImageDescription: 自定义描述</div>
+      <div style="color:#ff8080" data-i18n-html="exif.field.gps"><strong>GPS</strong>: 经纬度坐标(最敏感)</div>
+      <div data-i18n="exif.field.dateTime">DateTime: 拍摄时间</div>
+      <div data-i18n="exif.field.makeModel">Make / Model: 相机型号</div>
+      <div data-i18n="exif.field.software">Software: 编辑软件</div>
+      <div data-i18n="exif.field.artist">Artist / Copyright: 作者信息</div>
+      <div data-i18n="exif.field.desc">ImageDescription: 自定义描述</div>
     </div>
 
     <h2 data-i18n="common.notes">说明</h2>
-    <div style="font-size:11px; color:var(--muted); line-height:1.6">
+    <div style="font-size:11px; color:var(--muted); line-height:1.6" data-i18n-html="exif.notes">
       EXIF 是 JPEG / TIFF 里的元数据,常被拍摄设备自动写入。<br>
       <strong>清除</strong>会把所有 EXIF / IPTC / XMP 段都剥掉,只保留图像数据,看起来跟原图一模一样,但元数据全没了
     </div>
@@ -156,17 +156,17 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">查看 + 清除 JPEG 照片里的拍摄信息</div>
+    <div class="stats" id="stats" data-i18n="exif.stats.ready">查看 + 清除 JPEG 照片里的拍摄信息</div>
 
     <div class="exif-stage">
       <!-- Summary card -->
       <div class="exif-summary" id="summaryCard" style="display:none">
         <div class="thumb"><img id="thumbImg" /></div>
         <div class="info">
-          <div><span class="k">文件:</span> <span class="v" id="metaFile">—</span></div>
-          <div><span class="k">尺寸:</span> <span class="v" id="metaSize">—</span></div>
-          <div><span class="k">EXIF 字段数:</span> <span class="v" id="metaCount">—</span></div>
-          <div><span class="k">总元数据体积:</span> <span class="v" id="metaBytes">—</span></div>
+          <div><span class="k" data-i18n="exif.sum.file">文件:</span> <span class="v" id="metaFile">—</span></div>
+          <div><span class="k" data-i18n="exif.sum.size">尺寸:</span> <span class="v" id="metaSize">—</span></div>
+          <div><span class="k" data-i18n="exif.sum.count">EXIF 字段数:</span> <span class="v" id="metaCount">—</span></div>
+          <div><span class="k" data-i18n="exif.sum.bytes">总元数据体积:</span> <span class="v" id="metaBytes">—</span></div>
         </div>
         <div class="privacy" id="privacyVerdict">—</div>
       </div>
@@ -241,7 +241,7 @@ Toolkit.injectTopbar('exif-tool');
   function parseExif(bytes) {
     // JPEG starts with FFD8
     if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) {
-      throw new Error('不是合法 JPEG');
+      throw new Error(Toolkit.T('exif.err.notJpeg', null, '不是合法 JPEG'));
     }
     const segments = [];
     let i = 2;
@@ -380,35 +380,35 @@ Toolkit.injectTopbar('exif-tool');
     $('metaCount').textContent = tagKeys.length;
     // estimate EXIF segment bytes: APP1 size from segments
     const exifSeg = parsed.segments.find(s => s.marker === 0xE1);
-    $('metaBytes').textContent = exifSeg ? fmtBytes(exifSeg.length) : '0 字节';
+    $('metaBytes').textContent = exifSeg ? fmtBytes(exifSeg.length) : Toolkit.T('exif.zeroBytes', null, '0 字节');
 
     // privacy assessment
     const leaks = [];
-    if (tags['gps_2'] || tags['gps_4']) leaks.push('GPS 坐标');
-    if (tags[0x010F] || tags[0x0110]) leaks.push('相机型号');
-    if (tags[0x013B]) leaks.push('作者');
-    if (tags[0x8298]) leaks.push('版权');
-    if (tags[0x9003]) leaks.push('拍摄时间');
-    if (tags[0x010E]) leaks.push('描述');
+    if (tags['gps_2'] || tags['gps_4']) leaks.push(Toolkit.T('exif.leak.gps', null, 'GPS 坐标'));
+    if (tags[0x010F] || tags[0x0110]) leaks.push(Toolkit.T('exif.leak.camera', null, '相机型号'));
+    if (tags[0x013B]) leaks.push(Toolkit.T('exif.leak.artist', null, '作者'));
+    if (tags[0x8298]) leaks.push(Toolkit.T('exif.leak.copyright', null, '版权'));
+    if (tags[0x9003]) leaks.push(Toolkit.T('exif.leak.time', null, '拍摄时间'));
+    if (tags[0x010E]) leaks.push(Toolkit.T('exif.leak.desc', null, '描述'));
     const verdict = $('privacyVerdict');
     if (leaks.length) {
       verdict.className = 'privacy leak';
-      verdict.innerHTML = `<div class="big">🔴 ${leaks.length}</div><div>项隐私字段</div><div style="margin-top:4px; font-size:10px">${leaks.join(' · ')}</div>`;
+      verdict.innerHTML = `<div class="big">🔴 ${leaks.length}</div><div>${Toolkit.T('exif.verdict.privFields', null, '项隐私字段')}</div><div style="margin-top:4px; font-size:10px">${leaks.join(' · ')}</div>`;
     } else if (tagKeys.length) {
       verdict.className = 'privacy';
-      verdict.innerHTML = `<div class="big">🟡 ${tagKeys.length}</div><div>项元数据<br>无明显隐私</div>`;
+      verdict.innerHTML = `<div class="big">🟡 ${tagKeys.length}</div><div>${Toolkit.T('exif.verdict.noPriv', null, '项元数据<br>无明显隐私')}</div>`;
     } else {
       verdict.className = 'privacy private';
-      verdict.innerHTML = `<div class="big">🟢 干净</div><div>没有 EXIF</div>`;
+      verdict.innerHTML = `<div class="big">🟢 ${Toolkit.T('exif.verdict.cleanBig', null, '干净')}</div><div>${Toolkit.T('exif.verdict.noExif', null, '没有 EXIF')}</div>`;
     }
 
     // categories
     const categories = {
-      gps:    { title: '📍 GPS 位置(最敏感)',     priv: true, rows: [] },
-      camera: { title: '📷 相机 / 镜头(隐私)',    priv: true, rows: [] },
-      shoot:  { title: '🎬 拍摄参数(无隐私)',     priv: false, rows: [] },
-      tech:   { title: '⚙️ 其它技术字段',          priv: false, rows: [] },
-      owner:  { title: '👤 所有者信息(隐私)',     priv: true, rows: [] }
+      gps:    { title: Toolkit.T('exif.cat.gps', null, '📍 GPS 位置(最敏感)'),     priv: true, rows: [] },
+      camera: { title: Toolkit.T('exif.cat.camera', null, '📷 相机 / 镜头(隐私)'),    priv: true, rows: [] },
+      shoot:  { title: Toolkit.T('exif.cat.shoot', null, '🎬 拍摄参数(无隐私)'),     priv: false, rows: [] },
+      tech:   { title: Toolkit.T('exif.cat.tech', null, '⚙️ 其它技术字段'),          priv: false, rows: [] },
+      owner:  { title: Toolkit.T('exif.cat.owner', null, '👤 所有者信息(隐私)'),     priv: true, rows: [] }
     };
 
     for (const k of tagKeys) {
@@ -420,7 +420,16 @@ Toolkit.injectTopbar('exif-tool');
       if (!categories[cat]) continue;
       let v = t.value;
       // human-readable for some types
-      if (meta.n === 'Orientation') v = ['', '正常', '水平镜像', '180°', '垂直镜像', '90°顺+水平镜像', '90°顺', '90°逆+水平镜像', '90°逆'][v] || v;
+      if (meta.n === 'Orientation') v = ['',
+        Toolkit.T('exif.orient.normal', null, '正常'),
+        Toolkit.T('exif.orient.flipH', null, '水平镜像'),
+        '180°',
+        Toolkit.T('exif.orient.flipV', null, '垂直镜像'),
+        Toolkit.T('exif.orient.r90cwFlipH', null, '90°顺+水平镜像'),
+        Toolkit.T('exif.orient.r90cw', null, '90°顺'),
+        Toolkit.T('exif.orient.r90ccwFlipH', null, '90°逆+水平镜像'),
+        Toolkit.T('exif.orient.r90ccw', null, '90°逆')
+      ][v] || v;
       if (meta.n === 'GPSLatitude' && tags['gps_1']) v = `${fmtGPSCoord(v, tags['gps_1'].value)}° ${tags['gps_1'].value}`;
       if (meta.n === 'GPSLongitude' && tags['gps_3']) v = `${fmtGPSCoord(v, tags['gps_3'].value)}° ${tags['gps_3'].value}`;
       if (Array.isArray(v)) v = v.join(', ');
@@ -429,7 +438,7 @@ Toolkit.injectTopbar('exif-tool');
     }
 
     // also list segments
-    categories.tech.rows.push({ k: '── JPEG 段 ──', v: parsed.segments.map(s => s.name).join(', ') });
+    categories.tech.rows.push({ k: Toolkit.T('exif.jpegSeg', null, '── JPEG 段 ──'), v: parsed.segments.map(s => s.name).join(', ') });
 
     const grid = $('categories');
     grid.innerHTML = '';
@@ -448,7 +457,7 @@ Toolkit.injectTopbar('exif-tool');
     }
 
     if (!grid.children.length) {
-      grid.innerHTML = '<div class="exif-card"><h3>无 EXIF</h3><div class="empty">这张图没有 EXIF 元数据</div></div>';
+      grid.innerHTML = `<div class="exif-card"><h3>${Toolkit.T('exif.noExif.h', null, '无 EXIF')}</h3><div class="empty">${Toolkit.T('exif.noExif.body', null, '这张图没有 EXIF 元数据')}</div></div>`;
     }
 
     $('cleanBtn').disabled = tagKeys.length === 0;
@@ -490,7 +499,7 @@ Toolkit.injectTopbar('exif-tool');
     if (!files[0]) return;
     const f = files[0];
     if (!/jpe?g|tiff/i.test(f.type)) {
-      log.warn('文件类型 ' + (f.type || '未知') + ' — 只支持 JPEG/TIFF。PNG 几乎不会有 EXIF。');
+      log.warn(Toolkit.T('exif.warn.unsupported', { type: f.type || Toolkit.T('exif.unknown', null, '未知') }, '文件类型 ' + (f.type || '未知') + ' — 只支持 JPEG/TIFF。PNG 几乎不会有 EXIF。'));
     }
     try {
       const buf = await f.arrayBuffer();
@@ -499,9 +508,9 @@ Toolkit.injectTopbar('exif-tool');
       const parsed = parseExif(currentBytes);
       const blobUrl = URL.createObjectURL(f);
       renderResults(parsed, f.name, f.size, blobUrl);
-      log.ok(`已解析 ${Object.keys(parsed.tags).length} 个 EXIF 字段`);
+      log.ok(Toolkit.T('exif.log.parsed', { n: Object.keys(parsed.tags).length }, `已解析 ${Object.keys(parsed.tags).length} 个 EXIF 字段`));
     } catch (e) {
-      log.err('解析失败: ' + e.message);
+      log.err(Toolkit.T('exif.err.parseFail', { msg: e.message }, '解析失败: ' + e.message));
     }
   });
 
@@ -512,9 +521,9 @@ Toolkit.injectTopbar('exif-tool');
       const blob = new Blob([clean], { type: 'image/jpeg' });
       const base = (currentFilename || 'photo').replace(/\.[^.]+$/, '');
       download(blob, base + '_clean.jpg');
-      log.ok(`已剥离元数据 · 原 ${fmtBytes(currentBytes.length)} → ${fmtBytes(clean.length)} (省 ${fmtBytes(currentBytes.length - clean.length)})`);
+      log.ok(Toolkit.T('exif.log.stripped', { from: fmtBytes(currentBytes.length), to: fmtBytes(clean.length), saved: fmtBytes(currentBytes.length - clean.length) }, `已剥离元数据 · 原 ${fmtBytes(currentBytes.length)} → ${fmtBytes(clean.length)} (省 ${fmtBytes(currentBytes.length - clean.length)})`));
     } catch (e) {
-      log.err('清除失败: ' + e.message);
+      log.err(Toolkit.T('exif.err.stripFail', { msg: e.message }, '清除失败: ' + e.message));
     }
   });
 
@@ -526,7 +535,7 @@ Toolkit.injectTopbar('exif-tool');
     $('cleanBtn').disabled = true;
   });
 
-  log.ok('EXIF 工具准备好,拖照片进来');
+  log.ok(Toolkit.T('exif.log.ready', null, 'EXIF 工具准备好,拖照片进来'));
 })();
 </script>
 </body>

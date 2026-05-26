@@ -164,46 +164,46 @@
     <h1>🌐 Favicon 套装</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入源图</p>
-      <p class="hint">建议方形 / 透明背景<br>≥ 512×512</p>
+      <p data-i18n="fav.drop.title">📂 拖入源图</p>
+      <p class="hint" data-i18n-html="fav.drop.hint">建议方形 / 透明背景<br>≥ 512×512</p>
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
     <h2 data-i18n="fav.scale">缩放算法</h2>
     <select id="scaleAlgo" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="high">高质量(适合 logo / 渐变)</option>
-      <option value="pixelated">像素邻近(适合像素图)</option>
+      <option value="high" data-i18n="fav.scale.high">高质量(适合 logo / 渐变)</option>
+      <option value="pixelated" data-i18n="fav.scale.pixelated">像素邻近(适合像素图)</option>
     </select>
 
     <h2 data-i18n="common.export">导出</h2>
-    <button id="downloadAllBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border-color:rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit; margin-top:4px">💾 下载全部(ZIP)</button>
-    <button id="copyHtmlBtn" class="secondary" style="margin-top:6px">📋 复制 HTML &lt;link&gt; 代码</button>
+    <button id="downloadAllBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border-color:rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit; margin-top:4px" data-i18n="fav.btn.zip">💾 下载全部(ZIP)</button>
+    <button id="copyHtmlBtn" class="secondary" style="margin-top:6px" data-i18n="fav.btn.copyHtml">📋 复制 HTML &lt;link&gt; 代码</button>
 
     <h2 data-i18n="fav.usage">用途说明</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7">
-      <div><strong>16/32/48</strong>: 浏览器标签 / 收藏夹</div>
-      <div><strong>180</strong>: Apple touch(iOS 主屏)</div>
-      <div><strong>192/512</strong>: PWA manifest</div>
-      <div><strong>favicon.ico</strong>: 老 IE / 兜底</div>
-      <div><strong>safari-pinned</strong>: 单色 SVG(可选)</div>
+      <div data-i18n-html="fav.usage.tabs"><strong>16/32/48</strong>: 浏览器标签 / 收藏夹</div>
+      <div data-i18n-html="fav.usage.apple"><strong>180</strong>: Apple touch(iOS 主屏)</div>
+      <div data-i18n-html="fav.usage.pwa"><strong>192/512</strong>: PWA manifest</div>
+      <div data-i18n-html="fav.usage.ico"><strong>favicon.ico</strong>: 老 IE / 兜底</div>
+      <div data-i18n-html="fav.usage.safari"><strong>safari-pinned</strong>: 单色 SVG(可选)</div>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">一张图 → 完整 favicon 套装 + HTML 引用代码 + manifest.json</div>
+    <div class="stats" id="stats" data-i18n="fav.stats.ready">一张图 → 完整 favicon 套装 + HTML 引用代码 + manifest.json</div>
 
     <div class="fav-stage">
       <!-- Source preview -->
       <div class="fav-source">
         <div class="src-thumb" id="srcThumb">
-          <div style="color:var(--muted); font-size:11px; padding:10px; text-align:center">拖图进来 →</div>
+          <div style="color:var(--muted); font-size:11px; padding:10px; text-align:center" data-i18n="fav.dropHere">拖图进来 →</div>
         </div>
         <div class="src-info">
-          <div>源图: <strong id="srcName">—</strong></div>
-          <div>尺寸: <strong id="srcSize">—</strong></div>
-          <div>类型: <strong id="srcType">—</strong></div>
+          <div><span data-i18n="fav.info.src">源图</span>: <strong id="srcName">—</strong></div>
+          <div><span data-i18n="fav.info.size">尺寸</span>: <strong id="srcSize">—</strong></div>
+          <div><span data-i18n="fav.info.type">类型</span>: <strong id="srcType">—</strong></div>
           <div style="margin-top:6px; color:var(--text-soft)" id="srcWarn"></div>
         </div>
       </div>
@@ -215,10 +215,10 @@
 
       <!-- HTML snippet -->
       <div>
-        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px">把这段贴到 &lt;head&gt; 里</div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px" data-i18n="fav.snippet.title">把这段贴到 &lt;head&gt; 里</div>
         <div class="fav-html-snippet" id="htmlSnippet">
-          <button class="copy-btn" id="copyHtmlInline">📋 复制</button>
-          <span id="htmlOut">拖入源图后,这里出 HTML 引用代码 + manifest 配置...</span>
+          <button class="copy-btn" id="copyHtmlInline" data-i18n="fav.snippet.copy">📋 复制</button>
+          <span id="htmlOut" data-i18n="fav.snippet.empty">拖入源图后,这里出 HTML 引用代码 + manifest 配置...</span>
         </div>
       </div>
     </div>
@@ -237,12 +237,12 @@ Toolkit.injectTopbar('favicon-maker');
   //   Output sizes
   // ============================================================
   const SIZES = [
-    { px: 16,  name: 'favicon-16x16.png',     purpose: '浏览器标签' },
-    { px: 32,  name: 'favicon-32x32.png',     purpose: '浏览器标签 hi-DPI' },
-    { px: 48,  name: 'favicon-48x48.png',     purpose: '收藏夹' },
-    { px: 64,  name: 'favicon-64x64.png',     purpose: '收藏夹 hi-DPI' },
+    { px: 16,  name: 'favicon-16x16.png',     purpose: Toolkit.T('fav.purpose.tab', null, '浏览器标签') },
+    { px: 32,  name: 'favicon-32x32.png',     purpose: Toolkit.T('fav.purpose.tabHiDpi', null, '浏览器标签 hi-DPI') },
+    { px: 48,  name: 'favicon-48x48.png',     purpose: Toolkit.T('fav.purpose.bookmark', null, '收藏夹') },
+    { px: 64,  name: 'favicon-64x64.png',     purpose: Toolkit.T('fav.purpose.bookmarkHiDpi', null, '收藏夹 hi-DPI') },
     { px: 96,  name: 'favicon-96x96.png',     purpose: 'Android Chrome' },
-    { px: 180, name: 'apple-touch-icon.png',  purpose: 'iOS 主屏' },
+    { px: 180, name: 'apple-touch-icon.png',  purpose: Toolkit.T('fav.purpose.iosHome', null, 'iOS 主屏') },
     { px: 192, name: 'icon-192.png',          purpose: 'PWA manifest' },
     { px: 256, name: 'icon-256.png',          purpose: 'Windows tile' },
     { px: 384, name: 'icon-384.png',          purpose: 'PWA manifest' },
@@ -267,8 +267,8 @@ Toolkit.injectTopbar('favicon-maker');
     $('srcSize').textContent = `${bitmap.width}×${bitmap.height}`;
     $('srcType').textContent = file.type || 'unknown';
     const warns = [];
-    if (bitmap.width !== bitmap.height) warns.push('⚠️ 源图不是方形,渲染时会按宽高比适配后居中 letterbox');
-    if (Math.min(bitmap.width, bitmap.height) < 256) warns.push('⚠️ 源图小于 256,放大到 512 会糊 — 建议提供 ≥ 512×512');
+    if (bitmap.width !== bitmap.height) warns.push(Toolkit.T('fav.warn.notSquare', null, '⚠️ 源图不是方形,渲染时会按宽高比适配后居中 letterbox'));
+    if (Math.min(bitmap.width, bitmap.height) < 256) warns.push(Toolkit.T('fav.warn.tooSmall', null, '⚠️ 源图小于 256,放大到 512 会糊 — 建议提供 ≥ 512×512'));
     $('srcWarn').innerHTML = warns.join('<br>');
   }
 
@@ -302,14 +302,14 @@ Toolkit.injectTopbar('favicon-maker');
         <div class="canvas-wrap"></div>
         <div class="meta"><strong>${px}×${px}</strong> · ${fmtBytes(blob.size)}</div>
         <div class="name">${name}</div>
-        <button class="dl">💾 下载</button>
+        <button class="dl">${Toolkit.T('fav.btn.download', null, '💾 下载')}</button>
       `;
       card.querySelector('.canvas-wrap').appendChild(dispCv);
       card.querySelector('.dl').addEventListener('click', () => download(blob, name));
       grid.appendChild(card);
     }
     renderHtmlSnippet();
-    log.ok(`生成 ${SIZES.length} 个尺寸`);
+    log.ok(Toolkit.T('fav.log.generated', { n: SIZES.length }, `生成 ${SIZES.length} 个尺寸`));
   }
 
   function renderHtmlSnippet() {
@@ -343,7 +343,7 @@ Toolkit.injectTopbar('favicon-maker');
   //   ZIP everything (incl. manifest.json template)
   // ============================================================
   async function packAll() {
-    if (!srcBitmap) { log.err('先拖入源图'); return; }
+    if (!srcBitmap) { log.err(Toolkit.T('fav.err.dropFirst', null, '先拖入源图')); return; }
     const files = [];
     for (const [px, blob] of Object.entries(outputs)) {
       const meta = SIZES.find(s => s.px === parseInt(px, 10));
@@ -372,7 +372,7 @@ Toolkit.injectTopbar('favicon-maker');
 
     const zip = makeZip(files);
     download(zip, 'favicon-pack.zip');
-    log.ok(`已打包 ${files.length} 个文件 (${fmtBytes(zip.size)})`);
+    log.ok(Toolkit.T('fav.log.packed', { n: files.length, size: fmtBytes(zip.size) }, `已打包 ${files.length} 个文件 (${fmtBytes(zip.size)})`));
   }
 
   // wire
@@ -382,18 +382,18 @@ Toolkit.injectTopbar('favicon-maker');
       const bmp = await createImageBitmap(files[0]);
       renderSourceCard(bmp, files[0]);
       await generate(bmp);
-    } catch (e) { log.err('加载失败: ' + e.message); }
+    } catch (e) { log.err(Toolkit.T('fav.err.loadFail', { msg: e.message }, '加载失败: ' + e.message)); }
   });
   $('scaleAlgo').addEventListener('change', () => {
     if (srcBitmap) generate(srcBitmap);
   });
   $('downloadAllBtn').addEventListener('click', packAll);
   $('copyHtmlBtn').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('htmlOut').textContent); log.ok('已复制 HTML 代码'); } catch { log.err('复制失败'); }
+    try { await navigator.clipboard.writeText($('htmlOut').textContent); log.ok(Toolkit.T('fav.log.copied', null, '已复制 HTML 代码')); } catch { log.err(Toolkit.T('fav.log.copyFail', null, '复制失败')); }
   });
   $('copyHtmlInline').addEventListener('click', () => $('copyHtmlBtn').click());
 
-  log.ok('favicon 套装工具准备好,拖图开始');
+  log.ok(Toolkit.T('fav.log.ready', null, 'favicon 套装工具准备好,拖图开始'));
 })();
 </script>
 </body>

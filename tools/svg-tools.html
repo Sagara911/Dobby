@@ -99,62 +99,62 @@
     <h1>📐 SVG 工具</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 SVG</p>
-      <p class="hint">多选 .svg 文件</p>
+      <p data-i18n="svg.drop.title">📂 拖入 SVG</p>
+      <p class="hint" data-i18n="svg.drop.hint">多选 .svg 文件</p>
       <input type="file" id="fileInput" accept=".svg,image/svg+xml" multiple style="display:none" />
     </div>
 
     <h2 data-i18n="svg.mode">处理模式</h2>
     <div class="field">
       <select id="mode">
-        <option value="optimize" selected>✨ 优化 SVG (输出 .svg, 体积变小)</option>
-        <option value="rasterize">🖼 转 PNG (栅格化)</option>
+        <option value="optimize" selected data-i18n="svg.mode.optimize">✨ 优化 SVG (输出 .svg, 体积变小)</option>
+        <option value="rasterize" data-i18n="svg.mode.rasterize">🖼 转 PNG (栅格化)</option>
       </select>
     </div>
 
     <h2 id="optHead" data-i18n="svg.optSettings">优化设置</h2>
     <div id="optPane">
-      <label class="checkbox"><input type="checkbox" id="optMultipass" checked /><span>多 pass (慢一点, 体积更小)</span></label>
-      <label class="checkbox"><input type="checkbox" id="optRemoveDimensions" /><span>移除 width / height 属性 (留 viewBox)</span></label>
+      <label class="checkbox"><input type="checkbox" id="optMultipass" checked /><span data-i18n="svg.opt.multipass">多 pass (慢一点, 体积更小)</span></label>
+      <label class="checkbox"><input type="checkbox" id="optRemoveDimensions" /><span data-i18n="svg.opt.removeDims">移除 width / height 属性 (留 viewBox)</span></label>
       <div class="field">
-        <label>小数精度 <span id="precVal" class="mono">3</span></label>
+        <label><span data-i18n="svg.opt.precision">小数精度</span> <span id="precVal" class="mono">3</span></label>
         <input type="range" id="precision" min="0" max="5" value="3" />
-        <div class="info" style="margin-top:2px">3 ≈ 误差 0.001 px,通常无视觉差异; 数字越小体积越小</div>
+        <div class="info" style="margin-top:2px" data-i18n="svg.opt.precNote">3 ≈ 误差 0.001 px,通常无视觉差异; 数字越小体积越小</div>
       </div>
     </div>
 
     <h2 id="rasHead" style="display:none" data-i18n="svg.rasSettings">栅格化设置</h2>
     <div id="rasPane" style="display:none">
       <div class="field">
-        <label>缩放倍率 (相对 viewBox)</label>
+        <label data-i18n="svg.ras.scaleLabel">缩放倍率 (相对 viewBox)</label>
         <select id="rasScale">
-          <option value="1" selected>1× (原尺寸)</option>
-          <option value="2">2× (Retina)</option>
+          <option value="1" selected data-i18n="svg.ras.1x">1× (原尺寸)</option>
+          <option value="2" data-i18n="svg.ras.2x">2× (Retina)</option>
           <option value="3">3×</option>
           <option value="4">4×</option>
-          <option value="custom">自定义最大边 (px)</option>
+          <option value="custom" data-i18n="svg.ras.custom">自定义最大边 (px)</option>
         </select>
       </div>
       <div class="field" id="rasMaxDimField" style="display:none">
-        <label>最大边 (px)</label>
+        <label data-i18n="svg.ras.maxDim">最大边 (px)</label>
         <input type="number" id="rasMaxDim" value="512" min="16" max="8192" />
       </div>
-      <label class="checkbox"><input type="checkbox" id="rasTransparent" checked /><span>背景透明</span></label>
+      <label class="checkbox"><input type="checkbox" id="rasTransparent" checked /><span data-i18n="svg.ras.transparent">背景透明</span></label>
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
-    <button id="processBtn" disabled>开始处理</button>
-    <button id="downloadZipBtn" class="secondary" disabled>📦 全部下载 ZIP</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="processBtn" disabled data-i18n="svg.btn.process">开始处理</button>
+    <button id="downloadZipBtn" class="secondary" disabled data-i18n="svg.btn.zip">📦 全部下载 ZIP</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 手里还没文件</div>
-    <div class="info" style="margin-bottom:8px">所有处理本地完成 · 引擎:SVGO (CDN 加载,首次 ~150 KB)</div>
+    <div class="stats" id="stats" data-i18n="svg.stats.empty">Dobby 手里还没文件</div>
+    <div class="info" style="margin-bottom:8px" data-i18n="svg.engineNote">所有处理本地完成 · 引擎:SVGO (CDN 加载,首次 ~150 KB)</div>
     <div class="file-list" id="fileList">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢 SVG 进来,Dobby 比比瘦身前后</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)" data-i18n="svg.preview.empty">你丢 SVG 进来,Dobby 比比瘦身前后</div>
     </div>
   </div>
 </div>
@@ -191,14 +191,14 @@ Toolkit.injectTopbar('svg-tools');
     const fresh = [];
     for (const f of files) {
       if (!/\.svg$/i.test(f.name) && f.type !== 'image/svg+xml') {
-        log.warn(`${f.name}: 不是 SVG,跳过`);
+        log.warn(Toolkit.T('svg.warn.notSvg', { name: f.name }, `${f.name}: 不是 SVG,跳过`));
         continue;
       }
       const text = await f.text();
       fresh.push({ file: f, text });
     }
     items.push(...fresh);
-    if (fresh.length) log.ok(`加入 ${fresh.length} 个 SVG (累计 ${items.length})`);
+    if (fresh.length) log.ok(Toolkit.T('svg.log.added', { n: fresh.length, total: items.length }, `加入 ${fresh.length} 个 SVG (累计 ${items.length})`));
     renderRows();
     $('processBtn').disabled = items.length === 0;
   }
@@ -206,8 +206,8 @@ Toolkit.injectTopbar('svg-tools');
   function renderRows() {
     const host = $('fileList');
     if (!items.length) {
-      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢 SVG 进来,Dobby 比比瘦身前后</div>';
-      $('stats').textContent = 'Dobby 手里还没文件';
+      host.innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('svg.preview.empty', null, '你丢 SVG 进来,Dobby 比比瘦身前后')}</div>`;
+      $('stats').textContent = Toolkit.T('svg.stats.empty', null, 'Dobby 手里还没文件');
       return;
     }
     host.innerHTML = '';
@@ -229,7 +229,7 @@ Toolkit.injectTopbar('svg-tools');
         </div>
         <span class="size">${fmtBytes(beforeSize)}</span>
         <span class="savings ${savingsClass}">${savingsText}</span>
-        <button class="remove" data-i="${i}" title="移除">×</button>
+        <button class="remove" data-i="${i}" title="${Toolkit.T('svg.removeTitle', null, '移除')}">×</button>
       `;
       const preview = row.querySelector('.preview');
       const img = new Image();
@@ -248,14 +248,20 @@ Toolkit.injectTopbar('svg-tools');
     const processed = items.filter(x => x.optimizedText || x.rasterizedBlob);
     const totalAfter = processed.reduce((s, x) => s + ((x.optimizedText?.length) || (x.rasterizedBlob?.size) || 0), 0);
     const pct = totalBefore > 0 && totalAfter > 0 ? ((1 - totalAfter / totalBefore) * 100).toFixed(1) : null;
-    $('stats').innerHTML = `<strong>${items.length}</strong> 个 SVG · 总 <strong>${fmtBytes(totalBefore)}</strong>${processed.length ? ` · 处理后 <strong>${fmtBytes(totalAfter)}</strong> · 节省 <strong style="color:var(--jade)">${pct}%</strong>` : ''}`;
+    $('stats').innerHTML = Toolkit.T(
+      processed.length ? 'svg.stats.summaryDone' : 'svg.stats.summary',
+      { n: items.length, total: fmtBytes(totalBefore), after: fmtBytes(totalAfter), pct },
+      processed.length
+        ? `<strong>${items.length}</strong> 个 SVG · 总 <strong>${fmtBytes(totalBefore)}</strong> · 处理后 <strong>${fmtBytes(totalAfter)}</strong> · 节省 <strong style="color:var(--jade)">${pct}%</strong>`
+        : `<strong>${items.length}</strong> 个 SVG · 总 <strong>${fmtBytes(totalBefore)}</strong>`
+    );
   }
 
   async function ensureSvgo() {
     if (svgo) return svgo;
-    log.dim('加载 SVGO (首次联网 ~150 KB)...');
+    log.dim(Toolkit.T('svg.log.loadingSvgo', null, '加载 SVGO (首次联网 ~150 KB)...'));
     svgo = await import('https://esm.sh/svgo@3.3.2');
-    log.ok('SVGO 就绪');
+    log.ok(Toolkit.T('svg.log.svgoReady', null, 'SVGO 就绪'));
     return svgo;
   }
 
@@ -293,7 +299,7 @@ Toolkit.injectTopbar('svg-tools');
         // Sanity: optimized must still parse as SVG (cheap check: starts with <svg or <?xml)
         const t = result.data.trim();
         if (!t.startsWith('<') || result.data.length < 32) {
-          throw new Error('SVGO 输出过短或不是 SVG');
+          throw new Error(Toolkit.T('svg.err.shortOut', null, 'SVGO 输出过短或不是 SVG'));
         }
         // If somehow larger, keep original (rare for SVGO but safe)
         it.optimizedText = result.data.length < it.text.length ? result.data : it.text;
@@ -311,7 +317,7 @@ Toolkit.injectTopbar('svg-tools');
       const fname = first.file.name.replace(/\.svg$/i, '') + '.opt.svg';
       handoff.setBlob(new Blob([first.optimizedText], { type: 'image/svg+xml' }), fname, 'image/svg+xml');
     }
-    log.ok(`完成 · ${items.filter(x => x.optimizedText).length} 个 SVG 优化成功`);
+    log.ok(Toolkit.T('svg.log.optDone', { n: items.filter(x => x.optimizedText).length }, `完成 · ${items.filter(x => x.optimizedText).length} 个 SVG 优化成功`));
   }
 
   async function runRasterize() {
@@ -354,11 +360,11 @@ Toolkit.injectTopbar('svg-tools');
         await new Promise((resolve, reject) => {
           const img = new Image();
           img.onload = () => { ctx.drawImage(img, 0, 0, outW, outH); resolve(); };
-          img.onerror = () => reject(new Error('SVG 渲染失败'));
+          img.onerror = () => reject(new Error(Toolkit.T('svg.err.renderFail', null, 'SVG 渲染失败')));
           img.src = url;
         });
         const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
-        if (!blob || blob.size < 64) throw new Error('PNG 输出过短');
+        if (!blob || blob.size < 64) throw new Error(Toolkit.T('svg.err.pngShort', null, 'PNG 输出过短'));
         it.rasterizedBlob = blob;
         it.w = outW; it.h = outH;
         it.error = null;
@@ -374,7 +380,7 @@ Toolkit.injectTopbar('svg-tools');
       const fname = first.file.name.replace(/\.svg$/i, '') + '.png';
       handoff.setBlob(first.rasterizedBlob, fname, 'image/png');
     }
-    log.ok(`完成 · ${items.filter(x => x.rasterizedBlob).length} 个 SVG 栅格化成功`);
+    log.ok(Toolkit.T('svg.log.rasDone', { n: items.filter(x => x.rasterizedBlob).length }, `完成 · ${items.filter(x => x.rasterizedBlob).length} 个 SVG 栅格化成功`));
   }
 
   $('downloadZipBtn').addEventListener('click', async () => {
@@ -389,10 +395,10 @@ Toolkit.injectTopbar('svg-tools');
         files.push({ name: base, data: new Uint8Array(await it.rasterizedBlob.arrayBuffer()) });
       }
     }
-    if (!files.length) { log.warn('没有可下载的输出'); return; }
+    if (!files.length) { log.warn(Toolkit.T('svg.warn.noOutput', null, '没有可下载的输出')); return; }
     const zip = makeZip(files);
     download(zip, mode === 'optimize' ? 'optimized-svg.zip' : 'rasterized-png.zip');
-    log.ok(`打包 ${files.length} 个文件`);
+    log.ok(Toolkit.T('svg.log.packed', { n: files.length }, `打包 ${files.length} 个文件`));
   });
 
   $('clearBtn').addEventListener('click', () => {

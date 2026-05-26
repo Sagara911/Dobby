@@ -127,43 +127,43 @@
 <div class="tool-layout">
   <div class="sidebar">
     <h1>📊 包体分析</h1>
-    <div class="compat-note">需要 Chrome 86+ / Edge 86+ (File System Access API)</div>
+    <div class="compat-note" data-i18n="ba.compatNote">需要 Chrome 86+ / Edge 86+ (File System Access API)</div>
 
-    <button id="pickDirBtn">📁 选择项目文件夹</button>
+    <button id="pickDirBtn" data-i18n="ba.btn.pickDir">📁 选择项目文件夹</button>
     <div class="row" style="margin-top:8px; font-size:11px; color:var(--muted)" id="dirInfo"></div>
 
     <h2 data-i18n="ba.sort">排序</h2>
     <div class="field">
       <select id="sortBy">
-        <option value="size">体积 (大到小)</option>
-        <option value="name">文件名</option>
-        <option value="type">类型</option>
+        <option value="size" data-i18n="ba.sort.size">体积 (大到小)</option>
+        <option value="name" data-i18n="ba.sort.name">文件名</option>
+        <option value="type" data-i18n="ba.sort.type">类型</option>
       </select>
     </div>
 
     <h2 data-i18n="ba.filter">过滤</h2>
     <div class="field">
-      <label>显示类别</label>
+      <label data-i18n="ba.filter.cat">显示类别</label>
       <select id="filterCat">
-        <option value="all">全部</option>
-        <option value="image">图片</option>
-        <option value="font">字体</option>
-        <option value="script">脚本</option>
-        <option value="style">样式</option>
-        <option value="audio">音频</option>
-        <option value="video">视频</option>
+        <option value="all" data-i18n="ba.cat.all">全部</option>
+        <option value="image" data-i18n="ba.cat.image">图片</option>
+        <option value="font" data-i18n="ba.cat.font">字体</option>
+        <option value="script" data-i18n="ba.cat.script">脚本</option>
+        <option value="style" data-i18n="ba.cat.style">样式</option>
+        <option value="audio" data-i18n="ba.cat.audio">音频</option>
+        <option value="video" data-i18n="ba.cat.video">视频</option>
         <option value="markup">HTML</option>
-        <option value="data">数据</option>
-        <option value="other">其他</option>
+        <option value="data" data-i18n="ba.cat.data">数据</option>
+        <option value="other" data-i18n="ba.cat.other">其他</option>
       </select>
     </div>
     <div class="field">
-      <label>最小体积 (KB)</label>
+      <label data-i18n="ba.filter.minSize">最小体积 (KB)</label>
       <input type="number" id="minSize" value="0" min="0" />
     </div>
 
-    <button id="exportCsvBtn" class="secondary" disabled>导出 CSV</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="exportCsvBtn" class="secondary" disabled data-i18n="ba.btn.exportCsv">导出 CSV</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
@@ -173,17 +173,17 @@
 
     <div class="totals">
       <div class="card">
-        <div class="label">总文件数</div>
+        <div class="label" data-i18n="ba.totalCount">总文件数</div>
         <div class="value" id="totalCount">—</div>
         <div class="sub" id="totalSubdirs">—</div>
       </div>
       <div class="card">
-        <div class="label">总体积</div>
+        <div class="label" data-i18n="ba.totalSize">总体积</div>
         <div class="value" id="totalSize">—</div>
         <div class="sub" id="totalAvg">—</div>
       </div>
       <div class="card">
-        <div class="label">最大单文件</div>
+        <div class="label" data-i18n="ba.biggest">最大单文件</div>
         <div class="value" id="biggestSize">—</div>
         <div class="sub" id="biggestName">—</div>
       </div>
@@ -191,7 +191,7 @@
 
     <h2 style="margin-top:0" data-i18n="ba.catDist">按类别分布</h2>
     <div class="category-bars" id="catBars">
-      <div class="preview-empty">选择文件夹后扫描结果显示在这里</div>
+      <div class="preview-empty" data-i18n="ba.catBars.empty">选择文件夹后扫描结果显示在这里</div>
     </div>
 
     <h2 data-i18n="ba.allFiles">所有文件 (点击表头排序)</h2>
@@ -199,14 +199,14 @@
       <table>
         <thead>
           <tr>
-            <th>路径</th>
-            <th>类型</th>
-            <th style="text-align:right">体积</th>
-            <th style="text-align:right">占比</th>
+            <th data-i18n="ba.col.path">路径</th>
+            <th data-i18n="ba.col.type">类型</th>
+            <th style="text-align:right" data-i18n="ba.col.size">体积</th>
+            <th style="text-align:right" data-i18n="ba.col.pct">占比</th>
           </tr>
         </thead>
         <tbody id="fileBody">
-          <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">尚未扫描</td></tr>
+          <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px" data-i18n="ba.notScanned">尚未扫描</td></tr>
         </tbody>
       </table>
     </div>
@@ -232,7 +232,7 @@ Toolkit.injectTopbar('bundle-analyzer');
 
   $('pickDirBtn').addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
-      log.err('当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+');
+      log.err(Toolkit.T('ba.err.noFsApi', null, '当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+'));
       return;
     }
     try {
@@ -240,9 +240,9 @@ Toolkit.injectTopbar('bundle-analyzer');
       files = []; totalSize = 0; subdirCount = 0;
       rootName = handle.name;
       log.clear();
-      log.dim(`扫描 ${rootName} ...`);
+      log.dim(Toolkit.T('ba.log.scanning', { name: rootName }, `扫描 ${rootName} ...`));
       await walkDir(handle, '');
-      log.ok(`扫描完成,共 ${files.length} 个文件,${fmtBytes(totalSize)}`);
+      log.ok(Toolkit.T('ba.log.scanned', { n: files.length, size: fmtBytes(totalSize) }, `扫描完成,共 ${files.length} 个文件,${fmtBytes(totalSize)}`));
       $('dirInfo').textContent = `📂 ${rootName}`;
       renderTotals();
       renderCategoryBars();
@@ -281,22 +281,30 @@ Toolkit.injectTopbar('bundle-analyzer');
     return 'other';
   }
 
+  const T = Toolkit.T;
   const CAT_LABEL = {
-    image: '图片', font: '字体', script: '脚本', style: '样式',
-    audio: '音频', video: '视频', markup: 'HTML', data: '数据', other: '其他'
+    image: T('ba.cat.image', null, '图片'),
+    font: T('ba.cat.font', null, '字体'),
+    script: T('ba.cat.script', null, '脚本'),
+    style: T('ba.cat.style', null, '样式'),
+    audio: T('ba.cat.audio', null, '音频'),
+    video: T('ba.cat.video', null, '视频'),
+    markup: 'HTML',
+    data: T('ba.cat.data', null, '数据'),
+    other: T('ba.cat.other', null, '其他')
   };
 
   function renderTotals() {
     $('totalCount').textContent = files.length;
-    $('totalSubdirs').textContent = `${subdirCount} 个子目录`;
+    $('totalSubdirs').textContent = Toolkit.T('ba.subdirs', { n: subdirCount }, `${subdirCount} 个子目录`);
     $('totalSize').textContent = fmtBytes(totalSize);
-    $('totalAvg').textContent = files.length ? `平均 ${fmtBytes(totalSize / files.length)} / 文件` : '—';
+    $('totalAvg').textContent = files.length ? Toolkit.T('ba.avgSize', { avg: fmtBytes(totalSize / files.length) }, `平均 ${fmtBytes(totalSize / files.length)} / 文件`) : '—';
     const biggest = files.reduce((a, b) => a && a.size > b.size ? a : b, null);
     if (biggest) {
       $('biggestSize').textContent = fmtBytes(biggest.size);
       $('biggestName').textContent = biggest.path;
     }
-    $('stats').innerHTML = `<strong>${rootName}</strong> · <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+    $('stats').innerHTML = Toolkit.T('ba.stats.summary', { name: rootName, n: files.length, size: fmtBytes(totalSize) }, `<strong>${rootName}</strong> · <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`);
   }
 
   function renderCategoryBars() {
@@ -332,7 +340,7 @@ Toolkit.injectTopbar('bundle-analyzer');
 
     const tbody = $('fileBody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">没有匹配的文件</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">${Toolkit.T('ba.noMatch', null, '没有匹配的文件')}</td></tr>`;
       return;
     }
     tbody.innerHTML = list.map(f => {
@@ -356,16 +364,16 @@ Toolkit.injectTopbar('bundle-analyzer');
       .map(f => `"${f.path}","${f.ext}","${CAT_LABEL[f.category]}",${f.size},${(f.size/totalSize*100).toFixed(2)}`)
       .join('\n');
     downloadText(head + rows, (rootName || 'bundle') + '-analysis.csv', 'text/csv');
-    log.ok('CSV 已下载');
+    log.ok(Toolkit.T('ba.log.csvDone', null, 'CSV 已下载'));
   });
 
   $('clearBtn').addEventListener('click', () => {
     files = []; totalSize = 0; subdirCount = 0; rootName = '';
     ['totalCount','totalSubdirs','totalSize','totalAvg','biggestSize','biggestName'].forEach(id => $(id).textContent = '—');
     $('dirInfo').textContent = '';
-    $('stats').textContent = '未扫描';
-    $('catBars').innerHTML = '<div class="preview-empty">选择文件夹后扫描结果显示在这里</div>';
-    $('fileBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">尚未扫描</td></tr>';
+    $('stats').textContent = Toolkit.T('ba.stats.empty', null, '未扫描');
+    $('catBars').innerHTML = `<div class="preview-empty">${Toolkit.T('ba.catBars.empty', null, '选择文件夹后扫描结果显示在这里')}</div>`;
+    $('fileBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:40px">${Toolkit.T('ba.notScanned', null, '尚未扫描')}</td></tr>`;
     $('exportCsvBtn').disabled = true;
     log.clear();
   });

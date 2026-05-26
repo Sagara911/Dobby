@@ -257,14 +257,14 @@
   <div class="sidebar">
     <h1>🎬 Video Toolkit</h1>
 
-    <div class="compat-note">
+    <div class="compat-note" data-i18n-html="vt.compat">
       <strong>MP4 输出</strong>用 WebCodecs + mp4-muxer (Chrome / Edge 113+),首次联网加载 ~30KB。<br/>
       <strong>WebM 输出</strong>用浏览器原生 MediaRecorder,所有 Chromium 都支持。
     </div>
 
     <div class="drop-zone" id="dropZone">
-      <p id="dzTitle">📂 拖入视频</p>
-      <p class="hint" id="dzHint">MP4 / WebM / MOV<br/>所有处理在浏览器本地完成</p>
+      <p id="dzTitle" data-i18n="vt.dz.videoTitle">📂 拖入视频</p>
+      <p class="hint" id="dzHint" data-i18n-html="vt.dz.videoHint">MP4 / WebM / MOV<br/>所有处理在浏览器本地完成</p>
       <input type="file" id="fileInput" accept="video/*" style="display:none" />
     </div>
 
@@ -273,19 +273,19 @@
     <h2 data-i18n="common.operation">操作</h2>
     <div class="field">
       <select id="action">
-        <option value="compress">🗜️ 一键压缩 (变小)</option>
-        <option value="transcode">🔁 转码 / 改格式 (WebM ↔ MP4)</option>
-        <option value="trim">✂️ 时间裁剪 (Trim)</option>
-        <option value="crop">🔲 画面裁剪 (Crop)</option>
-        <option value="resize">📐 缩放</option>
-        <option value="speed">⏩ 调速</option>
-        <option value="changeFps">🎞️ 改 FPS (抽帧 / 补帧)</option>
-        <option value="reverse">⏪ 反向播放</option>
-        <option value="frames">🖼️ 抽帧 (PNG ZIP)</option>
-        <option value="fromFrames">🎬 帧合成视频 (Frames → MP4)</option>
-        <option value="toGif">🎞️ 转 GIF</option>
-        <option value="chromaKey">🌿 色键抠像 (绿幕去背景)</option>
-        <option value="filter">🎚️ 滤镜 / 色相 / 调色</option>
+        <option value="compress" data-i18n="vt.action.compress">🗜️ 一键压缩 (变小)</option>
+        <option value="transcode" data-i18n="vt.action.transcode">🔁 转码 / 改格式 (WebM ↔ MP4)</option>
+        <option value="trim" data-i18n="vt.action.trim">✂️ 时间裁剪 (Trim)</option>
+        <option value="crop" data-i18n="vt.action.crop">🔲 画面裁剪 (Crop)</option>
+        <option value="resize" data-i18n="vt.action.resize">📐 缩放</option>
+        <option value="speed" data-i18n="vt.action.speed">⏩ 调速</option>
+        <option value="changeFps" data-i18n="vt.action.changeFps">🎞️ 改 FPS (抽帧 / 补帧)</option>
+        <option value="reverse" data-i18n="vt.action.reverse">⏪ 反向播放</option>
+        <option value="frames" data-i18n="vt.action.frames">🖼️ 抽帧 (PNG ZIP)</option>
+        <option value="fromFrames" data-i18n="vt.action.fromFrames">🎬 帧合成视频 (Frames → MP4)</option>
+        <option value="toGif" data-i18n="vt.action.toGif">🎞️ 转 GIF</option>
+        <option value="chromaKey" data-i18n="vt.action.chromaKey">🌿 色键抠像 (绿幕去背景)</option>
+        <option value="filter" data-i18n="vt.action.filter">🎚️ 滤镜 / 色相 / 调色</option>
       </select>
     </div>
 
@@ -295,52 +295,52 @@
     <div class="field">
       <label data-i18n="vt.outFormat.label">输出格式 (除抽帧 / 转 GIF / 色键外)</label>
       <select id="outFormat">
-        <option value="mp4">MP4 (H.264) — Chrome / Edge 113+ 推荐</option>
-        <option value="webm-vp9">WebM (VP9) — 全平台</option>
-        <option value="webm-vp8">WebM (VP8) — 兼容性最好</option>
+        <option value="mp4" data-i18n="vt.outFmt.mp4">MP4 (H.264) — Chrome / Edge 113+ 推荐</option>
+        <option value="webm-vp9" data-i18n="vt.outFmt.vp9">WebM (VP9) — 全平台</option>
+        <option value="webm-vp8" data-i18n="vt.outFmt.vp8">WebM (VP8) — 兼容性最好</option>
       </select>
     </div>
     <div class="field">
-      <label>H.264 profile (仅 MP4 输出)</label>
+      <label data-i18n="vt.h264Profile">H.264 profile (仅 MP4 输出)</label>
       <select id="h264Profile">
-        <option value="baseline" selected>Baseline (兼容老设备, 体积稍大)</option>
-        <option value="main">Main (主流, 体积 -5%~-10%)</option>
-        <option value="high">High (推荐现代设备, 体积 -10%~-20%)</option>
+        <option value="baseline" selected data-i18n="vt.profile.baseline">Baseline (兼容老设备, 体积稍大)</option>
+        <option value="main" data-i18n="vt.profile.main">Main (主流, 体积 -5%~-10%)</option>
+        <option value="high" data-i18n="vt.profile.high">High (推荐现代设备, 体积 -10%~-20%)</option>
       </select>
-      <div class="info" style="margin-top:4px">所有主流浏览器和 ≥2014 年的设备都支持 High profile;选 High 比特率不变但视觉质量更好</div>
+      <div class="info" style="margin-top:4px" data-i18n="vt.profile.help">所有主流浏览器和 ≥2014 年的设备都支持 High profile;选 High 比特率不变但视觉质量更好</div>
     </div>
     <div class="field">
-      <label>比特率 (Kbps)</label>
+      <label data-i18n="vt.bitrate">比特率 (Kbps)</label>
       <input type="number" id="bitrate" value="3000" min="200" max="20000" />
     </div>
     <div class="field">
-      <label>抽帧 / GIF FPS</label>
+      <label data-i18n="vt.fpsFrames">抽帧 / GIF FPS</label>
       <input type="number" id="fps" value="12" min="1" max="60" />
     </div>
     <div class="field">
-      <label>文件名</label>
+      <label data-i18n="common.filename">文件名</label>
       <input type="text" id="filename" value="output" />
     </div>
-    <button id="applyBtn" disabled>应用</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="applyBtn" disabled data-i18n="vt.apply">应用</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="vt.download">下载</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
-        <div class="label">原视频</div>
+        <div class="label" data-i18n="vt.srcLabel">原视频</div>
         <div class="preview-box" id="srcBox">
-          <div class="preview-empty">拖入视频</div>
+          <div class="preview-empty" data-i18n="vt.empty.drop">拖入视频</div>
         </div>
       </div>
       <div class="preview-col">
-        <div class="label">输出预览</div>
+        <div class="label" data-i18n="vt.outLabel">输出预览</div>
         <div class="preview-box" id="outBox">
-          <div class="preview-empty">Dobby 干完显示在这里</div>
+          <div class="preview-empty" data-i18n="vt.empty.out">Dobby 干完显示在这里</div>
         </div>
       </div>
     </div>
@@ -382,10 +382,12 @@ Toolkit.injectTopbar('video-toolkit');
   // (fromFrames). Without this the user gets the wrong file picker on click.
   function updateDropZoneForAction() {
     const isFrames = $('action').value === 'fromFrames';
-    $('dzTitle').textContent = isFrames ? '📂 拖入序列帧 (可多选 / 文件夹)' : '📂 拖入视频';
+    $('dzTitle').textContent = isFrames
+      ? Toolkit.T('vt.dz.framesTitle', null, '📂 拖入序列帧 (可多选 / 文件夹)')
+      : Toolkit.T('vt.dz.videoTitle', null, '📂 拖入视频');
     $('dzHint').innerHTML = isFrames
-      ? 'PNG / JPG / WebP — 按文件名自然排序<br/>所有处理在浏览器本地完成'
-      : 'MP4 / WebM / MOV<br/>所有处理在浏览器本地完成';
+      ? Toolkit.T('vt.dz.framesHint', null, 'PNG / JPG / WebP — 按文件名自然排序<br/>所有处理在浏览器本地完成')
+      : Toolkit.T('vt.dz.videoHint', null, 'MP4 / WebM / MOV<br/>所有处理在浏览器本地完成');
     const fi = $('fileInput');
     if (isFrames) { fi.accept = 'image/*'; fi.multiple = true; }
     else { fi.accept = 'video/*'; fi.multiple = false; }
@@ -410,12 +412,12 @@ Toolkit.injectTopbar('video-toolkit');
       return;
     }
     if (!f0.type.startsWith('video/')) {
-      log.err('Bad Dobby! 没看到视频,你再丢一次?(或者扔一组图片,Dobby 自动切到「帧合成视频」)');
+      log.err(Toolkit.T('vt.err.notVideo', null, 'Bad Dobby! 没看到视频,你再丢一次?(或者扔一组图片,Dobby 自动切到「帧合成视频」)'));
       return;
     }
     const f = f0;
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('vt.log.load', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     if (srcUrl) URL.revokeObjectURL(srcUrl);
     srcUrl = URL.createObjectURL(f);
     srcVideo = document.createElement('video');
@@ -424,7 +426,7 @@ Toolkit.injectTopbar('video-toolkit');
 
     await new Promise((resolve, reject) => {
       srcVideo.onloadedmetadata = resolve;
-      srcVideo.onerror = () => reject(new Error('视频加载失败'));
+      srcVideo.onerror = () => reject(new Error(Toolkit.T('vt.err.videoLoad', null, '视频加载失败')));
     });
 
     srcMeta = { w: srcVideo.videoWidth, h: srcVideo.videoHeight, duration: srcVideo.duration };
@@ -433,9 +435,9 @@ Toolkit.injectTopbar('video-toolkit');
     srcVideo.style.maxWidth = '100%';
     srcVideo.style.maxHeight = '100%';
     $('srcBox').appendChild(srcVideo);
-    $('stats').innerHTML = `<strong>${srcMeta.w}×${srcMeta.h}</strong> · <strong>${srcMeta.duration.toFixed(2)}s</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`;
+    $('stats').innerHTML = Toolkit.T('vt.stats.loaded', { w: srcMeta.w, h: srcMeta.h, dur: srcMeta.duration.toFixed(2), size: fmtBytes(f.size) }, `<strong>${srcMeta.w}×${srcMeta.h}</strong> · <strong>${srcMeta.duration.toFixed(2)}s</strong> · 原文件 <strong>${fmtBytes(f.size)}</strong>`);
     $('applyBtn').disabled = false;
-    log.ok('加载完成');
+    log.ok(Toolkit.T('vt.log.loadDone', null, '加载完成'));
     renderActionControls();
   }
 
@@ -444,10 +446,10 @@ Toolkit.injectTopbar('video-toolkit');
   // Bitmaps are kept in memory — for 100+ frames this can use a lot of RAM, but
   // that's the cost of being a no-server browser tool.
   async function handleFramesInput(files) {
-    if (!files.length) { log.err('没有图片文件'); return; }
+    if (!files.length) { log.err(Toolkit.T('vt.err.noImages', null, '没有图片文件')); return; }
     const sorted = naturalSort(files);
     log.clear();
-    log.dim(`加载 ${sorted.length} 张图片...`);
+    log.dim(Toolkit.T('vt.log.loadingImgs', { n: sorted.length }, `加载 ${sorted.length} 张图片...`));
     // clear video state so the apply path doesn't get confused
     if (srcUrl) { URL.revokeObjectURL(srcUrl); srcUrl = null; }
     srcVideo = null; srcMeta = null;
@@ -459,12 +461,12 @@ Toolkit.injectTopbar('video-toolkit');
         const bm = await createImageBitmap(sorted[i]);
         srcFrames.push({ bitmap: bm, w: bm.width, h: bm.height, name: sorted[i].name });
       } catch (e) {
-        log.warn(`跳过 ${sorted[i].name}: ${e.message}`);
+        log.warn(Toolkit.T('vt.log.imgSkip', { name: sorted[i].name, msg: e.message }, `跳过 ${sorted[i].name}: ${e.message}`));
       }
       if (i % 10 === 0) progress.set(i / sorted.length);
     }
     progress.hide();
-    if (!srcFrames.length) { log.err('全部图片加载失败'); $('applyBtn').disabled = true; return; }
+    if (!srcFrames.length) { log.err(Toolkit.T('vt.err.allImgsFailed', null, '全部图片加载失败')); $('applyBtn').disabled = true; return; }
     const f0 = srcFrames[0];
     // preview first frame in the source box
     $('srcBox').innerHTML = '';
@@ -472,9 +474,9 @@ Toolkit.injectTopbar('video-toolkit');
     preview.getContext('2d').drawImage(f0.bitmap, 0, 0);
     preview.style.maxWidth = '100%'; preview.style.maxHeight = '100%';
     $('srcBox').appendChild(preview);
-    $('stats').innerHTML = `<strong>${srcFrames.length}</strong> 帧 · <strong>${f0.w}×${f0.h}</strong> · 首帧 <strong>${f0.name}</strong>`;
+    $('stats').innerHTML = Toolkit.T('vt.stats.frames', { n: srcFrames.length, w: f0.w, h: f0.h, name: f0.name }, `<strong>${srcFrames.length}</strong> 帧 · <strong>${f0.w}×${f0.h}</strong> · 首帧 <strong>${f0.name}</strong>`);
     $('applyBtn').disabled = false;
-    log.ok(`加载完成 ${srcFrames.length} 帧`);
+    log.ok(Toolkit.T('vt.log.framesLoaded', { n: srcFrames.length }, `加载完成 ${srcFrames.length} 帧`));
   }
 
   // remember the original bitrate so leaving "一键压缩" can restore it
@@ -514,7 +516,7 @@ Toolkit.injectTopbar('video-toolkit');
       const t = srcVideo.currentTime;
       const f = currentFrame();
       $('tcBig').textContent = fmtTC(t);
-      $('frameNum').textContent = `帧 ${f} / ${totalFrames - 1}`;
+      $('frameNum').textContent = Toolkit.T('vt.trim.frameNum', { f, max: totalFrames - 1 }, `帧 ${f} / ${totalFrames - 1}`);
       scrub.value = String(f);
     }
     function rebuildOnFpsChange(newFps) {
@@ -528,7 +530,7 @@ Toolkit.injectTopbar('video-toolkit');
       const v = parseFloat(fpsInput.value);
       if (isFinite(v) && v >= 1 && v <= 240) {
         rebuildOnFpsChange(v);
-        fpsHint.textContent = '(手动)';
+        fpsHint.textContent = Toolkit.T('vt.trim.manual', null, '(手动)');
       }
     });
 
@@ -550,7 +552,7 @@ Toolkit.injectTopbar('video-toolkit');
             const snap = snaps.find(s => Math.abs(s - detected) < 0.5);
             const final = snap || +detected.toFixed(2);
             fpsInput.value = String(final);
-            fpsHint.textContent = '(自动检测)';
+            fpsHint.textContent = Toolkit.T('vt.trim.auto', null, '(自动检测)');
             rebuildOnFpsChange(final);
             srcVideo.pause();
             srcVideo.currentTime = 0;
@@ -592,7 +594,7 @@ Toolkit.injectTopbar('video-toolkit');
         outFrame = null;
       }
       refreshRange();
-      log.ok(`📍 IN 设在帧 ${inFrame}`);
+      log.ok(Toolkit.T('vt.log.setIn', { f: inFrame }, `📍 IN 设在帧 ${inFrame}`));
     }
     function setOut() {
       outFrame = currentFrame();
@@ -600,7 +602,7 @@ Toolkit.injectTopbar('video-toolkit');
         inFrame = null;
       }
       refreshRange();
-      log.ok(`📍 OUT 设在帧 ${outFrame}`);
+      log.ok(Toolkit.T('vt.log.setOut', { f: outFrame }, `📍 OUT 设在帧 ${outFrame}`));
     }
     $('setInBtn').addEventListener('click', setIn);
     $('setOutBtn').addEventListener('click', setOut);
@@ -611,32 +613,34 @@ Toolkit.injectTopbar('video-toolkit');
       // The button alongside already says "IN" / "OUT", so the timecode
       // span just shows the value (or "未设" in muted italic if unset).
       const inEl = $('inDisplay'), outEl = $('outDisplay'), rEl = $('rangeDuration');
+      const frameLbl = Toolkit.T('vt.trim.frameWord', null, '帧');
+      const unset = Toolkit.T('vt.trim.unset', null, '未设');
       if (inFrame != null) {
-        inEl.textContent = `${fmtTC(inT)} · 帧 ${inFrame}`;
+        inEl.textContent = `${fmtTC(inT)} · ${frameLbl} ${inFrame}`;
         inEl.classList.remove('empty');
       } else {
-        inEl.textContent = '未设';
+        inEl.textContent = unset;
         inEl.classList.add('empty');
       }
       if (outFrame != null) {
-        outEl.textContent = `${fmtTC(outT)} · 帧 ${outFrame}`;
+        outEl.textContent = `${fmtTC(outT)} · ${frameLbl} ${outFrame}`;
         outEl.classList.remove('empty');
       } else {
-        outEl.textContent = '未设';
+        outEl.textContent = unset;
         outEl.classList.add('empty');
       }
       if (inFrame != null && outFrame != null) {
         const dur = outT - inT;
-        rEl.textContent = `📐 输出范围 · ${fmtTC(dur)} (${outFrame - inFrame + 1} 帧)`;
+        rEl.textContent = Toolkit.T('vt.trim.range', { dur: fmtTC(dur), n: outFrame - inFrame + 1 }, `📐 输出范围 · ${fmtTC(dur)} (${outFrame - inFrame + 1} 帧)`);
         rEl.classList.remove('empty');
       } else if (inFrame != null) {
-        rEl.textContent = '只设了 IN — 默认导出 [IN, 末尾]';
+        rEl.textContent = Toolkit.T('vt.trim.onlyIn', null, '只设了 IN — 默认导出 [IN, 末尾]');
         rEl.classList.add('empty');
       } else if (outFrame != null) {
-        rEl.textContent = '只设了 OUT — 默认导出 [开头, OUT]';
+        rEl.textContent = Toolkit.T('vt.trim.onlyOut', null, '只设了 OUT — 默认导出 [开头, OUT]');
         rEl.classList.add('empty');
       } else {
-        rEl.textContent = '未设置范围 · 默认导出整段';
+        rEl.textContent = Toolkit.T('vt.trim.noRange', null, '未设置范围 · 默认导出整段');
         rEl.classList.add('empty');
       }
       // Update the hidden inputs used by the export pipeline
@@ -692,22 +696,26 @@ Toolkit.injectTopbar('video-toolkit');
       const f0 = srcFrames[0] || null;
       const dW = f0 ? f0.w : 1280;
       const dH = f0 ? f0.h : 720;
+      const fpsLbl = Toolkit.T('vt.ff.fps', null, '输出 FPS');
+      const wLbl = Toolkit.T('vt.ff.outW', null, '输出宽 (px, 偶数)');
+      const hLbl = Toolkit.T('vt.ff.outH', null, '输出高 (px, 偶数)');
+      const sizeNote = Toolkit.T('vt.ff.sizeNote', null, '默认沿用首帧尺寸 · 所有帧会被等比缩放到这个尺寸 · 强烈建议偶数(H.264 要求)');
       c.innerHTML = `
         <div class="field">
-          <label>输出 FPS</label>
+          <label>${fpsLbl}</label>
           <input type="number" id="ffFps" value="30" min="1" max="60" />
         </div>
         <div class="row-fields">
           <div class="field">
-            <label>输出宽 (px, 偶数)</label>
+            <label>${wLbl}</label>
             <input type="number" id="ffOutW" value="${dW}" min="2" step="2" />
           </div>
           <div class="field">
-            <label>输出高 (px, 偶数)</label>
+            <label>${hLbl}</label>
             <input type="number" id="ffOutH" value="${dH}" min="2" step="2" />
           </div>
         </div>
-        <div class="info">默认沿用首帧尺寸 · 所有帧会被等比缩放到这个尺寸 · 强烈建议偶数(H.264 要求)</div>
+        <div class="info">${sizeNote}</div>
         <div class="info" id="ffEstimate" style="color: var(--jade); margin-top:4px"></div>
       `;
       const updateEst = () => {
@@ -715,8 +723,8 @@ Toolkit.injectTopbar('video-toolkit');
         const n = srcFrames.length;
         const dur = n / fps;
         $('ffEstimate').textContent = n
-          ? `${n} 帧 @ ${fps} FPS = ${dur.toFixed(2)} 秒`
-          : `先拖入序列帧再来,这里会显示预估时长`;
+          ? Toolkit.T('vt.ff.estimate', { n, fps, dur: dur.toFixed(2) }, `${n} 帧 @ ${fps} FPS = ${dur.toFixed(2)} 秒`)
+          : Toolkit.T('vt.ff.estimateEmpty', null, '先拖入序列帧再来,这里会显示预估时长');
       };
       updateEst();
       $('ffFps').addEventListener('input', updateEst);
@@ -737,35 +745,44 @@ Toolkit.injectTopbar('video-toolkit');
       // The default outW/outH = src dims so we don't touch the resolution;
       // existing encode pipeline already handles src→output with no transforms
       // when no other action flags are set.
+      const tcHead = Toolkit.T('vt.tc.head', { w: srcMeta.w, h: srcMeta.h, dur: srcMeta.duration.toFixed(1) }, `<strong style="color:var(--accent)">转码模式</strong> — 不做任何画面修改,只换编码格式(MP4 ↔ WebM)和码率。<br/>原视频: <strong>${srcMeta.w}×${srcMeta.h}</strong> · ${srcMeta.duration.toFixed(1)}s`);
+      const tcTip = Toolkit.T('vt.tc.tip', null, '📤 下方「输出」选 MP4 → 转 .mp4,选 WebM → 转 .webm。<br/>🎚️ 「比特率」越高质量越好但体积越大,3000-5000 kbps 适合一般录像。');
       c.innerHTML = `
         <div class="info" style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; border-radius:var(--radius-sm)">
-          <strong style="color:var(--accent)">转码模式</strong> — 不做任何画面修改,只换编码格式(MP4 ↔ WebM)和码率。<br/>
-          原视频: <strong>${srcMeta.w}×${srcMeta.h}</strong> · ${srcMeta.duration.toFixed(1)}s
+          ${tcHead}
         </div>
         <div class="info" style="margin-top:8px">
-          📤 下方「输出」选 MP4 → 转 .mp4,选 WebM → 转 .webm。<br/>
-          🎚️ 「比特率」越高质量越好但体积越大,3000-5000 kbps 适合一般录像。
+          ${tcTip}
         </div>
       `;
     } else if (action === 'compress') {
       const targetMb = Math.max(0.3, (srcMeta.w * srcMeta.h * srcMeta.duration / 5e6)).toFixed(1);
+      const cmpPL = Toolkit.T('vt.cmp.preset', null, '质量预设');
+      const cmpTL = Toolkit.T('vt.cmp.targetLabel', null, '目标体积 (MB)');
+      const cmpTH = Toolkit.T('vt.cmp.targetHelp', null, '按时长反推比特率,实际输出可能 ±20% 浮动');
+      const cmpSA = Toolkit.T('vt.cmp.stripAudio', null, '去掉音轨 (再节省 ~10%)');
+      const cmpNote = Toolkit.T('vt.cmp.note', null, '输出锁定 <strong>MP4 (H.264)</strong> 以获得最佳压缩率。预设会自动改下方"输出"区的比特率/格式 — 切走再切回会重置。');
+      const cmpTiny = Toolkit.T('vt.cmp.tiny', null, '📉 极致小 (480p · 400 kbps)');
+      const cmpSmall = Toolkit.T('vt.cmp.small', null, '📦 小 (720p · 1200 kbps)');
+      const cmpMed = Toolkit.T('vt.cmp.medium', null, '⚖️ 中等 (原尺寸 · 2500 kbps)');
+      const cmpCustom = Toolkit.T('vt.cmp.custom', null, '⚙️ 自定义目标体积');
       c.innerHTML = `
         <div class="field">
-          <label>质量预设</label>
+          <label>${cmpPL}</label>
           <select id="cmpPreset">
-            <option value="tiny">📉 极致小 (480p · 400 kbps)</option>
-            <option value="small" selected>📦 小 (720p · 1200 kbps)</option>
-            <option value="medium">⚖️ 中等 (原尺寸 · 2500 kbps)</option>
-            <option value="custom">⚙️ 自定义目标体积</option>
+            <option value="tiny">${cmpTiny}</option>
+            <option value="small" selected>${cmpSmall}</option>
+            <option value="medium">${cmpMed}</option>
+            <option value="custom">${cmpCustom}</option>
           </select>
         </div>
         <div class="field" id="cmpTargetField" style="display:none">
-          <label>目标体积 (MB)</label>
+          <label>${cmpTL}</label>
           <input type="number" id="cmpTargetMb" value="${targetMb}" min="0.1" step="0.1" />
-          <div class="info" style="margin-top:4px">按时长反推比特率,实际输出可能 ±20% 浮动</div>
+          <div class="info" style="margin-top:4px">${cmpTH}</div>
         </div>
-        <label class="checkbox" style="margin-top:8px"><input type="checkbox" id="cmpStripAudio" /><span>去掉音轨 (再节省 ~10%)</span></label>
-        <div class="info" style="margin-top:8px">输出锁定 <strong>MP4 (H.264)</strong> 以获得最佳压缩率。预设会自动改下方"输出"区的比特率/格式 — 切走再切回会重置。</div>
+        <label class="checkbox" style="margin-top:8px"><input type="checkbox" id="cmpStripAudio" /><span>${cmpSA}</span></label>
+        <div class="info" style="margin-top:8px">${cmpNote}</div>
         <div class="info" id="cmpEstimate" style="margin-top:4px; color: var(--jade)"></div>
       `;
       const applyPreset = () => {
@@ -785,8 +802,8 @@ Toolkit.injectTopbar('video-toolkit');
         $('bitrate').value = kbps;
         const estMb = (kbps * safeDur / 8192).toFixed(2);
         $('cmpEstimate').textContent = duration > 0.1
-          ? `预计输出 ≈ ${estMb} MB · ${kbps} kbps`
-          : `${kbps} kbps · 视频时长缺失,无法估算体积`;
+          ? Toolkit.T('vt.cmp.est', { mb: estMb, kbps }, `预计输出 ≈ ${estMb} MB · ${kbps} kbps`)
+          : Toolkit.T('vt.cmp.estNoDur', { kbps }, `${kbps} kbps · 视频时长缺失,无法估算体积`);
       };
       $('cmpPreset').addEventListener('change', applyPreset);
       $('cmpTargetMb')?.addEventListener('input', applyPreset);
@@ -803,11 +820,19 @@ Toolkit.injectTopbar('video-toolkit');
       //   3. IN / OUT marks capture the EXACT currentTime at click moment
       //      (not slider value), so what you see in the preview at click
       //      time is what gets cut.
+      const initFrameNum = Toolkit.T('vt.trim.frameNumInit', null, '帧 0 / —');
+      const btnIn = Toolkit.T('vt.trim.setIn', null, '📍 设为起点 IN');
+      const btnOut = Toolkit.T('vt.trim.setOut', null, '📍 设为终点 OUT');
+      const initIn = Toolkit.T('vt.trim.unset', null, '未设');
+      const initRange = Toolkit.T('vt.trim.noRange', null, '未设置范围 · 默认导出整段');
+      const tInTitle = Toolkit.T('vt.trim.setInTitle', null, '把当前帧设为起点 (I)');
+      const tOutTitle = Toolkit.T('vt.trim.setOutTitle', null, '把当前帧设为终点 (O)');
+      const shortcut = Toolkit.T('vt.trim.shortcut', null, '快捷键 <kbd>←</kbd>/<kbd>→</kbd> ±1 帧 · <kbd>Shift+←</kbd>/<kbd>→</kbd> ±1 秒 · <kbd>I</kbd> 设 IN · <kbd>O</kbd> 设 OUT · <kbd>Space</kbd> 播放/暂停');
       c.innerHTML = `
         <div class="frame-edit">
           <div class="frame-edit-readout">
             <span class="tc-big" id="tcBig">00:00:00.000</span>
-            <span class="frame-num" id="frameNum">帧 0 / —</span>
+            <span class="frame-num" id="frameNum">${initFrameNum}</span>
             <span class="fps-tag">@ <input type="number" id="fpsManual" min="1" max="240" step="0.001" value="30" /> fps</span>
             <span class="fps-tag" id="fpsHint" style="color:var(--accent)"></span>
           </div>
@@ -822,17 +847,17 @@ Toolkit.injectTopbar('video-toolkit');
           <input type="range" id="frameScrub" min="0" max="100" value="0" step="1" class="frame-scrub" />
           <div class="frame-marks">
             <div class="frame-mark-row">
-              <button type="button" class="mark in"  id="setInBtn"  title="把当前帧设为起点 (I)">📍 设为起点 IN</button>
-              <span class="tc empty" id="inDisplay">未设</span>
+              <button type="button" class="mark in"  id="setInBtn"  title="${tInTitle}">${btnIn}</button>
+              <span class="tc empty" id="inDisplay">${initIn}</span>
             </div>
             <div class="frame-mark-row">
-              <button type="button" class="mark out" id="setOutBtn" title="把当前帧设为终点 (O)">📍 设为终点 OUT</button>
-              <span class="tc empty" id="outDisplay">未设</span>
+              <button type="button" class="mark out" id="setOutBtn" title="${tOutTitle}">${btnOut}</button>
+              <span class="tc empty" id="outDisplay">${initIn}</span>
             </div>
-            <div class="range-dur empty" id="rangeDuration">未设置范围 · 默认导出整段</div>
+            <div class="range-dur empty" id="rangeDuration">${initRange}</div>
           </div>
           <div class="frame-shortcut">
-            快捷键 <kbd>←</kbd>/<kbd>→</kbd> ±1 帧 · <kbd>Shift+←</kbd>/<kbd>→</kbd> ±1 秒 · <kbd>I</kbd> 设 IN · <kbd>O</kbd> 设 OUT · <kbd>Space</kbd> 播放/暂停
+            ${shortcut}
           </div>
           <!-- Hidden inputs that integrate with the existing trim export path -->
           <input type="hidden" id="trimStart" value="0" />
@@ -843,48 +868,66 @@ Toolkit.injectTopbar('video-toolkit');
       `;
       setupFrameTrim(duration);
     } else if (action === 'crop') {
+      const wLbl = Toolkit.T('vt.dim.w', null, '宽');
+      const hLbl = Toolkit.T('vt.dim.h', null, '高');
       c.innerHTML = `
         <div class="row-fields">
           <div class="field"><label>X</label><input type="number" id="cropX" value="0" min="0" max="${w}" /></div>
           <div class="field"><label>Y</label><input type="number" id="cropY" value="0" min="0" max="${h}" /></div>
         </div>
         <div class="row-fields">
-          <div class="field"><label>宽</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
-          <div class="field"><label>高</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
+          <div class="field"><label>${wLbl}</label><input type="number" id="cropW" value="${w}" min="1" max="${w}" /></div>
+          <div class="field"><label>${hLbl}</label><input type="number" id="cropH" value="${h}" min="1" max="${h}" /></div>
         </div>
       `;
     } else if (action === 'resize') {
+      const wLbl = Toolkit.T('vt.dim.w', null, '宽');
+      const hLbl = Toolkit.T('vt.dim.h', null, '高');
+      const lockLbl = Toolkit.T('vt.resize.lock', null, '锁定宽高比');
       c.innerHTML = `
         <div class="row-fields">
-          <div class="field"><label>宽</label><input type="number" id="newW" value="${w}" min="1" /></div>
-          <div class="field"><label>高</label><input type="number" id="newH" value="${h}" min="1" /></div>
+          <div class="field"><label>${wLbl}</label><input type="number" id="newW" value="${w}" min="1" /></div>
+          <div class="field"><label>${hLbl}</label><input type="number" id="newH" value="${h}" min="1" /></div>
         </div>
-        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>锁定宽高比</span></label>
+        <label class="checkbox"><input type="checkbox" id="lockRatio" checked /><span>${lockLbl}</span></label>
       `;
       const ratio = w / h;
       $('newW').addEventListener('input', () => { if ($('lockRatio').checked) $('newH').value = Math.round(parseInt($('newW').value, 10) / ratio); });
       $('newH').addEventListener('input', () => { if ($('lockRatio').checked) $('newW').value = Math.round(parseInt($('newH').value, 10) * ratio); });
     } else if (action === 'speed') {
+      const spdLbl = Toolkit.T('vt.speed.label', null, '速度倍率');
       c.innerHTML = `
         <div class="field">
-          <label>速度倍率 <span id="speedVal" class="mono">1.0×</span></label>
+          <label>${spdLbl} <span id="speedVal" class="mono">1.0×</span></label>
           <input type="range" id="speedMul" min="10" max="400" value="100" />
         </div>
       `;
       $('speedMul').addEventListener('input', e => $('speedVal').textContent = (e.target.value / 100).toFixed(2) + '×');
     } else if (action === 'changeFps') {
+      const opTypeLbl = Toolkit.T('vt.cfps.opType', null, '操作类型');
+      const decBtn = Toolkit.T('vt.cfps.dec', null, '⊘ 抽帧 (帧数变少)');
+      const intBtn = Toolkit.T('vt.cfps.int', null, '✨ 补帧 (帧数变多)');
+      const keepNLbl = Toolkit.T('vt.cfps.keepN', null, '保留每 N 帧中的 1 帧');
+      const mulLbl = Toolkit.T('vt.cfps.mul', null, '补帧倍率');
+      const mulInfo = Toolkit.T('vt.cfps.mulInfo', null, '15 = 1.5× · 20 = 2× · 25 = 2.5× · 30 = 3×');
+      const algoLbl = Toolkit.T('vt.cfps.algoLabel', null, '补帧算法');
+      const algoDup = Toolkit.T('vt.cfps.algo.dup', null, '帧复制 (快, 不平滑)');
+      const algoBlend = Toolkit.T('vt.cfps.algo.blend', null, '线性混合 (相邻帧加权, 平滑但 ghost)');
+      const algoOpt = Toolkit.T('vt.cfps.algo.optical', null, '🚀 光流补帧 (自动: WebGPU=RIFE, 否则=Farnebäck CPU)');
+      const algoRife = Toolkit.T('vt.cfps.algo.rife', null, '└ 强制 RIFE (需 WebGPU + ~21 MB 联网)');
+      const algoFb = Toolkit.T('vt.cfps.algo.fb', null, '└ 强制 Farnebäck (CPU 版, ~8 MB 联网)');
       c.innerHTML = `
         <div class="field">
-          <label>操作类型</label>
+          <label>${opTypeLbl}</label>
           <div class="cfps-toggle" style="display:flex; gap:4px; padding:3px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm)">
-            <button type="button" id="cfpsModeDec" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">⊘ 抽帧 (帧数变少)</button>
-            <button type="button" id="cfpsModeInt" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">✨ 补帧 (帧数变多)</button>
+            <button type="button" id="cfpsModeDec" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">${decBtn}</button>
+            <button type="button" id="cfpsModeInt" class="cfps-mb secondary" style="flex:1; font-size:12px; padding:7px 0">${intBtn}</button>
           </div>
         </div>
 
         <div id="cfpsDecPane" style="display:none">
           <div class="field">
-            <label>保留每 N 帧中的 1 帧 <span id="cfpsDecNVal" class="mono">2</span></label>
+            <label>${keepNLbl} <span id="cfpsDecNVal" class="mono">2</span></label>
             <input type="range" id="cfpsDecN" min="2" max="6" value="2" />
           </div>
           <div style="display:flex; gap:4px; margin-bottom:8px">
@@ -896,9 +939,9 @@ Toolkit.injectTopbar('video-toolkit');
 
         <div id="cfpsIntPane" style="display:none">
           <div class="field">
-            <label>补帧倍率 <span id="cfpsIntMulVal" class="mono">2.0×</span></label>
+            <label>${mulLbl} <span id="cfpsIntMulVal" class="mono">2.0×</span></label>
             <input type="range" id="cfpsIntMul" min="15" max="30" value="20" step="1" />
-            <div class="info" style="margin-top:2px">15 = 1.5× · 20 = 2× · 25 = 2.5× · 30 = 3×</div>
+            <div class="info" style="margin-top:2px">${mulInfo}</div>
           </div>
           <div style="display:flex; gap:4px; margin-bottom:8px">
             <button type="button" id="cfpsIntQ2"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">2×</button>
@@ -906,13 +949,13 @@ Toolkit.injectTopbar('video-toolkit');
             <button type="button" id="cfpsIntQ3"  class="secondary" style="flex:1; font-size:11px; padding:5px 0">3×</button>
           </div>
           <div class="field">
-            <label>补帧算法</label>
+            <label>${algoLbl}</label>
             <select id="cfpsMode">
-              <option value="dup">帧复制 (快, 不平滑)</option>
-              <option value="blend" selected>线性混合 (相邻帧加权, 平滑但 ghost)</option>
-              <option value="optical">🚀 光流补帧 (自动: WebGPU=RIFE, 否则=Farnebäck CPU)</option>
-              <option value="optical-rife">└ 强制 RIFE (需 WebGPU + ~21 MB 联网)</option>
-              <option value="optical-fb">└ 强制 Farnebäck (CPU 版, ~8 MB 联网)</option>
+              <option value="dup">${algoDup}</option>
+              <option value="blend" selected>${algoBlend}</option>
+              <option value="optical">${algoOpt}</option>
+              <option value="optical-rife">${algoRife}</option>
+              <option value="optical-fb">${algoFb}</option>
             </select>
           </div>
           <div id="cfpsRifeStatus" class="info" style="display:none; padding:8px; background:rgba(255,255,255,0.04); border-radius:4px; margin-top:6px;"></div>
@@ -929,11 +972,11 @@ Toolkit.injectTopbar('video-toolkit');
         if (isDec) {
           const n = parseInt($('cfpsDecN').value, 10);
           target = Math.max(1, Math.round(SRC_FPS / n));
-          info = `抽帧: 保留每 ${n} 帧的 1 帧 → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`;
+          info = Toolkit.T('vt.cfps.summary.dec', { n, target, src: SRC_FPS }, `抽帧: 保留每 ${n} 帧的 1 帧 → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`);
         } else {
           const mul = parseInt($('cfpsIntMul').value, 10) / 10;
           target = Math.round(SRC_FPS * mul);
-          info = `补帧 ${mul.toFixed(1)}× → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`;
+          info = Toolkit.T('vt.cfps.summary.int', { mul: mul.toFixed(1), target, src: SRC_FPS }, `补帧 ${mul.toFixed(1)}× → 输出 ${target} FPS (源 ${SRC_FPS} FPS)`);
         }
         $('cfpsTarget').value = String(target);
         $('cfpsSummary').textContent = info;
@@ -983,119 +1026,169 @@ Toolkit.injectTopbar('video-toolkit');
         const hasGpu = 'gpu' in navigator;
         if (mode === 'optical') {
           status.textContent = hasGpu
-            ? '将使用 RIFE (WebGPU). 点"应用"开始 (首次 ~21 MB 下载)'
-            : '将使用 Farnebäck (CPU, 当前没 WebGPU). 点"应用"开始 (首次 ~8 MB 下载)';
+            ? Toolkit.T('vt.cfps.status.autoRife', null, '将使用 RIFE (WebGPU). 点"应用"开始 (首次 ~21 MB 下载)')
+            : Toolkit.T('vt.cfps.status.autoFb', null, '将使用 Farnebäck (CPU, 当前没 WebGPU). 点"应用"开始 (首次 ~8 MB 下载)');
         } else if (mode === 'optical-rife') {
           status.innerHTML = hasGpu
-            ? '强制 RIFE (WebGPU). 首次 ~21 MB 下载, 每帧 0.2-1s (480p)'
-            : '<span style="color:var(--err)">⚠ 当前没 WebGPU, 选"自动"或"强制 Farnebäck"</span>';
+            ? Toolkit.T('vt.cfps.status.forceRife', null, '强制 RIFE (WebGPU). 首次 ~21 MB 下载, 每帧 0.2-1s (480p)')
+            : Toolkit.T('vt.cfps.status.noGpu', null, '<span style="color:var(--err)">⚠ 当前没 WebGPU, 选"自动"或"强制 Farnebäck"</span>');
         } else if (mode === 'optical-fb') {
-          status.textContent = '强制 Farnebäck (CPU). 首次 ~8 MB 下载, 每帧 ~0.3-0.6s (480p, 单线程)';
+          status.textContent = Toolkit.T('vt.cfps.status.forceFb', null, '强制 Farnebäck (CPU). 首次 ~8 MB 下载, 每帧 ~0.3-0.6s (480p, 单线程)');
         }
       });
 
       // default = 补帧 2×
       showPane('int');
     } else if (action === 'reverse') {
-      c.innerHTML = `<div class="info">反向播放,无参数。需要逐帧抽样,长视频较慢。</div>`;
+      c.innerHTML = `<div class="info">${Toolkit.T('vt.reverse.info', null, '反向播放,无参数。需要逐帧抽样,长视频较慢。')}</div>`;
     } else if (action === 'frames') {
+      const ffpsLbl = Toolkit.T('vt.frames.fps', null, '抽帧 FPS (上面"输出"区也有)');
+      const fInfo = Toolkit.T('vt.frames.info', null, '从视频抽取 PNG 序列帧,打包为 ZIP 下载。FPS 越高文件越多。');
       c.innerHTML = `
         <div class="field">
-          <label>抽帧 FPS (上面"输出"区也有)</label>
+          <label>${ffpsLbl}</label>
           <input type="number" id="framesFps" value="12" min="1" max="60" />
         </div>
-        <div class="info">从视频抽取 PNG 序列帧,打包为 ZIP 下载。FPS 越高文件越多。</div>
+        <div class="info">${fInfo}</div>
       `;
     } else if (action === 'toGif') {
+      const gfpsLbl = Toolkit.T('vt.gif.fps', null, 'GIF FPS');
+      const gmaxLbl = Toolkit.T('vt.gif.maxDim', null, '缩放到最大边 (px, 0=原尺寸)');
+      const gpalLbl = Toolkit.T('vt.gif.palette', null, '调色板');
+      const gpalMed = Toolkit.T('vt.gif.pal.median', null, '中位切分 256 色 (推荐)');
+      const gpalUni = Toolkit.T('vt.gif.pal.uniform', null, '均匀 (快)');
+      const gInfo = Toolkit.T('vt.gif.info', null, 'GIF 体积通常远大于视频,建议先 trim + 降 FPS + 缩小尺寸');
       c.innerHTML = `
-        <div class="field"><label>GIF FPS</label><input type="number" id="gifFps" value="12" min="1" max="30" /></div>
-        <div class="field"><label>缩放到最大边 (px, 0=原尺寸)</label><input type="number" id="gifMaxDim" value="480" min="0" /></div>
-        <div class="field"><label>调色板</label>
+        <div class="field"><label>${gfpsLbl}</label><input type="number" id="gifFps" value="12" min="1" max="30" /></div>
+        <div class="field"><label>${gmaxLbl}</label><input type="number" id="gifMaxDim" value="480" min="0" /></div>
+        <div class="field"><label>${gpalLbl}</label>
           <select id="gifPalette">
-            <option value="median">中位切分 256 色 (推荐)</option>
-            <option value="uniform">均匀 (快)</option>
+            <option value="median">${gpalMed}</option>
+            <option value="uniform">${gpalUni}</option>
           </select>
         </div>
-        <div class="info">GIF 体积通常远大于视频,建议先 trim + 降 FPS + 缩小尺寸</div>
+        <div class="info">${gInfo}</div>
       `;
     } else if (action === 'chromaKey') {
+      const ckBg = Toolkit.T('vt.ck.bg', null, '背景颜色 (Hex)');
+      const ckAuto = Toolkit.T('vt.ck.auto', null, '用左上角像素作为背景色');
+      const ckTol = Toolkit.T('vt.ck.tol', null, '容差');
+      const ckFth = Toolkit.T('vt.ck.feather', null, '边缘羽化 (px)');
+      const ckCho = Toolkit.T('vt.ck.choke', null, '蒙版收缩 choke (px)');
+      const ckChoHelp = Toolkit.T('vt.ck.chokeHelp', null, '把蒙版往内收, 干掉主体边缘的绿色毛刺 (PR Ultra Key 同款步骤)');
+      const ckSpi = Toolkit.T('vt.ck.spill', null, 'spill 抑制 (去绿边 / 去绿调)');
+      const ckSpiOff = Toolkit.T('vt.ck.spill.off', null, '关');
+      const ckSpiLite = Toolkit.T('vt.ck.spill.light', null, '轻 (绿通道半夹到 max(R,B))');
+      const ckSpiHard = Toolkit.T('vt.ck.spill.strong', null, '强 (绿通道直接夹到 max(R,B), 推荐)');
+      const ckFps = Toolkit.T('vt.ck.fps', null, '抠像后 FPS (低 FPS 更快)');
+      const ckOut = Toolkit.T('vt.ck.outFmt', null, '输出格式');
+      const ckMp4 = Toolkit.T('vt.ck.out.mp4', null, 'MP4 — H.264,透明区填指定色 (playable 推荐)');
+      const ckWba = Toolkit.T('vt.ck.out.webmAlpha', null, 'WebM (VP9 + alpha) — 真透明,Chrome 113+');
+      const ckPng = Toolkit.T('vt.ck.out.pngZip', null, 'PNG 序列帧 (ZIP) — 真透明,最万能');
+      const ckApng = Toolkit.T('vt.ck.out.apng', null, 'APNG — 真透明,可直接预览');
+      const ckGif = Toolkit.T('vt.ck.out.gif', null, '透明 GIF (硬边缘,1-bit alpha)');
+      const ckWeb = Toolkit.T('vt.ck.out.webm', null, 'WebM (MediaRecorder) — alpha 区会变黑');
+      const ckBgL = Toolkit.T('vt.ck.bgFill', null, 'MP4 背景填充色');
+      const ckBgH = Toolkit.T('vt.ck.bgFillHelp', null, '仅 MP4 输出有效:透明区会用这个颜色填充 (playable 常用黑或合成色)');
+      const ckInfo = Toolkit.T('vt.ck.info', null, '绿幕 / 蓝幕场景默认参数即可。点击"背景颜色"输入框旁边可手动改 hex,或勾"用左上角"自动取色');
       c.innerHTML = `
         <div class="field">
-          <label>背景颜色 (Hex)</label>
+          <label>${ckBg}</label>
           <input type="text" id="keyColor" value="#00ff00" />
         </div>
-        <label class="checkbox"><input type="checkbox" id="keyAuto" /><span>用左上角像素作为背景色</span></label>
+        <label class="checkbox"><input type="checkbox" id="keyAuto" /><span>${ckAuto}</span></label>
         <div class="field">
-          <label>容差 <span id="keyTolVal" class="mono">60</span></label>
+          <label>${ckTol} <span id="keyTolVal" class="mono">60</span></label>
           <input type="range" id="keyTol" min="0" max="200" value="60" />
         </div>
         <div class="field">
-          <label>边缘羽化 (px) <span id="keyFeatherVal" class="mono">1</span></label>
+          <label>${ckFth} <span id="keyFeatherVal" class="mono">1</span></label>
           <input type="range" id="keyFeather" min="0" max="6" value="1" />
         </div>
         <div class="field">
-          <label>蒙版收缩 choke (px) <span id="keyChokeVal" class="mono">1</span></label>
+          <label>${ckCho} <span id="keyChokeVal" class="mono">1</span></label>
           <input type="range" id="keyChoke" min="0" max="3" value="1" />
-          <div class="info" style="margin-top:4px;">把蒙版往内收, 干掉主体边缘的绿色毛刺 (PR Ultra Key 同款步骤)</div>
+          <div class="info" style="margin-top:4px;">${ckChoHelp}</div>
         </div>
         <div class="field">
-          <label>spill 抑制 (去绿边 / 去绿调)</label>
+          <label>${ckSpi}</label>
           <select id="keySpill">
-            <option value="0">关</option>
-            <option value="1">轻 (绿通道半夹到 max(R,B))</option>
-            <option value="2" selected>强 (绿通道直接夹到 max(R,B), 推荐)</option>
+            <option value="0">${ckSpiOff}</option>
+            <option value="1">${ckSpiLite}</option>
+            <option value="2" selected>${ckSpiHard}</option>
           </select>
         </div>
         <div class="field">
-          <label>抠像后 FPS (低 FPS 更快)</label>
+          <label>${ckFps}</label>
           <input type="number" id="keyFps" value="24" min="1" max="60" />
         </div>
         <div class="field">
-          <label>输出格式</label>
+          <label>${ckOut}</label>
           <select id="keyOutput">
-            <option value="mp4">MP4 — H.264,透明区填指定色 (playable 推荐)</option>
-            <option value="webm-alpha">WebM (VP9 + alpha) — 真透明,Chrome 113+</option>
-            <option value="png-zip">PNG 序列帧 (ZIP) — 真透明,最万能</option>
-            <option value="apng">APNG — 真透明,可直接预览</option>
-            <option value="gif">透明 GIF (硬边缘,1-bit alpha)</option>
-            <option value="webm">WebM (MediaRecorder) — alpha 区会变黑</option>
+            <option value="mp4">${ckMp4}</option>
+            <option value="webm-alpha">${ckWba}</option>
+            <option value="png-zip">${ckPng}</option>
+            <option value="apng">${ckApng}</option>
+            <option value="gif">${ckGif}</option>
+            <option value="webm">${ckWeb}</option>
           </select>
         </div>
         <div class="field" id="bgFillField">
-          <label>MP4 背景填充色</label>
+          <label>${ckBgL}</label>
           <input type="text" id="keyBgColor" value="#000000" />
-          <div class="info" style="margin-top:4px;">仅 MP4 输出有效:透明区会用这个颜色填充 (playable 常用黑或合成色)</div>
+          <div class="info" style="margin-top:4px;">${ckBgH}</div>
         </div>
-        <div class="info">绿幕 / 蓝幕场景默认参数即可。点击"背景颜色"输入框旁边可手动改 hex,或勾"用左上角"自动取色</div>
+        <div class="info">${ckInfo}</div>
       `;
       $('keyTol').addEventListener('input', e => $('keyTolVal').textContent = e.target.value);
       $('keyFeather').addEventListener('input', e => $('keyFeatherVal').textContent = e.target.value);
       $('keyChoke').addEventListener('input', e => $('keyChokeVal').textContent = e.target.value);
     } else if (action === 'filter') {
+      const fT = (k, d) => Toolkit.T(k, null, d);
+      const presetLbl = fT('vt.filter.preset', '预设');
+      const opts = {
+        none: fT('vt.filter.opt.none', '自定义'),
+        bw: fT('vt.filter.opt.bw', '黑白'),
+        sepia: fT('vt.filter.opt.sepia', '怀旧 Sepia'),
+        cold: fT('vt.filter.opt.cold', '冷色'),
+        warm: fT('vt.filter.opt.warm', '暖色'),
+        vivid: fT('vt.filter.opt.vivid', '高饱和'),
+        contrast: fT('vt.filter.opt.contrast', '高对比'),
+        vintage: fT('vt.filter.opt.vintage', '复古胶片'),
+        dramatic: fT('vt.filter.opt.dramatic', '戏剧化'),
+        dreamy: fT('vt.filter.opt.dreamy', '梦幻'),
+      };
+      const cbGray = fT('vt.filter.gray', '灰度');
+      const cbInv = fT('vt.filter.invert', '反色');
+      const briL = fT('vt.filter.bri', '亮度');
+      const conL = fT('vt.filter.con', '对比度');
+      const satL = fT('vt.filter.sat', '饱和度');
+      const hueL = fT('vt.filter.hue', '色相旋转');
+      const finfo = fT('vt.filter.info', '逐帧应用 canvas filter,输出走当前输出格式(MP4 / WebM)');
       c.innerHTML = `
         <div class="field">
-          <label>预设</label>
+          <label>${presetLbl}</label>
           <select id="vfPreset">
-            <option value="none">自定义</option>
-            <option value="bw">黑白</option>
-            <option value="sepia">怀旧 Sepia</option>
-            <option value="cold">冷色</option>
-            <option value="warm">暖色</option>
-            <option value="vivid">高饱和</option>
-            <option value="contrast">高对比</option>
-            <option value="vintage">复古胶片</option>
-            <option value="dramatic">戏剧化</option>
-            <option value="dreamy">梦幻</option>
+            <option value="none">${opts.none}</option>
+            <option value="bw">${opts.bw}</option>
+            <option value="sepia">${opts.sepia}</option>
+            <option value="cold">${opts.cold}</option>
+            <option value="warm">${opts.warm}</option>
+            <option value="vivid">${opts.vivid}</option>
+            <option value="contrast">${opts.contrast}</option>
+            <option value="vintage">${opts.vintage}</option>
+            <option value="dramatic">${opts.dramatic}</option>
+            <option value="dreamy">${opts.dreamy}</option>
           </select>
         </div>
-        <label class="checkbox"><input type="checkbox" id="vfGray" /><span>灰度</span></label>
+        <label class="checkbox"><input type="checkbox" id="vfGray" /><span>${cbGray}</span></label>
         <label class="checkbox"><input type="checkbox" id="vfSepia" /><span>Sepia</span></label>
-        <label class="checkbox"><input type="checkbox" id="vfInvert" /><span>反色</span></label>
-        <div class="field"><label>亮度 <span id="vfBriVal" class="mono">100%</span></label><input type="range" id="vfBri" min="0" max="200" value="100" /></div>
-        <div class="field"><label>对比度 <span id="vfConVal" class="mono">100%</span></label><input type="range" id="vfCon" min="0" max="200" value="100" /></div>
-        <div class="field"><label>饱和度 <span id="vfSatVal" class="mono">100%</span></label><input type="range" id="vfSat" min="0" max="200" value="100" /></div>
-        <div class="field"><label>色相旋转 <span id="vfHueVal" class="mono">0°</span></label><input type="range" id="vfHue" min="0" max="360" value="0" /></div>
-        <div class="info">逐帧应用 canvas filter,输出走当前输出格式(MP4 / WebM)</div>
+        <label class="checkbox"><input type="checkbox" id="vfInvert" /><span>${cbInv}</span></label>
+        <div class="field"><label>${briL} <span id="vfBriVal" class="mono">100%</span></label><input type="range" id="vfBri" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${conL} <span id="vfConVal" class="mono">100%</span></label><input type="range" id="vfCon" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${satL} <span id="vfSatVal" class="mono">100%</span></label><input type="range" id="vfSat" min="0" max="200" value="100" /></div>
+        <div class="field"><label>${hueL} <span id="vfHueVal" class="mono">0°</span></label><input type="range" id="vfHue" min="0" max="360" value="0" /></div>
+        <div class="info">${finfo}</div>
       `;
       const b = (id, val, suf) => $(id).addEventListener('input', e => $(val).textContent = e.target.value + suf);
       b('vfBri','vfBriVal','%'); b('vfCon','vfConVal','%'); b('vfSat','vfSatVal','%'); b('vfHue','vfHueVal','°');
@@ -1126,13 +1219,13 @@ Toolkit.injectTopbar('video-toolkit');
     // Source-presence gate differs per action: fromFrames needs srcFrames,
     // everything else needs srcVideo. Reject early with a helpful message.
     if (action === 'fromFrames') {
-      if (!srcFrames.length) { log.err('Dobby 手里还没序列帧,你先丢一组?'); return; }
+      if (!srcFrames.length) { log.err(Toolkit.T('vt.err.noFrames', null, 'Dobby 手里还没序列帧,你先丢一组?')); return; }
     } else {
-      if (!srcVideo) { log.err('Dobby 手里还没视频,你先丢一个?'); return; }
+      if (!srcVideo) { log.err(Toolkit.T('vt.err.noVideo', null, 'Dobby 手里还没视频,你先丢一个?')); return; }
     }
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
-    log.dim(`应用 ${action}...`);
+    log.dim(Toolkit.T('vt.log.apply', { action }, `应用 ${action}...`));
     try {
       if (action === 'fromFrames') await doFramesToVideo();
       else if (action === 'frames') await doExtractFrames();
@@ -1191,7 +1284,7 @@ Toolkit.injectTopbar('video-toolkit');
     } else if (action === 'trim') {
       startT = parseFloat($('trimStart').value);
       endT = parseFloat($('trimEnd').value);
-      if (endT <= startT) throw new Error('结束时间必须大于起始时间');
+      if (endT <= startT) throw new Error(Toolkit.T('vt.err.trimRange', null, '结束时间必须大于起始时间'));
     } else if (action === 'crop') {
       srcX = parseInt($('cropX').value, 10);
       srcY = parseInt($('cropY').value, 10);
@@ -1222,10 +1315,10 @@ Toolkit.injectTopbar('video-toolkit');
     if (fmt === 'mp4') {
       // === WebCodecs + mp4-muxer path (Chrome/Edge 113+) ===
       if (!('VideoEncoder' in window)) {
-        log.warn('当前浏览器不支持 WebCodecs,回退到 WebM');
+        log.warn(Toolkit.T('vt.warn.noWebCodecs', null, '当前浏览器不支持 WebCodecs,回退到 WebM'));
         return doReencodeAsWebM(action, cv, ctx, srcX, srcY, srcW, srcH, outW, outH, startT, endT, speed, reverse, fpsNum, interval, 'webm-vp9', bitrate, canvasFilter);
       }
-      log.dim('加载 mp4-muxer (首次联网)...');
+      log.dim(Toolkit.T('vt.log.loadMuxer', null, '加载 mp4-muxer (首次联网)...'));
       const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
       const muxer = new Muxer({
         target: new ArrayBufferTarget(),
@@ -1243,7 +1336,7 @@ Toolkit.injectTopbar('video-toolkit');
         bitrate,
         framerate: fpsNum
       });
-      log.dim(`MP4 编码 ${outW}×${outH} @ ${fpsNum}fps, ${(bitrate/1000)|0}kbps...`);
+      log.dim(Toolkit.T('vt.log.mp4Encode', { w: outW, h: outH, fps: fpsNum, kbps: (bitrate/1000)|0 }, `MP4 编码 ${outW}×${outH} @ ${fpsNum}fps, ${(bitrate/1000)|0}kbps...`));
 
       let frameIdx = 0;
       ctx.filter = canvasFilter;
@@ -1309,12 +1402,12 @@ Toolkit.injectTopbar('video-toolkit');
         await encoder.flush();
         encoder.close();
         muxer.finalize();
-        if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
-        if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+        if (encoderError) throw new Error(Toolkit.T('vt.err.encode', { msg: encoderError.message }, `视频编码失败: ${encoderError.message}`));
+        if (!validateMp4Buffer(muxer.target.buffer)) throw new Error(Toolkit.T('vt.err.mp4Validate', null, '输出 MP4 校验失败 — 编码可能未完成或损坏'));
         outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
         outExt = 'mp4';
         showOutput();
-        log.ok(`生成 MP4 ${fmtBytes(outBlob.size)}`);
+        log.ok(Toolkit.T('vt.log.mp4Done', { size: fmtBytes(outBlob.size) }, `生成 MP4 ${fmtBytes(outBlob.size)}`));
       } finally {
         // Always restore preview visibility — even on error / cancel
         srcVideo.style.visibility = _preserveVis;
@@ -1335,7 +1428,7 @@ Toolkit.injectTopbar('video-toolkit');
     const stream = cv.captureStream(0);
     const track = stream.getVideoTracks()[0];
     const mimeType = fmt === 'webm-vp9' ? 'video/webm;codecs=vp9' : 'video/webm;codecs=vp8';
-    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error(Toolkit.T('vt.err.noMime', { mime: mimeType }, `当前浏览器不支持 ${mimeType}`));
     const chunks = [];
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
@@ -1389,7 +1482,7 @@ Toolkit.injectTopbar('video-toolkit');
     outBlob = new Blob(chunks, { type: 'video/webm' });
     outExt = 'webm';
     showOutput();
-    log.ok(`生成 WebM ${fmtBytes(outBlob.size)}`);
+    log.ok(Toolkit.T('vt.log.webmDone', { size: fmtBytes(outBlob.size) }, `生成 WebM ${fmtBytes(outBlob.size)}`));
   }
 
   // ChangeFps with optical-flow interpolation (RIFE on WebGPU, or Farnebäck
@@ -1412,18 +1505,18 @@ Toolkit.injectTopbar('video-toolkit');
     //   optical-fb    → Farnebäck only
     let backend = null;  // { name, prepare(), interpolate(A, B, α, out) }
     const tryRife = async () => {
-      if (!window.RIFE) throw new Error('RIFE 模块Dobby 待命');
+      if (!window.RIFE) throw new Error(Toolkit.T('vt.err.rifeMissing', null, 'RIFE 模块Dobby 待命'));
       await window.RIFE.prepare({
         onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; },
         onProgress: p => {
-          if (statusEl) statusEl.textContent = `下载 RIFE 模型 ${(p*100)|0}%...`;
+          if (statusEl) statusEl.textContent = Toolkit.T('vt.rife.downloading', { pct: (p*100)|0 }, `下载 RIFE 模型 ${(p*100)|0}%...`);
           progress.set(p * 0.2);
         }
       });
       return { name: 'RIFE (WebGPU)', interpolate: window.RIFE.interpolate };
     };
     const tryFarneback = async () => {
-      if (!window.Farneback) throw new Error('Farnebäck 模块Dobby 待命');
+      if (!window.Farneback) throw new Error(Toolkit.T('vt.err.fbMissing', null, 'Farnebäck 模块Dobby 待命'));
       await window.Farneback.prepare({
         onStatus: msg => { log.dim(msg); if (statusEl) statusEl.textContent = msg; }
       });
@@ -1437,13 +1530,13 @@ Toolkit.injectTopbar('video-toolkit');
       // auto: try RIFE first, fall back on any failure
       try { backend = await tryRife(); }
       catch (e) {
-        log.warn(`RIFE 不可用 (${e.message}), 降级到 Farnebäck CPU`);
-        if (statusEl) statusEl.textContent = `RIFE 不可用,改用 Farnebäck CPU...`;
+        log.warn(Toolkit.T('vt.warn.rifeUnavail', { msg: e.message }, `RIFE 不可用 (${e.message}), 降级到 Farnebäck CPU`));
+        if (statusEl) statusEl.textContent = Toolkit.T('vt.status.rifeFallback', null, 'RIFE 不可用,改用 Farnebäck CPU...');
         backend = await tryFarneback();
       }
     }
-    log.ok(`光流后端: ${backend.name}`);
-    if (statusEl) statusEl.textContent = `✓ ${backend.name} 就绪, 开始推理`;
+    log.ok(Toolkit.T('vt.log.opticalBackend', { name: backend.name }, `光流后端: ${backend.name}`));
+    if (statusEl) statusEl.textContent = Toolkit.T('vt.status.backendReady', { name: backend.name }, `✓ ${backend.name} 就绪, 开始推理`);
 
     const fmt = $('outFormat').value;
     const bitrate = (parseInt($('bitrate').value, 10) || 3000) * 1000;
@@ -1474,14 +1567,14 @@ Toolkit.injectTopbar('video-toolkit');
     const tmpInterp = newCanvas(outW, outH);
 
     if (fmt !== 'mp4') {
-      log.warn('光流补帧目前只走 MP4 (WebCodecs) 输出路径');
+      log.warn(Toolkit.T('vt.warn.opticalMp4Only', null, '光流补帧目前只走 MP4 (WebCodecs) 输出路径'));
       return;
     }
     if (!('VideoEncoder' in window)) {
-      throw new Error('当前浏览器不支持 WebCodecs, 光流补帧需要 WebCodecs + WebGPU');
+      throw new Error(Toolkit.T('vt.err.noWebCodecsOpt', null, '当前浏览器不支持 WebCodecs, 光流补帧需要 WebCodecs + WebGPU'));
     }
 
-    log.dim('加载 mp4-muxer (首次联网)...');
+    log.dim(Toolkit.T('vt.log.loadMuxer', null, '加载 mp4-muxer (首次联网)...'));
     const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
     const muxer = new Muxer({
       target: new ArrayBufferTarget(),
@@ -1501,7 +1594,7 @@ Toolkit.injectTopbar('video-toolkit');
     });
 
     const totalOut = Math.max(1, Math.floor(duration * target));
-    log.dim(`输出 ${totalOut} 帧 @ ${target}fps (源参考 ${SRC_FPS}fps), RIFE 推理...`);
+    log.dim(Toolkit.T('vt.log.opticalEncode', { n: totalOut, target, src: SRC_FPS }, `输出 ${totalOut} 帧 @ ${target}fps (源参考 ${SRC_FPS}fps), RIFE 推理...`));
     const t0 = performance.now();
 
     let frameIdx = 0;
@@ -1538,14 +1631,14 @@ Toolkit.injectTopbar('video-toolkit');
     await encoder.flush();
     encoder.close();
     muxer.finalize();
-    if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
-    if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+    if (encoderError) throw new Error(Toolkit.T('vt.err.encode', { msg: encoderError.message }, `视频编码失败: ${encoderError.message}`));
+    if (!validateMp4Buffer(muxer.target.buffer)) throw new Error(Toolkit.T('vt.err.mp4Validate', null, '输出 MP4 校验失败 — 编码可能未完成或损坏'));
     outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
     outExt = 'mp4';
     progress.set(1);
     showOutput();
     const dt = ((performance.now() - t0) / 1000).toFixed(1);
-    log.ok(`光流补帧完成 (${backend.name}) · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`);
+    log.ok(Toolkit.T('vt.log.opticalDone', { name: backend.name, size: fmtBytes(outBlob.size), n: frameIdx, dt }, `光流补帧完成 (${backend.name}) · ${fmtBytes(outBlob.size)} · ${frameIdx} 帧 · ${dt}s`));
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -1568,10 +1661,10 @@ Toolkit.injectTopbar('video-toolkit');
 
     if (fmt === 'mp4') {
       if (!('VideoEncoder' in window)) {
-        log.warn('当前浏览器不支持 WebCodecs MP4, 回退到 WebM (VP9)');
+        log.warn(Toolkit.T('vt.warn.noWebCodecsMp4', null, '当前浏览器不支持 WebCodecs MP4, 回退到 WebM (VP9)'));
         return doFramesToVideoWebm(cv, ctx, outW, outH, fps, bitrate, 'webm-vp9');
       }
-      log.dim('加载 mp4-muxer (首次联网)...');
+      log.dim(Toolkit.T('vt.log.loadMuxer', null, '加载 mp4-muxer (首次联网)...'));
       const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
       const muxer = new Muxer({
         target: new ArrayBufferTarget(),
@@ -1588,7 +1681,7 @@ Toolkit.injectTopbar('video-toolkit');
         width: outW, height: outH,
         bitrate, framerate: fps
       });
-      log.dim(`MP4 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`);
+      log.dim(Toolkit.T('vt.log.mp4FramesEncode', { w: outW, h: outH, fps, n: srcFrames.length }, `MP4 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`));
       const t0 = performance.now();
       for (let i = 0; i < srcFrames.length; i++) {
         const f = srcFrames[i];
@@ -1602,13 +1695,13 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
-      if (encErr) throw new Error('视频编码失败: ' + encErr.message);
-      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+      if (encErr) throw new Error(Toolkit.T('vt.err.encode', { msg: encErr.message }, `视频编码失败: ${encErr.message}`));
+      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error(Toolkit.T('vt.err.mp4Validate', null, '输出 MP4 校验失败 — 编码可能未完成或损坏'));
       outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
       outExt = 'mp4';
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
       showOutput();
-      log.ok(`生成 MP4 ${fmtBytes(outBlob.size)} · ${dt}s`);
+      log.ok(Toolkit.T('vt.log.mp4DoneT', { size: fmtBytes(outBlob.size), dt }, `生成 MP4 ${fmtBytes(outBlob.size)} · ${dt}s`));
       return;
     }
     return doFramesToVideoWebm(cv, ctx, outW, outH, fps, bitrate, fmt);
@@ -1618,13 +1711,13 @@ Toolkit.injectTopbar('video-toolkit');
     const stream = cv.captureStream(0);
     const track = stream.getVideoTracks()[0];
     const mimeType = fmt === 'webm-vp8' ? 'video/webm;codecs=vp8' : 'video/webm;codecs=vp9';
-    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+    if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error(Toolkit.T('vt.err.noMime', { mime: mimeType }, `当前浏览器不支持 ${mimeType}`));
     const chunks = [];
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     const done = new Promise(res => { recorder.onstop = res; });
     recorder.start();
-    log.dim(`WebM 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`);
+    log.dim(Toolkit.T('vt.log.webmFramesEncode', { w: outW, h: outH, fps, n: srcFrames.length }, `WebM 编码 ${outW}×${outH} @ ${fps}fps · ${srcFrames.length} 帧...`));
     const t0 = performance.now();
     const frameMs = 1000 / fps;
     for (let i = 0; i < srcFrames.length; i++) {
@@ -1643,14 +1736,14 @@ Toolkit.injectTopbar('video-toolkit');
     outExt = 'webm';
     const dt = ((performance.now() - t0) / 1000).toFixed(1);
     showOutput();
-    log.ok(`生成 WebM ${fmtBytes(outBlob.size)} · ${dt}s`);
+    log.ok(Toolkit.T('vt.log.webmDoneT', { size: fmtBytes(outBlob.size), dt }, `生成 WebM ${fmtBytes(outBlob.size)} · ${dt}s`));
   }
 
   async function doExtractFrames() {
     const fps = parseInt($('framesFps').value, 10) || parseInt($('fps').value, 10) || 12;
     const { w, h, duration } = srcMeta;
     const total = Math.max(1, Math.floor(duration * fps));
-    log.dim(`抽 ${total} 帧 @ ${fps} FPS...`);
+    log.dim(Toolkit.T('vt.log.extractFrames', { n: total, fps }, `抽 ${total} 帧 @ ${fps} FPS...`));
     const cv = newCanvas(w, h);
     const ctx = cv.getContext('2d');
     const files = [];
@@ -1668,7 +1761,7 @@ Toolkit.injectTopbar('video-toolkit');
     outBlob = zip;
     outExt = 'zip';
     showOutputAsZipInfo(total);
-    log.ok(`抽帧完成,共 ${total} 帧 · ZIP ${fmtBytes(zip.size)}`);
+    log.ok(Toolkit.T('vt.log.framesDone', { n: total, size: fmtBytes(zip.size) }, `抽帧完成,共 ${total} 帧 · ZIP ${fmtBytes(zip.size)}`));
   }
 
   async function doToGif() {
@@ -1679,7 +1772,7 @@ Toolkit.injectTopbar('video-toolkit');
     const ratio = maxDim > 0 ? Math.min(1, maxDim / Math.max(w, h)) : 1;
     const ow = Math.max(1, Math.round(w * ratio)), oh = Math.max(1, Math.round(h * ratio));
     const total = Math.max(1, Math.floor(duration * fps));
-    log.dim(`抽 ${total} 帧 → 编码 GIF (${ow}×${oh})...`);
+    log.dim(Toolkit.T('vt.log.gifEncode', { n: total, w: ow, h: oh }, `抽 ${total} 帧 → 编码 GIF (${ow}×${oh})...`));
     const cv = newCanvas(ow, oh);
     const ctx = cv.getContext('2d');
     const frames = [];
@@ -1700,7 +1793,7 @@ Toolkit.injectTopbar('video-toolkit');
     outBlob = gif;
     outExt = 'gif';
     showOutput();
-    log.ok(`生成 GIF ${fmtBytes(gif.size)}`);
+    log.ok(Toolkit.T('vt.log.gifDone', { size: fmtBytes(gif.size) }, `生成 GIF ${fmtBytes(gif.size)}`));
   }
 
   // ===== Chroma Key (背景去除) =====
@@ -1716,10 +1809,10 @@ Toolkit.injectTopbar('video-toolkit');
     const outputFmt = $('keyOutput').value;
 
     let keyRGB = hexToRgb(keyHex);
-    if (!keyRGB) { log.err('无效 hex'); return; }
+    if (!keyRGB) { log.err(Toolkit.T('vt.err.badHex', null, '无效 hex')); return; }
 
     const total = Math.max(1, Math.floor(duration * fps));
-    log.dim(`抽 ${total} 帧 @ ${fps} FPS, 色键 ${keyHex}, tol=${tol}, feather=${feather}...`);
+    log.dim(Toolkit.T('vt.log.ckExtract', { n: total, fps, hex: keyHex, tol, feather }, `抽 ${total} 帧 @ ${fps} FPS, 色键 ${keyHex}, tol=${tol}, feather=${feather}...`));
 
     // process each frame
     const srcCv = newCanvas(w, h);
@@ -1736,7 +1829,7 @@ Toolkit.injectTopbar('video-toolkit');
       if (autoCorner && i === 0) {
         const d = sctx.getImageData(0, 0, 1, 1).data;
         keyRGB = { r: d[0], g: d[1], b: d[2] };
-        log.dim(`  自动取色: rgb(${d[0]}, ${d[1]}, ${d[2]})`);
+        log.dim(Toolkit.T('vt.log.ckAuto', { r: d[0], g: d[1], b: d[2] }, `  自动取色: rgb(${d[0]}, ${d[1]}, ${d[2]})`));
       }
       applyChromaKeyToCanvas(srcCv, keyRGB, tol, feather, spill, choke);
       if (outputFmt === 'png-zip') {
@@ -1751,7 +1844,7 @@ Toolkit.injectTopbar('video-toolkit');
 
     // encode
     if (outputFmt === 'png-zip') {
-      log.dim('打包 PNG 帧 ZIP...');
+      log.dim(Toolkit.T('vt.log.ckPngZip', null, '打包 PNG 帧 ZIP...'));
       const files = [];
       for (let i = 0; i < framePngBlobs.length; i++) {
         const data = new Uint8Array(await framePngBlobs[i].arrayBuffer());
@@ -1761,9 +1854,9 @@ Toolkit.injectTopbar('video-toolkit');
       outBlob = zip;
       outExt = 'zip';
       showOutputAsZipInfo(framePngBlobs.length);
-      log.ok(`完成 ${framePngBlobs.length} 帧 PNG ZIP (${fmtBytes(zip.size)})`);
+      log.ok(Toolkit.T('vt.log.ckPngZipDone', { n: framePngBlobs.length, size: fmtBytes(zip.size) }, `完成 ${framePngBlobs.length} 帧 PNG ZIP (${fmtBytes(zip.size)})`));
     } else if (outputFmt === 'apng') {
-      log.dim('编码 APNG...');
+      log.dim(Toolkit.T('vt.log.apngEncode', null, '编码 APNG...'));
       const apng = await AnimEncoders.buildApng(frameBitmaps, {
         fps, loop: 0,
         onProgress: p => progress.set(0.6 + p * 0.4)
@@ -1771,9 +1864,9 @@ Toolkit.injectTopbar('video-toolkit');
       outBlob = apng;
       outExt = 'png';
       showOutput();
-      log.ok(`完成 APNG (${fmtBytes(apng.size)})`);
+      log.ok(Toolkit.T('vt.log.apngDone', { size: fmtBytes(apng.size) }, `完成 APNG (${fmtBytes(apng.size)})`));
     } else if (outputFmt === 'gif') {
-      log.dim('编码 GIF (透明色 = 抠掉的背景)...');
+      log.dim(Toolkit.T('vt.log.gifEncodeCk', null, '编码 GIF (透明色 = 抠掉的背景)...'));
       // For GIF transparency we need to map alpha<128 → transparent palette index.
       // Our AnimEncoders.buildGif currently does palette quantization, transparency in GIF
       // is handled by setting one palette index as transparent.
@@ -1782,7 +1875,7 @@ Toolkit.injectTopbar('video-toolkit');
       // alpha replaced by a chroma color and use buildGif (GIF will treat those pixels as
       // background color rather than transparent). To get real transparency, we'd need
       // to extend buildGif. Document this limitation.
-      log.warn('注意: 当前实现的 GIF 不支持透明,抠掉区域会变成纯色。建议用 APNG 或 PNG ZIP。');
+      log.warn(Toolkit.T('vt.warn.gifNoTransparency', null, '注意: 当前实现的 GIF 不支持透明,抠掉区域会变成纯色。建议用 APNG 或 PNG ZIP。'));
       const gif = await AnimEncoders.buildGif(frameBitmaps, {
         fps, loop: 0, paletteMode: 'median',
         onProgress: p => progress.set(0.6 + p * 0.4)
@@ -1790,10 +1883,10 @@ Toolkit.injectTopbar('video-toolkit');
       outBlob = gif;
       outExt = 'gif';
       showOutput();
-      log.ok(`完成 GIF (${fmtBytes(gif.size)})`);
+      log.ok(Toolkit.T('vt.log.gifDoneCk', { size: fmtBytes(gif.size) }, `完成 GIF (${fmtBytes(gif.size)})`));
     } else if (outputFmt === 'mp4') {
-      log.dim('编码 MP4 (H.264, 透明区填充指定色)...');
-      if (!('VideoEncoder' in window)) throw new Error('当前浏览器不支持 WebCodecs, 改用 PNG ZIP / APNG');
+      log.dim(Toolkit.T('vt.log.mp4EncodeCk', null, '编码 MP4 (H.264, 透明区填充指定色)...'));
+      if (!('VideoEncoder' in window)) throw new Error(Toolkit.T('vt.err.noWebCodecsCk', null, '当前浏览器不支持 WebCodecs, 改用 PNG ZIP / APNG'));
       const bg = hexToRgb($('keyBgColor').value) || { r: 0, g: 0, b: 0 };
       const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.5');
       const muxer = new Muxer({
@@ -1829,15 +1922,15 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
-      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
-      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error('输出 MP4 校验失败 — 编码可能未完成或损坏');
+      if (encoderError) throw new Error(Toolkit.T('vt.err.encode', { msg: encoderError.message }, `视频编码失败: ${encoderError.message}`));
+      if (!validateMp4Buffer(muxer.target.buffer)) throw new Error(Toolkit.T('vt.err.mp4Validate', null, '输出 MP4 校验失败 — 编码可能未完成或损坏'));
       outBlob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
       outExt = 'mp4';
       showOutput();
-      log.ok(`完成 MP4 (${fmtBytes(outBlob.size)})`);
+      log.ok(Toolkit.T('vt.log.mp4DoneCk', { size: fmtBytes(outBlob.size) }, `完成 MP4 (${fmtBytes(outBlob.size)})`));
     } else if (outputFmt === 'webm-alpha') {
-      log.dim('编码 WebM VP9 + alpha (真透明)...');
-      if (!('VideoEncoder' in window)) throw new Error('当前浏览器不支持 WebCodecs');
+      log.dim(Toolkit.T('vt.log.webmAlphaEncode', null, '编码 WebM VP9 + alpha (真透明)...'));
+      if (!('VideoEncoder' in window)) throw new Error(Toolkit.T('vt.err.noWebCodecsAlpha', null, '当前浏览器不支持 WebCodecs'));
       const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/webm-muxer@5.0.3');
       const muxer = new Muxer({
         target: new ArrayBufferTarget(),
@@ -1857,7 +1950,7 @@ Toolkit.injectTopbar('video-toolkit');
           alpha: 'keep'  // KEY: keep alpha channel
         });
       } catch (e) {
-        throw new Error('VP9 alpha 编码不支持 (Chrome 113+): ' + e.message);
+        throw new Error(Toolkit.T('vt.err.vp9Alpha', { msg: e.message }, `VP9 alpha 编码不支持 (Chrome 113+): ${e.message}`));
       }
       for (let i = 0; i < frameBitmaps.length; i++) {
         if (encoderError) break;
@@ -1869,20 +1962,20 @@ Toolkit.injectTopbar('video-toolkit');
       await encoder.flush();
       encoder.close();
       muxer.finalize();
-      if (encoderError) throw new Error('视频编码失败: ' + encoderError.message);
-      if (!validateWebmBuffer(muxer.target.buffer)) throw new Error('输出 WebM 校验失败 — 编码可能未完成或损坏');
+      if (encoderError) throw new Error(Toolkit.T('vt.err.encode', { msg: encoderError.message }, `视频编码失败: ${encoderError.message}`));
+      if (!validateWebmBuffer(muxer.target.buffer)) throw new Error(Toolkit.T('vt.err.webmValidate', null, '输出 WebM 校验失败 — 编码可能未完成或损坏'));
       outBlob = new Blob([muxer.target.buffer], { type: 'video/webm' });
       outExt = 'webm';
       showOutput();
-      log.ok(`完成 WebM (VP9 + alpha) ${fmtBytes(outBlob.size)}`);
+      log.ok(Toolkit.T('vt.log.webmAlphaDone', { size: fmtBytes(outBlob.size) }, `完成 WebM (VP9 + alpha) ${fmtBytes(outBlob.size)}`));
     } else if (outputFmt === 'webm') {
-      log.dim('编码 WebM (MediaRecorder, alpha 区域变黑)...');
+      log.dim(Toolkit.T('vt.log.webmMrEncode', null, '编码 WebM (MediaRecorder, alpha 区域变黑)...'));
       const cv = newCanvas(w, h);
       const ctx = cv.getContext('2d');
       const stream = cv.captureStream(0);
       const track = stream.getVideoTracks()[0];
       const mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error('当前浏览器不支持 ' + mimeType);
+      if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error(Toolkit.T('vt.err.noMime', { mime: mimeType }, `当前浏览器不支持 ${mimeType}`));
       const chunks = [];
       const recorder = new MediaRecorder(stream, { mimeType });
       recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
@@ -1901,7 +1994,7 @@ Toolkit.injectTopbar('video-toolkit');
       outBlob = new Blob(chunks, { type: 'video/webm' });
       outExt = 'webm';
       showOutput();
-      log.ok(`完成 WebM (${fmtBytes(outBlob.size)})`);
+      log.ok(Toolkit.T('vt.log.webmMrDone', { size: fmtBytes(outBlob.size) }, `完成 WebM (${fmtBytes(outBlob.size)})`));
     }
     progress.hide();
   }
@@ -2016,10 +2109,11 @@ Toolkit.injectTopbar('video-toolkit');
   }
 
   function showOutputAsZipInfo(frameCount) {
+    const zipMsg = Toolkit.T('vt.outBox.zip', { n: frameCount }, `<strong>${frameCount}</strong> 帧已打包为 ZIP`);
     $('outBox').innerHTML = `
       <div style="text-align:center; color: var(--muted-2)">
         <div style="font-size:48px">📦</div>
-        <div><strong>${frameCount}</strong> 帧已打包为 ZIP</div>
+        <div>${zipMsg}</div>
         <div class="small muted">${fmtBytes(outBlob.size)}</div>
       </div>
     `;
@@ -2132,9 +2226,9 @@ Toolkit.injectTopbar('video-toolkit');
   $('clearBtn').addEventListener('click', () => {
     if (srcUrl) URL.revokeObjectURL(srcUrl);
     srcVideo = null; srcUrl = null; srcMeta = null; outBlob = null;
-    $('srcBox').innerHTML = '<div class="preview-empty">拖入视频</div>';
-    $('outBox').innerHTML = '<div class="preview-empty">Dobby 干完显示在这里</div>';
-    $('stats').textContent = 'Dobby 待命';
+    $('srcBox').innerHTML = `<div class="preview-empty">${Toolkit.T('vt.empty.drop', null, '拖入视频')}</div>`;
+    $('outBox').innerHTML = `<div class="preview-empty">${Toolkit.T('vt.empty.out', null, 'Dobby 干完显示在这里')}</div>`;
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;

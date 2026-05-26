@@ -103,23 +103,23 @@
     <h1>🧩 Composer</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入多张图片</p>
-      <p class="hint">PNG / JPG / WebP<br/>按文件名自然排序,可上下调整</p>
+      <p data-i18n="comp.drop.title">📂 拖入多张图片</p>
+      <p class="hint" data-i18n-html="comp.drop.hint">PNG / JPG / WebP<br/>按文件名自然排序,可上下调整</p>
       <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
     </div>
 
     <h2 data-i18n="comp.assets">素材</h2>
     <div class="image-list" id="imageList">
-      <div class="empty-row">Dobby 手里还没图</div>
+      <div class="empty-row" data-i18n="comp.empty.assets">Dobby 手里还没图</div>
     </div>
 
     <h2 data-i18n="comp.layout">布局</h2>
     <div class="field">
       <select id="layout">
-        <option value="horizontal">↔ 横向拼接</option>
-        <option value="vertical">↕ 纵向拼接</option>
-        <option value="grid">⊞ 网格 (自动列数)</option>
-        <option value="overlay">⊕ 叠加 (overlay)</option>
+        <option value="horizontal" data-i18n="comp.opt.layout.h">↔ 横向拼接</option>
+        <option value="vertical" data-i18n="comp.opt.layout.v">↕ 纵向拼接</option>
+        <option value="grid" data-i18n="comp.opt.layout.grid">⊞ 网格 (自动列数)</option>
+        <option value="overlay" data-i18n="comp.opt.layout.overlay">⊕ 叠加 (overlay)</option>
       </select>
     </div>
 
@@ -128,39 +128,39 @@
     <h2 data-i18n="comp.bgGap">背景 / 间距</h2>
     <div class="row-fields">
       <div class="field">
-        <label>背景色</label>
+        <label data-i18n="comp.label.bg">背景色</label>
         <input type="text" id="bgColor" value="transparent" />
       </div>
       <div class="field">
-        <label>间距 (px)</label>
+        <label data-i18n="comp.label.gap">间距 (px)</label>
         <input type="number" id="gap" value="8" min="0" />
       </div>
     </div>
     <div class="field">
-      <label>外边距 (px)</label>
+      <label data-i18n="comp.label.padding">外边距 (px)</label>
       <input type="number" id="padding" value="0" min="0" />
     </div>
 
     <h2 data-i18n="comp.watermark">文字水印 (可选)</h2>
-    <div class="field"><label>文字</label><input type="text" id="wmText" placeholder="留空不加水印" /></div>
+    <div class="field"><label data-i18n="comp.label.wmText">文字</label><input type="text" id="wmText" data-i18n-attr="placeholder:comp.wmText.ph" placeholder="留空不加水印" /></div>
     <div class="row-fields">
-      <div class="field"><label>字号 (px)</label><input type="number" id="wmSize" value="24" min="6" /></div>
-      <div class="field"><label>颜色</label><input type="text" id="wmColor" value="rgba(255,255,255,0.8)" /></div>
+      <div class="field"><label data-i18n="comp.label.wmSize">字号 (px)</label><input type="number" id="wmSize" value="24" min="6" /></div>
+      <div class="field"><label data-i18n="comp.label.wmColor">颜色</label><input type="text" id="wmColor" value="rgba(255,255,255,0.8)" /></div>
     </div>
     <div class="field">
-      <label>位置</label>
+      <label data-i18n="comp.label.wmPos">位置</label>
       <select id="wmPos">
-        <option value="br">右下</option>
-        <option value="bl">左下</option>
-        <option value="tr">右上</option>
-        <option value="tl">左上</option>
-        <option value="center">居中</option>
+        <option value="br" data-i18n="comp.opt.pos.br">右下</option>
+        <option value="bl" data-i18n="comp.opt.pos.bl">左下</option>
+        <option value="tr" data-i18n="comp.opt.pos.tr">右上</option>
+        <option value="tl" data-i18n="comp.opt.pos.tl">左上</option>
+        <option value="center" data-i18n="comp.opt.pos.center">居中</option>
       </select>
     </div>
 
     <h2 data-i18n="common.output">输出</h2>
     <div class="field">
-      <label>格式</label>
+      <label data-i18n="ie.format.label">格式</label>
       <select id="format">
         <option value="image/png">PNG</option>
         <option value="image/jpeg">JPEG</option>
@@ -168,24 +168,24 @@
       </select>
     </div>
     <div class="field">
-      <label>JPEG / WebP 质量 <span id="qualityVal" class="mono">92</span></label>
+      <label data-i18n-html="comp.quality.label">JPEG / WebP 质量 <span id="qualityVal" class="mono">92</span></label>
       <input type="range" id="quality" min="1" max="100" value="92" />
     </div>
     <div class="field">
-      <label>文件名</label>
+      <label data-i18n="common.filename">文件名</label>
       <input type="text" id="filename" value="composed" />
     </div>
-    <button id="renderBtn" disabled>合成</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="renderBtn" disabled data-i18n="comp.btn.render">合成</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="imageOpt.download">下载</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-area" id="previewArea">
-      <div class="preview-empty">拖入图片并点击"合成"</div>
+      <div class="preview-empty" data-i18n="comp.empty.preview">拖入图片并点击"合成"</div>
     </div>
   </div>
 </div>
@@ -195,7 +195,7 @@
 Toolkit.injectTopbar('composer');
 
 (() => {
-  const { $, makeLogger, attachDropZone, naturalSort, download, newCanvas, canvasToBlob, fmtBytes } = Toolkit;
+  const { $, makeLogger, attachDropZone, naturalSort, download, newCanvas, canvasToBlob, fmtBytes, T } = Toolkit;
   const log = makeLogger($('log'));
 
   let items = []; // [{name, bitmap, w, h}]
@@ -210,7 +210,7 @@ Toolkit.injectTopbar('composer');
   async function handleFiles(files) {
     if (!files.length) return;
     files = naturalSort(files.filter(f => f.type.startsWith('image/')));
-    log.dim(`加载 ${files.length} 张图片...`);
+    log.dim(T('comp.log.loading', { n: files.length }, `加载 ${files.length} 张图片...`));
     for (const f of files) {
       try {
         const bitmap = await createImageBitmap(f);
@@ -219,17 +219,17 @@ Toolkit.injectTopbar('composer');
         log.err(`${f.name}: ${e.message}`);
       }
     }
-    log.ok(`加载完成,共 ${items.length} 张素材`);
+    log.ok(T('comp.log.loaded', { n: items.length }, `加载完成,共 ${items.length} 张素材`));
     renderImageList();
     renderLayoutControls();
     $('renderBtn').disabled = items.length === 0;
-    $('stats').innerHTML = `共 <strong>${items.length}</strong> 张素材`;
+    $('stats').innerHTML = T('comp.stats.assets', { n: items.length }, `共 <strong>${items.length}</strong> 张素材`);
   }
 
   function renderImageList() {
     const list = $('imageList');
     list.innerHTML = '';
-    if (!items.length) { list.innerHTML = '<div class="empty-row">Dobby 手里还没图</div>'; return; }
+    if (!items.length) { list.innerHTML = '<div class="empty-row">' + T('comp.empty.assets', null, 'Dobby 手里还没图') + '</div>'; return; }
     items.forEach((it, i) => {
       const row = document.createElement('div');
       row.className = 'image-row';
@@ -268,33 +268,33 @@ Toolkit.injectTopbar('composer');
     if (layout === 'horizontal' || layout === 'vertical') {
       c.innerHTML = `
         <div class="field">
-          <label>对齐 (跨垂直/水平轴)</label>
+          <label>${T('comp.label.align', null, '对齐 (跨垂直/水平轴)')}</label>
           <select id="align">
-            <option value="center">居中 (推荐)</option>
-            <option value="start">起始</option>
-            <option value="end">末端</option>
+            <option value="center">${T('comp.opt.align.center', null, '居中 (推荐)')}</option>
+            <option value="start">${T('comp.opt.align.start', null, '起始')}</option>
+            <option value="end">${T('comp.opt.align.end', null, '末端')}</option>
           </select>
         </div>
-        <label class="checkbox"><input type="checkbox" id="uniformSize" /><span>统一尺寸到最大边</span></label>
+        <label class="checkbox"><input type="checkbox" id="uniformSize" /><span>${T('comp.label.uniformSize', null, '统一尺寸到最大边')}</span></label>
       `;
     } else if (layout === 'grid') {
       c.innerHTML = `
         <div class="row-fields">
-          <div class="field"><label>列数 (0=自动)</label><input type="number" id="cols" value="0" min="0" /></div>
-          <div class="field"><label>单格大小 (px)</label><input type="number" id="cellSize" value="0" min="0" placeholder="0=用最大" /></div>
+          <div class="field"><label>${T('comp.label.cols', null, '列数 (0=自动)')}</label><input type="number" id="cols" value="0" min="0" /></div>
+          <div class="field"><label>${T('comp.label.cellSize', null, '单格大小 (px)')}</label><input type="number" id="cellSize" value="0" min="0" placeholder="${T('comp.cellSize.ph', null, '0=用最大')}" /></div>
         </div>
-        <div class="info">单格大小填 0 = 用所有图最大边作为格子尺寸</div>
+        <div class="info">${T('comp.info.grid', null, '单格大小填 0 = 用所有图最大边作为格子尺寸')}</div>
       `;
     } else if (layout === 'overlay') {
       c.innerHTML = `
-        <div class="info">所有图按列表顺序居中叠加,后加的图在上层。画布尺寸取所有图最大边。</div>
+        <div class="info">${T('comp.info.overlay', null, '所有图按列表顺序居中叠加,后加的图在上层。画布尺寸取所有图最大边。')}</div>
       `;
     }
   }
 
   $('renderBtn').addEventListener('click', async () => {
     if (!items.length) return;
-    log.dim('合成中...');
+    log.dim(T('comp.log.composing', null, '合成中...'));
     try {
       outCanvas = composeImage();
       const fmt = $('format').value;
@@ -305,7 +305,7 @@ Toolkit.injectTopbar('composer');
       area.appendChild(outCanvas);
       $('downloadBtn').disabled = false;
       handoff?.setBlob(outBlob, ($('filename').value || 'composed') + '.' + (fmt === 'image/jpeg' ? 'jpg' : fmt === 'image/webp' ? 'webp' : 'png'), fmt);
-      log.ok(`完成 ${outCanvas.width}×${outCanvas.height} · ${fmtBytes(outBlob.size)}`);
+      log.ok(T('comp.log.done', { w: outCanvas.width, h: outCanvas.height, size: fmtBytes(outBlob.size) }, `完成 ${outCanvas.width}×${outCanvas.height} · ${fmtBytes(outBlob.size)}`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -444,9 +444,9 @@ Toolkit.injectTopbar('composer');
 
   $('clearBtn').addEventListener('click', () => {
     items = []; outBlob = null; outCanvas = null;
-    $('imageList').innerHTML = '<div class="empty-row">Dobby 手里还没图</div>';
-    $('previewArea').innerHTML = '<div class="preview-empty">拖入图片并点击"合成"</div>';
-    $('stats').textContent = 'Dobby 待命';
+    $('imageList').innerHTML = '<div class="empty-row">' + T('comp.empty.assets', null, 'Dobby 手里还没图') + '</div>';
+    $('previewArea').innerHTML = '<div class="preview-empty">' + T('comp.empty.preview', null, '拖入图片并点击"合成"') + '</div>';
+    $('stats').textContent = T('common.idle', null, 'Dobby 待命');
     $('renderBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.clear();

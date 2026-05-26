@@ -90,74 +90,74 @@
   <div class="sidebar">
     <h1>📱 QR 码</h1>
 
-    <div class="compat-note">首次使用需联网加载 QR 库 (~50KB),之后浏览器缓存可离线用</div>
+    <div class="compat-note" data-i18n="qr.compat">首次使用需联网加载 QR 库 (~50KB),之后浏览器缓存可离线用</div>
 
     <h2 data-i18n="common.content">内容</h2>
     <div class="field">
-      <label>文本 / URL</label>
+      <label data-i18n="qr.content.label">文本 / URL</label>
       <textarea id="content" rows="4" style="background:rgba(0,0,0,0.4); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:ui-monospace, monospace; font-size:11px; width:100%;">https://playable-toolkit.local</textarea>
     </div>
     <div class="preset-row">
       <button data-preset="url" type="button">URL</button>
       <button data-preset="wifi" type="button">WiFi</button>
-      <button data-preset="vcard" type="button">名片</button>
-      <button data-preset="sms" type="button">短信</button>
+      <button data-preset="vcard" type="button" data-i18n="qr.preset.vcard">名片</button>
+      <button data-preset="sms" type="button" data-i18n="qr.preset.sms">短信</button>
     </div>
 
     <h2 data-i18n="qr.style">样式</h2>
     <div class="field-row">
       <div class="field">
-        <label>前景色</label>
+        <label data-i18n="qr.fg">前景色</label>
         <input type="text" id="fgColor" value="#000000" />
       </div>
       <div class="field">
-        <label>背景色</label>
+        <label data-i18n="qr.bg">背景色</label>
         <input type="text" id="bgColor" value="#ffffff" />
       </div>
     </div>
     <div class="field">
-      <label>纠错等级</label>
+      <label data-i18n="qr.ecc">纠错等级</label>
       <select id="ecc">
-        <option value="L">L · 7% (信息容量最大)</option>
-        <option value="M" selected>M · 15% (推荐)</option>
+        <option value="L" data-i18n="qr.ecc.l">L · 7% (信息容量最大)</option>
+        <option value="M" selected data-i18n="qr.ecc.m">M · 15% (推荐)</option>
         <option value="Q">Q · 25%</option>
-        <option value="H">H · 30% (适合中心嵌 logo)</option>
+        <option value="H" data-i18n="qr.ecc.h">H · 30% (适合中心嵌 logo)</option>
       </select>
     </div>
     <div class="field">
-      <label>尺寸 <span id="sizeVal" class="mono">512</span> px</label>
+      <label><span data-i18n="qr.size">尺寸</span> <span id="sizeVal" class="mono">512</span> px</label>
       <input type="range" id="size" min="128" max="2048" step="64" value="512" />
     </div>
     <div class="field">
-      <label>边距 <span id="marginVal" class="mono">4</span> 模块</label>
+      <label><span data-i18n="qr.margin">边距</span> <span id="marginVal" class="mono">4</span> <span data-i18n="qr.modules">模块</span></label>
       <input type="range" id="margin" min="0" max="10" value="4" />
     </div>
 
     <h2 data-i18n="qr.logo">中心 Logo (可选)</h2>
     <div class="drop-zone" id="logoDrop" style="padding:14px;">
-      <p style="margin:0; font-size:12px;">📂 拖入 logo</p>
-      <p class="hint" style="margin:2px 0 0;">建议 ECC=H,Logo 占比 ≤25%</p>
+      <p style="margin:0; font-size:12px;" data-i18n="qr.logo.drop">📂 拖入 logo</p>
+      <p class="hint" style="margin:2px 0 0;" data-i18n="qr.logo.hint">建议 ECC=H,Logo 占比 ≤25%</p>
       <input type="file" id="logoInput" accept="image/*" style="display:none" />
     </div>
     <div class="field">
-      <label>Logo 占比 <span id="logoSizeVal" class="mono">20</span>%</label>
+      <label><span data-i18n="qr.logo.size">Logo 占比</span> <span id="logoSizeVal" class="mono">20</span>%</label>
       <input type="range" id="logoSize" min="10" max="35" value="20" />
     </div>
-    <button id="clearLogoBtn" class="secondary">清除 logo</button>
+    <button id="clearLogoBtn" class="secondary" data-i18n="qr.logo.clear">清除 logo</button>
 
     <h2 data-i18n="common.export">导出</h2>
-    <div class="field"><label>文件名</label><input type="text" id="filename" value="qrcode" /></div>
-    <button id="genBtn">生成 QR 码</button>
-    <button id="downloadPngBtn" class="secondary" disabled>下载 PNG</button>
-    <button id="downloadSvgBtn" class="secondary" disabled>下载 SVG</button>
+    <div class="field"><label data-i18n="common.filename">文件名</label><input type="text" id="filename" value="qrcode" /></div>
+    <button id="genBtn" data-i18n="qr.gen">生成 QR 码</button>
+    <button id="downloadPngBtn" class="secondary" disabled data-i18n="qr.dlPng">下载 PNG</button>
+    <button id="downloadSvgBtn" class="secondary" disabled data-i18n="qr.dlSvg">下载 SVG</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未生成</div>
+    <div class="stats" id="stats" data-i18n="qr.stats.empty">未生成</div>
     <div class="qr-preview" id="preview">
-      <div class="preview-empty">点击"生成 QR 码"</div>
+      <div class="preview-empty" data-i18n="qr.preview.empty">点击"生成 QR 码"</div>
     </div>
   </div>
 </div>
@@ -183,8 +183,8 @@ Toolkit.injectTopbar('qr-gen');
   const PRESETS = {
     url: 'https://example.com',
     wifi: 'WIFI:T:WPA;S:MyNetwork;P:password123;;',
-    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN:张三\nTEL:13800138000\nEMAIL:zhangsan@example.com\nEND:VCARD',
-    sms: 'SMSTO:13800138000:你好'
+    vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN:' + Toolkit.T('qr.vcard.sampleName', null, '张三') + '\nTEL:13800138000\nEMAIL:zhangsan@example.com\nEND:VCARD',
+    sms: 'SMSTO:13800138000:' + Toolkit.T('qr.sms.sampleBody', null, '你好')
   };
   document.querySelectorAll('.preset-row button').forEach(b => {
     b.addEventListener('click', () => { $('content').value = PRESETS[b.dataset.preset]; scheduleGen(); });
@@ -196,11 +196,11 @@ Toolkit.injectTopbar('qr-gen');
     if (!files.length) return;
     try {
       logoBitmap = await createImageBitmap(files[0]);
-      log.ok(`Logo 已加载 ${logoBitmap.width}×${logoBitmap.height}`);
+      log.ok(Toolkit.T('qr.log.logoLoaded', { w: logoBitmap.width, h: logoBitmap.height }, `Logo 已加载 ${logoBitmap.width}×${logoBitmap.height}`));
       scheduleGen();
-    } catch (e) { log.err('logo 加载失败: ' + e.message); }
+    } catch (e) { log.err(Toolkit.T('qr.log.logoFail', { msg: e.message }, 'logo 加载失败: ' + e.message)); }
   });
-  $('clearLogoBtn').addEventListener('click', () => { logoBitmap = null; log.dim('Logo 已清除'); scheduleGen(); });
+  $('clearLogoBtn').addEventListener('click', () => { logoBitmap = null; log.dim(Toolkit.T('qr.log.logoCleared', null, 'Logo 已清除')); scheduleGen(); });
 
   // ----- live generate (debounced) -----
   let genTimer = null;
@@ -213,7 +213,7 @@ Toolkit.injectTopbar('qr-gen');
   async function generate() {
     const text = $('content').value;
     if (!text) {
-      $('preview').innerHTML = '<div class="preview-empty">输入内容后自动生成</div>';
+      $('preview').innerHTML = `<div class="preview-empty">${Toolkit.T('qr.preview.needInput', null, '输入内容后自动生成')}</div>`;
       $('downloadPngBtn').disabled = true;
       $('downloadSvgBtn').disabled = true;
       $('stats').textContent = '';
@@ -224,7 +224,7 @@ Toolkit.injectTopbar('qr-gen');
     $('genBtn').disabled = true;
     try {
       if (!qrLib) {
-        log.dim('加载 QR 库 (首次联网)...');
+        log.dim(Toolkit.T('qr.log.loadingLib', null, '加载 QR 库 (首次联网)...'));
         qrLib = await import('https://esm.sh/qrcode@1.5.3');
       }
       const size = parseInt($('size').value, 10);
@@ -250,7 +250,7 @@ Toolkit.injectTopbar('qr-gen');
       $('preview').appendChild(cv);
       $('downloadPngBtn').disabled = false;
       $('downloadSvgBtn').disabled = false;
-      $('stats').innerHTML = `<strong>${size}×${size}</strong> · ECC <strong>${ecc}</strong> · ${text.length} 字符`;
+      $('stats').innerHTML = `<strong>${size}×${size}</strong> · ECC <strong>${ecc}</strong> · ${text.length} ${Toolkit.T('qr.unit.chars', null, '字符')}`;
       const pngBlob = await canvasToBlob(cv, 'image/png');
       const fname = (($('filename').value || 'qrcode').replace(/[^\w-]/g, '_')) + '.png';
       handoff?.setBlob(pngBlob, fname, 'image/png');
@@ -271,7 +271,7 @@ Toolkit.injectTopbar('qr-gen');
     el.addEventListener('change', scheduleGen);
   });
   // keep the manual button as a fallback (force regen, ignore in-flight guard)
-  $('genBtn').textContent = '🔄 重新生成';
+  $('genBtn').textContent = Toolkit.T('qr.regen', null, '🔄 重新生成');
   $('genBtn').addEventListener('click', () => { genInFlight = false; generate(); });
 
   $('downloadPngBtn').addEventListener('click', async () => {

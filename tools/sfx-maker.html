@@ -167,29 +167,29 @@
 
     <h2 data-i18n="sfx.wave">波形</h2>
     <select id="wave" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
-      <option value="square">⬜ 方波 (Square) — 经典 8-bit</option>
-      <option value="sawtooth">📐 锯齿 (Saw) — 尖锐</option>
-      <option value="sine">∿ 正弦 (Sine) — 柔和</option>
-      <option value="triangle">▲ 三角 (Triangle) — 圆润</option>
-      <option value="noise">📻 噪声 (Noise) — 爆炸/打击</option>
+      <option value="square" data-i18n="sfx.wave.square">⬜ 方波 (Square) — 经典 8-bit</option>
+      <option value="sawtooth" data-i18n="sfx.wave.sawtooth">📐 锯齿 (Saw) — 尖锐</option>
+      <option value="sine" data-i18n="sfx.wave.sine">∿ 正弦 (Sine) — 柔和</option>
+      <option value="triangle" data-i18n="sfx.wave.triangle">▲ 三角 (Triangle) — 圆润</option>
+      <option value="noise" data-i18n="sfx.wave.noise">📻 噪声 (Noise) — 爆炸/打击</option>
     </select>
 
     <h2 data-i18n="sfx.envelope">包络 (Envelope)</h2>
     <div class="sfx-params">
       <div class="field">
-        <label>起音 (Attack) <span class="val" id="attackVal">0</span></label>
+        <label><span data-i18n="sfx.attack">起音 (Attack)</span> <span class="val" id="attackVal">0</span></label>
         <input type="range" id="attack" min="0" max="500" value="0" style="width:100%" />
       </div>
       <div class="field">
-        <label>维持 (Sustain) <span class="val" id="sustainVal">100</span></label>
+        <label><span data-i18n="sfx.sustain">维持 (Sustain)</span> <span class="val" id="sustainVal">100</span></label>
         <input type="range" id="sustain" min="10" max="2000" value="100" style="width:100%" />
       </div>
       <div class="field">
-        <label>衰减 (Decay) <span class="val" id="decayVal">200</span></label>
+        <label><span data-i18n="sfx.decay">衰减 (Decay)</span> <span class="val" id="decayVal">200</span></label>
         <input type="range" id="decay" min="10" max="2000" value="200" style="width:100%" />
       </div>
       <div class="field">
-        <label>音量 (Volume) <span class="val" id="volumeVal">0.5</span></label>
+        <label><span data-i18n="sfx.volume">音量 (Volume)</span> <span class="val" id="volumeVal">0.5</span></label>
         <input type="range" id="volume" min="0" max="100" value="50" style="width:100%" />
       </div>
     </div>
@@ -197,19 +197,19 @@
     <h2 data-i18n="sfx.pitch">音高 (Pitch)</h2>
     <div class="sfx-params">
       <div class="field">
-        <label>起始频率 <span class="val" id="freqStartVal">440 Hz</span></label>
+        <label><span data-i18n="sfx.freqStart">起始频率</span> <span class="val" id="freqStartVal">440 Hz</span></label>
         <input type="range" id="freqStart" min="40" max="2000" value="440" style="width:100%" />
       </div>
       <div class="field">
-        <label>结束频率 <span class="val" id="freqEndVal">440 Hz</span></label>
+        <label><span data-i18n="sfx.freqEnd">结束频率</span> <span class="val" id="freqEndVal">440 Hz</span></label>
         <input type="range" id="freqEnd" min="40" max="2000" value="440" style="width:100%" />
       </div>
       <div class="field">
-        <label>颤音深度 <span class="val" id="vibratoDepthVal">0</span></label>
+        <label><span data-i18n="sfx.vibratoDepth">颤音深度</span> <span class="val" id="vibratoDepthVal">0</span></label>
         <input type="range" id="vibratoDepth" min="0" max="100" value="0" style="width:100%" />
       </div>
       <div class="field">
-        <label>颤音速度 <span class="val" id="vibratoSpeedVal">10 Hz</span></label>
+        <label><span data-i18n="sfx.vibratoSpeed">颤音速度</span> <span class="val" id="vibratoSpeedVal">10 Hz</span></label>
         <input type="range" id="vibratoSpeed" min="0" max="40" value="10" style="width:100%" />
       </div>
     </div>
@@ -217,11 +217,11 @@
     <h2 data-i18n="sfx.filter">滤波</h2>
     <div class="sfx-params">
       <div class="field">
-        <label>低通 (Lowpass) <span class="val" id="lowpassVal">关</span></label>
+        <label><span data-i18n="sfx.lowpass">低通 (Lowpass)</span> <span class="val" id="lowpassVal">关</span></label>
         <input type="range" id="lowpass" min="0" max="20000" value="20000" step="100" style="width:100%" />
       </div>
       <div class="field">
-        <label>高通 (Highpass) <span class="val" id="highpassVal">关</span></label>
+        <label><span data-i18n="sfx.highpass">高通 (Highpass)</span> <span class="val" id="highpassVal">关</span></label>
         <input type="range" id="highpass" min="0" max="2000" value="0" step="10" style="width:100%" />
       </div>
     </div>
@@ -233,12 +233,12 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">挑个预设点 ▶ 试听 · 满意了导出 WAV</div>
+    <div class="stats" id="stats" data-i18n="sfx.stats.ready">挑个预设点 ▶ 试听 · 满意了导出 WAV</div>
 
     <div class="sfx-stage">
       <div class="sfx-actions">
-        <button id="playBtn" class="huge">▶ 播放</button>
-        <button id="randomBtn" class="secondary">🎲 随机变异</button>
+        <button id="playBtn" class="huge" data-i18n="sfx.play">▶ 播放</button>
+        <button id="randomBtn" class="secondary" data-i18n="sfx.random">🎲 随机变异</button>
       </div>
 
       <div class="sfx-waveform">
@@ -246,11 +246,11 @@
         <div class="info" id="waveInfo">—</div>
       </div>
 
-      <h2 style="margin-top:8px; color:var(--muted)">导出</h2>
+      <h2 style="margin-top:8px; color:var(--muted)" data-i18n="common.export">导出</h2>
       <div class="sfx-actions">
-        <button id="exportWav">💾 导出 WAV</button>
-        <button id="exportOpus" class="secondary">💾 导出 Opus (WebM)</button>
-        <button id="exportMp3" class="secondary" style="display:none">💾 导出 MP3</button>
+        <button id="exportWav" data-i18n="sfx.exportWav">💾 导出 WAV</button>
+        <button id="exportOpus" class="secondary" data-i18n="sfx.exportOpus">💾 导出 Opus (WebM)</button>
+        <button id="exportMp3" class="secondary" style="display:none" data-i18n="sfx.exportMp3">💾 导出 MP3</button>
       </div>
     </div>
   </div>
@@ -276,6 +276,7 @@ Toolkit.injectTopbar('sfx-maker');
     { id: 'coin',     icon: '🪙', name: '金币',  wave: 'square',  attack: 0,   sustain: 50,  decay: 200, freqStart: 800, freqEnd: 1300,vibratoDepth: 0,  vibratoSpeed: 0,  lowpass: 20000, highpass: 0, volume: 45 },
     { id: 'powerup',  icon: '⚡', name: '能量',  wave: 'sawtooth',attack: 8,   sustain: 120, decay: 400, freqStart: 300, freqEnd: 1200,vibratoDepth: 25, vibratoSpeed: 18, lowpass: 20000, highpass: 0, volume: 45 }
   ];
+  const presetName = (p) => Toolkit.T('sfx.preset.' + p.id, null, p.name);
 
   // ============================================================
   //   State
@@ -294,7 +295,7 @@ Toolkit.injectTopbar('sfx-maker');
     const b = document.createElement('button');
     b.className = 'sfx-preset' + (p.id === activePresetId ? ' active' : '');
     b.dataset.id = p.id;
-    b.innerHTML = `<span class="icon">${p.icon}</span><span class="name">${p.name}</span>`;
+    b.innerHTML = `<span class="icon">${p.icon}</span><span class="name">${presetName(p)}</span>`;
     b.addEventListener('click', () => loadPreset(p.id));
     presetGrid.appendChild(b);
   });
@@ -324,8 +325,8 @@ Toolkit.injectTopbar('sfx-maker');
      ['freqEnd','freqEnd',v=>v+' Hz'],
      ['vibratoDepth','vibratoDepth',v=>v],
      ['vibratoSpeed','vibratoSpeed',v=>v+' Hz'],
-     ['lowpass','lowpass',v=>v>=20000?'关':v+' Hz'],
-     ['highpass','highpass',v=>v<=0?'关':v+' Hz']
+     ['lowpass','lowpass',v=>v>=20000?Toolkit.T('sfx.off',null,'关'):v+' Hz'],
+     ['highpass','highpass',v=>v<=0?Toolkit.T('sfx.off',null,'关'):v+' Hz']
     ].forEach(([id, key, fmt]) => {
       const el = $(id);
       el.value = params[key];
@@ -563,20 +564,21 @@ Toolkit.injectTopbar('sfx-maker');
   }
 
   $('exportWav').addEventListener('click', () => {
-    if (!lastRenderedBuffer) { log.err('没有声音'); return; }
+    if (!lastRenderedBuffer) { log.err(Toolkit.T('sfx.err.noSound', null, '没有声音')); return; }
     const blob = bufferToWav(lastRenderedBuffer);
     const name = ($('filename').value || 'sfx').replace(/[^\w-]/g, '_');
     const ts = Date.now();
     download(blob, `${name}_${activePresetId}_${ts}.wav`);
-    log.ok(`导出 ${(blob.size / 1024).toFixed(1)} KB WAV`);
+    const kb = (blob.size / 1024).toFixed(1);
+    log.ok(Toolkit.T('sfx.log.exportedWav', { kb }, `导出 ${kb} KB WAV`));
   });
 
   // ============================================================
   //   Export Opus (via MediaRecorder webm/opus)
   // ============================================================
   $('exportOpus').addEventListener('click', async () => {
-    if (!lastRenderedBuffer) { log.err('没有声音'); return; }
-    log.dim('编码 Opus...');
+    if (!lastRenderedBuffer) { log.err(Toolkit.T('sfx.err.noSound', null, '没有声音')); return; }
+    log.dim(Toolkit.T('sfx.log.encodingOpus', null, '编码 Opus...'));
     try {
       const ctx = ensureCtx();
       const dest = ctx.createMediaStreamDestination();
@@ -598,9 +600,10 @@ Toolkit.injectTopbar('sfx-maker');
       const name = ($('filename').value || 'sfx').replace(/[^\w-]/g, '_');
       const ts = Date.now();
       download(blob, `${name}_${activePresetId}_${ts}.webm`);
-      log.ok(`导出 ${(blob.size / 1024).toFixed(1)} KB Opus (WebM 容器)`);
+      const kb = (blob.size / 1024).toFixed(1);
+      log.ok(Toolkit.T('sfx.log.exportedOpus', { kb }, `导出 ${kb} KB Opus (WebM 容器)`));
     } catch (e) {
-      log.err('Opus 编码失败: ' + e.message);
+      log.err(Toolkit.T('sfx.err.opusFailed', { msg: e.message }, 'Opus 编码失败: ' + e.message));
     }
   });
 

@@ -111,77 +111,77 @@
   <div class="sidebar">
     <h1>📄 HTML Inliner</h1>
 
-    <div class="compat-note">
+    <div class="compat-note" data-i18n-html="hi.compat">
       <strong>需要 Chrome 86+ / Edge 86+</strong> (File System Access API)。Firefox / Safari 暂不支持目录选择。
     </div>
 
-    <button id="pickDirBtn">📁 选择项目文件夹</button>
+    <button id="pickDirBtn" data-i18n="hi.pickDir">📁 选择项目文件夹</button>
     <div class="row" style="margin-top:8px; font-size:11px; color:var(--muted)" id="dirInfo"></div>
 
     <div class="field" style="margin-top:14px">
-      <label>入口 HTML 文件</label>
-      <select id="entrySelect"><option value="">(选择文件夹后填充)</option></select>
+      <label data-i18n="hi.entry">入口 HTML 文件</label>
+      <select id="entrySelect"><option value="" data-i18n="hi.entry.placeholder">(选择文件夹后填充)</option></select>
     </div>
 
     <h2 data-i18n="hi.strategy">内联策略</h2>
     <label class="checkbox">
       <input type="checkbox" id="inlineScripts" checked />
-      <span>内联 &lt;script src&gt;</span>
+      <span data-i18n="hi.opt.scripts">内联 &lt;script src&gt;</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="inlineStyles" checked />
-      <span>内联 &lt;link rel=stylesheet&gt;</span>
+      <span data-i18n="hi.opt.styles">内联 &lt;link rel=stylesheet&gt;</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="inlineImages" checked />
-      <span>内联 &lt;img&gt; / CSS url() 图片</span>
+      <span data-i18n="hi.opt.images">内联 &lt;img&gt; / CSS url() 图片</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="inlineFonts" checked />
-      <span>内联字体 (woff / woff2 / ttf)</span>
+      <span data-i18n="hi.opt.fonts">内联字体 (woff / woff2 / ttf)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="inlineMedia" />
-      <span>内联音视频 (体积大,慎用)</span>
+      <span data-i18n="hi.opt.media">内联音视频 (体积大,慎用)</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="doMinify" />
-      <span>顺便压缩 HTML/CSS (减少空白)</span>
+      <span data-i18n="hi.opt.minify">顺便压缩 HTML/CSS (减少空白)</span>
     </label>
 
     <div class="field">
-      <label>单文件最大体积 (KB,超过跳过)</label>
+      <label data-i18n="hi.maxKb">单文件最大体积 (KB,超过跳过)</label>
       <input type="number" id="maxFileKb" value="2048" min="1" />
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
     <div class="field">
-      <label>输出文件名</label>
+      <label data-i18n="hi.outputName">输出文件名</label>
       <input type="text" id="outputName" value="bundle" />
     </div>
-    <button id="processBtn" disabled>开始打包</button>
-    <button id="downloadBtn" class="secondary" disabled>下载 HTML</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="processBtn" disabled data-i18n="hi.process">开始打包</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="hi.dlHtml">下载 HTML</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 还没拿到目录</div>
+    <div class="stats" id="stats" data-i18n="hi.stats.empty">Dobby 还没拿到目录</div>
     <div>
       <h2 style="margin-top:0" data-i18n="hi.assets">资源处理</h2>
       <div class="file-list" id="fileList">
-        <div class="file-list-empty">选择目录并打包后这里会显示资源清单</div>
+        <div class="file-list-empty" data-i18n="hi.list.empty">选择目录并打包后这里会显示资源清单</div>
       </div>
     </div>
     <div class="output-area">
       <div class="output-stats" id="outputStats" style="display:none">
-        <span>原 HTML <strong id="srcSize">—</strong></span>
-        <span>输出 <strong id="outSize">—</strong></span>
-        <span>内联资源 <strong id="inlineCount">0</strong></span>
-        <span>跳过 <strong id="skipCount">0</strong></span>
+        <span><span data-i18n="hi.srcHtml">原 HTML</span> <strong id="srcSize">—</strong></span>
+        <span><span data-i18n="common.output">输出</span> <strong id="outSize">—</strong></span>
+        <span><span data-i18n="hi.inlined">内联资源</span> <strong id="inlineCount">0</strong></span>
+        <span><span data-i18n="hi.skipped">跳过</span> <strong id="skipCount">0</strong></span>
       </div>
-      <pre id="outputPreview">选择目录并打包后,这里会显示输出 HTML 的前几行预览。</pre>
+      <pre id="outputPreview" data-i18n="hi.preview.empty">选择目录并打包后,这里会显示输出 HTML 的前几行预览。</pre>
     </div>
   </div>
 </div>
@@ -201,22 +201,22 @@ Toolkit.injectTopbar('html-inliner');
 
   $('pickDirBtn').addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
-      log.err('当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+');
+      log.err(Toolkit.T('hi.err.unsupported', null, '当前浏览器不支持 File System Access API,请用 Chrome 86+ / Edge 86+'));
       return;
     }
     try {
       const handle = await window.showDirectoryPicker({ mode: 'read' });
       dirHandle = handle;
       log.clear();
-      log.dim(`扫描目录 ${handle.name} ...`);
+      log.dim(Toolkit.T('hi.log.scanning', { name: handle.name }, `扫描目录 ${handle.name} ...`));
       fileMap.clear();
       await walkDir(handle, '');
-      log.ok(`扫描完成,共 ${fileMap.size} 个文件`);
+      log.ok(Toolkit.T('hi.log.scanDone', { n: fileMap.size }, `扫描完成,共 ${fileMap.size} 个文件`));
       const htmlFiles = [...fileMap.keys()].filter(p => /\.html?$/i.test(p)).sort();
       const sel = $('entrySelect');
       sel.innerHTML = '';
       if (htmlFiles.length === 0) {
-        sel.innerHTML = '<option value="">(目录中没有 .html 文件)</option>';
+        sel.innerHTML = `<option value="">${Toolkit.T('hi.noHtml', null, '(目录中没有 .html 文件)')}</option>`;
         $('processBtn').disabled = true;
       } else {
         for (const h of htmlFiles) {
@@ -230,8 +230,8 @@ Toolkit.injectTopbar('html-inliner');
         if (idxIdx >= 0) sel.value = 'index.html';
         $('processBtn').disabled = false;
       }
-      $('dirInfo').textContent = `📂 ${handle.name} · ${fileMap.size} 文件`;
-      $('stats').innerHTML = `目录 <strong>${escapeHtml(handle.name)}</strong> · <strong>${fileMap.size}</strong> 个文件`;
+      $('dirInfo').textContent = Toolkit.T('hi.dirInfo', { name: handle.name, n: fileMap.size }, `📂 ${handle.name} · ${fileMap.size} 文件`);
+      $('stats').innerHTML = Toolkit.T('hi.stats.dir', { name: escapeHtml(handle.name), n: fileMap.size }, `目录 <strong>${escapeHtml(handle.name)}</strong> · <strong>${fileMap.size}</strong> 个文件`);
     } catch (e) {
       if (e.name !== 'AbortError') log.err(e.message);
     }
@@ -251,12 +251,12 @@ Toolkit.injectTopbar('html-inliner');
 
   $('processBtn').addEventListener('click', async () => {
     const entryPath = $('entrySelect').value;
-    if (!entryPath) return log.err('Dobby 还不知道从哪个 HTML 开始 — 你先选个入口文件');
+    if (!entryPath) return log.err(Toolkit.T('hi.err.noEntry', null, 'Dobby 还不知道从哪个 HTML 开始 — 你先选个入口文件'));
     const file = fileMap.get(entryPath);
-    if (!file) return log.err('入口文件不存在: ' + entryPath);
+    if (!file) return log.err(Toolkit.T('hi.err.missingEntry', { path: entryPath }, '入口文件不存在: ' + entryPath));
 
     $('processBtn').disabled = true;
-    log.dim(`开始打包 ${entryPath} ...`);
+    log.dim(Toolkit.T('hi.log.packing', { path: entryPath }, `开始打包 ${entryPath} ...`));
     $('fileList').innerHTML = '';
 
     const opts = {
@@ -288,7 +288,7 @@ Toolkit.injectTopbar('html-inliner');
     $('outputPreview').textContent = outText.slice(0, 1200) + (outText.length > 1200 ? '\n\n... (' + outText.length + ' chars total)' : '');
     $('downloadBtn').disabled = false;
     $('processBtn').disabled = false;
-    log.ok(`打包完成 ${fmtBytes(outputBlob.size)}, 内联 ${stats.inlined}, 跳过 ${stats.skipped}, 缺失 ${stats.missing}`);
+    log.ok(Toolkit.T('hi.log.done', { size: fmtBytes(outputBlob.size), inlined: stats.inlined, skipped: stats.skipped, missing: stats.missing }, `打包完成 ${fmtBytes(outputBlob.size)}, 内联 ${stats.inlined}, 跳过 ${stats.skipped}, 缺失 ${stats.missing}`));
   });
 
   async function inlineHtml(html, baseDir, opts, stats) {
@@ -300,11 +300,11 @@ Toolkit.injectTopbar('html-inliner');
       const links = [...doc.querySelectorAll('link[rel="stylesheet"][href]')];
       for (const link of links) {
         const href = link.getAttribute('href');
-        if (isExternal(href)) { stats.skipped++; reportRow(href, 'skipped', '外链不内联'); continue; }
+        if (isExternal(href)) { stats.skipped++; reportRow(href, 'skipped', Toolkit.T('hi.note.external', null, '外链不内联')); continue; }
         const resolved = resolvePath(baseDir, href);
         const f = fileMap.get(resolved);
-        if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
-        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+        if (!f) { stats.missing++; reportRow(resolved, 'missing', Toolkit.T('hi.note.missing', null, '文件未找到')); continue; }
+        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', Toolkit.T('hi.note.tooLarge', { size: fmtBytes(f.size) }, '超过单文件上限 ' + fmtBytes(f.size))); continue; }
         let css = await f.text();
         // recursively inline url() refs in CSS
         const cssDir = resolved.includes('/') ? resolved.slice(0, resolved.lastIndexOf('/')) : '';
@@ -322,11 +322,11 @@ Toolkit.injectTopbar('html-inliner');
       const scripts = [...doc.querySelectorAll('script[src]')];
       for (const sc of scripts) {
         const src = sc.getAttribute('src');
-        if (isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', '外链不内联'); continue; }
+        if (isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', Toolkit.T('hi.note.external', null, '外链不内联')); continue; }
         const resolved = resolvePath(baseDir, src);
         const f = fileMap.get(resolved);
-        if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
-        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+        if (!f) { stats.missing++; reportRow(resolved, 'missing', Toolkit.T('hi.note.missing', null, '文件未找到')); continue; }
+        if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', Toolkit.T('hi.note.tooLarge', { size: fmtBytes(f.size) }, '超过单文件上限 ' + fmtBytes(f.size))); continue; }
         const js = await f.text();
         sc.removeAttribute('src');
         sc.textContent = js;
@@ -347,11 +347,11 @@ Toolkit.injectTopbar('html-inliner');
     for (const el of tags) {
       const attr = el.tagName.toLowerCase() === 'image' ? 'href' : 'src';
       const src = el.getAttribute(attr);
-      if (!src || src.startsWith('data:') || isExternal(src)) { if (src && isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', '外链不内联'); } continue; }
+      if (!src || src.startsWith('data:') || isExternal(src)) { if (src && isExternal(src)) { stats.skipped++; reportRow(src, 'skipped', Toolkit.T('hi.note.external', null, '外链不内联')); } continue; }
       const resolved = resolvePath(baseDir, src);
       const f = fileMap.get(resolved);
-      if (!f) { stats.missing++; reportRow(resolved, 'missing', '文件未找到'); continue; }
-      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+      if (!f) { stats.missing++; reportRow(resolved, 'missing', Toolkit.T('hi.note.missing', null, '文件未找到')); continue; }
+      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', Toolkit.T('hi.note.tooLarge', { size: fmtBytes(f.size) }, '超过单文件上限 ' + fmtBytes(f.size))); continue; }
       const dataUrl = await fileToDataUrl(f);
       el.setAttribute(attr, dataUrl);
       stats.inlined++;
@@ -412,15 +412,15 @@ Toolkit.injectTopbar('html-inliner');
       const isImg = /\.(png|jpe?g|gif|webp|svg|avif|ico)$/i.test(url);
       if (isFont && !opts.fonts) continue;
       if (isImg && !opts.images) continue;
-      if (!f) { stats.missing++; reportRow(resolved, 'missing', 'CSS url() 未找到'); continue; }
-      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', '超过单文件上限 ' + fmtBytes(f.size)); continue; }
+      if (!f) { stats.missing++; reportRow(resolved, 'missing', Toolkit.T('hi.note.cssMissing', null, 'CSS url() 未找到')); continue; }
+      if (f.size > opts.maxBytes) { stats.skipped++; reportRow(resolved, 'skipped', Toolkit.T('hi.note.tooLarge', { size: fmtBytes(f.size) }, '超过单文件上限 ' + fmtBytes(f.size))); continue; }
       const dataUrl = await fileToDataUrl(f);
       replacements.push({ match: m[0], replacement: `url("${dataUrl}")`, path: resolved, size: f.size });
     }
     for (const r of replacements) {
       css = css.split(r.match).join(r.replacement);
       stats.inlined++;
-      reportRow(r.path, 'inlined', 'CSS url() ' + fmtBytes(r.size));
+      reportRow(r.path, 'inlined', Toolkit.T('hi.note.cssInlined', { size: fmtBytes(r.size) }, 'CSS url() ' + fmtBytes(r.size)));
     }
     return css;
   }
@@ -467,11 +467,11 @@ Toolkit.injectTopbar('html-inliner');
 
   $('clearBtn').addEventListener('click', () => {
     dirHandle = null; fileMap.clear(); outputBlob = null;
-    $('entrySelect').innerHTML = '<option value="">(选择文件夹后填充)</option>';
+    $('entrySelect').innerHTML = `<option value="">${Toolkit.T('hi.entry.placeholder', null, '(选择文件夹后填充)')}</option>`;
     $('dirInfo').textContent = '';
-    $('stats').textContent = 'Dobby 还没拿到目录';
-    $('fileList').innerHTML = '<div class="file-list-empty">选择目录并打包后这里会显示资源清单</div>';
-    $('outputPreview').textContent = '选择目录并打包后,这里会显示输出 HTML 的前几行预览。';
+    $('stats').textContent = Toolkit.T('hi.stats.empty', null, 'Dobby 还没拿到目录');
+    $('fileList').innerHTML = `<div class="file-list-empty">${Toolkit.T('hi.list.empty', null, '选择目录并打包后这里会显示资源清单')}</div>`;
+    $('outputPreview').textContent = Toolkit.T('hi.preview.empty', null, '选择目录并打包后,这里会显示输出 HTML 的前几行预览。');
     $('outputStats').style.display = 'none';
     $('processBtn').disabled = true;
     $('downloadBtn').disabled = true;

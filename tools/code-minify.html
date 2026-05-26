@@ -121,44 +121,44 @@
 
     <div id="cssOpts">
       <h2 data-i18n="cm.cssOpts">CSS 选项</h2>
-      <label class="checkbox"><input type="checkbox" id="cssRemoveComments" checked /><span>删除注释</span></label>
-      <label class="checkbox"><input type="checkbox" id="cssCollapseSpace" checked /><span>压缩空白</span></label>
-      <label class="checkbox"><input type="checkbox" id="cssShortenHex" checked /><span>短颜色 (#ffffff → #fff)</span></label>
+      <label class="checkbox"><input type="checkbox" id="cssRemoveComments" checked /><span data-i18n="cm.css.rmComments">删除注释</span></label>
+      <label class="checkbox"><input type="checkbox" id="cssCollapseSpace" checked /><span data-i18n="cm.css.collapse">压缩空白</span></label>
+      <label class="checkbox"><input type="checkbox" id="cssShortenHex" checked /><span data-i18n="cm.css.hex">短颜色 (#ffffff → #fff)</span></label>
     </div>
     <div id="jsOpts" style="display:none">
-      <div class="compat-note">JS 压缩用 terser,首次联网 ~250KB</div>
+      <div class="compat-note" data-i18n="cm.js.note">JS 压缩用 terser,首次联网 ~250KB</div>
       <h2 data-i18n="cm.jsOpts">JS 选项</h2>
-      <label class="checkbox"><input type="checkbox" id="jsMangle" checked /><span>变量名混淆 (mangle)</span></label>
-      <label class="checkbox"><input type="checkbox" id="jsCompress" checked /><span>逻辑压缩 (dead code 等)</span></label>
+      <label class="checkbox"><input type="checkbox" id="jsMangle" checked /><span data-i18n="cm.js.mangle">变量名混淆 (mangle)</span></label>
+      <label class="checkbox"><input type="checkbox" id="jsCompress" checked /><span data-i18n="cm.js.compress">逻辑压缩 (dead code 等)</span></label>
     </div>
     <div id="htmlOpts" style="display:none">
       <h2 data-i18n="cm.htmlOpts">HTML 选项</h2>
-      <label class="checkbox"><input type="checkbox" id="htmlRemoveComments" checked /><span>删除注释</span></label>
-      <label class="checkbox"><input type="checkbox" id="htmlCollapseSpace" checked /><span>折叠空白</span></label>
-      <label class="checkbox"><input type="checkbox" id="htmlMinifyInline" checked /><span>顺便压缩内联 &lt;style&gt; / &lt;script&gt;</span></label>
+      <label class="checkbox"><input type="checkbox" id="htmlRemoveComments" checked /><span data-i18n="cm.html.rmComments">删除注释</span></label>
+      <label class="checkbox"><input type="checkbox" id="htmlCollapseSpace" checked /><span data-i18n="cm.html.collapse">折叠空白</span></label>
+      <label class="checkbox"><input type="checkbox" id="htmlMinifyInline" checked /><span data-i18n="cm.html.inline">顺便压缩内联 &lt;style&gt; / &lt;script&gt;</span></label>
     </div>
 
     <h2 data-i18n="cm.fileOps">文件操作</h2>
     <input type="file" id="fileInput" accept=".css,.js,.html,.htm,text/*" style="display:none" />
-    <button id="loadFileBtn" class="secondary">加载文件</button>
-    <button id="minifyBtn">压缩</button>
-    <button id="copyBtn" class="secondary" disabled>复制结果</button>
-    <button id="downloadBtn" class="secondary" disabled>下载</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="loadFileBtn" class="secondary" data-i18n="cm.loadFile">加载文件</button>
+    <button id="minifyBtn" data-i18n="cm.minify">压缩</button>
+    <button id="copyBtn" class="secondary" disabled data-i18n="cm.copy">复制结果</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="cm.download">下载</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未输入</div>
+    <div class="stats" id="stats" data-i18n="cm.stats.empty">未输入</div>
     <div class="editor-grid">
       <div class="editor-col">
-        <div class="label"><span>输入</span><span class="size" id="inputSize">0 B</span></div>
-        <textarea id="inputEditor" placeholder="粘贴 CSS / JS / HTML 代码"></textarea>
+        <div class="label"><span data-i18n="cm.input">输入</span><span class="size" id="inputSize">0 B</span></div>
+        <textarea id="inputEditor" data-i18n-attr="placeholder:cm.input.ph" placeholder="粘贴 CSS / JS / HTML 代码"></textarea>
       </div>
       <div class="editor-col">
-        <div class="label"><span>输出</span><span class="size" id="outputSize">0 B</span></div>
-        <textarea id="outputEditor" readonly placeholder="压缩后的代码会显示在这里"></textarea>
+        <div class="label"><span data-i18n="common.output">输出</span><span class="size" id="outputSize">0 B</span></div>
+        <textarea id="outputEditor" readonly data-i18n-attr="placeholder:cm.output.ph" placeholder="压缩后的代码会显示在这里"></textarea>
       </div>
     </div>
   </div>
@@ -226,13 +226,13 @@ Toolkit.injectTopbar('code-minify');
     else if (/\.(js|mjs)$/i.test(ext)) document.querySelector('#langTabs [data-lang="js"]').click();
     else if (/\.html?$/i.test(ext)) document.querySelector('#langTabs [data-lang="html"]').click();
     updateInputSize();
-    log.ok(`已加载 ${f.name} (${fmtBytes(f.size)})`);
+    log.ok(Toolkit.T('cm.log.loaded', { name: f.name, size: fmtBytes(f.size) }, `已加载 ${f.name} (${fmtBytes(f.size)})`));
   });
 
   $('minifyBtn').addEventListener('click', async () => {
     const src = $('inputEditor').value;
-    if (!src.trim()) { log.err('Dobby 还没拿到代码 — 你贴一段?'); return; }
-    log.dim(`压缩 ${lang.toUpperCase()}...`);
+    if (!src.trim()) { log.err(Toolkit.T('cm.err.noCode', null, 'Dobby 还没拿到代码 — 你贴一段?')); return; }
+    log.dim(Toolkit.T('cm.log.compressing', { lang: lang.toUpperCase() }, `压缩 ${lang.toUpperCase()}...`));
     $('minifyBtn').disabled = true;
     try {
       let options;
@@ -260,7 +260,7 @@ Toolkit.injectTopbar('code-minify');
       const outSize = new Blob([out]).size;
       $('outputSize').textContent = fmtBytes(outSize);
       const pct = ((inSize - outSize) / inSize * 100);
-      $('stats').innerHTML = `<strong>${fmtBytes(inSize)} → ${fmtBytes(outSize)}</strong> · 压缩率 <strong>${pct.toFixed(1)}%</strong>`;
+      $('stats').innerHTML = `<strong>${fmtBytes(inSize)} → ${fmtBytes(outSize)}</strong> · ${Toolkit.T('cm.ratio', null, '压缩率')} <strong>${pct.toFixed(1)}%</strong>`;
       const outMime = lang === 'css' ? 'text/css'
                     : lang === 'html' ? 'text/html'
                     : 'application/javascript';
@@ -268,7 +268,7 @@ Toolkit.injectTopbar('code-minify');
       handoff?.setBlob(new Blob([out], { type: outMime }), `output${outExt}`, outMime);
       $('copyBtn').disabled = false;
       $('downloadBtn').disabled = false;
-      log.ok(`压缩完成: -${pct.toFixed(1)}%`);
+      log.ok(Toolkit.T('cm.log.done', { pct: pct.toFixed(1) }, `压缩完成: -${pct.toFixed(1)}%`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -285,11 +285,11 @@ Toolkit.injectTopbar('code-minify');
     if (!v) return;
     try {
       await navigator.clipboard.writeText(v);
-      log.ok('已复制到剪贴板');
+      log.ok(Toolkit.T('cm.log.copied', null, '已复制到剪贴板'));
     } catch (e) {
       $('outputEditor').select();
       document.execCommand('copy');
-      log.ok('已复制(兼容模式)');
+      log.ok(Toolkit.T('cm.log.copiedCompat', null, '已复制(兼容模式)'));
     }
   });
 
@@ -306,7 +306,7 @@ Toolkit.injectTopbar('code-minify');
     $('outputEditor').value = '';
     $('inputSize').textContent = '0 B';
     $('outputSize').textContent = '0 B';
-    $('stats').textContent = '未输入';
+    $('stats').textContent = Toolkit.T('cm.stats.empty', null, '未输入');
     $('copyBtn').disabled = true;
     $('downloadBtn').disabled = true;
     log.clear();

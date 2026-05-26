@@ -177,15 +177,15 @@
     <h1>📋 JSON 工具</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 .json 文件</p>
-      <p class="hint">或者直接在右边粘贴 / 输入</p>
+      <p data-i18n="json.drop.title">📂 拖入 .json 文件</p>
+      <p class="hint" data-i18n="json.drop.hint">或者直接在右边粘贴 / 输入</p>
       <input type="file" id="fileInput" accept=".json,application/json,text/plain" style="display:none" />
     </div>
 
     <h2 data-i18n="common.view">视图</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px">
-      <button class="px-tool-btn" data-view="text" id="viewText" style="background:var(--accent-soft); border-color:var(--accent); color:var(--accent); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">📝 文本</button>
-      <button class="px-tool-btn" data-view="tree" id="viewTree" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">🌳 树形</button>
+      <button class="px-tool-btn" data-view="text" id="viewText" data-i18n="json.view.text" style="background:var(--accent-soft); border-color:var(--accent); color:var(--accent); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">📝 文本</button>
+      <button class="px-tool-btn" data-view="tree" id="viewTree" data-i18n="json.view.tree" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">🌳 树形</button>
     </div>
 
     <h2 data-i18n="common.export">导出</h2>
@@ -206,43 +206,43 @@
 
     <div class="json-main">
       <div class="json-toolbar">
-        <button class="primary" id="formatBtn" title="格式化(Ctrl+Shift+F)">✨ 格式化</button>
-        <button id="minifyBtn" title="压缩成一行">🗜️ 压缩</button>
-        <button id="validateBtn" title="校验合法性">✅ 校验</button>
-        <button id="sortBtn" title="按 key 字母序排序">🔤 排序 keys</button>
+        <button class="primary" id="formatBtn" data-i18n="json.btn.format" data-i18n-attr="title:json.btn.format.title" title="格式化(Ctrl+Shift+F)">✨ 格式化</button>
+        <button id="minifyBtn" data-i18n="json.btn.minify" data-i18n-attr="title:json.btn.minify.title" title="压缩成一行">🗜️ 压缩</button>
+        <button id="validateBtn" data-i18n="json.btn.validate" data-i18n-attr="title:json.btn.validate.title" title="校验合法性">✅ 校验</button>
+        <button id="sortBtn" data-i18n="json.btn.sort" data-i18n-attr="title:json.btn.sort.title" title="按 key 字母序排序">🔤 排序 keys</button>
         <div class="sep"></div>
         <div class="indent-row">
-          <span>缩进</span>
+          <span data-i18n="json.indent">缩进</span>
           <select id="indent">
-            <option value="2">2 空格</option>
-            <option value="4">4 空格</option>
+            <option value="2" data-i18n="json.indent.2">2 空格</option>
+            <option value="4" data-i18n="json.indent.4">4 空格</option>
             <option value="tab">Tab</option>
           </select>
         </div>
         <div class="gap"></div>
-        <button id="copyResult" title="复制右侧结果">📋 复制</button>
-        <button id="swapBtn" title="把结果作为新输入">↺ 结果 → 输入</button>
+        <button id="copyResult" data-i18n="json.btn.copyShort" data-i18n-attr="title:json.btn.copyShort.title" title="复制右侧结果">📋 复制</button>
+        <button id="swapBtn" data-i18n="json.btn.swap" data-i18n-attr="title:json.btn.swap.title" title="把结果作为新输入">↺ 结果 → 输入</button>
       </div>
 
       <div class="json-grid">
         <div class="pane">
           <div class="pane-head">
-            <span>输入</span>
+            <span data-i18n="json.pane.input">输入</span>
             <span id="inputMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
           </div>
           <textarea id="input" spellcheck="false" placeholder='{"hello": "world", "items": [1, 2, 3]}'></textarea>
         </div>
         <div class="pane">
           <div class="pane-head">
-            <span>结果</span>
+            <span data-i18n="json.pane.result">结果</span>
             <span id="outputMeta" style="font-family:ui-monospace,Consolas,monospace; font-size:10px">—</span>
           </div>
-          <textarea id="output" spellcheck="false" readonly placeholder="结果出现在这里"></textarea>
+          <textarea id="output" spellcheck="false" readonly data-i18n-attr="placeholder:json.output.ph" placeholder="结果出现在这里"></textarea>
           <div class="tree-view" id="treeView" style="display:none"></div>
         </div>
       </div>
 
-      <div class="json-status" id="status">准备好,粘贴 JSON 到左边</div>
+      <div class="json-status" id="status" data-i18n="json.status.ready">准备好,粘贴 JSON 到左边</div>
     </div>
   </div>
 </div>
@@ -277,7 +277,7 @@ Toolkit.injectTopbar('json-tools');
   }
 
   function tryParse(text) {
-    if (!text.trim()) return { ok: false, err: '输入为空' };
+    if (!text.trim()) return { ok: false, err: Toolkit.T('json.err.empty', null, '输入为空') };
     try {
       return { ok: true, value: JSON.parse(text) };
     } catch (e) {
@@ -289,7 +289,7 @@ Toolkit.injectTopbar('json-tools');
         const upTo = text.slice(0, pos);
         const line = upTo.split('\n').length;
         const col = pos - upTo.lastIndexOf('\n');
-        lineCol = ` (第 ${line} 行 第 ${col} 列)`;
+        lineCol = ' ' + Toolkit.T('json.err.linecol', { line, col }, `(第 ${line} 行 第 ${col} 列)`);
       }
       return { ok: false, err: e.message + lineCol };
     }
@@ -313,11 +313,18 @@ Toolkit.injectTopbar('json-tools');
       }
     }
     if (parsed !== null && parsed !== undefined) walk(parsed);
+    const sLabel = Toolkit.T('json.stats.size', null, '大小');
+    const nLabel = Toolkit.T('json.stats.nodes', null, '节点');
+    const kLabel = Toolkit.T('json.stats.keys', null, '键');
+    const oLabel = Toolkit.T('json.stats.objects', null, '对象');
+    const aLabel = Toolkit.T('json.stats.arrays', null, '数组');
+    const stLabel = Toolkit.T('json.stats.strings', null, '字符串');
+    const numLabel = Toolkit.T('json.stats.numbers', null, '数字');
     $('statsPanel').innerHTML = `
-      <div>大小: <strong style="color:var(--text)">${(text.length / 1024).toFixed(1)} KB</strong></div>
-      <div>节点: ${count} · 键: ${keys}</div>
-      <div>对象: ${objs} · 数组: ${arrs}</div>
-      <div>字符串: ${strs} · 数字: ${nums}</div>
+      <div>${sLabel}: <strong style="color:var(--text)">${(text.length / 1024).toFixed(1)} KB</strong></div>
+      <div>${nLabel}: ${count} · ${kLabel}: ${keys}</div>
+      <div>${oLabel}: ${objs} · ${aLabel}: ${arrs}</div>
+      <div>${stLabel}: ${strs} · ${numLabel}: ${nums}</div>
     `;
   }
 
@@ -327,7 +334,7 @@ Toolkit.injectTopbar('json-tools');
     } else {
       outputEl.value = lastOutput;
     }
-    $('outputMeta').textContent = `${(lastOutput.length / 1024).toFixed(2)} KB · ${lastOutput.split('\n').length} 行`;
+    $('outputMeta').textContent = `${(lastOutput.length / 1024).toFixed(2)} KB · ${lastOutput.split('\n').length} ${Toolkit.T('json.unit.lines', null, '行')}`;
   }
 
   function format() {
@@ -343,7 +350,7 @@ Toolkit.injectTopbar('json-tools');
     lastOutput = JSON.stringify(r.value, null, getIndent());
     updateStats(r.value, lastOutput);
     refreshOutput();
-    setStatus(`✓ 格式化完成 · ${lastOutput.split('\n').length} 行`, 'ok');
+    setStatus(`✓ ${Toolkit.T('json.status.formatted', null, '格式化完成')} · ${lastOutput.split('\n').length} ${Toolkit.T('json.unit.lines', null, '行')}`, 'ok');
   }
 
   function minify() {
@@ -355,7 +362,7 @@ Toolkit.injectTopbar('json-tools');
     refreshOutput();
     const savePct = inputEl.value.length > 0
       ? ((1 - lastOutput.length / inputEl.value.length) * 100).toFixed(1) : '0';
-    setStatus(`✓ 压缩完成 · ${(lastOutput.length / 1024).toFixed(2)} KB · 节省 ${savePct}%`, 'ok');
+    setStatus(`✓ ${Toolkit.T('json.status.minified', null, '压缩完成')} · ${(lastOutput.length / 1024).toFixed(2)} KB · ${Toolkit.T('json.status.saved', { pct: savePct }, `节省 ${savePct}%`)}`, 'ok');
   }
 
   function validate() {
@@ -364,7 +371,7 @@ Toolkit.injectTopbar('json-tools');
     lastParsed = r.value;
     const minified = JSON.stringify(r.value);
     updateStats(r.value, minified);
-    setStatus(`✓ 合法 JSON · ${(minified.length / 1024).toFixed(2)} KB`, 'ok');
+    setStatus(`✓ ${Toolkit.T('json.status.valid', null, '合法 JSON')} · ${(minified.length / 1024).toFixed(2)} KB`, 'ok');
   }
 
   function sortKeys() {
@@ -381,7 +388,7 @@ Toolkit.injectTopbar('json-tools');
     lastOutput = JSON.stringify(lastParsed, null, getIndent());
     updateStats(lastParsed, lastOutput);
     refreshOutput();
-    setStatus('✓ key 已按字母序排序', 'ok');
+    setStatus('✓ ' + Toolkit.T('json.status.sorted', null, 'key 已按字母序排序'), 'ok');
   }
 
   // ── tree view ──
@@ -471,12 +478,12 @@ Toolkit.injectTopbar('json-tools');
   indentSel.addEventListener('change', () => { if (lastParsed !== null) format(); });
 
   $('copyBtn').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(lastOutput); log.ok('已复制结果'); }
-    catch (e) { log.err('复制失败: ' + e.message); }
+    try { await navigator.clipboard.writeText(lastOutput); log.ok(Toolkit.T('json.log.copied', null, '已复制结果')); }
+    catch (e) { log.err(Toolkit.T('json.log.copyFail', { msg: e.message }, '复制失败: ' + e.message)); }
   });
   $('copyResult').addEventListener('click', () => $('copyBtn').click());
   $('downloadBtn').addEventListener('click', () => {
-    if (!lastOutput) { log.err('没有结果可下载'); return; }
+    if (!lastOutput) { log.err(Toolkit.T('json.log.noResult', null, '没有结果可下载')); return; }
     const blob = new Blob([lastOutput], { type: 'application/json' });
     download(blob, 'output.json');
   });
@@ -491,7 +498,7 @@ Toolkit.injectTopbar('json-tools');
     treeView.innerHTML = '';
     lastParsed = null;
     lastOutput = '';
-    setStatus('已清空');
+    setStatus(Toolkit.T('json.status.cleared', null, '已清空'));
     $('inputMeta').textContent = '—';
     $('outputMeta').textContent = '—';
     $('statsPanel').textContent = '—';
@@ -508,7 +515,7 @@ Toolkit.injectTopbar('json-tools');
   // live input meta
   function onInput() {
     const v = inputEl.value;
-    $('inputMeta').textContent = v ? `${(v.length / 1024).toFixed(2)} KB · ${v.split('\n').length} 行` : '—';
+    $('inputMeta').textContent = v ? `${(v.length / 1024).toFixed(2)} KB · ${v.split('\n').length} ${Toolkit.T('json.unit.lines', null, '行')}` : '—';
   }
   inputEl.addEventListener('input', onInput);
 
@@ -520,10 +527,10 @@ Toolkit.injectTopbar('json-tools');
       inputEl.value = text;
       onInput();
       format();
-    } catch (e) { log.err('读文件失败: ' + e.message); }
+    } catch (e) { log.err(Toolkit.T('json.log.readFail', { msg: e.message }, '读文件失败: ' + e.message)); }
   });
 
-  log.ok('JSON 工具准备好');
+  log.ok(Toolkit.T('json.log.ready', null, 'JSON 工具准备好'));
 })();
 </script>
 </body>

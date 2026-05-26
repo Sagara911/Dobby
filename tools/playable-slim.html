@@ -117,51 +117,51 @@
     <h1>🩻 Playable 瘦身</h1>
 
     <div class="tab-row" id="modeTabs">
-      <button data-mode="auto" class="active" type="button">🤖 一键瘦身</button>
-      <button data-mode="split" type="button">📤 拆出资源</button>
-      <button data-mode="repack" type="button">📥 重组 HTML</button>
+      <button data-mode="auto" class="active" type="button" data-i18n="ps.tab.auto">🤖 一键瘦身</button>
+      <button data-mode="split" type="button" data-i18n="ps.tab.split">📤 拆出资源</button>
+      <button data-mode="repack" type="button" data-i18n="ps.tab.repack">📥 重组 HTML</button>
     </div>
 
     <div id="autoPane">
       <div class="drop-zone" id="autoDrop">
-        <p>📂 拖入大 HTML</p>
-        <p class="hint">一次性扫描 + 压缩 + 重组,不需切工具</p>
+        <p data-i18n="ps.auto.drop.title">📂 拖入大 HTML</p>
+        <p class="hint" data-i18n="ps.auto.drop.hint">一次性扫描 + 压缩 + 重组,不需切工具</p>
         <input type="file" id="autoFile" accept=".html,.htm,text/html" style="display:none" />
       </div>
-      <div class="warn-banner">⚠️ 视频压缩较慢(主线程 WebCodecs),100 MB 视频约 1-3 分钟,期间页面会忙。</div>
+      <div class="warn-banner" data-i18n="ps.auto.warn">⚠️ 视频压缩较慢(主线程 WebCodecs),100 MB 视频约 1-3 分钟,期间页面会忙。</div>
 
       <h2 data-i18n="ps.quality">质量档</h2>
       <div class="field">
         <select id="autoQuality">
-          <option value="tiny">📉 极致小 (体积最优,质量损失明显)</option>
-          <option value="balanced" selected>📦 平衡 (推荐)</option>
-          <option value="safe">🛡️ 保守 (质量优先)</option>
+          <option value="tiny" data-i18n="ps.q.tiny">📉 极致小 (体积最优,质量损失明显)</option>
+          <option value="balanced" selected data-i18n="ps.q.balanced">📦 平衡 (推荐)</option>
+          <option value="safe" data-i18n="ps.q.safe">🛡️ 保守 (质量优先)</option>
         </select>
-        <div class="info" id="autoQualityHint">图片 JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono</div>
+        <div class="info" id="autoQualityHint" data-i18n="ps.q.hint.balanced">图片 JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono</div>
       </div>
 
       <h2 data-i18n="ps.scope">处理范围</h2>
-      <label class="checkbox"><input type="checkbox" id="autoDoImages" checked /><span>压缩图片 (PNG / JPG / WebP) — 快</span></label>
-      <label class="checkbox"><input type="checkbox" id="autoDoVideos" checked /><span>压缩视频 (MP4 / WebM) — 慢</span></label>
-      <label class="checkbox"><input type="checkbox" id="autoDoAudios" /><span>压缩音频 (WAV) — 中等</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDoImages" checked /><span data-i18n="ps.scope.images">压缩图片 (PNG / JPG / WebP) — 快</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDoVideos" checked /><span data-i18n="ps.scope.videos">压缩视频 (MP4 / WebM) — 慢</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDoAudios" /><span data-i18n="ps.scope.audios">压缩音频 (WAV) — 中等</span></label>
 
       <h2 data-i18n="ps.engine">图片压缩引擎</h2>
       <div class="field">
         <select id="autoImageEngine">
-          <option value="native" selected>浏览器原生 (快, 零下载)</option>
-          <option value="hq">mozjpeg + oxipng (体积 -10%~-25%, 首次联网 ~1 MB)</option>
+          <option value="native" selected data-i18n="ps.engine.native">浏览器原生 (快, 零下载)</option>
+          <option value="hq" data-i18n="ps.engine.hq">mozjpeg + oxipng (体积 -10%~-25%, 首次联网 ~1 MB)</option>
         </select>
-        <div class="info" style="margin-top:4px">"hq" 用 WASM 极致编码器,质量等价但体积更小;视频/音频不受此影响</div>
+        <div class="info" style="margin-top:4px" data-i18n="ps.engine.note">"hq" 用 WASM 极致编码器,质量等价但体积更小;视频/音频不受此影响</div>
       </div>
 
-      <h2>导出</h2>
+      <h2 data-i18n="common.export">导出</h2>
       <div class="field">
-        <label>输出 HTML 文件名</label>
+        <label data-i18n="ps.outFilename">输出 HTML 文件名</label>
         <input type="text" id="autoFilename" value="playable-slim" />
       </div>
-      <button id="autoStartBtn" disabled>开始一键瘦身</button>
-      <button id="autoDownloadBtn" class="secondary" disabled>💾 下载瘦身 HTML</button>
-      <button id="autoClearBtn" class="secondary">清空</button>
+      <button id="autoStartBtn" disabled data-i18n="ps.btn.autoStart">开始一键瘦身</button>
+      <button id="autoDownloadBtn" class="secondary" disabled data-i18n="ps.btn.downloadSlim">💾 下载瘦身 HTML</button>
+      <button id="autoClearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
       <div id="autoProgress" style="display:none; margin-top:10px">
         <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden">
@@ -173,56 +173,56 @@
 
     <div id="splitPane" style="display:none">
       <div class="drop-zone" id="splitDrop">
-        <p>📂 拖入大体积 HTML</p>
-        <p class="hint">扫描 dataURL · 拆出图/音/视/字体</p>
+        <p data-i18n="ps.split.drop.title">📂 拖入大体积 HTML</p>
+        <p class="hint" data-i18n="ps.split.drop.hint">扫描 dataURL · 拆出图/音/视/字体</p>
         <input type="file" id="splitFile" accept=".html,.htm,text/html" style="display:none" />
       </div>
-      <div class="warn-banner">⚠️ 150 MB+ 的大块头,Dobby 也要喘口气,你稍等 5-30 秒。</div>
+      <div class="warn-banner" data-i18n="ps.split.warn">⚠️ 150 MB+ 的大块头,Dobby 也要喘口气,你稍等 5-30 秒。</div>
 
-      <h2>过滤</h2>
+      <h2 data-i18n="ps.split.filterH">过滤</h2>
       <div class="field">
-        <label>最小资源 (字节,小于此值合并到统计但不导出)</label>
+        <label data-i18n="ps.split.minBytes">最小资源 (字节,小于此值合并到统计但不导出)</label>
         <input type="number" id="minBytes" value="128" min="0" />
       </div>
-      <label class="checkbox"><input type="checkbox" id="includeOriginal" checked /><span>ZIP 内附原 HTML 副本</span></label>
+      <label class="checkbox"><input type="checkbox" id="includeOriginal" checked /><span data-i18n="ps.split.includeOrig">ZIP 内附原 HTML 副本</span></label>
 
-      <h2>导出</h2>
+      <h2 data-i18n="common.export">导出</h2>
       <div class="field">
-        <label>ZIP 文件名</label>
+        <label data-i18n="ps.split.zipName">ZIP 文件名</label>
         <input type="text" id="splitFilename" value="playable-slim" />
       </div>
-      <button id="splitExportBtn" disabled>导出资源 ZIP + manifest</button>
-      <button id="splitClearBtn" class="secondary">清空</button>
+      <button id="splitExportBtn" disabled data-i18n="ps.btn.exportSplit">导出资源 ZIP + manifest</button>
+      <button id="splitClearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
     </div>
 
     <div id="repackPane" style="display:none">
       <div class="drop-zone" id="repackDrop">
-        <p>📂 拖入压缩后的资源 ZIP</p>
-        <p class="hint">含 manifest.json + 原 HTML + 各资源</p>
+        <p data-i18n="ps.repack.drop.title">📂 拖入压缩后的资源 ZIP</p>
+        <p class="hint" data-i18n="ps.repack.drop.hint">含 manifest.json + 原 HTML + 各资源</p>
         <input type="file" id="repackFile" accept=".zip,application/zip" style="display:none" />
       </div>
-      <div class="info" style="margin-top:8px">
+      <div class="info" style="margin-top:8px" data-i18n-html="ps.repack.note">
         ZIP 必须包含来自"拆出资源"步骤导出的 <strong>manifest.json</strong> 和 <strong>original/&lt;原文件名&gt;</strong>。
         资源可以替换为压缩后的同名文件(filename 保持一致)。
       </div>
 
-      <h2>导出</h2>
+      <h2 data-i18n="common.export">导出</h2>
       <div class="field">
-        <label>输出 HTML 文件名</label>
+        <label data-i18n="ps.outFilename">输出 HTML 文件名</label>
         <input type="text" id="repackFilename" value="playable-slim" />
       </div>
-      <button id="repackBtn" disabled>生成瘦身 HTML</button>
-      <button id="repackClearBtn" class="secondary">清空</button>
+      <button id="repackBtn" disabled data-i18n="ps.btn.repack">生成瘦身 HTML</button>
+      <button id="repackClearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">等待文件</div>
-    <div class="info" style="margin-bottom:8px">Dobby 就在你本机干活 · Dobby 不上传 · Dobby 不偷看 · 流式拆 + ZIP 中转</div>
+    <div class="stats" id="stats" data-i18n="ps.stats.waiting">等待文件</div>
+    <div class="info" style="margin-bottom:8px" data-i18n="ps.privacyNote">Dobby 就在你本机干活 · Dobby 不上传 · Dobby 不偷看 · 流式拆 + ZIP 中转</div>
     <div class="res-list" id="resList">
-      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>
+      <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)" data-i18n="ps.resList.empty">拖入文件后这里显示资源清单</div>
     </div>
     <div id="summaryBox"></div>
   </div>
@@ -266,17 +266,17 @@ Toolkit.injectTopbar('playable-slim');
       $('autoPane').style.display = mode === 'auto' ? '' : 'none';
       $('splitPane').style.display = mode === 'split' ? '' : 'none';
       $('repackPane').style.display = mode === 'repack' ? '' : 'none';
-      $('stats').textContent = '等待文件';
-      $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+      $('stats').textContent = Toolkit.T('ps.stats.waiting', null, '等待文件');
+      $('resList').innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('ps.resList.empty', null, '拖入文件后这里显示资源清单')}</div>`;
       $('summaryBox').innerHTML = '';
     });
   });
 
   // quality preset hints
   const QUALITY_HINTS = {
-    tiny:     'PNG→WebP q=0.65 · JPG q=0.55 · 视频 480p/400kbps · 音频 11025Hz mono',
-    balanced: 'PNG→WebP q=0.85 · JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono',
-    safe:     'PNG 无损重编 · JPG q=0.88 · 视频 原尺寸/2500kbps · 音频 44100Hz stereo'
+    tiny:     Toolkit.T('ps.q.hint.tiny', null, 'PNG→WebP q=0.65 · JPG q=0.55 · 视频 480p/400kbps · 音频 11025Hz mono'),
+    balanced: Toolkit.T('ps.q.hint.balanced', null, 'PNG→WebP q=0.85 · JPG q=0.75 · 视频 720p/1200kbps · 音频 22050Hz mono'),
+    safe:     Toolkit.T('ps.q.hint.safe', null, 'PNG 无损重编 · JPG q=0.88 · 视频 原尺寸/2500kbps · 音频 44100Hz stereo')
   };
   $('autoQuality').addEventListener('change', e => {
     $('autoQualityHint').textContent = QUALITY_HINTS[e.target.value];
@@ -291,8 +291,8 @@ Toolkit.injectTopbar('playable-slim');
 
   $('splitClearBtn').addEventListener('click', () => {
     splitState = null;
-    $('stats').textContent = '等待文件';
-    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+    $('stats').textContent = Toolkit.T('ps.stats.waiting', null, '等待文件');
+    $('resList').innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('ps.resList.empty', null, '拖入文件后这里显示资源清单')}</div>`;
     $('summaryBox').innerHTML = '';
     $('splitExportBtn').disabled = true;
     log.clear();
@@ -300,18 +300,18 @@ Toolkit.injectTopbar('playable-slim');
 
   async function handleSplitFile(file) {
     if (!file) return;
-    if (!/\.html?$/i.test(file.name)) { log.warn('建议拖 .html 文件'); }
+    if (!/\.html?$/i.test(file.name)) { log.warn(Toolkit.T('ps.warn.useHtml', null, '建议拖 .html 文件')); }
     log.clear();
-    log.dim(`读入 ${file.name} (${fmtBytes(file.size)})...`);
+    log.dim(Toolkit.T('ps.log.reading', { name: file.name, size: fmtBytes(file.size) }, `读入 ${file.name} (${fmtBytes(file.size)})...`));
     $('splitExportBtn').disabled = true;
     try {
       const t0 = performance.now();
       const text = await file.text();
-      log.dim(`  读取耗时 ${((performance.now() - t0) / 1000).toFixed(2)}s · ${text.length.toLocaleString()} 字符`);
+      log.dim(Toolkit.T('ps.log.readDone', { s: ((performance.now() - t0) / 1000).toFixed(2), n: text.length.toLocaleString() }, `  读取耗时 ${((performance.now() - t0) / 1000).toFixed(2)}s · ${text.length.toLocaleString()} 字符`));
 
-      log.dim(`扫描内联 dataURL...`);
+      log.dim(Toolkit.T('ps.log.scanning', null, `扫描内联 dataURL...`));
       const resources = await scanDataUrls(text);
-      log.ok(`找到 ${resources.length} 个内联资源`);
+      log.ok(Toolkit.T('ps.log.foundN', { n: resources.length }, `找到 ${resources.length} 个内联资源`));
 
       splitState = {
         fileName: file.name,
@@ -389,8 +389,8 @@ Toolkit.injectTopbar('playable-slim');
   function renderResources(resources, totalSize) {
     const host = $('resList');
     if (!resources.length) {
-      host.innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">该 HTML 没找到内联 dataURL</div>';
-      $('stats').textContent = '没有可拆资源';
+      host.innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('ps.noDataUrl', null, '该 HTML 没找到内联 dataURL')}</div>`;
+      $('stats').textContent = Toolkit.T('ps.noResources', null, '没有可拆资源');
       $('summaryBox').innerHTML = '';
       return;
     }
@@ -432,16 +432,16 @@ Toolkit.injectTopbar('playable-slim');
 
     const catLines = Object.entries(byCat)
       .sort((a, b) => b[1].bytes - a[1].bytes)
-      .map(([cat, v]) => `<div class="row"><span class="label">${cat}</span><span class="value">${v.count} 个 · ${fmtBytes(v.bytes)}</span></div>`)
+      .map(([cat, v]) => `<div class="row"><span class="label">${cat}</span><span class="value">${Toolkit.T('ps.cat.countSize', { n: v.count, size: fmtBytes(v.bytes) }, `${v.count} 个 · ${fmtBytes(v.bytes)}`)}</span></div>`)
       .join('');
     $('summaryBox').innerHTML = `<div class="summary">
-      <div class="row"><span class="label">原 HTML</span><span class="value">${fmtBytes(totalSize)}</span></div>
-      <div class="row"><span class="label">内联资源 (base64 占用)</span><span class="value">${fmtBytes(totalInlined)} · ${((totalInlined/totalSize)*100).toFixed(1)}%</span></div>
-      <div class="row"><span class="label">非资源部分 (HTML/JS/CSS)</span><span class="value">${fmtBytes(totalSize - totalInlined)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.origHtml', null, '原 HTML')}</span><span class="value">${fmtBytes(totalSize)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.inlinedAssets', null, '内联资源 (base64 占用)')}</span><span class="value">${fmtBytes(totalInlined)} · ${((totalInlined/totalSize)*100).toFixed(1)}%</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.nonAssets', null, '非资源部分 (HTML/JS/CSS)')}</span><span class="value">${fmtBytes(totalSize - totalInlined)}</span></div>
       <hr style="border:none; border-top:1px solid var(--border); margin:6px 0">
       ${catLines}
     </div>`;
-    $('stats').innerHTML = `<strong>${resources.length}</strong> 个资源 · 总内联 <strong>${fmtBytes(totalInlined)}</strong> · 占 HTML <strong>${((totalInlined/totalSize)*100).toFixed(1)}%</strong>`;
+    $('stats').innerHTML = Toolkit.T('ps.stats.split', { n: resources.length, size: fmtBytes(totalInlined), pct: ((totalInlined/totalSize)*100).toFixed(1) }, `<strong>${resources.length}</strong> 个资源 · 总内联 <strong>${fmtBytes(totalInlined)}</strong> · 占 HTML <strong>${((totalInlined/totalSize)*100).toFixed(1)}%</strong>`);
   }
 
   // ===== Split export: ZIP =====
@@ -449,11 +449,11 @@ Toolkit.injectTopbar('playable-slim');
   $('splitExportBtn').addEventListener('click', async () => {
     if (!splitState) return;
     $('splitExportBtn').disabled = true;
-    log.dim('加载 fflate (首次联网 ~30KB)...');
+    log.dim(Toolkit.T('ps.log.loadingFflate', null, '加载 fflate (首次联网 ~30KB)...'));
     try {
       if (!fflateMod) fflateMod = await import('https://esm.sh/fflate@0.8.2');
       const { resources, htmlText, fileName, fileSize } = splitState;
-      log.dim(`编码 ${resources.length} 个资源...`);
+      log.dim(Toolkit.T('ps.log.encoding', { n: resources.length }, `编码 ${resources.length} 个资源...`));
       const data = {};
       // manifest
       const manifest = {
@@ -491,7 +491,7 @@ Toolkit.injectTopbar('playable-slim');
           lastYield = performance.now();
         }
       }
-      log.dim('打包 ZIP...');
+      log.dim(Toolkit.T('ps.log.zipping', null, '打包 ZIP...'));
       const zipped = await new Promise((resolve, reject) => {
         fflateMod.zip(data, (err, out) => err ? reject(err) : resolve(out));
       });
@@ -499,7 +499,7 @@ Toolkit.injectTopbar('playable-slim');
       const outName = ($('splitFilename').value || 'playable-slim') + '.zip';
       download(blob, outName);
       handoff?.setBlob(blob, outName, 'application/zip');
-      log.ok(`完成 · ${fmtBytes(blob.size)} · 已下载`);
+      log.ok(Toolkit.T('ps.log.zipDone', { size: fmtBytes(blob.size) }, `完成 · ${fmtBytes(blob.size)} · 已下载`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -517,8 +517,8 @@ Toolkit.injectTopbar('playable-slim');
 
   $('repackClearBtn').addEventListener('click', () => {
     repackState = null;
-    $('stats').textContent = '等待文件';
-    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入 ZIP 后这里显示资源对照</div>';
+    $('stats').textContent = Toolkit.T('ps.stats.waiting', null, '等待文件');
+    $('resList').innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('ps.repack.empty', null, '拖入 ZIP 后这里显示资源对照')}</div>`;
     $('summaryBox').innerHTML = '';
     $('repackBtn').disabled = true;
     log.clear();
@@ -577,8 +577,8 @@ Toolkit.injectTopbar('playable-slim');
     log.clear();
     let files;
     if (Array.isArray(input)) {
-      if (!input.length) { log.err('没有文件'); return; }
-      log.dim(`读取 ${input.length} 个文件...`);
+      if (!input.length) { log.err(Toolkit.T('ps.err.noFiles', null, '没有文件')); return; }
+      log.dim(Toolkit.T('ps.log.readingN', { n: input.length }, `读取 ${input.length} 个文件...`));
       // If the array contains a single .zip (user dropped a zip and auto-extract
       // failed for some reason), unzip it now.
       if (input.length === 1 && /\.zip$/i.test(input[0].name)) {
@@ -587,20 +587,20 @@ Toolkit.injectTopbar('playable-slim');
         files = input;
       }
     } else {
-      log.dim(`解压 ${input.name} (${fmtBytes(input.size)})...`);
+      log.dim(Toolkit.T('ps.log.unzipping', { name: input.name, size: fmtBytes(input.size) }, `解压 ${input.name} (${fmtBytes(input.size)})...`));
       files = await unzipBlob(input);
     }
     try {
       const manifestFile = files.find(f => f.name === 'manifest.json' || f.name.endsWith('/manifest.json'));
-      if (!manifestFile) throw new Error('ZIP 内没找到 manifest.json');
+      if (!manifestFile) throw new Error(Toolkit.T('ps.err.noManifest', null, 'ZIP 内没找到 manifest.json'));
       const manifest = JSON.parse(await manifestFile.text());
-      if (manifest.tool !== 'playable-slim') log.warn('manifest 不是 playable-slim 生成的,继续尝试');
+      if (manifest.tool !== 'playable-slim') log.warn(Toolkit.T('ps.warn.notOurManifest', null, 'manifest 不是 playable-slim 生成的,继续尝试'));
       const origName = manifest.originalName;
       const origFile = files.find(f => f.name === `original/${origName}` || f.name.endsWith('/' + origName));
-      if (!origFile) throw new Error(`ZIP 内没找到原 HTML: original/${origName}`);
+      if (!origFile) throw new Error(Toolkit.T('ps.err.noOrigHtml', { name: origName }, `ZIP 内没找到原 HTML: original/${origName}`));
       const htmlText = await origFile.text();
       if (htmlText.length !== manifest.originalSize) {
-        log.warn(`原 HTML 长度 ${htmlText.length} 与 manifest 记录 ${manifest.originalSize} 不一致 — 可能已被改动`);
+        log.warn(Toolkit.T('ps.warn.lenMismatch', { actual: htmlText.length, expected: manifest.originalSize }, `原 HTML 长度 ${htmlText.length} 与 manifest 记录 ${manifest.originalSize} 不一致 — 可能已被改动`));
       }
       // build replacements map.
       // Decode-check every user-supplied byte buffer before accepting it as a
@@ -621,7 +621,7 @@ Toolkit.injectTopbar('playable-slim');
         const u8 = new Uint8Array(await f.arrayBuffer());
         const valid = await validateAssetBytes(u8, r.mime);
         if (!valid) {
-          log.warn(`  ${r.filename} (${r.mime}): 解码失败,保留原资源`);
+          log.warn(Toolkit.T('ps.warn.decodeFail', { name: r.filename, mime: r.mime }, `  ${r.filename} (${r.mime}): 解码失败,保留原资源`));
           rejected++;
           unchanged++;
           continue;
@@ -630,8 +630,8 @@ Toolkit.injectTopbar('playable-slim');
         replaced++;
       }
       repackState = { manifest, htmlText, replacements };
-      const rejectedMsg = rejected ? ` · 拒收破损 ${rejected} 个` : '';
-      log.ok(`找到 ${manifest.resourceCount} 个原资源 · 将替换 ${replaced} 个 · 保留 ${unchanged} 个${rejectedMsg}`);
+      const rejectedMsg = rejected ? Toolkit.T('ps.log.rejected', { n: rejected }, ` · 拒收破损 ${rejected} 个`) : '';
+      log.ok(Toolkit.T('ps.log.repackSummary', { total: manifest.resourceCount, replaced, unchanged, rejected: rejectedMsg }, `找到 ${manifest.resourceCount} 个原资源 · 将替换 ${replaced} 个 · 保留 ${unchanged} 个${rejectedMsg}`));
       renderRepackPreview(manifest, replacements, htmlText.length);
       $('repackBtn').disabled = false;
     } catch (e) {
@@ -657,7 +657,7 @@ Toolkit.injectTopbar('playable-slim');
       const delta = rep ? ((newBytes - r.originalBytes) / r.originalBytes * 100) : 0;
       const deltaStr = rep
         ? (delta < 0 ? `${delta.toFixed(0)}%` : delta > 0 ? `+${delta.toFixed(0)}%` : '0%')
-        : '原';
+        : Toolkit.T('ps.original', null, '原');
       row.innerHTML = `
         <div class="thumb">${icon}</div>
         <div class="mime">${r.mime}</div>
@@ -673,21 +673,21 @@ Toolkit.injectTopbar('playable-slim');
     const nonAsset = htmlSize - beforeB64;
     const estimatedSize = nonAsset + afterB64;
     $('summaryBox').innerHTML = `<div class="summary">
-      <div class="row"><span class="label">原 HTML 体积</span><span class="value">${fmtBytes(htmlSize)}</span></div>
-      <div class="row"><span class="label">原内联资源 (字节)</span><span class="value">${fmtBytes(beforeBytes)}</span></div>
-      <div class="row"><span class="label">压缩后资源 (字节)</span><span class="value">${fmtBytes(afterBytes)}</span></div>
-      <div class="row"><span class="label">资源节省</span><span class="value" style="color:var(--jade)">−${fmtBytes(beforeBytes - afterBytes)} (${((1 - afterBytes/beforeBytes)*100).toFixed(1)}%)</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.origSize', null, '原 HTML 体积')}</span><span class="value">${fmtBytes(htmlSize)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.inlinedBytes', null, '原内联资源 (字节)')}</span><span class="value">${fmtBytes(beforeBytes)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.compressedBytes', null, '压缩后资源 (字节)')}</span><span class="value">${fmtBytes(afterBytes)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.assetSaved', null, '资源节省')}</span><span class="value" style="color:var(--jade)">−${fmtBytes(beforeBytes - afterBytes)} (${((1 - afterBytes/beforeBytes)*100).toFixed(1)}%)</span></div>
       <hr style="border:none; border-top:1px solid var(--border); margin:6px 0">
-      <div class="row"><span class="label">预计新 HTML 体积</span><span class="value" style="color:var(--jade); font-weight:600">≈ ${fmtBytes(estimatedSize)}</span></div>
+      <div class="row"><span class="label">${Toolkit.T('ps.sum.estimated', null, '预计新 HTML 体积')}</span><span class="value" style="color:var(--jade); font-weight:600">≈ ${fmtBytes(estimatedSize)}</span></div>
     </div>`;
-    $('stats').innerHTML = `预计新 HTML ≈ <strong style="color:var(--jade)">${fmtBytes(estimatedSize)}</strong> · 从 <strong>${fmtBytes(htmlSize)}</strong>`;
+    $('stats').innerHTML = Toolkit.T('ps.stats.estimated', { est: fmtBytes(estimatedSize), orig: fmtBytes(htmlSize) }, `预计新 HTML ≈ <strong style="color:var(--jade)">${fmtBytes(estimatedSize)}</strong> · 从 <strong>${fmtBytes(htmlSize)}</strong>`);
   }
 
   // ===== Repack: rebuild HTML =====
   $('repackBtn').addEventListener('click', async () => {
     if (!repackState) return;
     $('repackBtn').disabled = true;
-    log.dim('重建 HTML...');
+    log.dim(Toolkit.T('ps.log.rebuilding', null, '重建 HTML...'));
     try {
       const { manifest, htmlText, replacements } = repackState;
       // sort resources by htmlOffset ascending — we walk through original once
@@ -698,7 +698,7 @@ Toolkit.injectTopbar('playable-slim');
       let lastYield = performance.now();
       for (const r of resources) {
         // sanity check the dataURL boundary
-        if (r.htmlOffset < cursor) { log.warn(`资源 ${r.index} 偏移异常,跳过`); continue; }
+        if (r.htmlOffset < cursor) { log.warn(Toolkit.T('ps.warn.badOffset', { i: r.index }, `资源 ${r.index} 偏移异常,跳过`)); continue; }
         parts.push(htmlText.slice(cursor, r.htmlOffset));
         const rep = replacements.get(r.index);
         if (rep) {
@@ -722,7 +722,7 @@ Toolkit.injectTopbar('playable-slim');
       handoff?.setBlob(blob, outName, 'text/html');
       const orig = htmlText.length;
       const pct = ((1 - blob.size / orig) * 100).toFixed(1);
-      log.ok(`完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(orig)}, 节省 ${pct}%) · 已下载`);
+      log.ok(Toolkit.T('ps.log.repackDone', { size: fmtBytes(blob.size), orig: fmtBytes(orig), pct }, `完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(orig)}, 节省 ${pct}%) · 已下载`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -763,8 +763,8 @@ Toolkit.injectTopbar('playable-slim');
     autoState = null;
     autoOutBlob = null;
     autoOutName = null;
-    $('stats').textContent = '等待文件';
-    $('resList').innerHTML = '<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">拖入文件后这里显示资源清单</div>';
+    $('stats').textContent = Toolkit.T('ps.stats.waiting', null, '等待文件');
+    $('resList').innerHTML = `<div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">${Toolkit.T('ps.resList.empty', null, '拖入文件后这里显示资源清单')}</div>`;
     $('summaryBox').innerHTML = '';
     $('autoStartBtn').disabled = true;
     $('autoDownloadBtn').disabled = true;
@@ -775,22 +775,22 @@ Toolkit.injectTopbar('playable-slim');
   $('autoDownloadBtn').addEventListener('click', () => {
     if (!autoOutBlob || !autoOutName) return;
     download(autoOutBlob, autoOutName);
-    log.dim(`已下载 ${autoOutName}`);
+    log.dim(Toolkit.T('ps.log.downloaded', { name: autoOutName }, `已下载 ${autoOutName}`));
   });
 
   async function handleAutoFile(file) {
     if (!file) return;
     log.clear();
-    log.dim(`读入 ${file.name} (${fmtBytes(file.size)})...`);
+    log.dim(Toolkit.T('ps.log.reading', { name: file.name, size: fmtBytes(file.size) }, `读入 ${file.name} (${fmtBytes(file.size)})...`));
     $('autoStartBtn').disabled = true;
     $('autoDownloadBtn').disabled = true;
     autoOutBlob = null;
     autoOutName = null;
     try {
       const text = await file.text();
-      log.dim(`扫描内联资源...`);
+      log.dim(Toolkit.T('ps.log.scanningInline', null, `扫描内联资源...`));
       const resources = await scanDataUrls(text);
-      log.ok(`找到 ${resources.length} 个内联资源`);
+      log.ok(Toolkit.T('ps.log.foundN', { n: resources.length }, `找到 ${resources.length} 个内联资源`));
       autoState = { fileName: file.name, fileSize: file.size, htmlText: text, resources };
       renderResources(resources, file.size);
       $('autoStartBtn').disabled = resources.length === 0;
@@ -815,7 +815,7 @@ Toolkit.injectTopbar('playable-slim');
     const doVideos = $('autoDoVideos').checked;
     const doAudios = $('autoDoAudios').checked;
 
-    log.dim(`开始一键瘦身 · 质量档:${quality}`);
+    log.dim(Toolkit.T('ps.log.startAuto', { q: quality }, `开始一键瘦身 · 质量档:${quality}`));
     const t0 = performance.now();
     const compressed = new Map();
     const stats = { tried: 0, shrunk: 0, totalIn: 0, totalOut: 0, skipped: 0 };
@@ -835,7 +835,7 @@ Toolkit.injectTopbar('playable-slim');
           else if (cat === 'video' && doVideos) result = await compressVideo(bin, r.mime, quality);
           else if (cat === 'audio' && doAudios) result = await compressAudio(bin, r.mime, quality);
         } catch (err) {
-          log.warn(`  ${r.filename}: ${err.message},跳过`);
+          log.warn(Toolkit.T('ps.warn.skipped', { name: r.filename, msg: err.message }, `  ${r.filename}: ${err.message},跳过`));
         }
 
         stats.tried++;
@@ -849,7 +849,7 @@ Toolkit.injectTopbar('playable-slim');
         }
       }
 
-      setAutoProgress(0.95, '重组 HTML...');
+      setAutoProgress(0.95, Toolkit.T('ps.progress.rebuild', null, '重组 HTML...'));
       await new Promise(rs => setTimeout(rs, 20));
 
       // build new HTML (same algorithm as Repack)
@@ -870,7 +870,7 @@ Toolkit.injectTopbar('playable-slim');
       parts.push(autoState.htmlText.slice(cursor));
       const blob = new Blob(parts, { type: 'text/html' });
 
-      setAutoProgress(1, '完成 — 点击"💾 下载瘦身 HTML"保存');
+      setAutoProgress(1, Toolkit.T('ps.progress.done', null, '完成 — 点击"💾 下载瘦身 HTML"保存'));
       const outName = ($('autoFilename').value || 'playable-slim') + '.html';
       autoOutBlob = blob;
       autoOutName = outName;
@@ -879,9 +879,9 @@ Toolkit.injectTopbar('playable-slim');
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
       const pctTotal = ((1 - blob.size / autoState.fileSize) * 100).toFixed(1);
       const pctAssets = stats.totalIn > 0 ? ((1 - stats.totalOut / stats.totalIn) * 100).toFixed(1) : '0';
-      log.ok(`完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(autoState.fileSize)}, 整体 -${pctTotal}%) · ${stats.shrunk}/${stats.tried} 资源被压缩(-${pctAssets}%) · ${dt}s`);
-      log.dim(`点 "💾 下载瘦身 HTML" 按钮保存文件`);
-      $('stats').innerHTML = `<strong>${fmtBytes(autoState.fileSize)} → ${fmtBytes(blob.size)}</strong> · 节省 <strong style="color:var(--jade)">${pctTotal}%</strong> · ${stats.shrunk} 资源被压缩`;
+      log.ok(Toolkit.T('ps.log.autoDone', { size: fmtBytes(blob.size), orig: fmtBytes(autoState.fileSize), pctTotal, shrunk: stats.shrunk, tried: stats.tried, pctAssets, dt }, `完成 · ${fmtBytes(blob.size)} (原 ${fmtBytes(autoState.fileSize)}, 整体 -${pctTotal}%) · ${stats.shrunk}/${stats.tried} 资源被压缩(-${pctAssets}%) · ${dt}s`));
+      log.dim(Toolkit.T('ps.log.clickDownload', null, `点 "💾 下载瘦身 HTML" 按钮保存文件`));
+      $('stats').innerHTML = Toolkit.T('ps.stats.autoDone', { from: fmtBytes(autoState.fileSize), to: fmtBytes(blob.size), pct: pctTotal, n: stats.shrunk }, `<strong>${fmtBytes(autoState.fileSize)} → ${fmtBytes(blob.size)}</strong> · 节省 <strong style="color:var(--jade)">${pctTotal}%</strong> · ${stats.shrunk} 资源被压缩`);
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -976,11 +976,11 @@ Toolkit.injectTopbar('playable-slim');
   // ---------- video compression via WebCodecs + mp4-muxer ----------
   async function compressVideo(bytes, mime, quality) {
     if (!('VideoEncoder' in window)) {
-      log.warn('  浏览器不支持 WebCodecs,视频跳过');
+      log.warn(Toolkit.T('ps.warn.noWebCodecs', null, '  浏览器不支持 WebCodecs,视频跳过'));
       return null;
     }
     if (!mp4MuxerMod) {
-      log.dim('  加载 mp4-muxer (首次联网)...');
+      log.dim(Toolkit.T('ps.log.loadingMp4Muxer', null, '  加载 mp4-muxer (首次联网)...'));
       mp4MuxerMod = await import('https://esm.sh/mp4-muxer@5.1.5');
     }
     const blob = new Blob([bytes], { type: mime });
@@ -991,7 +991,7 @@ Toolkit.injectTopbar('playable-slim');
     try {
       await new Promise((resolve, reject) => {
         video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error('视频解析失败'));
+        video.onerror = () => reject(new Error(Toolkit.T('ps.err.videoParse', null, '视频解析失败')));
       });
     } catch (e) {
       URL.revokeObjectURL(url);

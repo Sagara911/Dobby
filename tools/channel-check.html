@@ -106,8 +106,8 @@
     <h1>✅ 渠道规范检查</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入 playable HTML</p>
-      <p class="hint">单文件 HTML(用 HTML Inliner 打包后的)</p>
+      <p data-i18n="cc.drop.title">📂 拖入 playable HTML</p>
+      <p class="hint" data-i18n="cc.drop.hint">单文件 HTML(用 HTML Inliner 打包后的)</p>
       <input type="file" id="fileInput" accept=".html,text/html" style="display:none" />
     </div>
 
@@ -116,20 +116,20 @@
       <select id="channel">
         <option value="facebook">Facebook / Meta</option>
         <option value="google">Google Ads (AdMob)</option>
-        <option value="tiktok">TikTok / 抖音</option>
+        <option value="tiktok" data-i18n="cc.ch.tiktok">TikTok / 抖音</option>
         <option value="mintegral">Mintegral</option>
         <option value="ironsource">IronSource</option>
         <option value="applovin">AppLovin</option>
         <option value="unity">Unity Ads</option>
-        <option value="common">通用 (所有渠道兼容)</option>
+        <option value="common" data-i18n="cc.ch.common">通用 (所有渠道兼容)</option>
       </select>
     </div>
 
     <h2 data-i18n="cc.rules">规则参考</h2>
-    <div class="info" id="ruleRef">选个渠道后这里显示该渠道的硬性规则</div>
+    <div class="info" id="ruleRef" data-i18n="cc.ruleRef.empty">选个渠道后这里显示该渠道的硬性规则</div>
 
-    <button id="recheckBtn" class="secondary" disabled style="margin-top:14px">重新检查</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="recheckBtn" class="secondary" disabled style="margin-top:14px" data-i18n="cc.btn.recheck">重新检查</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
@@ -138,15 +138,15 @@
     <div class="stats" id="stats" data-i18n="cc.stats.empty">未加载</div>
 
     <div class="report-summary" id="summary" style="display:none">
-      <div class="sum-card pass"><div class="value" id="passCount">0</div><div class="label">通过</div></div>
-      <div class="sum-card warn"><div class="value" id="warnCount">0</div><div class="label">警告</div></div>
-      <div class="sum-card fail"><div class="value" id="failCount">0</div><div class="label">失败</div></div>
-      <div class="sum-card info"><div class="value" id="totalSize">—</div><div class="label">文件大小</div></div>
+      <div class="sum-card pass"><div class="value" id="passCount">0</div><div class="label" data-i18n="cc.label.pass">通过</div></div>
+      <div class="sum-card warn"><div class="value" id="warnCount">0</div><div class="label" data-i18n="cc.label.warn">警告</div></div>
+      <div class="sum-card fail"><div class="value" id="failCount">0</div><div class="label" data-i18n="cc.label.fail">失败</div></div>
+      <div class="sum-card info"><div class="value" id="totalSize">—</div><div class="label" data-i18n="cc.label.fileSize">文件大小</div></div>
     </div>
 
     <h2 style="margin-top:0" data-i18n="cc.checks">检查项</h2>
     <div class="check-list" id="checkList">
-      <div class="preview-empty">拖入 HTML 文件后这里显示详细检查结果</div>
+      <div class="preview-empty" data-i18n="cc.checkList.empty">拖入 HTML 文件后这里显示详细检查结果</div>
     </div>
   </div>
 </div>
@@ -166,10 +166,11 @@ Toolkit.injectTopbar('channel-check');
   // ===== rules per channel =====
   // each rule: { key, title, severity, check(ctx) -> { pass, detail } }
   // ctx: { text, size, channel }
+  const T = Toolkit.T;
   const RULES = [
     {
       key: 'size-limit',
-      title: '文件大小符合渠道上限',
+      title: T('cc.rule.size.title', null, '文件大小符合渠道上限'),
       severity: 'fail',
       check: (ctx) => {
         const limits = {
@@ -181,40 +182,40 @@ Toolkit.injectTopbar('channel-check');
         const limit = limits[ctx.channel];
         return {
           pass: ctx.size <= limit,
-          detail: `当前 ${fmtBytes(ctx.size)} / 上限 ${fmtBytes(limit)}`
+          detail: T('cc.rule.size.detail', { cur: fmtBytes(ctx.size), lim: fmtBytes(limit) }, `当前 ${fmtBytes(ctx.size)} / 上限 ${fmtBytes(limit)}`)
         };
       }
     },
     {
       key: 'no-external-script',
-      title: '无外部 <script src>',
+      title: T('cc.rule.extScript.title', null, '无外部 <script src>'),
       severity: 'fail',
       check: (ctx) => {
         const m = ctx.text.match(/<script[^>]+src\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
-        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 script` : '全部 inline' };
+        return { pass: m.length === 0, detail: m.length ? T('cc.rule.extScript.found', { n: m.length }, `发现 ${m.length} 个外部 script`) : T('cc.rule.allInline', null, '全部 inline') };
       }
     },
     {
       key: 'no-external-css',
-      title: '无外部 <link rel=stylesheet>',
+      title: T('cc.rule.extCss.title', null, '无外部 <link rel=stylesheet>'),
       severity: 'fail',
       check: (ctx) => {
         const m = ctx.text.match(/<link[^>]+(?:href|rel)[^>]*?href\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
-        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 stylesheet` : '全部 inline' };
+        return { pass: m.length === 0, detail: m.length ? T('cc.rule.extCss.found', { n: m.length }, `发现 ${m.length} 个外部 stylesheet`) : T('cc.rule.allInline', null, '全部 inline') };
       }
     },
     {
       key: 'no-external-img',
-      title: '无外部 <img src>',
+      title: T('cc.rule.extImg.title', null, '无外部 <img src>'),
       severity: 'warn',
       check: (ctx) => {
         const m = ctx.text.match(/<img[^>]+src\s*=\s*["'](https?:|\/\/)[^"']+["']/gi) || [];
-        return { pass: m.length === 0, detail: m.length ? `发现 ${m.length} 个外部 img` : '全部 dataURL 或本地' };
+        return { pass: m.length === 0, detail: m.length ? T('cc.rule.extImg.found', { n: m.length }, `发现 ${m.length} 个外部 img`) : T('cc.rule.extImg.ok', null, '全部 dataURL 或本地') };
       }
     },
     {
       key: 'no-fetch',
-      title: '不应有 fetch / XMLHttpRequest',
+      title: T('cc.rule.fetch.title', null, '不应有 fetch / XMLHttpRequest'),
       severity: 'fail',
       check: (ctx) => {
         const f = (ctx.text.match(/\bfetch\s*\(/g) || []).length;
@@ -224,7 +225,7 @@ Toolkit.injectTopbar('channel-check');
     },
     {
       key: 'no-cookie-storage',
-      title: '不应使用 cookie / localStorage / sessionStorage',
+      title: T('cc.rule.storage.title', null, '不应使用 cookie / localStorage / sessionStorage'),
       severity: 'warn',
       check: (ctx) => {
         const c = (ctx.text.match(/document\.cookie/g) || []).length;
@@ -235,7 +236,7 @@ Toolkit.injectTopbar('channel-check');
     },
     {
       key: 'cta-callback',
-      title: '存在 CTA 回调',
+      title: T('cc.rule.cta.title', null, '存在 CTA 回调'),
       severity: 'fail',
       check: (ctx) => {
         const channel = ctx.channel;
@@ -251,76 +252,76 @@ Toolkit.injectTopbar('channel-check');
         };
         const re = patterns[channel];
         const found = re.test(ctx.text);
-        return { pass: found, detail: found ? '检测到回调代码' : '⚠ 未检测到 CTA 回调,确认按钮能正确跳转' };
+        return { pass: found, detail: found ? T('cc.rule.cta.found', null, '检测到回调代码') : T('cc.rule.cta.missing', null, '⚠ 未检测到 CTA 回调,确认按钮能正确跳转') };
       }
     },
     {
       key: 'has-mraid',
-      title: 'mraid.js 引用 (非 Facebook 渠道需要)',
+      title: T('cc.rule.mraid.title', null, 'mraid.js 引用 (非 Facebook 渠道需要)'),
       severity: 'warn',
       check: (ctx) => {
-        if (ctx.channel === 'facebook') return { pass: true, detail: 'Facebook 不需要 mraid' };
+        if (ctx.channel === 'facebook') return { pass: true, detail: T('cc.rule.mraid.fbSkip', null, 'Facebook 不需要 mraid') };
         const m = /mraid\.js/.test(ctx.text);
-        return { pass: m, detail: m ? '已包含 mraid 引用' : '建议在 head 加 <script src="mraid.js"><\/script>' };
+        return { pass: m, detail: m ? T('cc.rule.mraid.ok', null, '已包含 mraid 引用') : T('cc.rule.mraid.miss', null, '建议在 head 加 <script src="mraid.js"></script>') };
       }
     },
     {
       key: 'viewport-meta',
-      title: '有 viewport meta',
+      title: T('cc.rule.viewport.title', null, '有 viewport meta'),
       severity: 'warn',
       check: (ctx) => {
         const has = /<meta[^>]+name\s*=\s*["']viewport/i.test(ctx.text);
-        return { pass: has, detail: has ? 'OK' : '建议加 <meta name="viewport" content="width=device-width,initial-scale=1">' };
+        return { pass: has, detail: has ? 'OK' : T('cc.rule.viewport.miss', null, '建议加 <meta name="viewport" content="width=device-width,initial-scale=1">') };
       }
     },
     {
       key: 'no-auto-redirect',
-      title: '无自动跳转 (window.location 赋值)',
+      title: T('cc.rule.redirect.title', null, '无自动跳转 (window.location 赋值)'),
       severity: 'warn',
       check: (ctx) => {
         const m = (ctx.text.match(/(?:window\.)?location\s*=\s*["']https?:/g) || []).length;
         const h = (ctx.text.match(/location\.href\s*=\s*["']https?:/g) || []).length;
-        return { pass: m+h === 0, detail: m+h ? `发现 ${m+h} 处疑似自动跳转` : '无' };
+        return { pass: m+h === 0, detail: m+h ? T('cc.rule.redirect.found', { n: m+h }, `发现 ${m+h} 处疑似自动跳转`) : T('cc.rule.none', null, '无') };
       }
     },
     {
       key: 'orientation-lock',
-      title: '声明屏幕方向 (orientation)',
+      title: T('cc.rule.orient.title', null, '声明屏幕方向 (orientation)'),
       severity: 'warn',
       check: (ctx) => {
         const m = /orientation/i.test(ctx.text);
-        return { pass: m, detail: m ? '检测到 orientation 相关代码' : '建议用 window.orientation 或 CSS @media 适配横竖屏' };
+        return { pass: m, detail: m ? T('cc.rule.orient.found', null, '检测到 orientation 相关代码') : T('cc.rule.orient.miss', null, '建议用 window.orientation 或 CSS @media 适配横竖屏') };
       }
     },
     {
       key: 'doctype',
-      title: 'HTML5 doctype',
+      title: T('cc.rule.doctype.title', null, 'HTML5 doctype'),
       severity: 'fail',
       check: (ctx) => {
         const m = /^\s*<!DOCTYPE\s+html\s*>/i.test(ctx.text);
-        return { pass: m, detail: m ? '正确' : '需要 <!DOCTYPE html>' };
+        return { pass: m, detail: m ? T('cc.rule.correct', null, '正确') : T('cc.rule.doctype.miss', null, '需要 <!DOCTYPE html>') };
       }
     },
     {
       key: 'utf8-meta',
-      title: 'UTF-8 字符集声明',
+      title: T('cc.rule.utf8.title', null, 'UTF-8 字符集声明'),
       severity: 'warn',
       check: (ctx) => {
         const m = /<meta[^>]+charset\s*=\s*["']?utf-8/i.test(ctx.text);
-        return { pass: m, detail: m ? '正确' : '建议 <meta charset="UTF-8">' };
+        return { pass: m, detail: m ? T('cc.rule.correct', null, '正确') : T('cc.rule.utf8.miss', null, '建议 <meta charset="UTF-8">') };
       }
     }
   ];
 
   const CHANNEL_RULES_REF = {
-    facebook: '上限 5MB(部分位置 2MB) · 单文件 · 必须调 FbPlayableAd.onCTAClick · 禁外部资源 / cookie / fetch',
-    google: '上限 5MB · 单文件 · 用 mraid.open() 跳转 · 必须支持 mraid 1-3 协议',
-    tiktok: '上限 5MB · 单文件 · 用 playableSDK 或 window 回调 · 禁自动跳转',
-    mintegral: '上限 5MB · 单文件 · 用 mraid · CTA 在用户首次点击后触发',
-    ironsource: '上限 5MB · 单文件 · 用 mraid · 禁外部资源',
-    applovin: '上限 5MB · 单文件 · 用 mraid · 必须有 CTA 按钮',
-    unity: '上限 5MB · 单文件 · 用 UnityAds 或 mraid · 横屏 / 竖屏需明确声明',
-    common: '上限 2MB(最严) · 全部规则取交集 · 兼容所有主流渠道'
+    facebook: T('cc.ref.facebook', null, '上限 5MB(部分位置 2MB) · 单文件 · 必须调 FbPlayableAd.onCTAClick · 禁外部资源 / cookie / fetch'),
+    google: T('cc.ref.google', null, '上限 5MB · 单文件 · 用 mraid.open() 跳转 · 必须支持 mraid 1-3 协议'),
+    tiktok: T('cc.ref.tiktok', null, '上限 5MB · 单文件 · 用 playableSDK 或 window 回调 · 禁自动跳转'),
+    mintegral: T('cc.ref.mintegral', null, '上限 5MB · 单文件 · 用 mraid · CTA 在用户首次点击后触发'),
+    ironsource: T('cc.ref.ironsource', null, '上限 5MB · 单文件 · 用 mraid · 禁外部资源'),
+    applovin: T('cc.ref.applovin', null, '上限 5MB · 单文件 · 用 mraid · 必须有 CTA 按钮'),
+    unity: T('cc.ref.unity', null, '上限 5MB · 单文件 · 用 UnityAds 或 mraid · 横屏 / 竖屏需明确声明'),
+    common: T('cc.ref.common', null, '上限 2MB(最严) · 全部规则取交集 · 兼容所有主流渠道')
   };
 
   $('channel').addEventListener('change', () => {
@@ -336,11 +337,11 @@ Toolkit.injectTopbar('channel-check');
     if (!files.length) return;
     const f = files[0];
     if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') {
-      log.err('Bad Dobby! 这不是 HTML 文件,你再丢一次?');
+      log.err(Toolkit.T('cc.err.notHtml', null, 'Bad Dobby! 这不是 HTML 文件,你再丢一次?'));
       return;
     }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('cc.log.loading', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     try {
       srcText = await f.text();
       srcSize = f.size;
@@ -385,16 +386,16 @@ Toolkit.injectTopbar('channel-check');
         <span class="badge">${it.status.toUpperCase()}</span>
       </div>
     `).join('');
-    log.ok(`检查完成: ${pass} 通过 / ${warn} 警告 / ${fail} 失败`);
+    log.ok(Toolkit.T('cc.log.done', { pass, warn, fail }, `检查完成: ${pass} 通过 / ${warn} 警告 / ${fail} 失败`));
   }
 
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
   $('clearBtn').addEventListener('click', () => {
     srcText = null; srcSize = 0; srcName = '';
-    $('stats').textContent = '未加载';
+    $('stats').textContent = Toolkit.T('cc.stats.empty', null, '未加载');
     $('summary').style.display = 'none';
-    $('checkList').innerHTML = '<div class="preview-empty">拖入 HTML 文件后这里显示详细检查结果</div>';
+    $('checkList').innerHTML = `<div class="preview-empty">${Toolkit.T('cc.checkList.empty', null, '拖入 HTML 文件后这里显示详细检查结果')}</div>`;
     $('recheckBtn').disabled = true;
     log.clear();
     $('fileInput').value = '';

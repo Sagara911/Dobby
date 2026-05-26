@@ -128,32 +128,32 @@
 <div class="tool-layout">
   <div class="sidebar">
     <h1>🔠 字体子集化</h1>
-    <div class="compat-note">首次使用需联网加载 opentype.js (~200KB),之后缓存可离线</div>
+    <div class="compat-note" data-i18n="fs.compat">首次使用需联网加载 opentype.js (~200KB),之后缓存可离线</div>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入字体</p>
-      <p class="hint">TTF / OTF<br/>(WOFF/WOFF2 需先转回 TTF)</p>
+      <p data-i18n="fs.drop.title">📂 拖入字体</p>
+      <p class="hint" data-i18n-html="fs.drop.hint">TTF / OTF<br/>(WOFF/WOFF2 需先转回 TTF)</p>
       <input type="file" id="fileInput" accept=".ttf,.otf,font/ttf,font/otf" style="display:none" />
     </div>
 
     <h2 data-i18n="fs.chars">需要保留的字符</h2>
     <div class="preset-row">
-      <button data-preset="ascii" type="button">英数符号</button>
-      <button data-preset="digits" type="button">数字</button>
-      <button data-preset="cjk-common" type="button">中文 500 常用字</button>
-      <button data-preset="cjk-3500" type="button">中文 3500 字</button>
+      <button data-preset="ascii" type="button" data-i18n="fs.preset.ascii">英数符号</button>
+      <button data-preset="digits" type="button" data-i18n="fs.preset.digits">数字</button>
+      <button data-preset="cjk-common" type="button" data-i18n="fs.preset.cjk500">中文 500 常用字</button>
+      <button data-preset="cjk-3500" type="button" data-i18n="fs.preset.cjk3500">中文 3500 字</button>
     </div>
     <div class="field">
       <textarea id="charset" rows="8" style="background:rgba(0,0,0,0.4); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:ui-monospace, monospace; font-size:11px; width:100%;"></textarea>
     </div>
-    <div class="info" style="font-size:11px; color:var(--muted); margin-top:-4px;">字符数: <span id="charCount">0</span></div>
+    <div class="info" style="font-size:11px; color:var(--muted); margin-top:-4px;"><span data-i18n="fs.charCount">字符数</span>: <span id="charCount">0</span></div>
 
     <h2 data-i18n="common.export">导出</h2>
-    <div class="field"><label>输出字体名 (CSS family)</label><input type="text" id="familyName" value="MyFont" /></div>
-    <button id="subsetBtn" disabled>开始子集化</button>
-    <button id="downloadTtfBtn" class="secondary" disabled>下载 TTF</button>
-    <button id="downloadCssBtn" class="secondary" disabled>下载 CSS</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <div class="field"><label data-i18n="fs.familyName">输出字体名 (CSS family)</label><input type="text" id="familyName" value="MyFont" /></div>
+    <button id="subsetBtn" disabled data-i18n="fs.subset">开始子集化</button>
+    <button id="downloadTtfBtn" class="secondary" disabled data-i18n="fs.dlTtf">下载 TTF</button>
+    <button id="downloadCssBtn" class="secondary" disabled data-i18n="fs.dlCss">下载 CSS</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="progress" id="progress"><div class="progress-bar"></div></div>
     <div class="log" id="log"></div>
@@ -162,17 +162,17 @@
   <div class="main">
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="label">原字体</div>
+        <div class="label" data-i18n="fs.card.orig">原字体</div>
         <div class="value" id="origSize">—</div>
         <div class="delta" id="origGlyphs">—</div>
       </div>
       <div class="stat-card">
-        <div class="label">子集化后</div>
+        <div class="label" data-i18n="fs.card.sub">子集化后</div>
         <div class="value" id="subSize">—</div>
         <div class="delta" id="subGlyphs">—</div>
       </div>
       <div class="stat-card">
-        <div class="label">瘦身</div>
+        <div class="label" data-i18n="fs.card.slim">瘦身</div>
         <div class="value" id="savings">—</div>
         <div class="delta good" id="savingsAbs">—</div>
       </div>
@@ -180,11 +180,11 @@
 
     <h2 style="margin-top:0" data-i18n="fs.preview">效果预览 (用子集字体渲染)</h2>
     <div class="preview-area">
-      <div class="preview-text" id="previewText">拖入字体并子集化后,这里会用新字体渲染样本文字。</div>
+      <div class="preview-text" id="previewText" data-i18n="fs.preview.empty">拖入字体并子集化后,这里会用新字体渲染样本文字。</div>
     </div>
 
     <h2 data-i18n="fs.cssEmbed">CSS 嵌入代码</h2>
-    <div class="css-snippet" id="cssSnippet">/* 子集化完成后这里显示 @font-face 代码 */</div>
+    <div class="css-snippet" id="cssSnippet" data-i18n="fs.css.empty">/* 子集化完成后这里显示 @font-face 代码 */</div>
   </div>
 </div>
 
@@ -231,23 +231,23 @@ Toolkit.injectTopbar('font-subset');
     if (!files.length) return;
     const f = files[0];
     if (!/\.(ttf|otf)$/i.test(f.name) && !f.type.startsWith('font/')) {
-      log.err('Bad Dobby! 这不是 TTF 也不是 OTF,你再丢一次?');
+      log.err(Toolkit.T('fs.err.notFont', null, 'Bad Dobby! 这不是 TTF 也不是 OTF,你再丢一次?'));
       return;
     }
     log.clear();
-    log.dim(`加载 ${f.name} (${fmtBytes(f.size)})...`);
+    log.dim(Toolkit.T('fs.log.loading', { name: f.name, size: fmtBytes(f.size) }, `加载 ${f.name} (${fmtBytes(f.size)})...`));
     try {
       if (!opentype) {
-        log.dim('  加载 opentype.js (首次联网)...');
+        log.dim(Toolkit.T('fs.log.loadingLib', null, '  加载 opentype.js (首次联网)...'));
         opentype = (await import('https://esm.sh/opentype.js@1.3.4')).default;
       }
       srcBuffer = await f.arrayBuffer();
       srcFontData = opentype.parse(srcBuffer);
       $('origSize').textContent = fmtBytes(f.size);
-      $('origGlyphs').textContent = `${srcFontData.numGlyphs} 字形`;
+      $('origGlyphs').textContent = Toolkit.T('fs.glyphs', { n: srcFontData.numGlyphs }, `${srcFontData.numGlyphs} 字形`);
       $('familyName').value = srcFontData.names.fontFamily?.en || 'MyFont';
       $('subsetBtn').disabled = false;
-      log.ok(`字体加载完成: ${srcFontData.names.fontFamily?.en || '?'} · ${srcFontData.numGlyphs} 字形`);
+      log.ok(Toolkit.T('fs.log.loaded', { name: srcFontData.names.fontFamily?.en || '?', n: srcFontData.numGlyphs }, `字体加载完成: ${srcFontData.names.fontFamily?.en || '?'} · ${srcFontData.numGlyphs} 字形`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -257,8 +257,8 @@ Toolkit.injectTopbar('font-subset');
   $('subsetBtn').addEventListener('click', async () => {
     if (!srcFontData) return;
     const chars = [...new Set([...$('charset').value])];
-    if (!chars.length) { log.err('Dobby 还没拿到字符表 — 你先填一下要保留哪些字?'); return; }
-    log.dim(`子集化中,目标 ${chars.length} 字符...`);
+    if (!chars.length) { log.err(Toolkit.T('fs.err.noChars', null, 'Dobby 还没拿到字符表 — 你先填一下要保留哪些字?')); return; }
+    log.dim(Toolkit.T('fs.log.subsetting', { n: chars.length }, `子集化中,目标 ${chars.length} 字符...`));
     $('subsetBtn').disabled = true;
     try {
       // collect glyphs we want
@@ -272,7 +272,7 @@ Toolkit.injectTopbar('font-subset');
         if (idx > 0) wantedGlyphs.set(idx, srcFontData.glyphs.get(idx));
         else missing++;
       }
-      log.dim(`  找到 ${wantedGlyphs.size - 1} 字形, 缺失 ${missing}`);
+      log.dim(Toolkit.T('fs.log.found', { found: wantedGlyphs.size - 1, missing }, `  找到 ${wantedGlyphs.size - 1} 字形, 缺失 ${missing}`));
       // construct new font
       const glyphArr = [...wantedGlyphs.values()];
       const subFont = new opentype.Font({
@@ -287,7 +287,7 @@ Toolkit.injectTopbar('font-subset');
       subBuffer = ttfBuf;
       const subSize = ttfBuf.byteLength;
       $('subSize').textContent = fmtBytes(subSize);
-      $('subGlyphs').textContent = `${glyphArr.length} 字形`;
+      $('subGlyphs').textContent = Toolkit.T('fs.glyphs', { n: glyphArr.length }, `${glyphArr.length} 字形`);
       const orig = srcBuffer.byteLength;
       const pct = ((orig - subSize) / orig * 100);
       $('savings').textContent = pct.toFixed(1) + '%';
@@ -301,17 +301,18 @@ Toolkit.injectTopbar('font-subset');
       // remove previous
       document.fonts.forEach(f => { if (f.family === 'PreviewFont') document.fonts.delete(f); });
       document.fonts.add(face);
-      $('previewText').textContent = '示例文字 · The quick brown fox · 1234567890 · ' + chars.slice(0, 40).join('');
+      $('previewText').textContent = Toolkit.T('fs.preview.sample', null, '示例文字') + ' · The quick brown fox · 1234567890 · ' + chars.slice(0, 40).join('');
 
       // CSS snippet (data URL embedded variant + URL variant)
       const family = $('familyName').value || 'MyFont';
+      const inlineComment = Toolkit.T('fs.css.inlineComment', null, '/* 或者直接 inline (用我们的 Base64 工具转 dataURL) */');
       $('cssSnippet').textContent = `@font-face {
   font-family: '${family}';
   src: url('./${family}.ttf') format('truetype');
   font-display: swap;
 }
 
-/* 或者直接 inline (用我们的 Base64 工具转 dataURL) */
+${inlineComment}
 @font-face {
   font-family: '${family}';
   src: url(data:font/ttf;base64,...) format('truetype');
@@ -323,7 +324,7 @@ body { font-family: '${family}', sans-serif; }`;
       $('downloadCssBtn').disabled = false;
       const fname = (($('familyName').value || 'subset').replace(/[^\w-]/g, '_')) + '.ttf';
       handoff?.setBlob(new Blob([subBuffer], { type: 'font/ttf' }), fname, 'font/ttf');
-      log.ok(`子集化完成: ${fmtBytes(orig)} → ${fmtBytes(subSize)} (-${pct.toFixed(1)}%)`);
+      log.ok(Toolkit.T('fs.log.done', { from: fmtBytes(orig), to: fmtBytes(subSize), pct: pct.toFixed(1) }, `子集化完成: ${fmtBytes(orig)} → ${fmtBytes(subSize)} (-${pct.toFixed(1)}%)`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -347,8 +348,8 @@ body { font-family: '${family}', sans-serif; }`;
   $('clearBtn').addEventListener('click', () => {
     srcBuffer = null; srcFontData = null; subBuffer = null;
     ['origSize','origGlyphs','subSize','subGlyphs','savings','savingsAbs'].forEach(id => $(id).textContent = '—');
-    $('previewText').textContent = '拖入字体并子集化后,这里会用新字体渲染样本文字。';
-    $('cssSnippet').textContent = '/* 子集化完成后这里显示 @font-face 代码 */';
+    $('previewText').textContent = Toolkit.T('fs.preview.empty', null, '拖入字体并子集化后,这里会用新字体渲染样本文字。');
+    $('cssSnippet').textContent = Toolkit.T('fs.css.empty', null, '/* 子集化完成后这里显示 @font-face 代码 */');
     $('charset').value = '';
     $('charCount').textContent = '0';
     $('subsetBtn').disabled = true;

@@ -121,50 +121,50 @@
   <div class="sidebar">
     <h1>🩺 瘦身助手</h1>
 
-    <div class="compat-note">需要 Chrome 86+ / Edge 86+ 或现代浏览器拖入文件夹</div>
+    <div class="compat-note" data-i18n="sc.compatNote">需要 Chrome 86+ / Edge 86+ 或现代浏览器拖入文件夹</div>
 
-    <button id="pickDirBtn">📁 选择项目文件夹</button>
+    <button id="pickDirBtn" data-i18n="sc.btn.pickDir">📁 选择项目文件夹</button>
 
     <div class="drop-zone" id="dropZone" style="margin-top:12px">
-      <p>📂 或拖入文件夹</p>
-      <p class="hint">所有文件/递归扫描</p>
+      <p data-i18n="sc.drop.title">📂 或拖入文件夹</p>
+      <p class="hint" data-i18n="sc.drop.hint">所有文件/递归扫描</p>
     </div>
 
     <h2 data-i18n="sc.thresholds">分析阈值</h2>
     <div class="field">
-      <label>大 PNG 阈值 (KB)</label>
+      <label data-i18n="sc.thresh.png">大 PNG 阈值 (KB)</label>
       <input type="number" id="bigPngKb" value="50" min="0" />
     </div>
     <div class="field">
-      <label>大字体阈值 (KB)</label>
+      <label data-i18n="sc.thresh.font">大字体阈值 (KB)</label>
       <input type="number" id="bigFontKb" value="200" min="0" />
     </div>
     <div class="field">
-      <label>大音频阈值 (KB)</label>
+      <label data-i18n="sc.thresh.audio">大音频阈值 (KB)</label>
       <input type="number" id="bigAudioKb" value="100" min="0" />
     </div>
     <div class="field">
-      <label>序列帧最少帧数</label>
+      <label data-i18n="sc.thresh.seq">序列帧最少帧数</label>
       <input type="number" id="seqMin" value="4" min="2" />
     </div>
 
-    <button id="rescanBtn" class="secondary" disabled>重新分析</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="rescanBtn" class="secondary" disabled data-i18n="sc.btn.rescan">重新分析</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未扫描</div>
+    <div class="stats" id="stats" data-i18n="sc.stats.empty">未扫描</div>
     <div class="total-summary" id="totalSummary" style="display:none">
-      <div class="label">瘦身潜力</div>
+      <div class="label" data-i18n="sc.potential">瘦身潜力</div>
       <div class="value" id="potential">—</div>
       <div class="delta" id="potentialDetail">—</div>
     </div>
 
     <h2 style="margin-top:0" data-i18n="sc.advice">建议清单</h2>
     <div class="advice-list" id="adviceList">
-      <div class="preview-empty">Dobby 扫完会列出针对你这个项目的具体瘦身建议</div>
+      <div class="preview-empty" data-i18n="sc.advice.empty">Dobby 扫完会列出针对你这个项目的具体瘦身建议</div>
     </div>
   </div>
 </div>
@@ -182,14 +182,14 @@ Toolkit.injectTopbar('slim-coach');
 
   $('pickDirBtn').addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
-      log.err('Bad Dobby! 这个浏览器太旧,Dobby 用不了 — 你换 Chrome 86+ / Edge 86+,或者直接拖文件夹进来');
+      log.err(Toolkit.T('sc.err.noFsApi', null, 'Bad Dobby! 这个浏览器太旧,Dobby 用不了 — 你换 Chrome 86+ / Edge 86+,或者直接拖文件夹进来'));
       return;
     }
     try {
       const handle = await window.showDirectoryPicker({ mode: 'read' });
       files = []; totalSize = 0;
       log.clear();
-      log.dim(`扫描 ${handle.name} ...`);
+      log.dim(Toolkit.T('sc.log.scanning', { name: handle.name }, `扫描 ${handle.name} ...`));
       await walkDir(handle, '');
       analyze();
     } catch (e) {
@@ -202,7 +202,7 @@ Toolkit.injectTopbar('slim-coach');
     files = [];
     totalSize = 0;
     log.clear();
-    log.dim(`处理 ${droppedFiles.length} 个文件...`);
+    log.dim(Toolkit.T('sc.log.processing', { n: droppedFiles.length }, `处理 ${droppedFiles.length} 个文件...`));
     for (const f of droppedFiles) {
       const path = f.webkitRelativePath || f.name;
       const ext = (f.name.match(/\.[^./]+$/) || [''])[0].toLowerCase();
@@ -241,8 +241,8 @@ Toolkit.injectTopbar('slim-coach');
   $('rescanBtn').addEventListener('click', analyze);
 
   function analyze() {
-    if (!files.length) { log.err('Dobby 还没拿到文件夹,你先选一个?'); return; }
-    $('stats').innerHTML = `共 <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`;
+    if (!files.length) { log.err(Toolkit.T('sc.err.noFiles', null, 'Dobby 还没拿到文件夹,你先选一个?')); return; }
+    $('stats').innerHTML = Toolkit.T('sc.stats.summary', { n: files.length, size: fmtBytes(totalSize) }, `共 <strong>${files.length}</strong> 个文件 · 总 <strong>${fmtBytes(totalSize)}</strong>`);
     $('rescanBtn').disabled = false;
 
     const bigPng = parseInt($('bigPngKb').value, 10) * 1024;
@@ -253,6 +253,7 @@ Toolkit.injectTopbar('slim-coach');
     const advices = [];
     let totalPotential = 0;
 
+    const T = Toolkit.T;
     // 1. big PNGs
     const bigPngs = files.filter(f => /\.png$/i.test(f.ext) && f.size > bigPng);
     if (bigPngs.length) {
@@ -261,11 +262,11 @@ Toolkit.injectTopbar('slim-coach');
       totalPotential += estimate;
       advices.push({
         ico: '💎', impact: `-${fmtBytes(estimate)}`,
-        title: `${bigPngs.length} 张大 PNG (>${$('bigPngKb').value}KB) 可深度压缩`,
-        body: `用 PNG 深压(palette + dither)通常能减 60-85% 体积,视觉无损。`,
+        title: T('sc.adv.png.title', { n: bigPngs.length, kb: $('bigPngKb').value }, `${bigPngs.length} 张大 PNG (>${$('bigPngKb').value}KB) 可深度压缩`),
+        body: T('sc.adv.png.body', null, `用 PNG 深压(palette + dither)通常能减 60-85% 体积,视觉无损。`),
         files: bigPngs.sort((a,b) => b.size - a.size),
         tool: '../tools/png-crusher.html',
-        toolName: '💎 去 PNG 深压',
+        toolName: T('sc.adv.png.tool', null, '💎 去 PNG 深压'),
         minor: false
       });
     }
@@ -278,11 +279,11 @@ Toolkit.injectTopbar('slim-coach');
       totalPotential += estimate;
       advices.push({
         ico: '🔠', impact: `-${fmtBytes(estimate)}`,
-        title: `${bigFonts.length} 个大字体可子集化`,
-        body: `中文字体只保留实际用到的字符,通常 50MB → 几 KB。这是 playable 包体瘦身最大头。`,
+        title: T('sc.adv.font.title', { n: bigFonts.length }, `${bigFonts.length} 个大字体可子集化`),
+        body: T('sc.adv.font.body', null, `中文字体只保留实际用到的字符,通常 50MB → 几 KB。这是 playable 包体瘦身最大头。`),
         files: bigFonts.sort((a,b) => b.size - a.size),
         tool: '../tools/font-subset.html',
-        toolName: '🔠 去字体子集化',
+        toolName: T('sc.adv.font.tool', null, '🔠 去字体子集化'),
         minor: false
       });
     }
@@ -295,11 +296,11 @@ Toolkit.injectTopbar('slim-coach');
       totalPotential += estimate;
       advices.push({
         ico: '🔊', impact: `-${fmtBytes(estimate)}`,
-        title: `${bigAudios.length} 个大音频可压缩`,
-        body: `降采样到 22050Hz + 单声道 + Opus,通常能减 50-70%。`,
+        title: T('sc.adv.audio.title', { n: bigAudios.length }, `${bigAudios.length} 个大音频可压缩`),
+        body: T('sc.adv.audio.body', null, `降采样到 22050Hz + 单声道 + Opus,通常能减 50-70%。`),
         files: bigAudios.sort((a,b) => b.size - a.size),
         tool: '../tools/audio-compress.html',
-        toolName: '🔊 去音频压缩',
+        toolName: T('sc.adv.audio.tool', null, '🔊 去音频压缩'),
         minor: false
       });
     }
@@ -312,11 +313,11 @@ Toolkit.injectTopbar('slim-coach');
       totalPotential += estimate;
       advices.push({
         ico: '🎬', impact: `-${fmtBytes(estimate)}`,
-        title: `检测到 ${seqGroups.length} 组序列帧,合并精灵图能减 zlib 冗余`,
-        body: `把 N 张序列帧合成一张精灵图通常更紧凑,且 GPU 友好。`,
-        files: seqGroups.map(g => ({ path: `${g.prefix}_*.${g.ext} (${g.count} 帧)`, size: g.totalSize })),
+        title: T('sc.adv.seq.title', { n: seqGroups.length }, `检测到 ${seqGroups.length} 组序列帧,合并精灵图能减 zlib 冗余`),
+        body: T('sc.adv.seq.body', null, `把 N 张序列帧合成一张精灵图通常更紧凑,且 GPU 友好。`),
+        files: seqGroups.map(g => ({ path: T('sc.adv.seq.frameLine', { p: g.prefix, ext: g.ext, n: g.count }, `${g.prefix}_*.${g.ext} (${g.count} 帧)`), size: g.totalSize })),
         tool: '../tools/sprite-packer.html',
-        toolName: '🎬 去精灵图合成',
+        toolName: T('sc.adv.seq.tool', null, '🎬 去精灵图合成'),
         minor: false
       });
     }
@@ -325,12 +326,12 @@ Toolkit.injectTopbar('slim-coach');
     const htmlFiles = files.filter(f => f.category === 'markup');
     if (htmlFiles.length) {
       advices.push({
-        ico: '📄', impact: '改善加载',
-        title: `${htmlFiles.length} 个 HTML 文件,playable 应单文件交付`,
-        body: `用 HTML Inliner 把所有 JS/CSS/图片内联到单 HTML,符合各渠道规范。`,
+        ico: '📄', impact: T('sc.adv.html.impact', null, '改善加载'),
+        title: T('sc.adv.html.title', { n: htmlFiles.length }, `${htmlFiles.length} 个 HTML 文件,playable 应单文件交付`),
+        body: T('sc.adv.html.body', null, `用 HTML Inliner 把所有 JS/CSS/图片内联到单 HTML,符合各渠道规范。`),
         files: htmlFiles,
         tool: '../tools/html-inliner.html',
-        toolName: '📄 去单文件打包',
+        toolName: T('sc.adv.html.tool', null, '📄 去单文件打包'),
         minor: false
       });
     }
@@ -343,11 +344,11 @@ Toolkit.injectTopbar('slim-coach');
       totalPotential += estimate;
       advices.push({
         ico: '📦', impact: `-${fmtBytes(estimate)}`,
-        title: `${jpegs.length} 张 JPEG 可转 WebP 进一步减 25%`,
-        body: `相同视觉质量下 WebP 通常比 JPEG 小 25-35%。`,
+        title: T('sc.adv.jpeg.title', { n: jpegs.length }, `${jpegs.length} 张 JPEG 可转 WebP 进一步减 25%`),
+        body: T('sc.adv.jpeg.body', null, `相同视觉质量下 WebP 通常比 JPEG 小 25-35%。`),
         files: jpegs.sort((a,b) => b.size - a.size),
         tool: '../tools/image-optimizer.html',
-        toolName: '📦 去图片压缩',
+        toolName: T('sc.adv.jpeg.tool', null, '📦 去图片压缩'),
         minor: true
       });
     }
@@ -356,24 +357,24 @@ Toolkit.injectTopbar('slim-coach');
     const videos = files.filter(f => f.category === 'video');
     if (videos.length) {
       advices.push({
-        ico: '🎬', impact: '尺寸优化',
-        title: `${videos.length} 个视频文件,playable 中通常需转 WebM 或 GIF`,
-        body: `视频转 WebM/VP9 体积更小,或转 GIF 通用兼容。`,
+        ico: '🎬', impact: T('sc.adv.video.impact', null, '尺寸优化'),
+        title: T('sc.adv.video.title', { n: videos.length }, `${videos.length} 个视频文件,playable 中通常需转 WebM 或 GIF`),
+        body: T('sc.adv.video.body', null, `视频转 WebM/VP9 体积更小,或转 GIF 通用兼容。`),
         files: videos,
         tool: '../tools/video-toolkit.html',
-        toolName: '🎬 去视频处理',
+        toolName: T('sc.adv.video.tool', null, '🎬 去视频处理'),
         minor: true
       });
     }
 
     // ----- render -----
     if (!advices.length) {
-      $('adviceList').innerHTML = '<div class="preview-empty">Dobby 转了一圈,没挑出毛病 — 你这项目已经很精瘦了</div>';
+      $('adviceList').innerHTML = `<div class="preview-empty">${T('sc.allClean', null, 'Dobby 转了一圈,没挑出毛病 — 你这项目已经很精瘦了')}</div>`;
       $('totalSummary').style.display = 'none';
       return;
     }
     $('potential').textContent = fmtBytes(totalPotential);
-    $('potentialDetail').textContent = `估算最多能减少 ${fmtBytes(totalPotential)},占当前 ${(totalPotential/totalSize*100).toFixed(1)}%`;
+    $('potentialDetail').textContent = T('sc.potentialDetail', { size: fmtBytes(totalPotential), pct: (totalPotential/totalSize*100).toFixed(1) }, `估算最多能减少 ${fmtBytes(totalPotential)},占当前 ${(totalPotential/totalSize*100).toFixed(1)}%`);
     $('totalSummary').style.display = 'block';
     $('adviceList').innerHTML = advices.map(a => `
       <div class="advice ${a.minor ? 'minor' : ''}">
@@ -385,14 +386,14 @@ Toolkit.injectTopbar('slim-coach');
         <div class="body">${escapeHtml(a.body)}</div>
         <div class="files">
           ${a.files.slice(0, 12).map(f => `<div class="file-row"><span class="name">${escapeHtml(f.path)}</span><span class="mono">${fmtBytes(f.size)}</span></div>`).join('')}
-          ${a.files.length > 12 ? `<div class="muted small" style="text-align:center; margin-top:4px;">... 还有 ${a.files.length - 12} 个</div>` : ''}
+          ${a.files.length > 12 ? `<div class="muted small" style="text-align:center; margin-top:4px;">${Toolkit.T('sc.moreFiles', { n: a.files.length - 12 }, `... 还有 ${a.files.length - 12} 个`)}</div>` : ''}
         </div>
         <div class="actions">
           <a href="${a.tool}" target="_blank">${a.toolName} →</a>
         </div>
       </div>
     `).join('');
-    log.ok(`生成 ${advices.length} 条建议,潜在节省 ${fmtBytes(totalPotential)}`);
+    log.ok(Toolkit.T('sc.log.done', { n: advices.length, saved: fmtBytes(totalPotential) }, `生成 ${advices.length} 条建议,潜在节省 ${fmtBytes(totalPotential)}`));
   }
 
   // detect sequences like frame_001.png frame_002.png ...
@@ -422,9 +423,9 @@ Toolkit.injectTopbar('slim-coach');
 
   $('clearBtn').addEventListener('click', () => {
     files = []; totalSize = 0;
-    $('stats').textContent = '未扫描';
+    $('stats').textContent = Toolkit.T('sc.stats.empty', null, '未扫描');
     $('totalSummary').style.display = 'none';
-    $('adviceList').innerHTML = '<div class="preview-empty">Dobby 扫完会列出针对你这个项目的具体瘦身建议</div>';
+    $('adviceList').innerHTML = `<div class="preview-empty">${Toolkit.T('sc.advice.empty', null, 'Dobby 扫完会列出针对你这个项目的具体瘦身建议')}</div>`;
     $('rescanBtn').disabled = true;
     log.clear();
   });

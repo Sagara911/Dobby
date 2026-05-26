@@ -75,8 +75,8 @@
     <h1>✂️ Atlas Splitter</h1>
 
     <div class="drop-zone" id="dropZone">
-      <p>📂 拖入精灵图 (+ 可选 JSON)</p>
-      <p class="hint">
+      <p data-i18n="as.drop.title">📂 拖入精灵图 (+ 可选 JSON)</p>
+      <p class="hint" data-i18n-html="as.drop.hint">
         PNG + JSON: TexturePacker / 简洁数组<br/>
         只拖 PNG: 切换到手动网格拆分模式
       </p>
@@ -84,24 +84,24 @@
     </div>
 
     <div id="gridPanel" style="display:none; background:var(--bg); border:1px solid var(--border); border-left:3px solid var(--warning); border-radius:var(--radius-sm); padding:10px; margin-bottom:12px;">
-      <div style="font-size:12px; color:var(--warning); margin-bottom:8px;">⚠ 没有 JSON,需要手动指定网格</div>
+      <div style="font-size:12px; color:var(--warning); margin-bottom:8px;" data-i18n="as.grid.noJson">⚠ 没有 JSON,需要手动指定网格</div>
       <div style="font-size:11px; color:var(--muted-2); margin-bottom:8px;" id="gridImgInfo"></div>
       <div class="field">
-        <label>拆分模式</label>
+        <label data-i18n="as.grid.mode">拆分模式</label>
         <select id="gridMode">
-          <option value="byCount">按行列数 (cols × rows)</option>
-          <option value="bySize">按单帧尺寸 (W × H px)</option>
+          <option value="byCount" data-i18n="as.grid.byCount">按行列数 (cols × rows)</option>
+          <option value="bySize" data-i18n="as.grid.bySize">按单帧尺寸 (W × H px)</option>
         </select>
       </div>
       <div class="field-row" id="gridByCount">
-        <div class="field"><label>列数</label><input type="number" id="gridCols" value="4" min="1" /></div>
-        <div class="field"><label>行数</label><input type="number" id="gridRows" value="4" min="1" /></div>
+        <div class="field"><label data-i18n="as.grid.cols">列数</label><input type="number" id="gridCols" value="4" min="1" /></div>
+        <div class="field"><label data-i18n="as.grid.rows">行数</label><input type="number" id="gridRows" value="4" min="1" /></div>
       </div>
       <div class="field-row" id="gridBySize" style="display:none">
-        <div class="field"><label>单帧宽 (px)</label><input type="number" id="gridFrameW" value="64" min="1" /></div>
-        <div class="field"><label>单帧高 (px)</label><input type="number" id="gridFrameH" value="64" min="1" /></div>
+        <div class="field"><label data-i18n="as.grid.frameW">单帧宽 (px)</label><input type="number" id="gridFrameW" value="64" min="1" /></div>
+        <div class="field"><label data-i18n="as.grid.frameH">单帧高 (px)</label><input type="number" id="gridFrameH" value="64" min="1" /></div>
       </div>
-      <button id="applyGridBtn" style="width:100%">应用网格拆分</button>
+      <button id="applyGridBtn" style="width:100%" data-i18n="as.grid.apply">应用网格拆分</button>
     </div>
 
     <h2 data-i18n="as.playback">动画播放</h2>
@@ -111,48 +111,48 @@
     </div>
     <label class="checkbox">
       <input type="checkbox" id="loop" checked />
-      <span>循环播放</span>
+      <span data-i18n="as.loop">循环播放</span>
     </label>
     <label class="checkbox">
       <input type="checkbox" id="zoom" />
-      <span>2× 放大显示</span>
+      <span data-i18n="as.zoom2x">2× 放大显示</span>
     </label>
 
     <h2 data-i18n="common.export">导出</h2>
     <div class="field">
-      <label>文件名前缀</label>
+      <label data-i18n="as.filePrefix">文件名前缀</label>
       <input type="text" id="filePrefix" value="frame" />
     </div>
-    <button id="exportZipBtn" disabled>下载全部 (ZIP)</button>
-    <button id="exportGifBtn" class="secondary" disabled>导出动画 (GIF / APNG)</button>
-    <button id="exportSelectedBtn" class="secondary" disabled>下载选中帧</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="exportZipBtn" disabled data-i18n="as.btn.zip">下载全部 (ZIP)</button>
+    <button id="exportGifBtn" class="secondary" disabled data-i18n="as.btn.anim">导出动画 (GIF / APNG)</button>
+    <button id="exportSelectedBtn" class="secondary" disabled data-i18n="as.btn.selected">下载选中帧</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div id="gifPanel" style="display:none; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; margin-top:8px;">
       <div class="field-row">
-        <div class="field"><label>格式</label>
+        <div class="field"><label data-i18n="as.anim.format">格式</label>
           <select id="animFormat"><option value="gif">GIF</option><option value="apng">APNG</option></select>
         </div>
         <div class="field"><label>FPS</label>
           <input type="number" id="animFps" value="12" min="1" max="60" />
         </div>
       </div>
-      <div class="field"><label>循环次数 (0=无限)</label>
+      <div class="field"><label data-i18n="as.anim.loop">循环次数 (0=无限)</label>
         <input type="number" id="animLoop" value="0" min="0" />
       </div>
-      <button id="animBuildBtn" style="width:100%">生成并下载</button>
+      <button id="animBuildBtn" style="width:100%" data-i18n="as.anim.build">生成并下载</button>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="anim-preview" id="animPreview">
-      <div class="preview-empty">拖入 PNG + JSON 后开始播放动画</div>
+      <div class="preview-empty" data-i18n="as.preview.empty">拖入 PNG + JSON 后开始播放动画</div>
     </div>
     <div class="anim-toolbar" id="animToolbar" style="display:none">
-      <button id="playBtn" class="secondary">⏸ 暂停</button>
+      <button id="playBtn" class="secondary" data-i18n="as.btn.pause">⏸ 暂停</button>
       <input type="range" id="frameSlider" min="0" max="0" value="0" />
       <span class="frame-label" id="frameLabel">0 / 0</span>
     </div>
@@ -205,7 +205,7 @@ Toolkit.injectTopbar('atlas-splitter');
       rows = Math.floor(bm.height / fh);
     }
     if (cols < 1 || rows < 1 || fw < 1 || fh < 1) {
-      log.err('网格参数无效');
+      log.err(Toolkit.T('as.err.badGrid', null, '网格参数无效'));
       return;
     }
     const total = cols * rows;
@@ -218,16 +218,22 @@ Toolkit.injectTopbar('atlas-splitter');
         offsetX: 0, offsetY: 0, sourceW: fw, sourceH: fh
       });
     }
-    log.dim(`网格拆分: ${cols}×${rows} = ${total} 帧, 单帧 ${fw}×${fh}`);
+    log.dim(Toolkit.T('as.log.gridSplit', { cols, rows, total, fw, fh }, `网格拆分: ${cols}×${rows} = ${total} 帧, 单帧 ${fw}×${fh}`));
     buildFrames(bm, frameDefs);
-    log.ok(`拆分完成 ${frames.length} 帧`);
+    log.ok(Toolkit.T('as.log.splitDone', { n: frames.length }, `拆分完成 ${frames.length} 帧`));
     renderFrameGrid();
     startPlayback();
     $('animToolbar').style.display = 'flex';
     $('exportZipBtn').disabled = false;
     $('exportGifBtn').disabled = false;
     $('gridPanel').style.display = 'none';
-    $('stats').innerHTML = `<strong>${frames.length}</strong> 帧 · 图集 <strong>${bm.width}×${bm.height}</strong> · 网格 <strong>${cols}×${rows}</strong> · 单帧 <strong>${fw}×${fh}</strong>`;
+    {
+      const tFrames = Toolkit.T('as.stats.frames', null, '帧');
+      const tAtlas = Toolkit.T('as.stats.atlas', null, '图集');
+      const tGrid = Toolkit.T('as.stats.grid', null, '网格');
+      const tCell = Toolkit.T('as.stats.cell', null, '单帧');
+      $('stats').innerHTML = `<strong>${frames.length}</strong> ${tFrames} · ${tAtlas} <strong>${bm.width}×${bm.height}</strong> · ${tGrid} <strong>${cols}×${rows}</strong> · ${tCell} <strong>${fw}×${fh}</strong>`;
+    }
     pendingBitmap = null;
   });
 
@@ -240,15 +246,15 @@ Toolkit.injectTopbar('atlas-splitter');
       else if (/\.json$/i.test(f.name) || f.type === 'application/json') jsonFile = f;
     }
     if (!pngFile) {
-      log.err('需要至少一张图片');
+      log.err(Toolkit.T('as.err.needPng', null, '需要至少一张图片'));
       return;
     }
     if (!jsonFile) {
       // No JSON: enter grid mode
-      log.dim(`PNG: ${pngFile.name} (无 JSON,等待手动指定网格)`);
+      log.dim(Toolkit.T('as.log.pngNoJson', { name: pngFile.name }, `PNG: ${pngFile.name} (无 JSON,等待手动指定网格)`));
       try {
         pendingBitmap = await createImageBitmap(pngFile);
-        $('gridImgInfo').textContent = `已加载: ${pendingBitmap.width} × ${pendingBitmap.height} px`;
+        $('gridImgInfo').textContent = Toolkit.T('as.grid.loadedInfo', { w: pendingBitmap.width, h: pendingBitmap.height }, `已加载: ${pendingBitmap.width} × ${pendingBitmap.height} px`);
         $('gridPanel').style.display = 'block';
         const cv = newCanvas(pendingBitmap.width, pendingBitmap.height);
         cv.getContext('2d').drawImage(pendingBitmap, 0, 0);
@@ -268,16 +274,21 @@ Toolkit.injectTopbar('atlas-splitter');
       const jsonText = await jsonFile.text();
       const data = JSON.parse(jsonText);
       const parsed = parseFrames(data);
-      log.dim(`解析格式: ${parsed.format}`);
+      log.dim(Toolkit.T('as.log.parsedFormat', { format: parsed.format }, `解析格式: ${parsed.format}`));
       buildFrames(bitmap, parsed.frames);
-      log.ok(`加载完成 ${frames.length} 帧`);
+      log.ok(Toolkit.T('as.log.loadedFrames', { n: frames.length }, `加载完成 ${frames.length} 帧`));
       renderFrameGrid();
       startPlayback();
       $('animToolbar').style.display = 'flex';
       $('exportZipBtn').disabled = false;
       $('exportGifBtn').disabled = false;
       const sample = frames[0];
-      $('stats').innerHTML = `<strong>${frames.length}</strong> 帧 · 图集 <strong>${bitmap.width}×${bitmap.height}</strong> · 最大单帧 <strong>${Math.max(...frames.map(f=>f.sw))}×${Math.max(...frames.map(f=>f.sh))}</strong>`;
+      {
+        const tFrames = Toolkit.T('as.stats.frames', null, '帧');
+        const tAtlas = Toolkit.T('as.stats.atlas', null, '图集');
+        const tMaxCell = Toolkit.T('as.stats.maxCell', null, '最大单帧');
+        $('stats').innerHTML = `<strong>${frames.length}</strong> ${tFrames} · ${tAtlas} <strong>${bitmap.width}×${bitmap.height}</strong> · ${tMaxCell} <strong>${Math.max(...frames.map(f=>f.sw))}×${Math.max(...frames.map(f=>f.sh))}</strong>`;
+      }
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -319,7 +330,7 @@ Toolkit.injectTopbar('atlas-splitter');
       }));
       return { format: 'Simple Array', frames: arr };
     }
-    throw new Error('JSON 格式无法识别');
+    throw new Error(Toolkit.T('as.err.unknownJson', null, 'JSON 格式无法识别'));
   }
 
   function buildFrames(bitmap, frameDefs) {
@@ -366,7 +377,7 @@ Toolkit.injectTopbar('atlas-splitter');
     cancelAnimationFrame(rafId);
     currentFrame = 0;
     playing = true;
-    $('playBtn').textContent = '⏸ 暂停';
+    $('playBtn').textContent = Toolkit.T('as.btn.pause', null, '⏸ 暂停');
     $('frameSlider').max = String(frames.length - 1);
     lastTime = performance.now();
     setupAnimCanvas();
@@ -411,7 +422,7 @@ Toolkit.injectTopbar('atlas-splitter');
       currentFrame++;
       if (currentFrame >= frames.length) {
         if ($('loop').checked) currentFrame = 0;
-        else { currentFrame = frames.length - 1; playing = false; $('playBtn').textContent = '▶ 播放'; }
+        else { currentFrame = frames.length - 1; playing = false; $('playBtn').textContent = Toolkit.T('as.btn.play', null, '▶ 播放'); }
       }
       drawCurrentFrame();
     }
@@ -420,12 +431,12 @@ Toolkit.injectTopbar('atlas-splitter');
   $('playBtn').addEventListener('click', () => {
     if (!frames.length) return;
     playing = !playing;
-    $('playBtn').textContent = playing ? '⏸ 暂停' : '▶ 播放';
+    $('playBtn').textContent = playing ? Toolkit.T('as.btn.pause', null, '⏸ 暂停') : Toolkit.T('as.btn.play', null, '▶ 播放');
     if (playing) lastTime = performance.now();
   });
   $('frameSlider').addEventListener('input', (e) => {
     playing = false;
-    $('playBtn').textContent = '▶ 播放';
+    $('playBtn').textContent = Toolkit.T('as.btn.play', null, '▶ 播放');
     currentFrame = parseInt(e.target.value, 10);
     drawCurrentFrame();
   });
@@ -435,7 +446,7 @@ Toolkit.injectTopbar('atlas-splitter');
   $('exportZipBtn').addEventListener('click', async () => {
     if (!frames.length) return;
     const prefix = ($('filePrefix').value || 'frame').replace(/[^\w-]/g, '_');
-    log.dim('打包 ZIP...');
+    log.dim(Toolkit.T('as.log.packingZip', null, '打包 ZIP...'));
     const files = [];
     for (let i = 0; i < frames.length; i++) {
       const f = frames[i];
@@ -450,7 +461,7 @@ Toolkit.injectTopbar('atlas-splitter');
     const zip = makeZip(files);
     download(zip, `${prefix}_frames.zip`);
     handoff?.setBlob(zip, `${prefix}_frames.zip`, 'application/zip');
-    log.ok(`已导出 ${files.length} 帧到 ZIP (${Toolkit.fmtBytes(zip.size)})`);
+    log.ok(Toolkit.T('as.log.zipExported', { n: files.length, size: Toolkit.fmtBytes(zip.size) }, `已导出 ${files.length} 帧到 ZIP (${Toolkit.fmtBytes(zip.size)})`));
   });
 
   $('exportGifBtn').addEventListener('click', () => {
@@ -464,7 +475,7 @@ Toolkit.injectTopbar('atlas-splitter');
     const fps = parseInt($('animFps').value, 10) || 12;
     const loop = parseInt($('animLoop').value, 10) || 0;
     $('animBuildBtn').disabled = true;
-    log.dim(`生成 ${fmt.toUpperCase()}...`);
+    log.dim(Toolkit.T('as.log.buildingAnim', { fmt: fmt.toUpperCase() }, `生成 ${fmt.toUpperCase()}...`));
     try {
       // build frames at source size with offsets honored (so animation looks correct)
       const animFrames = frames.map(f => {
@@ -480,7 +491,7 @@ Toolkit.injectTopbar('atlas-splitter');
       const ext = fmt === 'gif' ? 'gif' : 'png';
       download(blob, `${prefix}.${ext}`);
       handoff?.setBlob(blob, `${prefix}.${ext}`, fmt === 'gif' ? 'image/gif' : 'image/png');
-      log.ok(`已导出 ${prefix}.${ext} (${Toolkit.fmtBytes(blob.size)})`);
+      log.ok(Toolkit.T('as.log.animExported', { name: `${prefix}.${ext}`, size: Toolkit.fmtBytes(blob.size) }, `已导出 ${prefix}.${ext} (${Toolkit.fmtBytes(blob.size)})`));
     } catch (e) {
       log.err(e.message);
       console.error(e);
@@ -496,16 +507,16 @@ Toolkit.injectTopbar('atlas-splitter');
     cv.getContext('2d').drawImage(f.canvas, f.offsetX, f.offsetY);
     const blob = await canvasToBlob(cv, 'image/png');
     download(blob, (f.name || 'frame') + '.png');
-    log.ok(`已导出 ${f.name}.png`);
+    log.ok(Toolkit.T('as.log.frameExported', { name: f.name }, `已导出 ${f.name}.png`));
   });
 
   $('clearBtn').addEventListener('click', () => {
     frames = []; selectedIdx = -1; playing = false;
     cancelAnimationFrame(rafId);
     $('frameGrid').innerHTML = '';
-    $('animPreview').innerHTML = '<div class="preview-empty">拖入 PNG + JSON 后开始播放动画</div>';
+    $('animPreview').innerHTML = `<div class="preview-empty">${Toolkit.T('as.preview.empty', null, '拖入 PNG + JSON 后开始播放动画')}</div>`;
     $('animToolbar').style.display = 'none';
-    $('stats').textContent = 'Dobby 待命';
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('exportZipBtn').disabled = true;
     $('exportGifBtn').disabled = true;
     $('exportSelectedBtn').disabled = true;
