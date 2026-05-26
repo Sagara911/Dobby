@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title data-i18n="private.title">隐私设置 · Dobby</title>
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  .priv-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+  .priv-page h1 {
+    font-size: 32px;
+    margin: 0 0 10px 0;
+    background: linear-gradient(135deg, var(--accent), var(--champagne));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .priv-page .lede {
+    color: var(--text-soft);
+    font-size: 13px;
+    margin: 0 0 28px 0;
+    line-height: 1.7;
+  }
+
+  .priv-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .priv-card h2 {
+    font-size: 16px;
+    color: var(--text);
+    margin: 0 0 8px 0;
+  }
+  .priv-card .body {
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .priv-card .body code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .status-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.tracked  { background: var(--accent); box-shadow: 0 0 8px rgba(var(--jade-rgb), 0.6); }
+  .status-dot.private  { background: var(--danger); box-shadow: 0 0 8px rgba(245, 91, 91, 0.6); }
+  .status-text { flex: 1; font-size: 13px; color: var(--text); }
+  .status-text .sub { color: var(--muted); font-size: 11px; }
+
+  .priv-btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .priv-btn-row button {
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .priv-btn-row button.danger {
+    background: rgba(245, 91, 91, 0.12);
+    border-color: rgba(245, 91, 91, 0.5);
+    color: #ff8080;
+  }
+  .priv-btn-row button.danger:hover { background: rgba(245, 91, 91, 0.20); }
+  .priv-btn-row button.primary {
+    background: rgba(var(--jade-rgb), 0.12);
+    border-color: rgba(var(--jade-rgb), 0.5);
+    color: var(--accent);
+  }
+  .priv-btn-row button.primary:hover { background: rgba(var(--jade-rgb), 0.22); }
+  .priv-btn-row button.secondary {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+  }
+  .priv-btn-row button.secondary:hover { background: rgba(255, 255, 255, 0.10); }
+
+  .priv-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    line-height: 1.7;
+  }
+  .priv-meta .row { display: flex; justify-content: space-between; gap: 12px; }
+  .priv-meta .row .k { color: var(--muted); }
+  .priv-meta .row .v { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="priv-page">
+  <h1 data-i18n="private.h1">🔒 隐私设置</h1>
+  <p class="lede" data-i18n="private.lede">
+    Dobby 默认接了 <strong style="color:var(--accent)">Cloudflare Web Analytics</strong> 看大致访客量(纯统计,不卖数据、不存指纹、不跨站追踪)。如果你不想让自己的访问被算进数字里 — 比如你是站长在测试 — 这页给你一个开关。
+  </p>
+
+  <!-- 排除当前设备 -->
+  <div class="priv-card">
+    <h2 data-i18n="private.optout.h">排除当前设备</h2>
+    <div class="body" data-i18n="private.optout.body">
+      点下面按钮,这个设备 + 这个浏览器以后访问 Dobby 都不会再加载分析脚本(<code>cloudflareinsights.com</code>)。设置存在浏览器 localStorage 里,清缓存会丢。<br/>
+      <strong>多设备使用</strong>:每个设备访问这个页面一次,点排除按钮,就排除掉这个设备。
+    </div>
+    <div class="status-row">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text">
+        <div id="statusLabel">—</div>
+        <div class="sub" id="statusSub">—</div>
+      </div>
+    </div>
+    <div class="priv-btn-row">
+      <button class="danger" id="excludeBtn" data-i18n="private.optout.exclude">🚫 不要统计这台设备</button>
+      <button class="primary" id="includeBtn" data-i18n="private.optout.include" style="display:none">✅ 恢复统计</button>
+    </div>
+  </div>
+
+  <!-- 详细说明 -->
+  <div class="priv-card">
+    <h2 data-i18n="private.what.h">Dobby 在你浏览器里存了啥</h2>
+    <div class="body" data-i18n="private.what.body">
+      纯粹给工具用的本地缓存,**不上传**:
+    </div>
+    <div class="priv-meta" id="storageMeta">检查中...</div>
+    <div class="priv-btn-row" style="margin-top:12px">
+      <button class="secondary" id="clearStorageBtn" data-i18n="private.what.clear">🧹 清空全部本地缓存</button>
+    </div>
+  </div>
+
+  <!-- 网络请求说明 -->
+  <div class="priv-card">
+    <h2 data-i18n="private.network.h">Dobby 会发出哪些网络请求</h2>
+    <div class="body" data-i18n="private.network.body">
+      <ul style="margin:6px 0; padding-left:20px; line-height:1.8">
+        <li><strong>HTML / CSS / JS 静态资源</strong>: <code>dobby-aih.pages.dev</code>(Cloudflare Pages 自己的 CDN)</li>
+        <li><strong>分析 beacon</strong>: <code>cloudflareinsights.com</code> — <span id="netAnalytics" style="color:var(--accent)">默认开</span>(可在上面关掉)</li>
+        <li><strong>Giscus 留言板 iframe</strong>: <code>giscus.app</code> — 只有访问 <code>/messages.html</code> 才加载</li>
+        <li><strong>AI 模型按需下载</strong>: <code>huggingface.co</code>(MODNet / RMBG / LaMa)— 只有使用 AI 抠图 / 去水印才下,缓存在 IndexedDB</li>
+        <li><strong>压缩引擎按需下载</strong>: <code>unpkg.com</code> / <code>cdn.jsdelivr.net</code>(mozjpeg / oxipng / AVIF / terser / opentype)— 只有选了这些引擎才下</li>
+      </ul>
+      你处理的文件**完全不上传**,所有图片 / 视频 / 音频 / 字体处理都在浏览器本地完成。
+    </div>
+  </div>
+
+  <p style="text-align:center; margin-top:24px">
+    <a href="index.html" style="color:var(--accent); text-decoration:none; font-size:13px" data-i18n="private.back">← 回首页</a>
+  </p>
+</div>
+
+<script src="assets/shared.js"></script>
+<script>
+Toolkit.injectTopbar('private');
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  function getStatus() {
+    try { return localStorage.getItem('dobby-noTrack') === '1'; } catch { return false; }
+  }
+  function updateUI() {
+    const excluded = getStatus();
+    const dot = $('statusDot');
+    const label = $('statusLabel');
+    const sub = $('statusSub');
+    const excludeBtn = $('excludeBtn');
+    const includeBtn = $('includeBtn');
+    const netA = $('netAnalytics');
+    if (excluded) {
+      dot.className = 'status-dot private';
+      label.textContent = '🚫 这台设备不被统计';
+      sub.textContent = '分析脚本不会加载,你的访问不会出现在 Cloudflare 数字里';
+      excludeBtn.style.display = 'none';
+      includeBtn.style.display = '';
+      netA.textContent = '已关闭(只在这台设备)';
+      netA.style.color = 'var(--danger)';
+    } else {
+      dot.className = 'status-dot tracked';
+      label.textContent = '✅ 这台设备正常统计';
+      sub.textContent = '匿名访问计数,Cloudflare 看不到你是谁,只知道有人来过';
+      excludeBtn.style.display = '';
+      includeBtn.style.display = 'none';
+      netA.textContent = '默认开';
+      netA.style.color = 'var(--accent)';
+    }
+  }
+
+  $('excludeBtn').addEventListener('click', () => {
+    try { localStorage.setItem('dobby-noTrack', '1'); } catch (e) { alert('localStorage 不可写: ' + e.message); return; }
+    updateUI();
+  });
+  $('includeBtn').addEventListener('click', () => {
+    try { localStorage.removeItem('dobby-noTrack'); } catch (_) {}
+    updateUI();
+  });
+
+  // ── show what we store ──
+  function refreshStorage() {
+    const meta = $('storageMeta');
+    const keys = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    } catch (_) {}
+    if (!keys.length) {
+      meta.textContent = '(localStorage 当前是空的)';
+      return;
+    }
+    keys.sort();
+    meta.innerHTML = keys.map(k => {
+      let v = '';
+      try { v = localStorage.getItem(k) || ''; } catch (_) {}
+      const short = v.length > 60 ? v.slice(0, 60) + '…' : v;
+      return `<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(short) || '(空)'}</span></div>`;
+    }).join('');
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  $('clearStorageBtn').addEventListener('click', () => {
+    if (!confirm('清空 Dobby 在这台设备上的全部本地缓存?这会清掉:\n• 你的语言偏好 / 主题偏好 / 工具最近列表\n• 隐私开关(会回到默认统计)\n• 各工具的设置记忆\n\nIndexedDB 里的 AI 模型缓存不动 — 下次抠图还是秒载。')) return;
+    try { localStorage.clear(); } catch (_) {}
+    try { sessionStorage.clear(); } catch (_) {}
+    updateUI();
+    refreshStorage();
+  });
+
+  updateUI();
+  refreshStorage();
+})();
+</script>
+</body>
+</html>

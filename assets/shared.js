@@ -519,6 +519,13 @@
             <span class="fp-board-sub">${T('feedback.board.sub', '所有人都能看到 · 需要 GitHub 账号')}</span>
           </span>
         </a>
+        <a class="fp-board" href="${prefix}private.html" style="margin-top:6px">
+          <span class="fp-board-icon">🔒</span>
+          <span class="fp-board-text">
+            <span class="fp-board-title">${T('feedback.private.title', '隐私设置 →')}</span>
+            <span class="fp-board-sub">${T('feedback.private.sub', '排除自己访问 / 看本地存了啥 / 一键清空')}</span>
+          </span>
+        </a>
       `;
       document.body.appendChild(panel);
       // Anchor below the button, right-aligned to it.
@@ -823,6 +830,14 @@
   function setupCloudflareAnalytics() {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.endsWith('.local')) return;
+    // Per-device opt-out: anyone visiting /private.html and toggling
+    // "don't track this device" sets this localStorage flag. We then
+    // skip injecting the beacon so the page never reports back to
+    // Cloudflare Web Analytics. Survives until the user clears
+    // localStorage or re-toggles on the same page.
+    try {
+      if (localStorage.getItem('dobby-noTrack') === '1') return;
+    } catch (_) { /* localStorage disabled — fall through and track */ }
     if (document.querySelector('script[data-cf-beacon]')) return;
     const s = document.createElement('script');
     s.defer = true;
