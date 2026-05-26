@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v36",
+      "date": "2026-05-26",
+      "title": "📱 首页大改 + 全站手机适配(viewport / hero 瘦身 / 卡片压扁)",
+      "items": [
+        "**修了个根 bug** — 之前所有 HTML 里居然没有 `<meta name=\"viewport\">`,手机浏览器都按桌面宽度渲染再缩小看,字小得离谱。给全部 47 个页面加上了 `width=device-width, initial-scale=1, viewport-fit=cover`",
+        "首页 Hero 瘦身:扔掉了顶部「Dobby 还在学本事 + 邮箱」eyebrow 行和底部「4 个 stats 一字排」,标题/副标合并成一行短文案,搜索框直接顶上来,5 大类彩色 chip 当主视觉锚点。Hero 从 ~700px 砍到 **311px**(手机 375 宽测),整页从 12212px 砍到 **7107px**(-42%)",
+        "工具卡片压扁:`min-height` 140→100,grid `minmax(280→240, 1fr)`,描述加 2 行 `-webkit-line-clamp` 截断不再撑高。1280 桌面一行从 4 张变 5 张,大类不再霸 4-5 屏",
+        "手机适配做了两档 media query(≤720px 平板和大手机 / ≤480px 手机),≤480 强制单列卡片 + chip 大小加触控友好(38px+ 高)+ 新闻弹窗紧凑化 + footer 改竖排。搜索框字号顶到 16px,iOS 不再自动放大",
+        "邮件联系从 Hero 顶部 eyebrow 移到 footer 一个绿色 pill —— 既不挤首屏,联系入口还在(topbar 💬 反馈按钮也保留)"
+      ]
+    },
+    {
       "version": "dobby-v35",
       "date": "2026-05-26",
       "title": "🧦 浏览器 tab 上终于有 Dobby 图标了",

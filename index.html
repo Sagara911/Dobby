@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <!-- KILLSWITCH v1 -->
 <script>
 /* one-shot legacy cleanup — drops old SW, caches, and localStorage left behind
@@ -35,56 +36,34 @@
 <style>
   body { overflow-x: hidden; }
 
-  /* ===== HERO ===== */
+  /* ===== HERO =====
+     Design intent (mobile-first):
+     - h1 + tight one-line subtitle + search + cat chips. That's it.
+     - Stats row & contact eyebrow moved out (counts absorbed into subtitle
+       via {n} interpolation, contact moved to footer). 5-second test:
+       user immediately sees "tool catalog" not "marketing pitch". */
   .hero {
     position: relative;
     z-index: 1;
-    padding: 64px 24px 48px;
+    padding: 40px 20px 28px;
     text-align: center;
     margin: 0 auto;
   }
-  /* every direct child of hero is horizontally centered */
   .hero > * {
     margin-left: auto;
     margin-right: auto;
     text-align: center;
     display: block;
   }
-  /* explicit max-widths so each block is narrower than viewport and shows centering */
-  .hero h1 { max-width: 800px; }
-  /* (副标 .hero p 的 max-width 在下方主样式里统一设) */
-  /* eyebrow is a pill tag — inline-block so it sizes to content; parent text-align centers it */
-  .hero .eyebrow { display: inline-block; }
-  .hero .eyebrow {
-    display: inline-block;
-    padding: 6px 16px;
-    border-radius: var(--radius-pill);
-    background: rgba(var(--jade-rgb), 0.14);
-    border: 1px solid rgba(var(--jade-rgb), 0.4);
-    color: var(--jade);
-    font-size: 12.5px;
-    font-family: ui-monospace, Consolas, monospace;
-    letter-spacing: 0.06em;
-    margin-bottom: 20px;
-  }
-  .hero .eyebrow-email {
-    color: var(--jade);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
-    transition: color 0.15s;
-  }
-  .hero .eyebrow-email:hover { color: #fff; text-decoration-color: #fff;
-  }
   .hero h1 {
-    font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+    max-width: 800px;
+    font-size: clamp(2rem, 6vw, 3.4rem);
     font-weight: 700;
-    line-height: 1.05;
+    line-height: 1.1;
     color: #fff;
-    letter-spacing: -0.03em;
-    margin: 0 auto 16px;
+    letter-spacing: -0.025em;
+    margin: 0 auto 10px;
     font-family: "Space Grotesk", sans-serif;
-    text-align: center;
   }
   .hero h1 .accent {
     background: linear-gradient(135deg, var(--jade), var(--champagne));
@@ -93,29 +72,31 @@
     color: transparent;
     display: inline-block;
   }
-  .hero p {
-    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
-    color: rgba(255, 255, 255, 0.62);
-    margin: 0 auto 32px;
-    line-height: 1.6;
-    max-width: 560px;
-    text-align: center;
+  .hero .hero-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 auto 22px;
+    line-height: 1.5;
+    max-width: 600px;
+    font-family: ui-monospace, Consolas, monospace;
+    letter-spacing: 0.02em;
   }
 
   /* search */
   .search-wrap {
     position: relative;
     max-width: 540px;
-    margin: 0 auto 24px;
+    margin: 0 auto 22px;
   }
   .search-wrap input {
     width: 100%;
     background: rgba(0, 0, 0, 0.55);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-pill);
-    padding: 13px 20px 13px 44px;
+    padding: 14px 20px 14px 44px;
     color: var(--text);
-    font-size: 14px;
+    /* 16px to avoid iOS auto-zoom on focus */
+    font-size: 16px;
     font-family: "Space Grotesk", sans-serif;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
@@ -150,57 +131,30 @@
   .search-wrap .clear:hover { background: rgba(255,255,255,0.1); color: var(--text); transform: translateY(-50%); }
   .search-wrap.has-value .clear { display: block; }
 
-  /* hero stat row */
-  .hero-stats {
-    display: flex;
-    gap: 30px;
-    justify-content: center;
-    flex-wrap: wrap;
-    color: var(--muted);
-    font-size: 12px;
-    font-family: ui-monospace, Consolas, monospace;
-  }
-  .hero-stats .stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .hero-stats .stat strong {
-    color: var(--text);
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .hero-stats .sep {
-    width: 1px; height: 14px;
-    background: var(--border-strong);
-    margin: 0 -6px;
-    align-self: center;
-  }
-
   /* ===== TOOLS SECTION ===== */
   .tools-section {
     position: relative;
     z-index: 1;
     max-width: 1240px;
-    margin: 30px auto 60px;
-    padding: 0 24px;
+    margin: 24px auto 48px;
+    padding: 0 20px;
   }
 
   /* category header */
   .cat-header {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin: 44px 0 18px;
-    padding-top: 6px;
+    gap: 12px;
+    margin: 32px 0 14px;
+    padding-top: 4px;
   }
   .cat-header .cat-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
+    width: 32px; height: 32px;
+    border-radius: 9px;
     background: linear-gradient(135deg, rgba(var(--cat-rgb, var(--jade-rgb)), 0.22), rgba(var(--cat-rgb, var(--jade-rgb)), 0.05));
     border: 1px solid rgba(var(--cat-rgb, var(--jade-rgb)), 0.32);
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
   }
   /* Mirror the data-cat mapping for category section wrappers */
   .cat-anchor[data-cat="image"] { --cat-rgb: var(--cat-image-rgb); }
@@ -247,8 +201,9 @@
 
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 14px;
+    /* Denser: 240px min gives an extra column at 1280-1440 widths */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
   }
 
   /* recent section: emphasized container */
@@ -263,7 +218,8 @@
   .recent-section .cat-header { margin-top: 0; margin-bottom: 14px; padding-top: 0; }
   .recent-section .cat-name { color: var(--jade); }
 
-  /* glassmorphism cards */
+  /* glassmorphism cards — tighter: 100 min-height + smaller padding,
+     descriptions clamped to 2 lines so dense category pages don't sprawl */
   .tool-card {
     --mx: 50%;
     --my: 50%;
@@ -274,14 +230,14 @@
     -webkit-backdrop-filter: blur(18px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 18px 20px 16px;
+    padding: 14px 16px 12px;
     text-decoration: none;
     color: var(--text);
     transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    min-height: 140px;
+    gap: 4px;
+    min-height: 100px;
   }
   .tool-card::before,
   .tool-card::after {
@@ -321,14 +277,14 @@
   .tool-card > * { position: relative; z-index: 2; }
 
   .tool-card .icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 9px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     background: linear-gradient(135deg, rgba(var(--cat-rgb, var(--jade-rgb)), 0.18), rgba(var(--cat-rgb, var(--jade-rgb)), 0.04));
     border: 1px solid rgba(var(--cat-rgb, var(--jade-rgb)), 0.28);
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 4px;
+    font-size: 16px;
+    margin-bottom: 2px;
   }
   /* Per-category accent override — the home page card generator (and
      cat-header below) sets data-cat="image|anim|av|code|audit"; that
@@ -356,14 +312,14 @@
   }
   .tool-card h3 {
     margin: 0;
-    font-size: 14.5px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text);
     font-family: "Space Grotesk", sans-serif;
     letter-spacing: -0.005em;
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
   .tool-card h3 .card-sub {
@@ -377,8 +333,14 @@
     margin: 0;
     color: var(--muted-2);
     font-size: 11.5px;
-    line-height: 1.55;
+    line-height: 1.5;
     flex: 1;
+    /* Clamp description to 2 lines so card height stays predictable
+       even when tools have very long desc strings */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .empty-search {
@@ -432,6 +394,23 @@
     color: var(--muted);
     font-size: 11px;
     font-family: ui-monospace, Consolas, monospace;
+  }
+  .footer-contact {
+    color: var(--jade);
+    text-decoration: none;
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    background: rgba(var(--jade-rgb), 0.08);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    transition: background 0.15s, border-color 0.15s;
+    /* touch-friendly */
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .footer-contact:hover {
+    background: rgba(var(--jade-rgb), 0.18);
+    border-color: rgba(var(--jade-rgb), 0.55);
   }
   .footer-inner .tag { display: inline-flex; align-items: center; gap: 6px; }
   .footer-inner .dot {
@@ -588,31 +567,32 @@
   }
 
   /* Hero category chips — colorful quick-jump bar that visually advertises
-     the five tool families. Replaces the previous text-only subtitle role
-     as the page's main visual anchor. */
+     the five tool families. With the eyebrow + stats row gone, these chips
+     ARE the visual anchor of the hero. Touch-target 40px+ on mobile. */
   .hero-cat-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: center;
     max-width: 720px;
-    margin: 0 auto 28px;
+    margin: 0 auto;
   }
   .hero-cat-chips a {
     --c: var(--jade-rgb);
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 14px;
+    padding: 9px 14px;
     border-radius: var(--radius-pill);
     text-decoration: none;
     background: rgba(var(--c), 0.10);
     border: 1px solid rgba(var(--c), 0.32);
     color: rgb(var(--c));
-    font-size: 12.5px;
+    font-size: 13px;
     font-family: "Space Grotesk", sans-serif;
     font-weight: 500;
     transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    min-height: 36px;
   }
   .hero-cat-chips a:hover {
     background: rgba(var(--c), 0.22);
@@ -631,30 +611,109 @@
   .hero-cat-chips a[data-cat="av"]    { --c: var(--cat-av-rgb); }
   .hero-cat-chips a[data-cat="code"]  { --c: var(--cat-code-rgb); }
   .hero-cat-chips a[data-cat="audit"] { --c: var(--cat-audit-rgb); }
+
+  /* ============================================================
+     MOBILE — mobile-first adjustments at common breakpoints.
+     ≤720px: tablets and large phones (most mobile traffic)
+     ≤480px: phones, where 1 column + touch ergonomics matter most
+     ============================================================ */
+  @media (max-width: 720px) {
+    .hero {
+      padding: 28px 16px 20px;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 8vw, 2.6rem);
+      margin-bottom: 8px;
+    }
+    .hero .hero-sub {
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .search-wrap {
+      margin-bottom: 18px;
+    }
+    .tools-section {
+      margin: 16px auto 36px;
+      padding: 0 14px;
+    }
+    .tools-grid {
+      gap: 10px;
+    }
+    .cat-header {
+      margin: 24px 0 12px;
+      gap: 10px;
+    }
+    .cat-header .cat-name { font-size: 16px; }
+    .cat-header .cat-en   { display: none; }
+    .hero-cat-chips a {
+      padding: 9px 12px;
+      font-size: 12.5px;
+    }
+    .news-card { padding: 18px 18px 16px; }
+    .news-head h2 { font-size: 17px; }
+    .footer-inner {
+      flex-direction: column;
+      text-align: center;
+      gap: 10px;
+      font-size: 10.5px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .hero {
+      padding: 24px 14px 16px;
+    }
+    .hero h1 {
+      font-size: 1.9rem;
+      letter-spacing: -0.02em;
+    }
+    .hero .hero-sub {
+      font-size: 12.5px;
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+    /* tools force single column with comfortable padding */
+    .tools-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .tool-card {
+      padding: 13px 14px 12px;
+      min-height: auto;
+    }
+    .tool-card p {
+      /* on phones a 3-line clamp reads fine, gives more context */
+      -webkit-line-clamp: 3;
+    }
+    /* chips: bigger touch target, allow tighter wrap */
+    .hero-cat-chips { gap: 6px; }
+    .hero-cat-chips a {
+      padding: 10px 12px;
+      font-size: 12px;
+      min-height: 38px;
+    }
+    .hero-cat-chips a .chip-count { display: none; }
+    /* news modal: full-width, smaller padding */
+    .news-card { padding: 16px 16px 14px; max-height: 80vh; }
+    .news-head { gap: 8px; margin-bottom: 14px; }
+    .news-head h2 { font-size: 16px; }
+    .news-list li { padding: 10px 12px; font-size: 12.5px; }
+    .news-primary { padding: 10px 18px; }
+  }
 </style>
 </head>
 <body>
 
 <main>
   <section class="hero">
-    <div class="eyebrow"><span data-i18n="home.eyebrow">🧦 Dobby 还在学本事 · 想找 Dobby 聊聊?写信 </span><a href="mailto:huobingli0924@gmail.com" class="eyebrow-email">huobingli0924@gmail.com</a></div>
-    <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span>。<br/>你的本地素材精灵。</h1>
-    <p data-i18n="home.hero.subtitle">图像 / 动画 / 音视频 / 代码 / 诊断 — 44 件家务 Dobby 全替你扛了 · 文件不上传 · Dobby 不偷看 · Dobby is free!</p>
+    <h1 data-i18n-html="home.hero.title">叫我 <span class="accent">Dobby</span></h1>
+    <p class="hero-sub" id="heroSub">— 44 件本地工具 · 文件不上传 · Dobby is free</p>
     <div class="search-wrap" id="searchWrap">
       <span class="icon">🔍</span>
       <input type="text" id="search" data-i18n-attr="placeholder:home.search.placeholder" placeholder="告诉 Dobby 你想干什么...  (Ctrl+K 聚焦)" autocomplete="off" />
       <button class="clear" id="searchClear" type="button" data-i18n-attr="aria-label:home.search.clear" aria-label="清空">✕</button>
     </div>
     <div class="hero-cat-chips" id="heroCatChips"></div>
-    <div class="hero-stats" id="heroStats">
-      <span class="stat"><strong id="statToolCount">—</strong> <span data-i18n="home.stats.tools">件家务</span></span>
-      <span class="sep"></span>
-      <span class="stat"><strong id="statCatCount">—</strong> <span data-i18n="home.stats.cats">大类</span></span>
-      <span class="sep"></span>
-      <span class="stat" data-i18n="home.stats.free">⚡ Dobby 不收费</span>
-      <span class="sep"></span>
-      <span class="stat" data-i18n="home.stats.private">🧦 Dobby 不偷看</span>
-    </div>
   </section>
 
   <section class="tools-section" id="toolsSection"></section>
@@ -663,6 +722,7 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <span class="tag"><span class="dot"></span><span data-i18n="home.footer.tag">所有家务在你本机做完 · Dobby 不上传 · Dobby 不偷看</span></span>
+    <a class="footer-contact" href="mailto:huobingli0924@gmail.com" data-i18n="home.footer.contact">📮 写信给 Dobby</a>
     <span data-i18n="home.footer.brand">2026 · 🧦 Dobby is free!</span>
   </div>
 </footer>
@@ -793,10 +853,16 @@
     return score;
   }
 
-  // Fill in the hero stats from the source-of-truth TOOLS / CATEGORIES
-  // arrays — no more hard-coded counts that go stale when tools are added.
-  document.getElementById('statToolCount').textContent = CARDS.length;
-  document.getElementById('statCatCount').textContent  = CATEGORIES.length;
+  // Subtitle is templated with {n} so the count stays in sync with the
+  // TOOLS array — no more hard-coded "44" that goes stale. Re-run on
+  // langchange so the swap to EN also fills in the count.
+  function renderHeroSub() {
+    const el = document.getElementById('heroSub');
+    if (!el) return;
+    el.textContent = T('home.hero.subtitle', { n: CARDS.length }, `— ${CARDS.length} 件本地工具 · 文件不上传 · Dobby is free`);
+  }
+  renderHeroSub();
+  document.addEventListener('langchange', renderHeroSub);
 
   // Hero category chips — colored quick-jump buttons that double as a visual
   // anchor for the hero section.
