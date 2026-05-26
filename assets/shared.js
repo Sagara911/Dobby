@@ -90,24 +90,40 @@
     currentLang = lang;
     try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-    applyTranslations();
-    // Trigger a full re-render of dynamic UI bits (topbar, sidebar, etc.)
-    document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
+
+    const finish = () => {
+      applyTranslations();
+      // Trigger a full re-render of dynamic UI bits (topbar, sidebar, etc.)
+      document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
+    };
+
+    // For zh users at boot we skip dict fetch entirely (HTML defaults ARE the
+    // zh source of truth). So when they switch to en the first time, the dict
+    // isn't in memory yet — fetch it on demand before completing the swap.
+    if (lang === 'en' && !window.I18N_STRINGS) {
+      loadStringsDict(finish);
+    } else {
+      finish();
+    }
   }
 
   function getLang() { return currentLang; }
 
-  // Load the strings dict asynchronously. Sites work with Chinese defaults
-  // before this lands; once it loads, applyTranslations swaps to the
-  // active language.
-  function loadStringsDict() {
-    if (window.I18N_STRINGS) { applyTranslations(); return; }
+  // Load the strings dict asynchronously. For Chinese users we skip the
+  // download entirely — the HTML markup IS the zh source of truth, so the
+  // dict (~97 KB gzipped after Phase 3) is dead weight on every page load.
+  // Lazy-load only happens when the user explicitly switches to en.
+  // The script-tag onload callback is reused by setLang() to defer
+  // applyTranslations + langchange dispatch until the dict is in memory.
+  function loadStringsDict(cb) {
+    if (window.I18N_STRINGS) { applyTranslations(); if (cb) cb(); return; }
+    if (currentLang === 'zh') { if (cb) cb(); return; }
     const inSubdir = window.location.pathname.includes('/tools/');
     const prefix = inSubdir ? '../' : '';
     const s = document.createElement('script');
     s.src = prefix + 'assets/i18n-strings.js';
-    s.onload = () => { applyTranslations(); };
-    s.onerror = () => { console.warn('[i18n] failed to load strings dict'); };
+    s.onload = () => { applyTranslations(); if (cb) cb(); };
+    s.onerror = () => { console.warn('[i18n] failed to load strings dict'); if (cb) cb(); };
     document.head.appendChild(s);
   }
   loadStringsDict();

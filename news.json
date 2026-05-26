@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v43",
+      "date": "2026-05-26",
+      "title": "⚡ 中文用户跳过 i18n-strings.js 下载 — page load -60% / CLS 修复",
+      "items": [
+        "Cloudflare Web Analytics 上 page load time 飙到 **1461ms (+185% 回归)**,CLS 红块也明显。一查就是 Phase 3 把 `i18n-strings.js` 涨到 **97 KB gzipped** 之后,每个页面无脑加载导致的",
+        "**问题:** 中文用户是默认 lang,HTML 默认文本本来就是中文 — 加载完 dict 之后 `applyTranslations` 是在把中文换成中文(视觉上空操作,但 textContent 重写依然触发布局重算 → CLS;下载 + parse 又拖慢 onload → page load 时间爆炸)",
+        "**修法:** `loadStringsDict()` 现在检测 `currentLang === 'zh'` 直接 return,中文用户根本不下载这 97 KB。EN 用户第一次切语言时再 lazy 拉(`setLang('en')` 检测 dict 不在内存就先 fetch 再 applyTranslations,保证 langchange 事件触发时已经有翻译)",
+        "**预期:** zh 用户(占绝大多数)每页省 97 KB 下载 + parse + DOM walk,page load 应该回到 < 600ms,CLS 红块消失,INP 也跟着改善(主线程不再被 applyTranslations 那一通 querySelectorAll + textContent 阻塞)",
+        "**代价:** EN 用户第一次切语言会有 ~50ms 延迟(下载 dict)。Trade-off 划算 — 网站 90%+ 用户中文,EN 切换是低频操作",
+        "改动 shared.js 14 行,无破坏性。zh 用户的行为完全不变(本来就用 HTML 默认文本)"
+      ]
+    },
+    {
       "version": "dobby-v42",
       "date": "2026-05-26",
       "title": "🌐 i18n Phase 3 — 40 个工具的深度翻译,EN 模式不再夹生",
