@@ -209,7 +209,7 @@
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
-    <h2>Tile 尺寸</h2>
+    <h2 data-i18n="tm.tileSize">Tile 尺寸</h2>
     <div class="tm-size-row">
       <input type="number" id="tileW" value="16" min="4" max="128" placeholder="W" />
       <input type="number" id="tileH" value="16" min="4" max="128" placeholder="H" />
@@ -221,14 +221,14 @@
       <button id="ts32">32</button>
     </div>
 
-    <h2>地图尺寸 (tile)</h2>
+    <h2 data-i18n="tm.mapSize">地图尺寸 (tile)</h2>
     <div class="tm-size-row">
       <input type="number" id="mapW" value="20" min="1" max="256" />
       <input type="number" id="mapH" value="15" min="1" max="256" />
     </div>
     <button id="resizeMapBtn" class="secondary" style="margin-top:4px">🔄 应用地图尺寸</button>
 
-    <h2>当前 tile</h2>
+    <h2 data-i18n="tm.curTile">当前 tile</h2>
     <div class="tm-selected-tile">
       <canvas id="selectedTileCv" width="32" height="32" style="width:32px; height:32px"></canvas>
       <div>
@@ -245,21 +245,21 @@
       <button class="tm-tool-btn"        data-tool="rect"   title="矩形填充 (R)">▣</button>
     </div>
 
-    <h2>历史</h2>
+    <h2 data-i18n="common.history">历史</h2>
     <div class="tm-action-row">
       <button id="undoBtn">↶ 撤销</button>
       <button id="redoBtn">↷ 重做</button>
       <button id="clearMapBtn">🗑️ 清空</button>
     </div>
 
-    <h2>视图</h2>
+    <h2 data-i18n="common.view">视图</h2>
     <div class="tm-action-row">
       <button id="zoomIn">🔍+</button>
       <button id="zoomOut">🔍−</button>
       <button id="gridToggle">▦ 网格</button>
     </div>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <div class="tm-export-grid">
       <button id="exportJson">📄 JSON (Tiled)</button>
       <button id="exportPng">🖼️ 平摊 PNG</button>

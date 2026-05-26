@@ -239,7 +239,7 @@
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
     </div>
 
-    <h2>模型</h2>
+    <h2 data-i18n="ac.model">模型</h2>
     <div class="field">
       <select id="modelSelect">
         <option value="Xenova/modnet">MODNet (~25MB · 人像 · Apache 2.0 可商用)</option>
@@ -254,7 +254,7 @@
       </select>
     </div>
 
-    <h2>后处理</h2>
+    <h2 data-i18n="ac.postProc">后处理</h2>
     <label class="checkbox">
       <input type="checkbox" id="refine" checked />
       <span>边缘精修 (Guided Filter)</span>
@@ -274,7 +274,7 @@
       <input type="range" id="feather" min="0" max="8" value="0" />
     </div>
 
-    <h2>输出</h2>
+    <h2 data-i18n="common.output">输出</h2>
     <div class="field"><label>文件名前缀</label><input type="text" id="filename" value="cutout" /></div>
     <button id="loadModelBtn">加载模型</button>
     <button id="processBtn" disabled>开始抠图</button>
@@ -288,7 +288,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="preview-pair">
       <div class="preview-col">
         <div class="label">原图 (点击下方队列切换)</div>
@@ -326,7 +326,7 @@
       </div>
     </div>
     <div>
-      <h2 style="margin-top:0">批量队列</h2>
+      <h2 style="margin-top:0" data-i18n="ac.batchQueue">批量队列</h2>
       <div class="batch-grid" id="batchGrid">
         <div class="preview-empty">你多扔几张,Dobby 排好队</div>
       </div>

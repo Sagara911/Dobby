@@ -129,7 +129,7 @@
       <button id="addFolderBtn" class="secondary" style="flex:1; font-size:11px">+ 加文件夹</button>
     </div>
 
-    <h2>压缩参数</h2>
+    <h2 data-i18n="zip.params">压缩参数</h2>
     <div class="field">
       <label>压缩级别 <span id="levelVal" class="mono">9</span></label>
       <input type="range" id="level" min="0" max="9" value="9" />
@@ -138,20 +138,20 @@
 
     <label class="checkbox"><input type="checkbox" id="keepPaths" checked /><span>保留文件夹层级结构</span></label>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <div class="field">
-      <label>文件名</label>
+      <label data-i18n="common.filename">文件名</label>
       <input type="text" id="filename" value="archive" />
     </div>
-    <button id="packBtn" disabled>开始打包</button>
-    <button id="downloadBtn" class="secondary" disabled>下载 ZIP</button>
-    <button id="clearBtn" class="secondary">清空</button>
+    <button id="packBtn" disabled data-i18n="zip.pack">开始打包</button>
+    <button id="downloadBtn" class="secondary" disabled data-i18n="zip.downloadZip">下载 ZIP</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 手里还没文件</div>
+    <div class="stats" id="stats" data-i18n="zip.stats.empty">Dobby 手里还没文件</div>
     <div class="info" style="margin-bottom:8px">Dobby 就在你本机打包 · Dobby 不上传 · Dobby 不偷看 · 引擎:fflate (deflate)</div>
     <div class="file-list" id="fileList">
       <div class="preview-empty" style="text-align:center; padding:40px 20px; color:var(--muted)">你丢文件进来,Dobby 给列清楚</div>

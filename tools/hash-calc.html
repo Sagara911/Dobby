@@ -173,7 +173,7 @@
       <input type="file" id="fileInput" style="display:none" />
     </div>
 
-    <h2>选哪些算法</h2>
+    <h2 data-i18n="hash.algos">选哪些算法</h2>
     <div style="display:flex; flex-direction:column; gap:4px">
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="algoMD5" checked />
@@ -197,11 +197,11 @@
       </label>
     </div>
 
-    <h2>动作</h2>
-    <button id="recalcBtn" class="secondary">🔄 重新计算</button>
-    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+    <h2 data-i18n="common.actions">动作</h2>
+    <button id="recalcBtn" class="secondary" data-i18n="hash.recalc">🔄 重新计算</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
-    <h2>用途</h2>
+    <h2 data-i18n="hash.uses">用途</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6">
       • 校验下载文件完整性<br>
       • Git LFS / Docker layer 标识<br>
@@ -213,7 +213,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">拖文件 / 输入文本 → 计算各种哈希</div>
+    <div class="stats" id="stats" data-i18n="hash.stats.ready">拖文件 / 输入文本 → 计算各种哈希</div>
 
     <div class="hash-stage">
       <!-- File area -->

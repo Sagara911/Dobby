@@ -156,12 +156,12 @@
   <div class="sidebar">
     <h1>🔊 8-bit SFX 生成器</h1>
 
-    <h2>预设</h2>
+    <h2 data-i18n="common.presets">预设</h2>
     <div class="sfx-preset-grid" id="presetGrid">
       <!-- populated at runtime -->
     </div>
 
-    <h2>波形</h2>
+    <h2 data-i18n="sfx.wave">波形</h2>
     <select id="wave" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="square">⬜ 方波 (Square) — 经典 8-bit</option>
       <option value="sawtooth">📐 锯齿 (Saw) — 尖锐</option>
@@ -170,7 +170,7 @@
       <option value="noise">📻 噪声 (Noise) — 爆炸/打击</option>
     </select>
 
-    <h2>包络 (Envelope)</h2>
+    <h2 data-i18n="sfx.envelope">包络 (Envelope)</h2>
     <div class="sfx-params">
       <div class="field">
         <label>起音 (Attack) <span class="val" id="attackVal">0</span></label>
@@ -190,7 +190,7 @@
       </div>
     </div>
 
-    <h2>音高 (Pitch)</h2>
+    <h2 data-i18n="sfx.pitch">音高 (Pitch)</h2>
     <div class="sfx-params">
       <div class="field">
         <label>起始频率 <span class="val" id="freqStartVal">440 Hz</span></label>
@@ -210,7 +210,7 @@
       </div>
     </div>
 
-    <h2>滤波</h2>
+    <h2 data-i18n="sfx.filter">滤波</h2>
     <div class="sfx-params">
       <div class="field">
         <label>低通 (Lowpass) <span class="val" id="lowpassVal">关</span></label>
@@ -222,7 +222,7 @@
       </div>
     </div>
 
-    <h2>文件名前缀</h2>
+    <h2 data-i18n="sfx.namePrefix">文件名前缀</h2>
     <input type="text" id="filename" value="sfx" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" />
 
     <div class="log" id="log"></div>

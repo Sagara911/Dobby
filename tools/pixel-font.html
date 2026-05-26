@@ -232,7 +232,7 @@
       <strong style="color:var(--accent)">画自己的像素字</strong> · 一格一像素,导 BDF / TTF / PNG 雪碧图,塞进游戏 / Playable / Phaser。
     </div>
 
-    <h2>字体名 / 大小</h2>
+    <h2 data-i18n="pf.nameSize">字体名 / 大小</h2>
     <input type="text" id="fontName" value="MyPixelFont" placeholder="字体名" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
 
     <div style="display:flex; gap:6px; margin-top:6px">
@@ -246,7 +246,7 @@
       </label>
     </div>
 
-    <h2>字符集</h2>
+    <h2 data-i18n="pf.charset">字符集</h2>
     <select id="charsetPreset" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="ascii">ASCII 可见(95 字符)</option>
       <option value="alpha">仅字母数字(62)</option>
@@ -255,11 +255,11 @@
     </select>
     <textarea id="customCharset" rows="3" placeholder="自定义字符,直接打进来" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace, Consolas, monospace; font-size:11px; margin-top:6px; display:none; resize:vertical"></textarea>
 
-    <h2>基线位置</h2>
+    <h2 data-i18n="pf.baseline">基线位置</h2>
     <input type="range" id="baseline" min="0" max="16" value="6" style="width:100%">
     <div class="pf-help">从顶部算第 <span id="baselineLabel">6</span> 行 — 字母「g」「p」「y」的下降部分在基线下方</div>
 
-    <h2>显示</h2>
+    <h2 data-i18n="common.display">显示</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="onion" checked />
       <span>洋葱皮(显示上一个字)</span>
@@ -269,14 +269,14 @@
       <span>显示基线</span>
     </label>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <div class="pf-help">
       <strong>BDF</strong>(.bdf): 文本格式像素字体,FreeType / 嵌入式系统通吃<br/>
       <strong>TTF</strong>(.ttf): 真矢量字体,网页 / 游戏引擎全兼容<br/>
       <strong>PNG 雪碧图</strong>: 加 JSON,适合 Phaser / Pixi 的 BitmapFont
     </div>
 
-    <h2>保存 / 加载</h2>
+    <h2 data-i18n="pf.saveLoad">保存 / 加载</h2>
     <button id="saveLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit">💾 存到浏览器</button>
     <button id="loadLocal" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📂 从浏览器读</button>
     <button id="exportJson" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:6px; font-size:11px; cursor:pointer; font-family:inherit; margin-top:4px">📤 导出 JSON 工程</button>

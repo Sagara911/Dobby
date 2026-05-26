@@ -214,18 +214,18 @@
   <div class="sidebar">
     <h1>🎢 缓动曲线</h1>
 
-    <h2>预设</h2>
+    <h2 data-i18n="common.presets">预设</h2>
     <div class="ez-preset-grid" id="presetGrid">
       <!-- populated at runtime -->
     </div>
 
-    <h2>曲线类型</h2>
+    <h2 data-i18n="ease.curveType">曲线类型</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
       <button class="ez-preset active" id="modeBezier" data-mode="bezier">cubic-bezier</button>
       <button class="ez-preset" id="modeSpring" data-mode="spring">弹簧</button>
     </div>
 
-    <h2 id="paramsHead">控制点</h2>
+    <h2 id="paramsHead" data-i18n="ease.ctrlPts">控制点</h2>
     <div id="bezierParams" style="display:flex; flex-direction:column; gap:8px">
       <div style="font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft)" id="bezierStr">cubic-bezier(0.4, 0, 0.2, 1)</div>
       <div class="px-help" style="font-size:10px; color:var(--muted)">在右边画布上拖蓝/绿色控制点,或直接改下面数值</div>
@@ -260,7 +260,7 @@
       </div>
     </div>
 
-    <h2>动作</h2>
+    <h2 data-i18n="common.actions">动作</h2>
     <button id="copyBtn" class="secondary">📋 复制当前格式代码</button>
     <button id="resetBtn" class="secondary">🔄 重置</button>
 

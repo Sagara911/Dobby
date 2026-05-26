@@ -200,7 +200,7 @@
   <div class="sidebar">
     <h1>🔍 正则测试器</h1>
 
-    <h2>常用模板</h2>
+    <h2 data-i18n="re.presets">常用模板</h2>
     <select id="presetSelect" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="">— 选一个常用正则 —</option>
       <option value="email">📧 邮箱</option>
@@ -227,7 +227,7 @@
       <option value="html-tag">&lt;tag&gt; HTML 标签</option>
     </select>
 
-    <h2>Flags 速查</h2>
+    <h2 data-i18n="re.flags">Flags 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div><strong>g</strong>: 全局,找所有匹配</div>
       <div><strong>i</strong>: 忽略大小写</div>
@@ -238,7 +238,7 @@
       <div><strong>d</strong>: 输出匹配子串索引</div>
     </div>
 
-    <h2>语法速查</h2>
+    <h2 data-i18n="re.syntax">语法速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div>\d 数字 · \D 非数字</div>
       <div>\w 字母数字 _ · \W 反</div>
@@ -250,7 +250,7 @@
       <div>(?=...) 前瞻 · (?!...) 负前瞻</div>
     </div>
 
-    <h2>动作</h2>
+    <h2 data-i18n="common.actions">动作</h2>
     <button id="copyRegexBtn" class="secondary">📋 复制完整正则 /pattern/flags</button>
     <button id="copyJsBtn" class="secondary">📋 复制 JS 代码片段</button>
     <button id="clearBtn" class="secondary">🗑️ 清空</button>

@@ -171,13 +171,13 @@
   <div class="sidebar">
     <h1>♿ 颜色对比度</h1>
 
-    <h2>前景色(文字)</h2>
+    <h2 data-i18n="a11y.fg">前景色(文字)</h2>
     <div class="ax-pick-row">
       <input type="color" id="fgPicker" value="#ffffff" class="swatch" style="padding:0" />
       <input type="text" id="fgHex" value="#ffffff" maxlength="7" />
     </div>
 
-    <h2>背景色</h2>
+    <h2 data-i18n="a11y.bg">背景色</h2>
     <div class="ax-pick-row">
       <input type="color" id="bgPicker" value="#1a1a24" class="swatch" style="padding:0" />
       <input type="text" id="bgHex" value="#1a1a24" maxlength="7" />
@@ -186,15 +186,15 @@
     <h2>常见组合 <span style="float:right; font-size:10px; color:var(--muted)">点选</span></h2>
     <div id="commonCombos" style="display:flex; flex-direction:column; gap:4px"></div>
 
-    <h2>动作</h2>
+    <h2 data-i18n="common.actions">动作</h2>
     <button id="swapBtn" class="secondary">↔ 交换前/背景</button>
     <button id="randomBtn" class="secondary">🎲 随机一对</button>
     <button id="copyBtn" class="secondary">📋 复制 hex 对</button>
 
-    <h2>预览文本</h2>
+    <h2 data-i18n="a11y.previewText">预览文本</h2>
     <textarea id="previewText" style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; resize:vertical; min-height:60px" placeholder="自定义预览文字">Lorem ipsum dolor sit amet</textarea>
 
-    <h2>WCAG 速查</h2>
+    <h2 data-i18n="a11y.wcag">WCAG 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div><strong>AA 普通文本</strong>: ≥ 4.5</div>
       <div><strong>AA 大字</strong>: ≥ 3.0(≥18pt 或 14pt 加粗)</div>

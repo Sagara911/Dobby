@@ -132,7 +132,7 @@
       <input type="file" id="fileInput" accept=".ttf,.otf,font/ttf,font/otf" style="display:none" />
     </div>
 
-    <h2>需要保留的字符</h2>
+    <h2 data-i18n="fs.chars">需要保留的字符</h2>
     <div class="preset-row">
       <button data-preset="ascii" type="button">英数符号</button>
       <button data-preset="digits" type="button">数字</button>
@@ -144,7 +144,7 @@
     </div>
     <div class="info" style="font-size:11px; color:var(--muted); margin-top:-4px;">字符数: <span id="charCount">0</span></div>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <div class="field"><label>输出字体名 (CSS family)</label><input type="text" id="familyName" value="MyFont" /></div>
     <button id="subsetBtn" disabled>开始子集化</button>
     <button id="downloadTtfBtn" class="secondary" disabled>下载 TTF</button>
@@ -174,12 +174,12 @@
       </div>
     </div>
 
-    <h2 style="margin-top:0">效果预览 (用子集字体渲染)</h2>
+    <h2 style="margin-top:0" data-i18n="fs.preview">效果预览 (用子集字体渲染)</h2>
     <div class="preview-area">
       <div class="preview-text" id="previewText">拖入字体并子集化后,这里会用新字体渲染样本文字。</div>
     </div>
 
-    <h2>CSS 嵌入代码</h2>
+    <h2 data-i18n="fs.cssEmbed">CSS 嵌入代码</h2>
     <div class="css-snippet" id="cssSnippet">/* 子集化完成后这里显示 @font-face 代码 */</div>
   </div>
 </div>

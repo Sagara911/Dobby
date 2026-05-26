@@ -73,7 +73,7 @@
       <input type="file" id="fileInput" accept="audio/*" style="display:none" />
     </div>
 
-    <h2>处理</h2>
+    <h2 data-i18n="common.process">处理</h2>
     <div class="field">
       <label>采样率</label>
       <select id="sampleRate">
@@ -96,7 +96,7 @@
       </select>
     </div>
 
-    <h2>时间裁剪</h2>
+    <h2 data-i18n="audc.trim">时间裁剪</h2>
     <div class="field">
       <label>起始 (秒) <span id="startVal" class="mono">0</span></label>
       <input type="range" id="startTime" min="0" max="100" step="0.1" value="0" />
@@ -116,7 +116,7 @@
       </div>
     </div>
 
-    <h2>输出</h2>
+    <h2 data-i18n="common.output">输出</h2>
     <div class="field">
       <label>格式</label>
       <select id="outFormat">
@@ -136,7 +136,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">Dobby 待命</div>
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
     <div class="compare-stats">
       <div class="item">
         <div class="label">原文件</div>
@@ -152,15 +152,15 @@
       </div>
     </div>
 
-    <h2 style="margin-top:0">波形预览</h2>
+    <h2 style="margin-top:0" data-i18n="audc.waveform">波形预览</h2>
     <div class="waveform-box">
       <canvas id="waveform" width="800" height="120"></canvas>
     </div>
 
     <div class="player">
-      <h2>原音频</h2>
+      <h2 data-i18n="audc.origAudio">原音频</h2>
       <audio id="origPlayer" controls></audio>
-      <h2>输出音频</h2>
+      <h2 data-i18n="audc.outAudio">输出音频</h2>
       <audio id="outPlayer" controls></audio>
     </div>
   </div>

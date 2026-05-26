@@ -152,12 +152,12 @@
       <strong style="color:var(--accent)">100% 本地</strong> · 解码完全在浏览器,token 不离开你这台机器
     </div>
 
-    <h2>动作</h2>
-    <button id="pasteBtn" class="secondary">📋 粘贴剪贴板</button>
-    <button id="sampleBtn" class="secondary">🧪 加载示例 token</button>
-    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+    <h2 data-i18n="common.actions">动作</h2>
+    <button id="pasteBtn" class="secondary" data-i18n="jwt.btn.paste">📋 粘贴剪贴板</button>
+    <button id="sampleBtn" class="secondary" data-i18n="jwt.btn.sample">🧪 加载示例 token</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
-    <h2>常见 claims 速查</h2>
+    <h2 data-i18n="jwt.claims.h">常见 claims 速查</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div><strong>iss</strong>: 签发者</div>
       <div><strong>sub</strong>: 主体(用户 id)</div>
@@ -168,7 +168,7 @@
       <div><strong>jti</strong>: JWT 唯一 ID</div>
     </div>
 
-    <h2>注意</h2>
+    <h2 data-i18n="common.notes">注意</h2>
     <div style="font-size:11px; color:var(--muted); line-height:1.6">
       Dobby 只解码不验签 — 验签需要服务端密钥,跟「浏览器本地」原则冲突。如果你要验签,用 jwt.io 或本地 jose 库
     </div>
@@ -177,7 +177,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">粘贴 JWT token 到下面 · 自动解码 header / payload / signature</div>
+    <div class="stats" id="stats" data-i18n="jwt.stats.ready">粘贴 JWT token 到下面 · 自动解码 header / payload / signature</div>
 
     <div class="jwt-stage">
       <!-- Input -->

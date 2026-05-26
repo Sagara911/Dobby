@@ -107,7 +107,7 @@
       <input type="file" id="fileInput" accept=".html,text/html" style="display:none" />
     </div>
 
-    <h2>目标渠道</h2>
+    <h2 data-i18n="cc.target">目标渠道</h2>
     <div class="field">
       <select id="channel">
         <option value="facebook">Facebook / Meta</option>
@@ -121,7 +121,7 @@
       </select>
     </div>
 
-    <h2>规则参考</h2>
+    <h2 data-i18n="cc.rules">规则参考</h2>
     <div class="info" id="ruleRef">选个渠道后这里显示该渠道的硬性规则</div>
 
     <button id="recheckBtn" class="secondary" disabled style="margin-top:14px">重新检查</button>
@@ -131,7 +131,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats" data-i18n="cc.stats.empty">未加载</div>
 
     <div class="report-summary" id="summary" style="display:none">
       <div class="sum-card pass"><div class="value" id="passCount">0</div><div class="label">通过</div></div>
@@ -140,7 +140,7 @@
       <div class="sum-card info"><div class="value" id="totalSize">—</div><div class="label">文件大小</div></div>
     </div>
 
-    <h2 style="margin-top:0">检查项</h2>
+    <h2 style="margin-top:0" data-i18n="cc.checks">检查项</h2>
     <div class="check-list" id="checkList">
       <div class="preview-empty">拖入 HTML 文件后这里显示详细检查结果</div>
     </div>

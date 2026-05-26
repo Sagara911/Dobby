@@ -131,7 +131,7 @@
       <input type="file" id="fileInput" accept="image/*" style="display:none" />
     </div>
 
-    <h2>参数</h2>
+    <h2 data-i18n="common.params">参数</h2>
     <div class="nm-param-grid">
       <label>
         强度 <span class="val" id="strengthVal">3.0</span>
@@ -143,7 +143,7 @@
       </label>
     </div>
 
-    <h2>方向</h2>
+    <h2 data-i18n="nm.direction">方向</h2>
     <div style="display:flex; flex-direction:column; gap:4px">
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
         <input type="checkbox" id="invertR" /> <span>反转红通道(X)</span>
@@ -156,7 +156,7 @@
       </label>
     </div>
 
-    <h2>源图当成</h2>
+    <h2 data-i18n="nm.sourceAs">源图当成</h2>
     <select id="sourceMode" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="luma">亮度(灰度)— 默认,最通用</option>
       <option value="red">仅 R 通道</option>
@@ -165,11 +165,11 @@
       <option value="alpha">仅 alpha 通道</option>
     </select>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>💾 下载法线贴图 PNG</button>
     <input type="text" id="filename" value="normal" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
 
-    <h2>说明</h2>
+    <h2 data-i18n="common.notes">说明</h2>
     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7">
       用 <strong>Sobel 算子</strong>算高度图的梯度(X 和 Y 方向),用 RGB 编码法线向量:<br>
       • <span style="color:#ff5b5b">R</span> = X 方向<br>

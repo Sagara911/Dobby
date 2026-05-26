@@ -89,7 +89,7 @@
   <div class="sidebar">
     <h1>🌀 程序化纹理</h1>
 
-    <h2>纹理类型</h2>
+    <h2 data-i18n="tg.type">纹理类型</h2>
     <div class="tx-type-grid" id="typeGrid">
       <button class="tx-type-btn active" data-t="perlin">🌊 Perlin</button>
       <button class="tx-type-btn" data-t="fbm">📈 fBm</button>
@@ -102,7 +102,7 @@
       <button class="tx-type-btn" data-t="gradient">🌈 渐变</button>
     </div>
 
-    <h2>尺寸</h2>
+    <h2 data-i18n="common.size">尺寸</h2>
     <select id="size" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="64">64×64</option>
       <option value="128">128×128</option>
@@ -111,16 +111,16 @@
       <option value="1024">1024×1024</option>
     </select>
 
-    <h2>种子(seed)</h2>
+    <h2 data-i18n="tg.seed">种子(seed)</h2>
     <div style="display:flex; gap:4px">
       <input type="number" id="seed" value="42" style="flex:1; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:ui-monospace,Consolas,monospace; font-size:12px">
       <button id="randomSeed" class="secondary" style="padding:6px 10px">🎲</button>
     </div>
 
-    <h2 id="paramsHead">参数</h2>
+    <h2 id="paramsHead" data-i18n="common.params">参数</h2>
     <div id="params" style="display:flex; flex-direction:column; gap:8px"></div>
 
-    <h2>颜色</h2>
+    <h2 data-i18n="common.color">颜色</h2>
     <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">
       <input type="color" id="color1" value="#000000" style="width:40px; height:32px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; padding:0">
       <span style="color:var(--muted); font-size:11px">低</span>
@@ -136,18 +136,18 @@
       <option value="terrain">地形(蓝→绿→棕→白)</option>
     </select>
 
-    <h2>瓦片(tileable)</h2>
+    <h2 data-i18n="tg.tileable">瓦片(tileable)</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="tileable" />
       <span>无缝拼接</span>
     </label>
     <div style="font-size:10px; color:var(--muted); margin-top:4px">勾上后,Perlin/fBm 类纹理边界可无缝重复(对 voronoi/checker 无影响)</div>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <button id="downloadBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:8px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit">💾 下载 PNG</button>
     <input type="text" id="filename" value="texture" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名">
 
-    <h2>送往</h2>
+    <h2 data-i18n="tg.sendTo">送往</h2>
     <div style="font-size:10px; color:var(--muted); line-height:1.5">输出可以直接喂给 <a href="normal-map.html" style="color:var(--accent)">法线贴图</a> 当高度图,或 <a href="png-crusher.html" style="color:var(--accent)">深度压缩</a> 减体积</div>
 
     <div class="log" id="log"></div>

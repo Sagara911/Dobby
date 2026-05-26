@@ -128,11 +128,11 @@
       <input type="file" id="fileInput" accept="image/jpeg,image/tiff,image/jpg" style="display:none" />
     </div>
 
-    <h2>动作</h2>
+    <h2 data-i18n="common.actions">动作</h2>
     <button id="cleanBtn" class="primary" style="background:rgba(var(--jade-rgb),0.18); border:1px solid rgba(var(--jade-rgb),0.5); color:var(--accent); padding:10px; border-radius:var(--radius-sm); width:100%; cursor:pointer; font-size:13px; font-family:inherit" disabled>🧹 下载干净版(清掉 EXIF)</button>
     <button id="clearBtn" class="secondary" style="margin-top:6px">🗑️ 清空</button>
 
-    <h2>常见隐私字段</h2>
+    <h2 data-i18n="exif.privacy">常见隐私字段</h2>
     <div style="background:rgba(245,91,91,0.06); border:1px solid rgba(245,91,91,0.3); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.7; font-family:ui-monospace,Consolas,monospace">
       <div style="color:#ff8080"><strong>GPS</strong>: 经纬度坐标(最敏感)</div>
       <div>DateTime: 拍摄时间</div>
@@ -142,7 +142,7 @@
       <div>ImageDescription: 自定义描述</div>
     </div>
 
-    <h2>说明</h2>
+    <h2 data-i18n="common.notes">说明</h2>
     <div style="font-size:11px; color:var(--muted); line-height:1.6">
       EXIF 是 JPEG / TIFF 里的元数据,常被拍摄设备自动写入。<br>
       <strong>清除</strong>会把所有 EXIF / IPTC / XMP 段都剥掉,只保留图像数据,看起来跟原图一模一样,但元数据全没了

@@ -417,7 +417,7 @@
   <div class="sidebar">
     <h1>🎨 像素画板</h1>
 
-    <h2>画布大小</h2>
+    <h2 data-i18n="pxed.canvasSize">画布大小</h2>
     <div class="px-size-row">
       <input type="number" id="canvasW" value="32" min="2" max="512" />
       <input type="number" id="canvasH" value="32" min="2" max="512" />
@@ -445,13 +445,13 @@
     <h2>笔刷大小 <span id="brushSizeVal" class="mono" style="float:right">1</span> px</h2>
     <input type="range" id="brushSize" min="1" max="16" value="1" style="width:100%" />
 
-    <h2>对称镜像</h2>
+    <h2 data-i18n="pxed.mirror">对称镜像</h2>
     <div class="px-mirror-row">
       <button class="px-mirror-btn" id="mirrorH" title="左右对称">⇋ 水平</button>
       <button class="px-mirror-btn" id="mirrorV" title="上下对称">⇵ 垂直</button>
     </div>
 
-    <h2>颜色</h2>
+    <h2 data-i18n="common.color">颜色</h2>
     <div class="px-color-row">
       <div class="px-color-swatch fg" id="fgSwatch" style="--c:#31f59c"></div>
       <input type="text" class="px-color-input" id="fgHex" value="#31f59c" maxlength="9" />
@@ -469,14 +469,14 @@
     </div>
     <div class="px-palette" id="paletteGrid"></div>
 
-    <h2>历史</h2>
+    <h2 data-i18n="common.history">历史</h2>
     <div class="px-action-row">
       <button id="undoBtn">↶ 撤销</button>
       <button id="redoBtn">↷ 重做</button>
       <button id="clearBtn">🗑️ 清空</button>
     </div>
 
-    <h2>视图</h2>
+    <h2 data-i18n="common.view">视图</h2>
     <div class="px-action-row">
       <button id="zoomIn">🔍+</button>
       <button id="zoomOut">🔍−</button>
@@ -503,7 +503,7 @@
 
     <input type="text" id="filename" value="pixel" style="margin-top:6px; width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px" placeholder="文件名" />
 
-    <h2>导入</h2>
+    <h2 data-i18n="pxed.import">导入</h2>
     <button id="importBtn" class="secondary" style="width:100%">📂 拖入 PNG / JPG 作为初始画布</button>
     <input type="file" id="fileInput" accept="image/*" style="display:none" />
     <div class="px-help">拖入的图片会按当前画布大小缩放(像素邻近,保留硬边)</div>

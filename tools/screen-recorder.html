@@ -194,21 +194,21 @@
       <strong style="color:var(--accent)">100% 本地</strong> · 录像直接存在浏览器内存,完成后下载到本地。不上传任何东西。
     </div>
 
-    <h2>录什么</h2>
+    <h2 data-i18n="sr.what">录什么</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="micEnabled" />
       <span>包含麦克风音轨</span>
     </label>
     <div class="rec-help">系统音(标签页 / 应用音)默认会录(取决于你浏览器的「分享」对话框,选「同时分享系统声音」)</div>
 
-    <h2>摄像头叠加(PiP)</h2>
+    <h2 data-i18n="sr.pip">摄像头叠加(PiP)</h2>
     <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
       <input type="checkbox" id="webcamEnabled" />
       <span>右下角加摄像头小窗</span>
     </label>
     <div class="rec-help">做教程时常用 — 摄像头会通过 Canvas 实时合成到输出视频里(不只是预览),教程类录像零后期</div>
 
-    <h2>PiP 位置 / 大小</h2>
+    <h2 data-i18n="sr.pipPos">PiP 位置 / 大小</h2>
     <select id="pipPos" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="br" selected>右下</option>
       <option value="bl">左下</option>
@@ -218,14 +218,14 @@
     <input type="range" id="pipSize" min="10" max="35" value="20" style="width:100%; margin-top:6px">
     <div class="rec-help"><span id="pipSizeLabel">20</span>% 屏幕宽度</div>
 
-    <h2>编码格式</h2>
+    <h2 data-i18n="sr.codec">编码格式</h2>
     <select id="mimeType" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="video/webm;codecs=vp9,opus">WebM · VP9 + Opus(推荐,小)</option>
       <option value="video/webm;codecs=vp8,opus">WebM · VP8 + Opus(老兼容)</option>
       <option value="video/webm">WebM(浏览器选)</option>
     </select>
 
-    <h2>比特率</h2>
+    <h2 data-i18n="sr.bitrate">比特率</h2>
     <select id="bitrate" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
       <option value="2500000">2.5 Mbps · 普通(小)</option>
       <option value="5000000" selected>5 Mbps · 推荐</option>
@@ -233,7 +233,7 @@
       <option value="20000000">20 Mbps · 极清</option>
     </select>
 
-    <h2>文件名前缀</h2>
+    <h2 data-i18n="sr.namePrefix">文件名前缀</h2>
     <input type="text" id="filename" value="screen" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px">
 
     <div class="log" id="log"></div>

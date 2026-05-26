@@ -104,7 +104,7 @@
         <p class="hint">图片 / 字体 / JSON / 二进制都行</p>
         <input type="file" id="fileInput" style="display:none" />
       </div>
-      <h2>编码格式</h2>
+      <h2 data-i18n="b64.encFormat">编码格式</h2>
       <div class="field">
         <select id="encodeFormat">
           <option value="dataurl">dataURL (带 MIME 前缀, 可直接用)</option>
@@ -117,13 +117,13 @@
         <span>每 76 字符换行 (RFC 标准格式)</span>
       </label>
 
-      <h2>结果</h2>
-      <button id="copyBtn" disabled>复制到剪贴板</button>
-      <button id="downloadTextBtn" class="secondary" disabled>下载为 .txt</button>
+      <h2 data-i18n="b64.result">结果</h2>
+      <button id="copyBtn" disabled data-i18n="b64.copy">复制到剪贴板</button>
+      <button id="downloadTextBtn" class="secondary" disabled data-i18n="b64.downloadTxt">下载为 .txt</button>
     </div>
 
     <div id="decodePanel" style="display:none">
-      <h2>输入</h2>
+      <h2 data-i18n="b64.input">输入</h2>
       <div class="field">
         <label>粘贴 base64 / dataURL</label>
         <textarea id="decodeInput" rows="6" style="font-family: ui-monospace, monospace; font-size: 11px;"></textarea>
@@ -132,15 +132,15 @@
         <label>文件名 (无扩展自动检测)</label>
         <input type="text" id="decodeName" value="decoded" />
       </div>
-      <button id="decodeBtn">解码 → 下载</button>
-      <button id="previewBtn" class="secondary">解码 + 预览</button>
+      <button id="decodeBtn" data-i18n="b64.decodeDownload">解码 → 下载</button>
+      <button id="previewBtn" class="secondary" data-i18n="b64.decodePreview">解码 + 预览</button>
     </div>
 
     <div class="log" id="log"></div>
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">未加载</div>
+    <div class="stats" id="stats" data-i18n="b64.stats.empty">未加载</div>
     <div>
       <h2 style="margin-top:0">输出</h2>
       <textarea id="output" class="output" readonly placeholder="拖入文件后这里显示 base64 / dataURL"></textarea>

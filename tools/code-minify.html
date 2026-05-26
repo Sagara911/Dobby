@@ -116,25 +116,25 @@
     </div>
 
     <div id="cssOpts">
-      <h2>CSS 选项</h2>
+      <h2 data-i18n="cm.cssOpts">CSS 选项</h2>
       <label class="checkbox"><input type="checkbox" id="cssRemoveComments" checked /><span>删除注释</span></label>
       <label class="checkbox"><input type="checkbox" id="cssCollapseSpace" checked /><span>压缩空白</span></label>
       <label class="checkbox"><input type="checkbox" id="cssShortenHex" checked /><span>短颜色 (#ffffff → #fff)</span></label>
     </div>
     <div id="jsOpts" style="display:none">
       <div class="compat-note">JS 压缩用 terser,首次联网 ~250KB</div>
-      <h2>JS 选项</h2>
+      <h2 data-i18n="cm.jsOpts">JS 选项</h2>
       <label class="checkbox"><input type="checkbox" id="jsMangle" checked /><span>变量名混淆 (mangle)</span></label>
       <label class="checkbox"><input type="checkbox" id="jsCompress" checked /><span>逻辑压缩 (dead code 等)</span></label>
     </div>
     <div id="htmlOpts" style="display:none">
-      <h2>HTML 选项</h2>
+      <h2 data-i18n="cm.htmlOpts">HTML 选项</h2>
       <label class="checkbox"><input type="checkbox" id="htmlRemoveComments" checked /><span>删除注释</span></label>
       <label class="checkbox"><input type="checkbox" id="htmlCollapseSpace" checked /><span>折叠空白</span></label>
       <label class="checkbox"><input type="checkbox" id="htmlMinifyInline" checked /><span>顺便压缩内联 &lt;style&gt; / &lt;script&gt;</span></label>
     </div>
 
-    <h2>文件操作</h2>
+    <h2 data-i18n="cm.fileOps">文件操作</h2>
     <input type="file" id="fileInput" accept=".css,.js,.html,.htm,text/*" style="display:none" />
     <button id="loadFileBtn" class="secondary">加载文件</button>
     <button id="minifyBtn">压缩</button>

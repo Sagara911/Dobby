@@ -178,18 +178,18 @@
       <input type="file" id="fileInput" accept=".json,application/json,text/plain" style="display:none" />
     </div>
 
-    <h2>视图</h2>
+    <h2 data-i18n="common.view">视图</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px">
       <button class="px-tool-btn" data-view="text" id="viewText" style="background:var(--accent-soft); border-color:var(--accent); color:var(--accent); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">📝 文本</button>
       <button class="px-tool-btn" data-view="tree" id="viewTree" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:12px">🌳 树形</button>
     </div>
 
-    <h2>导出</h2>
-    <button id="copyBtn" class="secondary">📋 复制结果</button>
-    <button id="downloadBtn" class="secondary">💾 下载 .json</button>
-    <button id="clearBtn" class="secondary">🗑️ 清空</button>
+    <h2 data-i18n="common.export">导出</h2>
+    <button id="copyBtn" class="secondary" data-i18n="json.copy">📋 复制结果</button>
+    <button id="downloadBtn" class="secondary" data-i18n="json.downloadJson">💾 下载 .json</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">🗑️ 清空</button>
 
-    <h2>统计</h2>
+    <h2 data-i18n="common.stats">统计</h2>
     <div id="statsPanel" style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--text-soft); line-height:1.7">
       —
     </div>
@@ -198,7 +198,7 @@
   </div>
 
   <div class="main">
-    <div class="stats" id="stats">JSON 格式化 / 压缩 / 校验 / 树形浏览 — 全在浏览器里</div>
+    <div class="stats" id="stats" data-i18n="json.stats.ready">JSON 格式化 / 压缩 / 校验 / 树形浏览 — 全在浏览器里</div>
 
     <div class="json-main">
       <div class="json-toolbar">

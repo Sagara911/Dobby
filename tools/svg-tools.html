@@ -100,7 +100,7 @@
       <input type="file" id="fileInput" accept=".svg,image/svg+xml" multiple style="display:none" />
     </div>
 
-    <h2>处理模式</h2>
+    <h2 data-i18n="svg.mode">处理模式</h2>
     <div class="field">
       <select id="mode">
         <option value="optimize" selected>✨ 优化 SVG (输出 .svg, 体积变小)</option>
@@ -108,7 +108,7 @@
       </select>
     </div>
 
-    <h2 id="optHead">优化设置</h2>
+    <h2 id="optHead" data-i18n="svg.optSettings">优化设置</h2>
     <div id="optPane">
       <label class="checkbox"><input type="checkbox" id="optMultipass" checked /><span>多 pass (慢一点, 体积更小)</span></label>
       <label class="checkbox"><input type="checkbox" id="optRemoveDimensions" /><span>移除 width / height 属性 (留 viewBox)</span></label>
@@ -119,7 +119,7 @@
       </div>
     </div>
 
-    <h2 id="rasHead" style="display:none">栅格化设置</h2>
+    <h2 id="rasHead" style="display:none" data-i18n="svg.rasSettings">栅格化设置</h2>
     <div id="rasPane" style="display:none">
       <div class="field">
         <label>缩放倍率 (相对 viewBox)</label>
@@ -138,7 +138,7 @@
       <label class="checkbox"><input type="checkbox" id="rasTransparent" checked /><span>背景透明</span></label>
     </div>
 
-    <h2>导出</h2>
+    <h2 data-i18n="common.export">导出</h2>
     <button id="processBtn" disabled>开始处理</button>
     <button id="downloadZipBtn" class="secondary" disabled>📦 全部下载 ZIP</button>
     <button id="clearBtn" class="secondary">清空</button>
