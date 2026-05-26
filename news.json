@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v29",
+      "date": "2026-05-26",
+      "title": "一波加 4 个新工具:JSON / 对比度 / 缓动曲线 / 屏幕录制",
+      "items": [
+        "Dobby 准备从「游戏素材厂」扩成「全栈开发者瑞士军刀」,这是第一波 4 个新工具,游戏向 + 通用向各 2 个",
+        "📋 JSON 工具:格式化 / 压缩 / 校验 / 排序 keys / 树形浏览,错误带行列定位 — 比 jsonformatter.org 离线快",
+        "♿ 颜色对比度:WCAG 2.1 对比度比 + AA/AAA 合规徽章 + 三种色盲(红/绿/蓝)滤镜预览 + 七组常用色卡 — 前端设计必备",
+        "🎢 缓动曲线编辑器:cubic-bezier 拖控点 + 弹簧物理(质量/劲度/阻尼)+ 12 预设(线性/Material/Apple/Bounce/Spring 软/弹...),一键导出 CSS / JS / Unity / Godot / Phaser / Lottie 六种格式 — 替代 cubic-bezier.com",
+        "📺 屏幕录制器:浏览器原生 getDisplayMedia,可选麦克风混音 + 摄像头小窗预览,WebM/VP9 输出,2.5/5/10/20 Mbps 可调 — 教程作者必备,零上传",
+        "下一波打算继续加:正则测试器、Markdown 预览、文件哈希、JWT 解码、屏幕录制器添加 PiP 合成到最终视频(目前 PiP 仅预览)"
+      ]
+    },
+    {
       "version": "dobby-v28",
       "date": "2026-05-25",
       "title": "像素游戏工具链补完 — SFX 生成器 + Tilemap 编辑器 + 像素画板加帧动画",
