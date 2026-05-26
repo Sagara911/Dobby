@@ -898,6 +898,16 @@
       link.href = prefix + 'assets/icon.svg';
       document.head.appendChild(link);
     }
+    // 3b. browser-tab favicon — this is the one that actually shows in the tab.
+    // Without this <link rel="icon">, browsers fall back to /favicon.ico (which
+    // doesn't exist) and the tab is iconless.
+    if (!document.querySelector('link[rel="icon"]')) {
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/svg+xml';
+      link.href = prefix + 'assets/icon.svg';
+      document.head.appendChild(link);
+    }
     // 4. register service worker (silently fails on file:// or non-HTTPS non-localhost)
     if ('serviceWorker' in navigator) {
       const swUrl = prefix + 'sw.js';

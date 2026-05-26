@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v35",
+      "date": "2026-05-26",
+      "title": "🧦 浏览器 tab 上终于有 Dobby 图标了",
+      "items": [
+        "之前所有页面 `<head>` 里没有 `<link rel=\"icon\">`,浏览器 tab 上只有一个空白圆圈。修了:`setupPWA` 自动给所有 49 个页面注入 favicon link(以及 apple-touch-icon 给 iOS / manifest link 给 PWA 安装)",
+        "顺便把旧的 icon.svg(工具箱 + \"TOOLKIT\" 字样)换成 Dobby 风:深底圆角 + 翡翠绿 + 单只袜子轮廓。16×16 / 32×32 / 64×64 任意尺寸都验证过,小到 favicon 也认得出是只袜子",
+        "i18n 也补完了 Phase 2 剩下的 40 个工具的侧栏 h2 / 主按钮 / stats 标签(常用词共享 `common.*` 命名空间复用),右上角 EN 切换现在覆盖全站结构性文案"
+      ]
+    },
+    {
       "version": "dobby-v34",
       "date": "2026-05-26",
       "title": "一波三连:📄 PDF 工具包 + 👁️ OCR + 🅰️ 像素字体设计器(Dobby 现在 44 个工具)",
