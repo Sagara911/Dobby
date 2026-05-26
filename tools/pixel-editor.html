@@ -1087,7 +1087,25 @@ Toolkit.injectTopbar('pixel-editor');
   $('fileInput').addEventListener('change', e => {
     if (e.target.files.length) loadImageFile(e.target.files[0]);
   });
-  attachDropZone($('stage'), $('fileInput'), files => files[0] && loadImageFile(files[0]));
+  // Drop-only handler for the stage — we deliberately do NOT use
+  // Toolkit.attachDropZone here because that helper also wires
+  // click→fileInput.click(), which would mean every pencil click on the
+  // canvas opens the OS file picker. The sidebar "📂 拖入 PNG / JPG"
+  // button is the only click-to-browse entry point.
+  (() => {
+    const stage = $('stage');
+    stage.addEventListener('dragover', e => {
+      e.preventDefault();
+      stage.classList.add('dragging');
+    });
+    stage.addEventListener('dragleave', () => stage.classList.remove('dragging'));
+    stage.addEventListener('drop', e => {
+      e.preventDefault();
+      stage.classList.remove('dragging');
+      const f = e.dataTransfer.files[0];
+      if (f) loadImageFile(f);
+    });
+  })();
   async function loadImageFile(file) {
     try {
       const bmp = await createImageBitmap(file);
