@@ -257,9 +257,11 @@
     <div class="field">
       <label data-i18n="ap.imgFormat.label">图集图片格式</label>
       <select id="imgFormat">
-        <option value="png" data-i18n="ap.img.png">PNG(无损,最兼容)</option>
+        <option value="png" data-i18n="ap.img.png">PNG(无损,最快,未优化)</option>
+        <option value="png-opt" data-i18n="ap.img.pngOpt">PNG · oxipng 优化(无损,更小)</option>
+        <option value="webp-lossless" data-i18n="ap.img.webpLossless">WebP 无损(通常比 PNG 小很多)</option>
+        <option value="lossless-min" data-i18n="ap.img.losslessMin">无损 · 自动选最小(oxipng PNG vs WebP 无损)</option>
         <option value="webp-lossy" data-i18n="ap.img.webpLossy">WebP 有损(体积最小,带透明)</option>
-        <option value="webp-lossless" data-i18n="ap.img.webpLossless">WebP 无损</option>
         <option value="avif" data-i18n="ap.img.avif">AVIF 有损(更小,较慢)</option>
       </select>
       <div class="info" id="imgFormatInfo" style="margin-top:4px; display:none" data-i18n="ap.imgFormat.info">非 PNG 首次使用会联网下载 WASM 编码器(之后缓存)。WebP/AVIF 都带透明通道,Godot 4 / Unity / Cocos / 现代浏览器都原生支持</div>
@@ -1003,29 +1005,44 @@ Toolkit.injectTopbar('atlas-packer');
     const q = Math.max(1, Math.min(100, parseInt($('imgQuality').value, 10) || 85)) / 100;
     const pngBlob = await canvasToBlob(src, 'image/png');
     const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+    const pngLen = pngBytes.length;
     if (sel === 'png' || typeof Codecs === 'undefined') {
       if (sel !== 'png') log.warn(Toolkit.T('ap.warn.noCodecs', null, '压缩引擎未加载,改用 PNG'));
-      return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
     }
     try {
       const id = src.getContext('2d').getImageData(0, 0, src.width, src.height);
-      let bytes, ext;
-      if (sel === 'webp-lossy')         { bytes = await Codecs.encodeWebp(id, { quality: q }); ext = 'webp'; }
-      else if (sel === 'webp-lossless') { bytes = await Codecs.encodeWebp(id, { lossless: true }); ext = 'webp'; }
-      else if (sel === 'avif')          { bytes = await Codecs.encodeAvif(id, { quality: q }); ext = 'avif'; }
-      else return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
-      return { bytes, ext, pngLen: pngBytes.length };
+      if (sel === 'png-opt') {
+        // oxipng: lossless DEFLATE re-optimization (returns original if it can't beat it)
+        const opt = await Codecs.optimizePng(pngBytes, { level: 4 });
+        return { bytes: opt, ext: 'png', pngLen, label: 'oxipng PNG' };
+      }
+      if (sel === 'webp-lossy')    return { bytes: await Codecs.encodeWebp(id, { quality: q }), ext: 'webp', pngLen, label: 'WebP' };
+      if (sel === 'webp-lossless') return { bytes: await Codecs.encodeWebp(id, { lossless: true }), ext: 'webp', pngLen, label: 'WebP 无损' };
+      if (sel === 'avif')          return { bytes: await Codecs.encodeAvif(id, { quality: q }), ext: 'avif', pngLen, label: 'AVIF' };
+      if (sel === 'lossless-min') {
+        // true "best lossless": encode both, ship whichever is smaller.
+        const [optPng, webpLL] = await Promise.all([
+          Codecs.optimizePng(pngBytes, { level: 4 }),
+          Codecs.encodeWebp(id, { lossless: true })
+        ]);
+        return webpLL.length < optPng.length
+          ? { bytes: webpLL, ext: 'webp', pngLen, label: 'WebP 无损 (自动)' }
+          : { bytes: optPng, ext: 'png', pngLen, label: 'oxipng PNG (自动)' };
+      }
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
     } catch (e) {
       log.warn(Toolkit.T('ap.warn.imgEncodeFallback', { msg: e.message }, `图片压缩失败,回退 PNG: ${e.message}`));
-      return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
     }
   }
-  function logSizeCompare(totChosen, totPng, ext) {
-    if (ext === 'png') return;
+  function logSizeCompare(totChosen, totPng, label) {
+    if (!label || label === 'PNG') return;  // nothing to compare against for raw PNG
     const pct = totPng > 0 ? Math.round((1 - totChosen / totPng) * 100) : 0;
+    const sign = pct >= 0 ? '-' : '+';
     log.ok(Toolkit.T('ap.log.sizeCompare',
-      { ext: ext.toUpperCase(), png: fmtBytes(totPng), chosen: fmtBytes(totChosen), pct },
-      `图集体积: PNG ${fmtBytes(totPng)} → ${ext.toUpperCase()} ${fmtBytes(totChosen)} (-${pct}%)`));
+      { ext: label, png: fmtBytes(totPng), chosen: fmtBytes(totChosen), pct: `${sign}${Math.abs(pct)}` },
+      `图集体积: 原始 PNG ${fmtBytes(totPng)} → ${label} ${fmtBytes(totChosen)} (${sign}${Math.abs(pct)}%)`));
   }
 
   async function doExport() {
@@ -1050,13 +1067,13 @@ Toolkit.injectTopbar('atlas-packer');
         const fps = parseInt($('animFps').value, 10) || 12;
         const files = [];
         const imgNames = [];
-        let totChosen = 0, totPng = 0, chosenExt = 'png';
+        let totChosen = 0, totPng = 0, chosenLabel = 'PNG';
         for (let i = 0; i < packedBins.length; i++) {
           const r = await encodeAtlasImage(packedBins[i].canvas, false); // Godot: no PMA bake
           const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
           imgNames.push(nm);
           files.push({ name: nm, data: r.bytes });
-          totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
+          totChosen += r.bytes.length; totPng += r.pngLen; chosenLabel = r.label;
         }
         let normalNames = null;
         if (hasNormals) {
@@ -1075,7 +1092,7 @@ Toolkit.injectTopbar('atlas-packer');
         const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
         const normNote = hasNormals ? Toolkit.T('ap.log.godotNormalNote', null, ' · 含法线图 (CanvasTexture 绑定)') : '';
         log.ok(Toolkit.T('ap.log.exportedGodotSF', { name: `${prefix}-godot.zip`, anims, frames: frameCount }, `导出 ${prefix}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${frameCount} 帧`) + normNote);
-        logSizeCompare(totChosen, totPng, chosenExt);
+        logSizeCompare(totChosen, totPng, chosenLabel);
         return;
       }
 
@@ -1083,32 +1100,32 @@ Toolkit.injectTopbar('atlas-packer');
       if (fmt === 'libgdx') {
         const files = [];
         const imgNames = [];
-        let totChosen = 0, totPng = 0, chosenExt = 'png';
+        let totChosen = 0, totPng = 0, chosenLabel = 'PNG';
         for (let i = 0; i < packedBins.length; i++) {
           const r = await encodeAtlasImage(packedBins[i].canvas, pma);
           const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
           imgNames.push(nm);
           files.push({ name: nm, data: r.bytes });
-          totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
+          totChosen += r.bytes.length; totPng += r.pngLen; chosenLabel = r.label;
         }
         files.push({ name: `${prefix}.atlas`, data: new TextEncoder().encode(buildLibGdxAtlas(packedBins, imgNames, pma)) });
         const zip = makeZip(files);
         download(zip, `${prefix}-libgdx.zip`);
         const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
         log.ok(Toolkit.T('ap.log.exportedLibgdx', { name: `${prefix}-libgdx.zip`, n: frameCount, pages: packedBins.length }, `导出 ${prefix}-libgdx.zip · .atlas 含 ${frameCount} 块 / ${packedBins.length} 页`));
-        logSizeCompare(totChosen, totPng, chosenExt);
+        logSizeCompare(totChosen, totPng, chosenLabel);
         return;
       }
 
       // ── other formats: per-page image + sidecar metadata ──
-      let totChosen = 0, totPng = 0, chosenExt = 'png';
+      let totChosen = 0, totPng = 0, chosenLabel = 'PNG';
       for (let i = 0; i < packedBins.length; i++) {
         const bin = packedBins[i];
         const suffix = packedBins.length > 1 ? `-${i}` : '';
         const r = await encodeAtlasImage(bin.canvas, pma);
         const imgName = `${prefix}${suffix}.${r.ext}`;
         download(new Blob([r.bytes], { type: 'image/' + r.ext }), imgName);
-        totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
+        totChosen += r.bytes.length; totPng += r.pngLen; chosenLabel = r.label;
         // normal atlas rides along as a sibling image so it isn't lost in non-Godot formats (never PMA)
         if (hasNormals && bin.normalCanvas) {
           const rn = await encodeAtlasImage(bin.normalCanvas, false);
@@ -1124,7 +1141,7 @@ Toolkit.injectTopbar('atlas-packer');
         downloadText(metaText, metaName, 'text/plain');
         log.ok(Toolkit.T('ap.log.exported', { png: imgName, meta: metaName }, `导出 ${imgName} + ${metaName}`));
       }
-      logSizeCompare(totChosen, totPng, chosenExt);
+      logSizeCompare(totChosen, totPng, chosenLabel);
     } catch (e) {
       log.err(e.message); console.error(e);
     }

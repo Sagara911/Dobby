@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v71",
+      "title": "🧱 Atlas Packer 无损压缩补强:oxipng PNG + 无损自动选最小",
+      "date": "2026-05-27",
+      "items": [
+        "之前 PNG 导出用的是浏览器原生编码(没优化)。现在新增 **PNG · oxipng 优化**:无损,纯优化 DEFLATE/过滤,实测 5.8KB → 4.2KB (-27%)",
+        "新增 **无损 · 自动选最小**:同时编 oxipng-PNG 和 WebP 无损,自动挑更小的那个导出。实测自动选了 WebP 无损 3.6KB (-37%)",
+        "WebP 无损本来就是同类天花板;现在 PNG 这条路也接上了 oxipng,要纯无损也能拿到最小体积",
+        "oxipng 首次用联网下载编码器(之后缓存);压缩失败一律回退原始 PNG,绝不导出坏图"
+      ]
+    },
+    {
       "version": "dobby-v70",
       "title": "🧱 Atlas Packer 加打包策略选择 + 预乘 Alpha(PMA)",
       "date": "2026-05-27",
