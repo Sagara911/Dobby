@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v66",
+      "date": "2026-05-27",
+      "title": "🎮 Godot 进阶:Aseprite 标签直转 SpriteFrames + 法线图配对打包",
+      "items": [
+        "**Atlas Splitter** 多了「🎮 导出 Godot SpriteFrames」:拖 Aseprite 导出的 PNG+JSON,直接复用原图(不重排),按 `meta.frameTags` 切成多个动画",
+        "标签方向全认:forward / reverse / pingpong / pingpong_reverse;每帧时长读 Aseprite 的 `duration`(ms),速度/时长自动算,动画节奏 1:1 还原",
+        "没标签也能用:按文件名前缀分组(`walk_n_003` → `walk_n`),八方向命名 `动作_方向_序号` 自动拆成每方向一条动画",
+        "**Atlas Packer** 新增「法线贴图配对打包」:按文件名配对 `foo` + `foo_n`(也认 _normal/_nrm),漫反射决定布局,法线图按完全相同的矩形排进第二张图集",
+        "导出 Godot 用 **CanvasTexture** 绑定 diffuse+normal,同一个 AtlasTexture 区域同时取样两张图,2D 法线光照自动对齐 — 无法线的散图自动补平面法线 #8080ff"
+      ]
+    },
+    {
       "version": "dobby-v65",
       "date": "2026-05-27",
       "title": "🎮 音频加 OGG Vorbis + MP3 导出 — Godot 工作流 4/4 全补齐!",

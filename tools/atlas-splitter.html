@@ -125,6 +125,7 @@
     </div>
     <button id="exportZipBtn" disabled data-i18n="as.btn.zip">下载全部 (ZIP)</button>
     <button id="exportGifBtn" class="secondary" disabled data-i18n="as.btn.anim">导出动画 (GIF / APNG)</button>
+    <button id="exportGodotBtn" class="secondary" disabled data-i18n="as.btn.godot">🎮 导出 Godot SpriteFrames</button>
     <button id="exportSelectedBtn" class="secondary" disabled data-i18n="as.btn.selected">下载选中帧</button>
     <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
@@ -179,6 +180,8 @@ Toolkit.injectTopbar('atlas-splitter');
   let currentFrame = 0;
   let lastTime = 0;
   let pendingBitmap = null;  // for no-JSON grid mode
+  let sheetBitmap = null;    // the full source sheet (for Godot export — regions index into this)
+  let frameTags = [];        // Aseprite meta.frameTags: [{name, from, to, direction}]
 
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
   const handoff = Toolkit.setupHandoff('atlas-splitter', { outputType: 'image/gif' });
@@ -191,6 +194,8 @@ Toolkit.injectTopbar('atlas-splitter');
   $('applyGridBtn').addEventListener('click', () => {
     if (!pendingBitmap) return;
     const bm = pendingBitmap;
+    sheetBitmap = bm;
+    frameTags = [];   // grid mode has no animation tags → Godot export groups by filename prefix
     const mode = $('gridMode').value;
     let cols, rows, fw, fh;
     if (mode === 'byCount') {
@@ -226,6 +231,7 @@ Toolkit.injectTopbar('atlas-splitter');
     $('animToolbar').style.display = 'flex';
     $('exportZipBtn').disabled = false;
     $('exportGifBtn').disabled = false;
+    $('exportGodotBtn').disabled = false;
     $('gridPanel').style.display = 'none';
     {
       const tFrames = Toolkit.T('as.stats.frames', null, '帧');
@@ -271,17 +277,21 @@ Toolkit.injectTopbar('atlas-splitter');
 
     try {
       const bitmap = await createImageBitmap(pngFile);
+      sheetBitmap = bitmap;
       const jsonText = await jsonFile.text();
       const data = JSON.parse(jsonText);
       const parsed = parseFrames(data);
+      frameTags = parsed.frameTags || [];
       log.dim(Toolkit.T('as.log.parsedFormat', { format: parsed.format }, `解析格式: ${parsed.format}`));
       buildFrames(bitmap, parsed.frames);
+      if (frameTags.length) log.ok(Toolkit.T('as.log.tagsFound', { n: frameTags.length, names: frameTags.map(t => t.name).join(', ') }, `检测到 ${frameTags.length} 个动画标签: ${frameTags.map(t => t.name).join(', ')}`));
       log.ok(Toolkit.T('as.log.loadedFrames', { n: frames.length }, `加载完成 ${frames.length} 帧`));
       renderFrameGrid();
       startPlayback();
       $('animToolbar').style.display = 'flex';
       $('exportZipBtn').disabled = false;
       $('exportGifBtn').disabled = false;
+      $('exportGodotBtn').disabled = false;
       const sample = frames[0];
       {
         const tFrames = Toolkit.T('as.stats.frames', null, '帧');
@@ -296,7 +306,11 @@ Toolkit.injectTopbar('atlas-splitter');
   }
 
   function parseFrames(data) {
-    // TexturePacker Hash: { frames: { "name.png": {frame:{x,y,w,h}, spriteSourceSize, sourceSize} }, meta }
+    // Aseprite (and any TexturePacker exporter) put animation tags in
+    // meta.frameTags: [{name, from, to, direction}] — from/to index into the
+    // frame order below. We thread these through to the Godot exporter.
+    const tags = (data.meta && Array.isArray(data.meta.frameTags)) ? data.meta.frameTags : [];
+    // TexturePacker / Aseprite Hash: { frames: { "name.png": {frame:{x,y,w,h}, duration, spriteSourceSize, sourceSize} }, meta }
     if (data.frames && !Array.isArray(data.frames) && typeof data.frames === 'object') {
       const arr = Object.entries(data.frames).map(([name, v]) => ({
         name: name.replace(/\.png$/i, ''),
@@ -304,11 +318,12 @@ Toolkit.injectTopbar('atlas-splitter');
         offsetX: v.spriteSourceSize?.x || 0,
         offsetY: v.spriteSourceSize?.y || 0,
         sourceW: v.sourceSize?.w || v.frame.w,
-        sourceH: v.sourceSize?.h || v.frame.h
+        sourceH: v.sourceSize?.h || v.frame.h,
+        duration: v.duration || 0
       }));
-      return { format: 'TexturePacker Hash', frames: arr };
+      return { format: 'TexturePacker/Aseprite Hash', frames: arr, frameTags: tags };
     }
-    // TexturePacker Array: { frames: [ {filename, frame, ...} ], meta }
+    // TexturePacker / Aseprite Array: { frames: [ {filename, frame, duration, ...} ], meta }
     if (Array.isArray(data.frames) && data.frames[0] && data.frames[0].frame) {
       const arr = data.frames.map(v => ({
         name: (v.filename || v.name || '').replace(/\.png$/i, ''),
@@ -316,9 +331,10 @@ Toolkit.injectTopbar('atlas-splitter');
         offsetX: v.spriteSourceSize?.x || 0,
         offsetY: v.spriteSourceSize?.y || 0,
         sourceW: v.sourceSize?.w || v.frame.w,
-        sourceH: v.sourceSize?.h || v.frame.h
+        sourceH: v.sourceSize?.h || v.frame.h,
+        duration: v.duration || 0
       }));
-      return { format: 'TexturePacker Array', frames: arr };
+      return { format: 'TexturePacker/Aseprite Array', frames: arr, frameTags: tags };
     }
     // simple: { frames: [ {name, x, y, w, h, sourceW, sourceH, offsetX, offsetY} ] }
     if (Array.isArray(data.frames) && data.frames[0] && data.frames[0].w !== undefined) {
@@ -326,9 +342,10 @@ Toolkit.injectTopbar('atlas-splitter');
         name: v.name || '',
         sx: v.x, sy: v.y, sw: v.w, sh: v.h,
         offsetX: v.offsetX || 0, offsetY: v.offsetY || 0,
-        sourceW: v.sourceW || v.w, sourceH: v.sourceH || v.h
+        sourceW: v.sourceW || v.w, sourceH: v.sourceH || v.h,
+        duration: v.duration || 0
       }));
-      return { format: 'Simple Array', frames: arr };
+      return { format: 'Simple Array', frames: arr, frameTags: tags };
     }
     throw new Error(Toolkit.T('as.err.unknownJson', null, 'JSON 格式无法识别'));
   }
@@ -442,6 +459,96 @@ Toolkit.injectTopbar('atlas-splitter');
   });
   $('zoom').addEventListener('change', () => { if (frames.length) { setupAnimCanvas(); drawCurrentFrame(); } });
 
+  // ===== Godot SpriteFrames export =====
+  // Reuses the ORIGINAL sheet (no repack) + Aseprite frameTags as animations.
+  function animNameOf(n) { const m = n.match(/^(.*?)[\s._-]*\d+$/); return (m && m[1]) ? m[1] : n; }
+  const natCompare = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  // Expand a frame-index range per Aseprite tag direction into a playback order.
+  function expandTagRange(lo, hi, dir) {
+    const fwd = []; for (let i = lo; i <= hi; i++) fwd.push(i);
+    switch (String(dir || 'forward').toLowerCase()) {
+      case 'reverse': return fwd.slice().reverse();
+      case 'pingpong': { const r = fwd.slice(); for (let i = hi - 1; i > lo; i--) r.push(i); return r; }
+      case 'pingpong_reverse': { const r = fwd.slice().reverse(); for (let i = lo + 1; i < hi; i++) r.push(i); return r; }
+      default: return fwd;
+    }
+  }
+
+  function buildGodotSpriteFrames(sheetName, baseFps) {
+    const sheetId = 'sheet_tex';
+    let ext = `[ext_resource type="Texture2D" path="res://${sheetName}" id="${sheetId}"]\n`;
+    let sub = '';
+    frames.forEach((f, i) => {
+      sub += `[sub_resource type="AtlasTexture" id="AtlasTexture_${i}"]\n`;
+      sub += `atlas = ExtResource("${sheetId}")\n`;
+      sub += `region = Rect2(${f.sx}, ${f.sy}, ${f.sw}, ${f.sh})\n`;
+      sub += `margin = Rect2(${f.offsetX}, ${f.offsetY}, ${f.sourceW - f.sw}, ${f.sourceH - f.sh})\n\n`;
+    });
+
+    // animations: from frameTags when present, else group by filename prefix
+    let anims;
+    if (frameTags.length) {
+      anims = frameTags.map(t => {
+        const a = Math.max(0, Math.min(frames.length - 1, t.from | 0));
+        const b = Math.max(0, Math.min(frames.length - 1, t.to | 0));
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        return { name: (t.name || 'tag').replace(/"/g, ''), indices: expandTagRange(lo, hi, t.direction) };
+      });
+    } else {
+      const groups = {};
+      frames.forEach((f, i) => { const k = animNameOf(f.name); (groups[k] = groups[k] || []).push(i); });
+      for (const k in groups) groups[k].sort((x, y) => natCompare(frames[x].name, frames[y].name));
+      anims = Object.entries(groups).map(([name, indices]) => ({ name, indices }));
+    }
+
+    const animEntries = anims.map(a => {
+      // honor Aseprite per-frame ms durations when available; else use base FPS
+      const durs = a.indices.map(i => frames[i].duration || 0);
+      const positive = durs.filter(d => d > 0);
+      let speed, durOf;
+      if (positive.length) {
+        const baseMs = Math.min(...positive);
+        speed = 1000 / baseMs;
+        durOf = i => (frames[i].duration || baseMs) / baseMs;
+      } else {
+        speed = baseFps;
+        durOf = () => 1.0;
+      }
+      const fr = a.indices.map(i => `{\n"duration": ${durOf(i).toFixed(3)},\n"texture": SubResource("AtlasTexture_${i}")\n}`).join(', ');
+      return `{\n"frames": [${fr}],\n"loop": true,\n"name": &"${a.name}",\n"speed": ${speed.toFixed(3)}\n}`;
+    });
+
+    const loadSteps = 1 + frames.length + 1;
+    let out = `[gd_resource type="SpriteFrames" load_steps=${loadSteps} format=3]\n\n`;
+    out += ext + '\n' + sub;
+    out += `[resource]\nanimations = [${animEntries.join(', ')}]\n`;
+    return out;
+  }
+
+  $('exportGodotBtn').addEventListener('click', async () => {
+    if (!frames.length || !sheetBitmap) return;
+    const prefix = ($('filePrefix').value || 'sprite').replace(/[^\w-]/g, '_');
+    const baseFps = parseInt($('fps').value, 10) || 12;
+    try {
+      // re-encode the full sheet to PNG so the .tres region coords always match
+      const cv = newCanvas(sheetBitmap.width, sheetBitmap.height);
+      cv.getContext('2d').drawImage(sheetBitmap, 0, 0);
+      const blob = await canvasToBlob(cv, 'image/png');
+      const sheetName = `${prefix}.png`;
+      const tres = buildGodotSpriteFrames(sheetName, baseFps);
+      const files = [
+        { name: sheetName, data: new Uint8Array(await blob.arrayBuffer()) },
+        { name: `${prefix}_frames.tres`, data: new TextEncoder().encode(tres) }
+      ];
+      const zip = makeZip(files);
+      download(zip, `${prefix}-godot.zip`);
+      handoff?.setBlob(zip, `${prefix}-godot.zip`, 'application/zip');
+      const animCount = frameTags.length || new Set(frames.map(f => animNameOf(f.name))).size;
+      log.ok(Toolkit.T('as.log.godotExported', { name: `${prefix}-godot.zip`, anims: animCount, frames: frames.length }, `已导出 ${prefix}-godot.zip · SpriteFrames 含 ${animCount} 个动画 / ${frames.length} 帧`));
+    } catch (e) { log.err(e.message); console.error(e); }
+  });
+
   // ===== export =====
   $('exportZipBtn').addEventListener('click', async () => {
     if (!frames.length) return;
@@ -519,10 +626,13 @@ Toolkit.injectTopbar('atlas-splitter');
     $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('exportZipBtn').disabled = true;
     $('exportGifBtn').disabled = true;
+    $('exportGodotBtn').disabled = true;
     $('exportSelectedBtn').disabled = true;
     $('gifPanel').style.display = 'none';
     $('gridPanel').style.display = 'none';
     pendingBitmap = null;
+    sheetBitmap = null;
+    frameTags = [];
     log.clear();
     $('fileInput').value = '';
   });
