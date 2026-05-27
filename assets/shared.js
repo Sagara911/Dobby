@@ -168,6 +168,7 @@
     'easing-editor':    'spline',
     'sprite-packer':    'grid-2x2',
     'atlas-splitter':   'split-square-horizontal',
+    'atlas-packer':     'boxes',
     'gif-tools':        'clapperboard',
     'lottie-tools':     'sparkles',
     'pixel-font':       'type',
@@ -247,6 +248,7 @@
     { id: 'easing-editor',  cat: 'anim',  name: '缓动曲线',       en: 'Easing Editor',   icon: '🎢', href: 'tools/easing-editor.html',  desc: 'cubic-bezier 拖控点 + spring 弹簧,导出 CSS/JS/Unity/Godot/Phaser/Lottie' },
     { id: 'sprite-packer',  cat: 'anim',  name: '精灵图合成',     en: 'Sprite Packer',   icon: '🎬', href: 'tools/sprite-packer.html',  desc: '序列帧 / 视频 / GIF → 精灵图 + JSON' },
     { id: 'atlas-splitter', cat: 'anim',  name: '精灵图拆帧',     en: 'Atlas Splitter',  icon: '✂️', href: 'tools/atlas-splitter.html', desc: '精灵图 + JSON → 拆回序列帧 + 动画预览' },
+    { id: 'atlas-packer',   cat: 'anim',  name: '图集打包器',     en: 'Atlas Packer',    icon: '🧱', href: 'tools/atlas-packer.html',   desc: '任意尺寸素材 MaxRects 紧密打包 → 图集 + 多格式元数据' },
     { id: 'gif-tools',      cat: 'anim',  name: 'GIF 工具',       en: 'GIF Tools',       icon: '🎞️', href: 'tools/gif-tools.html',      desc: '制作 (序列帧→GIF/APNG) + 编辑 (缩放/裁剪/调速/反向/减帧/优化/滤镜)' },
     { id: 'lottie-tools',   cat: 'anim',  name: 'Lottie 工具',    en: 'Lottie Tools',    icon: '🎭', href: 'tools/lottie-tools.html',   desc: 'Lottie JSON 预览 + 精度优化 (体积 -50%~-80%) + 转 APNG/GIF' },
     { id: 'pixel-font',     cat: 'anim',  name: '像素字体设计器', en: 'Pixel Font',      icon: '🅰️', href: 'tools/pixel-font.html',     desc: '一格一像素画字形,导 BDF / TTF / PNG 雪碧图,塞进游戏 / Playable' },
@@ -288,6 +290,11 @@
       '拖入精灵图 + JSON;或只拖 PNG 进入手动网格模式',
       '动画自动播放,可点单帧选中',
       '导出为帧 ZIP / 单帧 PNG / 一键转 GIF·APNG'
+    ],
+    'atlas-packer': [
+      '拖入任意尺寸的散图(UI / 图标 / 多动画混合)',
+      '调旋转 / 裁透明边 / 间距 / extrude 防渗色 / POT 等参数,MaxRects 紧密打包',
+      '导出图集 PNG + 元数据(TexturePacker JSON / Cocos plist / CSS / Godot)'
     ],
     'image-optimizer': [
       '拖入多张图片(PNG/JPG/WebP)',
@@ -1417,6 +1424,7 @@
   const HANDOFF_ACCEPTS = {
     'sprite-packer':   ['image/png','image/jpeg','image/gif','image/webp','video/*','application/zip'],
     'atlas-splitter':  ['image/png'],  // needs JSON too but handoff only carries one file
+    'atlas-packer':    ['image/png','image/jpeg','image/webp','application/zip'],
     'image-optimizer': ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'png-crusher':     ['image/png','image/jpeg','image/webp','image/gif','application/zip'],
     'gif-tools':       ['image/png','image/jpeg','image/webp','image/gif','application/zip'],

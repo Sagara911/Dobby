@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "version": "dobby-v51",
+      "date": "2026-05-26",
+      "title": "🧱 新工具:图集打包器 (Atlas Packer) — MaxRects 紧密打包,TexturePacker 级",
+      "items": [
+        "之前的「精灵图合成」是 **grid 均匀网格**,适合帧动画(每帧尺寸差不多),但尺寸杂乱的 UI / 图标 / 多动画混合素材会浪费大量空白。新工具专治这个",
+        "**MaxRects 算法**(Jukka Jylänki 论文,TexturePacker 默认用的那个)— 业界空间利用率最高的矩形装箱。任意尺寸散图塞进最小图集。用的是 `maxrects-packer` 库(浏览器本地跑,文件不上传)",
+        "**全套 TexturePacker 级功能:** 旋转 90°(塞更紧)· trim 裁透明边(存 offset 元数据,引擎自动还原)· padding 间距 · **extrude 防渗色**(边缘像素外扩,治 playable 缩放黑边经典 bug)· 2 的幂次尺寸 · 强制正方 · **超尺寸自动多张图集溢出**(单张超 maxSize 就拆成 atlas-0/1/2...)",
+        "**5 种元数据导出格式:**",
+        " · **TexturePacker JSON Hash** — Phaser 3 / Pixi.js 首选",
+        " · **TexturePacker JSON Array** — 部分引擎/工具链用",
+        " · **Cocos plist** — Cocos2d-x / Creator",
+        " · **CSS sprite** — 网页 background-position 雪碧图,生成 .css 类",
+        " · **Godot AtlasTexture** — 打包成 ZIP,每块一个 .tres 资源 + 图集 PNG,**拖进 Godot 项目原生可用**",
+        "实时预览图集 + 填充率统计(用了多少 / 浪费多少)。继承了 sprite-packer 的 16384 Canvas 上限守护。**Dobby 现在 46 个工具**(动画 / 精灵图分类 8 → 9)"
+      ]
+    },
+    {
       "version": "dobby-v50",
       "date": "2026-05-26",
       "title": "↩️ 卡片设计回滚 — 紧凑布局 + 大 icon 换回 emoji",

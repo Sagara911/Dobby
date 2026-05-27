@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<!-- KILLSWITCH v1 -->
+<script>
+(function () {
+  var KEY = 'toolkit-cleaned-v1';
+  if (localStorage.getItem(KEY)) return;
+  localStorage.setItem(KEY, '1');
+  (async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { try { await r.unregister(); } catch (_) {} }
+      }
+      if ('caches' in window) {
+        var ks = await caches.keys();
+        for (var k of ks) { try { await caches.delete(k); } catch (_) {} }
+      }
+      try { localStorage.removeItem('toolkit-cursor'); } catch (_) {}
+      try { localStorage.removeItem('toolkit-theme'); } catch (_) {}
+      var stale = document.getElementById('__toolkit_cursor_style__');
+      if (stale) stale.remove();
+      document.documentElement.removeAttribute('data-theme');
+      location.reload();
+    } catch (e) { console.warn('[cleanup]', e); }
+  })();
+})();
+</script>
+<title>Atlas Packer · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .ap-preview-wrap { display: flex; flex-direction: column; gap: 16px; }
+  .ap-bin {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--checker, #1a1a1a), #1a1a1a;
+    overflow: auto;
+    padding: 10px;
+  }
+  .ap-bin h3 {
+    font-size: 12px; color: var(--muted); margin: 0 0 8px;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .ap-bin canvas {
+    image-rendering: pixelated;
+    background:
+      linear-gradient(45deg, #2a2a30 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2a30 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2a30 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2a30 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    max-width: 100%; height: auto; display: block;
+  }
+  .ap-frame-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 6px;
+  }
+  .ap-thumb {
+    aspect-ratio: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+  }
+  .ap-thumb img { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+  .ap-thumb .nm {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    font-size: 8px; color: var(--muted); background: rgba(0,0,0,0.6);
+    padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .ap-eff {
+    font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+    color: var(--accent); margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🧱 Atlas Packer</h1>
+
+    <div style="background:rgba(var(--jade-rgb),0.08); border:1px solid rgba(var(--jade-rgb),0.3); border-left:3px solid var(--accent); padding:10px 12px; font-size:11px; color:var(--text-soft); line-height:1.6; border-radius:var(--radius-sm); margin-bottom:12px" data-i18n-html="ap.intro">
+      <strong style="color:var(--accent)">MaxRects 紧密打包</strong> · 任意尺寸散图塞进最小图集。跟「精灵图合成」(规整网格 / 帧动画)不同,这个专治尺寸杂乱的 UI / 图标 / 多动画混合素材。
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <p data-i18n="ap.drop.title">📂 拖入图片(可多选 / ZIP)</p>
+      <p class="hint" data-i18n-html="ap.drop.hint">
+        PNG / JPG / WebP,任意尺寸<br/>
+        文件名会成为图集里每块的索引名
+      </p>
+      <input type="file" id="fileInput" multiple accept="image/*,application/zip,.zip" style="display:none" />
+    </div>
+
+    <div class="progress" id="progress"><div class="progress-bar"></div></div>
+
+    <h2 data-i18n="ap.pack.title">打包参数</h2>
+    <div class="field-row">
+      <div class="field">
+        <label data-i18n="ap.maxSize">最大边 (px)</label>
+        <input type="number" id="maxSize" value="4096" min="64" max="16384" step="64" />
+      </div>
+      <div class="field">
+        <label data-i18n="ap.padding">间距 (px)</label>
+        <input type="number" id="padding" value="2" min="0" max="32" />
+      </div>
+    </div>
+    <label class="checkbox">
+      <input type="checkbox" id="allowRotation" />
+      <span data-i18n="ap.rotation">允许旋转 90°(塞得更紧)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="trim" checked />
+      <span data-i18n="ap.trim">裁剪透明边(存 offset 元数据)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="pot" />
+      <span data-i18n="ap.pot">2 的幂次尺寸 (WebGL / 老 GPU)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="square" />
+      <span data-i18n="ap.square">强制正方形图集</span>
+    </label>
+    <div class="field">
+      <label data-i18n="ap.extrude">Extrude 防渗色 (px)</label>
+      <input type="number" id="extrude" value="0" min="0" max="8" />
+      <div class="info" style="margin-top:4px" data-i18n="ap.extrude.info">边缘像素向外复制 N 像素,防止缩放采样时邻块渗色(经典 playable 黑边 bug)</div>
+    </div>
+
+    <h2 data-i18n="common.export">导出</h2>
+    <div class="field">
+      <label data-i18n="common.filename">文件名前缀</label>
+      <input type="text" id="filename" value="atlas" />
+    </div>
+    <div class="field">
+      <label data-i18n="ap.format.label">元数据格式</label>
+      <select id="format">
+        <option value="json-hash" data-i18n="ap.fmt.jsonHash">TexturePacker JSON Hash (Phaser 3 / Pixi)</option>
+        <option value="json-array" data-i18n="ap.fmt.jsonArray">TexturePacker JSON Array</option>
+        <option value="cocos" data-i18n="ap.fmt.cocos">Cocos plist (Cocos2d-x / Creator)</option>
+        <option value="css" data-i18n="ap.fmt.css">CSS sprite (background-position)</option>
+        <option value="godot" data-i18n="ap.fmt.godot">Godot AtlasTexture (.tres ZIP,原生拖入)</option>
+      </select>
+    </div>
+
+    <button id="exportBtn" data-i18n="ap.exportBtn" disabled>导出图集 + 元数据</button>
+    <button id="clearBtn" class="secondary" data-i18n="common.clear">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
+    <div class="ap-preview-wrap">
+      <div id="previewArea">
+        <div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>
+      </div>
+    </div>
+    <div style="margin-top:6px">
+      <h2 style="margin-top:0" data-i18n="ap.srcGrid.title">源素材</h2>
+      <div class="ap-frame-grid" id="frameGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script type="module">
+import { MaxRectsPacker } from 'https://esm.sh/maxrects-packer@2.7.3';
+
+Toolkit.injectTopbar('atlas-packer');
+
+(() => {
+  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, downloadText, newCanvas, canvasToBlob, fmtBytes, unzipBlob, makeZip } = Toolkit;
+  const log = makeLogger($('log'));
+  const progress = makeProgress($('progress'));
+
+  let rawImages = [];   // { name, bitmap, w, h }
+  let packedBins = [];  // { canvas, frames:[{name, x, y, w, h, rotated, trimX, trimY, srcW, srcH}], width, height }
+
+  attachDropZone($('dropZone'), $('fileInput'), handleFiles);
+  const handoff = Toolkit.setupHandoff('atlas-packer', { outputType: 'image/png' });
+
+  // re-pack on option change
+  ['maxSize', 'padding', 'allowRotation', 'trim', 'pot', 'square', 'extrude'].forEach(id => {
+    $(id).addEventListener('change', () => { if (rawImages.length) repack(); });
+  });
+  $('exportBtn').addEventListener('click', doExport);
+  $('clearBtn').addEventListener('click', clearAll);
+
+  async function handleFiles(files) {
+    if (!files.length) return;
+    rawImages = [];
+    packedBins = [];
+    $('frameGrid').innerHTML = '';
+    $('previewArea').innerHTML = '<div class="preview-empty">🧦 Dobby 正在打包图集...</div>';
+    log.clear();
+    $('exportBtn').disabled = true;
+
+    try {
+      // expand any ZIPs into their image entries
+      const expanded = [];
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name) || f.type === 'application/zip') {
+          log.dim(`解压 ${f.name}...`);
+          const entries = await unzipBlob(f);  // returns File[]
+          for (const file of entries) {
+            if (/\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) expanded.push(file);
+          }
+        } else if (f.type.startsWith('image/')) {
+          expanded.push(f);
+        }
+      }
+      const imgs = naturalSort(expanded).filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name));
+      if (!imgs.length) { log.err(Toolkit.T('ap.err.noImages', null, '没有可用的图片')); $('previewArea').innerHTML = '<div class="preview-empty">没有可用的图片</div>'; return; }
+
+      log.dim(Toolkit.T('ap.log.loading', { n: imgs.length }, `加载 ${imgs.length} 张图...`));
+      for (let i = 0; i < imgs.length; i++) {
+        const f = imgs[i];
+        try {
+          const bitmap = await createImageBitmap(f);
+          rawImages.push({ name: f.name.replace(/\.[^.]+$/, ''), bitmap, w: bitmap.width, h: bitmap.height });
+        } catch (e) {
+          log.err(`${f.name}: ${e.message}`);
+        }
+        progress.set((i + 1) / imgs.length);
+      }
+    } catch (e) {
+      log.err(e.message); console.error(e);
+    } finally {
+      progress.hide();
+    }
+
+    if (rawImages.length) {
+      log.ok(Toolkit.T('ap.log.loaded', { n: rawImages.length }, `加载完成 ${rawImages.length} 张`));
+      renderFrameGrid();
+      await repack();
+    }
+  }
+
+  // ── transparent-border trim ──
+  function computeTrim(bitmap) {
+    const cv = newCanvas(bitmap.width, bitmap.height);
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    let minX = bitmap.width, minY = bitmap.height, maxX = -1, maxY = -1;
+    for (let y = 0; y < bitmap.height; y++) {
+      const row = y * bitmap.width * 4;
+      for (let x = 0; x < bitmap.width; x++) {
+        if (data[row + x * 4 + 3] > 0) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return null; // fully transparent
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  // draw a sprite region + extrude border
+  function drawWithExtrude(octx, src, sx, sy, sw, sh, dx, dy, ex) {
+    octx.drawImage(src, sx, sy, sw, sh, dx, dy, sw, sh);
+    if (ex <= 0) return;
+    octx.drawImage(src, sx, sy, sw, 1, dx, dy - ex, sw, ex);             // top
+    octx.drawImage(src, sx, sy + sh - 1, sw, 1, dx, dy + sh, sw, ex);    // bottom
+    octx.drawImage(src, sx, sy, 1, sh, dx - ex, dy, ex, sh);            // left
+    octx.drawImage(src, sx + sw - 1, sy, 1, sh, dx + sw, dy, ex, sh);   // right
+    octx.drawImage(src, sx, sy, 1, 1, dx - ex, dy - ex, ex, ex);            // TL
+    octx.drawImage(src, sx + sw - 1, sy, 1, 1, dx + sw, dy - ex, ex, ex);  // TR
+    octx.drawImage(src, sx, sy + sh - 1, 1, 1, dx - ex, dy + sh, ex, ex);  // BL
+    octx.drawImage(src, sx + sw - 1, sy + sh - 1, 1, 1, dx + sw, dy + sh, ex, ex); // BR
+  }
+
+  async function repack() {
+    const maxSize = Math.min(16384, Math.max(64, parseInt($('maxSize').value, 10) || 4096));
+    const padding = Math.max(0, parseInt($('padding').value, 10) || 0);
+    const extrude = Math.max(0, parseInt($('extrude').value, 10) || 0);
+    const allowRotation = $('allowRotation').checked;
+    const trim = $('trim').checked;
+    const pot = $('pot').checked;
+    const square = $('square').checked;
+
+    // build items; pack dims are (sprite dims + 2*extrude). padding handles the gap.
+    const items = [];
+    let totalSpriteArea = 0;
+    for (const img of rawImages) {
+      const region = trim ? computeTrim(img.bitmap) : null;
+      const sw = region ? region.w : img.w;
+      const sh = region ? region.h : img.h;
+      if (sw <= 0 || sh <= 0) continue; // fully transparent → skip
+      totalSpriteArea += sw * sh;
+      items.push({
+        width: sw + 2 * extrude,
+        height: sh + 2 * extrude,
+        data: { img, region, sw, sh, trimX: region ? region.x : 0, trimY: region ? region.y : 0 }
+      });
+    }
+    if (!items.length) { log.err(Toolkit.T('ap.err.allEmpty', null, '所有图都是全透明,没东西可打包')); return; }
+
+    const packer = new MaxRectsPacker(maxSize, maxSize, padding, {
+      smart: true, pot, square, allowRotation, border: 0
+    });
+    packer.addArray(items);
+
+    packedBins = [];
+    for (const bin of packer.bins) {
+      // guardrail (shouldn't fire since maxSize ≤ 16384, but POT rounding could nudge)
+      if (bin.width > 16384 || bin.height > 16384) {
+        log.err(Toolkit.T('ap.err.binTooBig', { w: bin.width, h: bin.height }, `图集 ${bin.width}×${bin.height} 超过 Canvas 上限,调小「最大边」或开旋转`));
+        continue;
+      }
+      const cv = newCanvas(bin.width, bin.height);
+      const octx = cv.getContext('2d');
+      octx.imageSmoothingEnabled = false;
+      const frames = [];
+      for (const rect of bin.rects) {
+        const { img, sw, sh, trimX, trimY } = rect.data;
+        const dx = rect.x + extrude;
+        const dy = rect.y + extrude;
+        if (rect.rot) {
+          // rotated 90° CW in the sheet. occupies sh×sw.
+          octx.save();
+          octx.translate(rect.x + extrude + sh, rect.y + extrude);
+          octx.rotate(Math.PI / 2);
+          octx.drawImage(img.bitmap, trimX, trimY, sw, sh, 0, 0, sw, sh);
+          octx.restore();
+          frames.push({ name: img.name, x: dx, y: dy, w: sw, h: sh, rotated: true,
+            trimX, trimY, srcW: img.w, srcH: img.h });
+        } else {
+          drawWithExtrude(octx, img.bitmap, trimX, trimY, sw, sh, dx, dy, extrude);
+          frames.push({ name: img.name, x: dx, y: dy, w: sw, h: sh, rotated: false,
+            trimX, trimY, srcW: img.w, srcH: img.h });
+        }
+      }
+      packedBins.push({ canvas: cv, frames, width: bin.width, height: bin.height });
+    }
+
+    if (!packedBins.length) { $('exportBtn').disabled = true; return; }
+
+    // efficiency = used sprite area / total atlas area
+    const totalAtlasArea = packedBins.reduce((s, b) => s + b.width * b.height, 0);
+    const eff = ((totalSpriteArea / totalAtlasArea) * 100).toFixed(1);
+
+    renderPreview();
+    const binNote = packedBins.length > 1 ? Toolkit.T('ap.stats.bins', { n: packedBins.length }, ` · ${packedBins.length} 张图集`) : '';
+    $('stats').innerHTML = `<strong>${rawImages.length}</strong> ${Toolkit.T('ap.stats.sprites', null, '块')} · ${packedBins.map(b => `${b.width}×${b.height}`).join(', ')}${binNote} · ${Toolkit.T('ap.stats.fill', null, '填充率')} <strong>${eff}%</strong>`;
+    $('exportBtn').disabled = false;
+    log.ok(Toolkit.T('ap.log.packed', { n: packedBins.length, eff }, `打包完成 · ${packedBins.length} 张图集 · 填充率 ${eff}%`));
+
+    // wire handoff with the first bin
+    try {
+      const blob = await canvasToBlob(packedBins[0].canvas, 'image/png');
+      handoff?.setBlob(blob, ($('filename').value || 'atlas') + '.png');
+    } catch (_) {}
+  }
+
+  function renderPreview() {
+    const area = $('previewArea');
+    area.innerHTML = '';
+    packedBins.forEach((bin, i) => {
+      const box = document.createElement('div');
+      box.className = 'ap-bin';
+      const title = packedBins.length > 1
+        ? Toolkit.T('ap.bin.titleN', { i: i, w: bin.width, h: bin.height }, `图集 ${i} · ${bin.width}×${bin.height}`)
+        : Toolkit.T('ap.bin.title', { w: bin.width, h: bin.height }, `图集 · ${bin.width}×${bin.height}`);
+      const h = document.createElement('h3');
+      h.textContent = title;
+      box.appendChild(h);
+      box.appendChild(bin.canvas);
+      area.appendChild(box);
+    });
+  }
+
+  function renderFrameGrid() {
+    const grid = $('frameGrid');
+    grid.innerHTML = '';
+    for (const img of rawImages) {
+      const cell = document.createElement('div');
+      cell.className = 'ap-thumb';
+      const cv = newCanvas(img.w, img.h);
+      cv.getContext('2d').drawImage(img.bitmap, 0, 0);
+      const el = document.createElement('img');
+      cv.toBlob(b => { el.src = URL.createObjectURL(b); });
+      cell.appendChild(el);
+      const nm = document.createElement('span');
+      nm.className = 'nm'; nm.textContent = img.name;
+      cell.appendChild(nm);
+      grid.appendChild(cell);
+    }
+  }
+
+  // ===== metadata generators =====
+  function buildJsonHash(bin, imageName) {
+    const frames = {};
+    for (const f of bin.frames) {
+      frames[f.name + '.png'] = {
+        frame: { x: f.x, y: f.y, w: f.rotated ? f.h : f.w, h: f.rotated ? f.w : f.h },
+        rotated: f.rotated,
+        trimmed: (f.trimX !== 0 || f.trimY !== 0 || f.w !== f.srcW || f.h !== f.srcH),
+        spriteSourceSize: { x: f.trimX, y: f.trimY, w: f.w, h: f.h },
+        sourceSize: { w: f.srcW, h: f.srcH }
+      };
+    }
+    return JSON.stringify({
+      frames,
+      meta: { app: 'Dobby Atlas Packer', version: '1.0', image: imageName, format: 'RGBA8888',
+        size: { w: bin.width, h: bin.height }, scale: '1' }
+    }, null, 2);
+  }
+  function buildJsonArray(bin, imageName) {
+    const frames = bin.frames.map(f => ({
+      filename: f.name + '.png',
+      frame: { x: f.x, y: f.y, w: f.rotated ? f.h : f.w, h: f.rotated ? f.w : f.h },
+      rotated: f.rotated,
+      trimmed: (f.trimX !== 0 || f.trimY !== 0 || f.w !== f.srcW || f.h !== f.srcH),
+      spriteSourceSize: { x: f.trimX, y: f.trimY, w: f.w, h: f.h },
+      sourceSize: { w: f.srcW, h: f.srcH }
+    }));
+    return JSON.stringify({
+      frames,
+      meta: { app: 'Dobby Atlas Packer', version: '1.0', image: imageName, format: 'RGBA8888',
+        size: { w: bin.width, h: bin.height }, scale: '1' }
+    }, null, 2);
+  }
+  function buildCocosPlist(bin, imageName) {
+    const esc = s => String(s);
+    let frames = '';
+    for (const f of bin.frames) {
+      const fw = f.rotated ? f.h : f.w, fh = f.rotated ? f.w : f.h;
+      frames += `      <key>${esc(f.name)}.png</key>\n      <dict>\n` +
+        `        <key>frame</key>\n        <string>{{${f.x},${f.y}},{${fw},${fh}}}</string>\n` +
+        `        <key>offset</key>\n        <string>{0,0}</string>\n` +
+        `        <key>rotated</key>\n        <${f.rotated ? 'true' : 'false'}/>\n` +
+        `        <key>sourceColorRect</key>\n        <string>{{${f.trimX},${f.trimY}},{${f.w},${f.h}}}</string>\n` +
+        `        <key>sourceSize</key>\n        <string>{${f.srcW},${f.srcH}}</string>\n      </dict>\n`;
+    }
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n  <dict>\n    <key>frames</key>\n    <dict>\n${frames}    </dict>\n    <key>metadata</key>\n    <dict>\n      <key>format</key>\n      <integer>2</integer>\n      <key>realTextureFileName</key>\n      <string>${imageName}</string>\n      <key>size</key>\n      <string>{${bin.width},${bin.height}}</string>\n      <key>textureFileName</key>\n      <string>${imageName}</string>\n    </dict>\n  </dict>\n</plist>\n`;
+  }
+  function buildCss(bin, imageName, prefix) {
+    let out = `/* Dobby Atlas Packer — sprite sheet CSS\n   background image: ${imageName} (${bin.width}×${bin.height}) */\n`;
+    out += `.${prefix} { background-image: url('${imageName}'); background-repeat: no-repeat; display: inline-block; }\n`;
+    for (const f of bin.frames) {
+      const fw = f.rotated ? f.h : f.w, fh = f.rotated ? f.w : f.h;
+      const cls = f.name.replace(/[^\w-]/g, '_');
+      out += `.${prefix}--${cls} { width: ${fw}px; height: ${fh}px; background-position: -${f.x}px -${f.y}px; }\n`;
+    }
+    return out;
+  }
+  function buildGodotTres(f, atlasResName) {
+    const fw = f.rotated ? f.h : f.w, fh = f.rotated ? f.w : f.h;
+    return `[gd_resource type="AtlasTexture" load_steps=2 format=3]\n\n` +
+      `[ext_resource type="Texture2D" path="res://${atlasResName}" id="1_atlas"]\n\n` +
+      `[resource]\n` +
+      `atlas = ExtResource("1_atlas")\n` +
+      `region = Rect2(${f.x}, ${f.y}, ${fw}, ${fh})\n` +
+      `margin = Rect2(${f.trimX}, ${f.trimY}, ${f.srcW - f.w}, ${f.srcH - f.h})\n`;
+  }
+
+  async function doExport() {
+    if (!packedBins.length) return;
+    const prefix = ($('filename').value || 'atlas').replace(/[^\w-]/g, '_');
+    const fmt = $('format').value;
+
+    try {
+      for (let i = 0; i < packedBins.length; i++) {
+        const bin = packedBins[i];
+        const suffix = packedBins.length > 1 ? `-${i}` : '';
+        const pngName = `${prefix}${suffix}.png`;
+        const blob = await canvasToBlob(bin.canvas, 'image/png');
+
+        if (fmt === 'godot') {
+          // bundle atlas PNG + one .tres per frame into a ZIP.
+          // makeZip wants [{ name, data: Uint8Array }] and returns a Blob.
+          const enc = new TextEncoder();
+          const files = [{ name: pngName, data: new Uint8Array(await blob.arrayBuffer()) }];
+          for (const f of bin.frames) {
+            files.push({ name: `${f.name}.tres`, data: enc.encode(buildGodotTres(f, pngName)) });
+          }
+          const zip = makeZip(files);
+          download(zip, `${prefix}${suffix}-godot.zip`);
+          log.ok(Toolkit.T('ap.log.exportedGodot', { name: `${prefix}${suffix}-godot.zip`, n: bin.frames.length }, `导出 ${prefix}${suffix}-godot.zip(${bin.frames.length} 个 AtlasTexture)`));
+        } else {
+          download(blob, pngName);
+          let metaText, metaName;
+          if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, pngName);  metaName = `${prefix}${suffix}.json`; }
+          else if (fmt === 'json-array') { metaText = buildJsonArray(bin, pngName); metaName = `${prefix}${suffix}.json`; }
+          else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, pngName);  metaName = `${prefix}${suffix}.plist`; }
+          else if (fmt === 'css')   { metaText = buildCss(bin, pngName, prefix); metaName = `${prefix}${suffix}.css`; }
+          downloadText(metaText, metaName, 'text/plain');
+          log.ok(Toolkit.T('ap.log.exported', { png: pngName, meta: metaName }, `导出 ${pngName} + ${metaName}`));
+        }
+      }
+    } catch (e) {
+      log.err(e.message); console.error(e);
+    }
+  }
+
+  function clearAll() {
+    rawImages = []; packedBins = [];
+    $('frameGrid').innerHTML = '';
+    $('previewArea').innerHTML = '<div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>';
+    $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
+    $('exportBtn').disabled = true;
+    log.clear();
+  }
+})();
+</script>
+</body>
+</html>
