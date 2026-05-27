@@ -136,6 +136,7 @@
         <option value="hash" data-i18n="sp.jsonFormat.hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
         <option value="array" data-i18n="sp.jsonFormat.array">TexturePacker JSON Array</option>
         <option value="godot" data-i18n="sp.jsonFormat.godot">Godot SpriteFrames (.tres ZIP)</option>
+        <option value="libgdx" data-i18n="sp.jsonFormat.libgdx">libGDX / Spine (.atlas ZIP)</option>
         <option value="simple" data-i18n="sp.jsonFormat.simple">简洁数组 (自定义引擎)</option>
       </select>
       <div class="info" style="margin-top:4px" data-i18n="sp.jsonFormat.info">取消勾选只下载 PNG —— 适合规则网格 + 自己算帧位置的渲染流程</div>
@@ -590,6 +591,19 @@ Toolkit.injectTopbar('sprite-packer');
       return;
     }
 
+    // libGDX / Spine → bundle image + .atlas into a ZIP
+    if (fmt === 'libgdx') {
+      const enc = new TextEncoder();
+      const files = [
+        { name: imgName, data: r.bytes },
+        { name: `${name}.atlas`, data: enc.encode(buildLibGdxAtlas(imgName)) }
+      ];
+      download(makeZip(files), `${name}-libgdx.zip`);
+      log.ok(Toolkit.T('sp.log.libgdx', { name: `${name}-libgdx.zip`, n: packed.frames.length }, `已导出 ${name}-libgdx.zip · .atlas 含 ${packed.frames.length} 块`));
+      logSizeCompare(r.bytes.length, r.pngLen, r.label);
+      return;
+    }
+
     download(new Blob([r.bytes], { type: 'image/' + r.ext }), imgName);
     if (fmt) {
       downloadJson(buildJson(name, fmt, imgName), `${name}.json`);
@@ -631,6 +645,29 @@ Toolkit.injectTopbar('sprite-packer');
       `[ext_resource type="Texture2D" path="res://${imgName}" id="1_atlas"]\n\n` +
       sub +
       `[resource]\nanimations = [${anims.join(', ')}]\n`;
+  }
+
+  // libGDX / Spine TextureAtlas (.atlas) — single page (sprite-packer makes one
+  // sheet). Same convention as atlas-packer: legacy xy/size/orig/offset, offset
+  // is (fromLeft, fromBottom) so offsetBottom = sourceH - h - offsetY(top trim).
+  function buildLibGdxAtlas(imgName) {
+    const { canvas, frames } = packed;
+    let s = `${imgName}\n`;
+    s += `size: ${canvas.width},${canvas.height}\n`;
+    s += `format: RGBA8888\n`;
+    s += `filter: Linear,Linear\n`;
+    s += `repeat: none\n`;
+    for (const f of frames) {
+      const offBottom = f.sourceH - f.h - f.offsetY;
+      s += `${f.name}\n`;
+      s += `  rotate: false\n`;
+      s += `  xy: ${f.x}, ${f.y}\n`;
+      s += `  size: ${f.w}, ${f.h}\n`;
+      s += `  orig: ${f.sourceW}, ${f.sourceH}\n`;
+      s += `  offset: ${f.offsetX}, ${offBottom}\n`;
+      s += `  index: -1\n`;
+    }
+    return s;
   }
 
   function buildJson(name, fmt, imgName) {

@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v73",
+      "title": "🎬 Sprite Packer 也加 libGDX / Spine (.atlas) 导出",
+      "date": "2026-05-27",
+      "items": [
+        "JSON 格式下拉新增 **libGDX / Spine (.atlas ZIP)**,和 atlas-packer 同一套 TextureAtlas 文本格式 + 图片打包 ZIP",
+        "trim 偏移按 spec 写对(offset 是「距左、距底」),实测非对称裁剪 offset 5, 22 正确",
+        "至此两个打包器导出格式完全对齐:Godot / TexturePacker JSON / libGDX·Spine,图片都支持 PNG·oxipng / WebP无损 / 自动选最小 等无损压缩"
+      ]
+    },
+    {
       "version": "dobby-v72",
       "title": "🎬 Sprite Packer 也接上无损/WebP/AVIF 压缩链路",
       "date": "2026-05-27",
