@@ -35,49 +35,57 @@
 <title>Atlas Packer · Dobby</title>
 <link rel="stylesheet" href="../assets/shared.css" />
 <style>
-  /* Preview is a COMPACT thumbnail strip — users come here to PACK, not to
-     scroll giant images. Pages sit side by side, each capped to 300px tall;
-     click any page to open it big in the lightbox (Toolkit.Lightbox auto-
-     binds to .preview-area canvas). */
-  #previewArea {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    align-items: flex-start;
-  }
-  .ap-bin {
+  /* ===== TexturePacker-style preview panel =====
+     One fixed-height workspace: toolbar (page tabs + outline toggle + zoom
+     controls) over a bounded, scrollable viewport. The atlas is the
+     centerpiece, shown fit-to-window by default; zoom / pan / 1:1 like
+     TexturePacker. No infinite scroll, no separate layout view — sprite
+     outlines overlay the real atlas. */
+  .tp-preview {
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: #1a1a1a;
-    padding: 10px;
-    flex: 0 1 auto;
-    max-width: 100%;
+    display: flex; flex-direction: column;
+    height: 460px;
+    margin-bottom: 14px;
+    overflow: hidden;
   }
-  .ap-bin h3 {
-    font-size: 12px; color: var(--muted); margin: 0 0 8px;
-    font-family: ui-monospace, Consolas, monospace;
+  .tp-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+    flex-wrap: wrap;
   }
-  .ap-bin canvas {
-    image-rendering: pixelated;
+  .tp-spacer { flex: 1; }
+  .tp-pages { display: inline-flex; gap: 4px; }
+  .tp-pages button {
+    background: transparent; border: 1px solid var(--border); box-shadow: none;
+    color: var(--muted); font-size: 11px; padding: 3px 9px; cursor: pointer;
+    border-radius: var(--radius-sm); font-family: ui-monospace, Consolas, monospace;
+  }
+  .tp-pages button.active { background: rgba(var(--jade-rgb), 0.18); color: var(--jade); border-color: rgba(var(--jade-rgb), 0.4); }
+  .tp-outline { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .tp-zoom { display: inline-flex; align-items: center; gap: 4px; }
+  .tp-zoom button {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;
+    color: var(--text); font-size: 12px; padding: 3px 9px; cursor: pointer;
+    border-radius: var(--radius-sm); min-width: 28px; font-family: inherit;
+  }
+  .tp-zoom button:hover { background: rgba(255,255,255,0.1); }
+  .tp-zoom .tp-zoom-label { min-width: 46px; text-align: center; font-family: ui-monospace, Consolas, monospace; color: var(--text); }
+  .tp-viewport {
+    flex: 1; overflow: auto; position: relative;
     background:
       linear-gradient(45deg, #2a2a30 25%, transparent 25%),
       linear-gradient(-45deg, #2a2a30 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #2a2a30 75%),
       linear-gradient(-45deg, transparent 75%, #2a2a30 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-    /* cap the inline preview size — both axes — preserving aspect ratio.
-       300px tall keeps the whole preview compact even with several pages. */
-    max-width: 100%;
-    max-height: 300px;
-    width: auto; height: auto;
-    display: block;
-    cursor: zoom-in;
+    background-color: #16161b;
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
   }
-  .ap-bin .ap-zoom-hint {
-    font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center;
-    font-family: ui-monospace, Consolas, monospace; opacity: 0.7;
-  }
+  .tp-stage { position: relative; margin: auto; }
+  .tp-stage canvas { position: absolute; top: 0; left: 0; image-rendering: pixelated; display: block; }
   .ap-frame-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
@@ -260,13 +268,22 @@
       </div>
     </div>
 
-    <div class="ap-view-toggle" id="viewToggle" style="display:none">
-      <button type="button" class="active" data-mode="atlas" data-i18n="ap.view.atlas">图集</button>
-      <button type="button" data-mode="layout" data-i18n="ap.view.layout">布局图</button>
-    </div>
-    <div class="ap-preview-wrap">
-      <div id="previewArea" class="preview-area">
-        <div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>
+    <div class="preview-empty" id="emptyHint" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>
+    <div class="tp-preview" id="tpPreview" style="display:none">
+      <div class="tp-toolbar">
+        <div class="tp-pages" id="tpPages"></div>
+        <label class="tp-outline"><input type="checkbox" id="showOutlines" /><span data-i18n="ap.outline">精灵描边</span></label>
+        <span class="tp-spacer"></span>
+        <div class="tp-zoom">
+          <button type="button" id="zoomOut" title="缩小">−</button>
+          <span class="tp-zoom-label" id="zoomLabel">100%</span>
+          <button type="button" id="zoomIn" title="放大">+</button>
+          <button type="button" id="zoomFit" data-i18n="ap.zoom.fit">适应</button>
+          <button type="button" id="zoomOne">1:1</button>
+        </div>
+      </div>
+      <div class="tp-viewport" id="tpViewport">
+        <div class="tp-stage" id="tpStage"></div>
       </div>
     </div>
     <div style="margin-top:6px">
@@ -289,16 +306,27 @@ Toolkit.injectTopbar('atlas-packer');
 
   let rawImages = [];   // { name, bitmap, w, h }
   let packedBins = [];  // { canvas, frames:[{name, x, y, w, h, rotated, trimX, trimY, srcW, srcH}], width, height }
-  let previewMode = 'atlas';  // 'atlas' (real PNG) | 'layout' (region map)
+  // ── TexturePacker-style preview state ──
+  let curPage = 0;        // which atlas page is shown
+  let zoom = 1;           // display scale
+  let fitMode = true;     // auto fit-to-window until the user zooms manually
+  let showOutlines = false;
 
-  // atlas / layout view toggle
-  $('viewToggle').querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      previewMode = btn.dataset.mode;
-      $('viewToggle').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-      if (packedBins.length) renderPreview();
-    });
-  });
+  $('zoomIn').addEventListener('click', () => { fitMode = false; zoom = Math.min(8, zoom * 1.25); layoutStage(); });
+  $('zoomOut').addEventListener('click', () => { fitMode = false; zoom = Math.max(0.02, zoom / 1.25); layoutStage(); });
+  $('zoomFit').addEventListener('click', () => { fitMode = true; layoutStage(); });
+  $('zoomOne').addEventListener('click', () => { fitMode = false; zoom = 1; layoutStage(); });
+  $('showOutlines').addEventListener('change', () => { showOutlines = $('showOutlines').checked; layoutStage(); });
+  // ctrl/cmd + wheel to zoom inside the viewport
+  $('tpViewport').addEventListener('wheel', (e) => {
+    if (!packedBins.length) return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    fitMode = false;
+    zoom = e.deltaY < 0 ? Math.min(8, zoom * 1.1) : Math.max(0.02, zoom / 1.1);
+    layoutStage();
+  }, { passive: false });
+  window.addEventListener('resize', () => { if (packedBins.length && fitMode) layoutStage(); });
 
   attachDropZone($('dropZone'), $('fileInput'), handleFiles);
   const handoff = Toolkit.setupHandoff('atlas-packer', { outputType: 'image/png' });
@@ -361,7 +389,10 @@ Toolkit.injectTopbar('atlas-packer');
     rawImages = [];
     packedBins = [];
     $('frameGrid').innerHTML = '';
-    $('previewArea').innerHTML = '<div class="preview-empty">🧦 Dobby 正在打包图集...</div>';
+    $('tpPreview').style.display = 'none';
+    $('tpStage').innerHTML = '';
+    $('emptyHint').style.display = '';
+    $('emptyHint').textContent = '🧦 Dobby 正在打包图集...';
     log.clear();
     $('exportBtn').disabled = true;
 
@@ -380,7 +411,7 @@ Toolkit.injectTopbar('atlas-packer');
         }
       }
       const imgs = naturalSort(expanded).filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name));
-      if (!imgs.length) { log.err(Toolkit.T('ap.err.noImages', null, '没有可用的图片')); $('previewArea').innerHTML = '<div class="preview-empty">没有可用的图片</div>'; return; }
+      if (!imgs.length) { log.err(Toolkit.T('ap.err.noImages', null, '没有可用的图片')); $('emptyHint').textContent = Toolkit.T('ap.err.noImages', null, '没有可用的图片'); return; }
 
       log.dim(Toolkit.T('ap.log.loading', { n: imgs.length }, `加载 ${imgs.length} 张图...`));
       for (let i = 0; i < imgs.length; i++) {
@@ -490,7 +521,7 @@ Toolkit.injectTopbar('atlas-packer');
       }
       return true;
     });
-    if (!fitItems.length) { $('exportBtn').disabled = true; $('previewArea').innerHTML = '<div class="preview-empty">所有图都太大,无法打包</div>'; return; }
+    if (!fitItems.length) { $('exportBtn').disabled = true; $('tpPreview').style.display='none'; $('emptyHint').style.display=''; $('emptyHint').textContent = Toolkit.T('ap.err.allTooBig', null, '所有图都太大,无法打包'); return; }
     // "fit one page" overrides the user's max side with the full 16384 cap so
     // the smart packer crams everything into a single (minimally-sized) bin
     // whenever it physically fits.
@@ -548,6 +579,8 @@ Toolkit.injectTopbar('atlas-packer');
     const totalAtlasArea = packedBins.reduce((s, b) => s + b.width * b.height, 0);
     const eff = ((totalSpriteArea / totalAtlasArea) * 100).toFixed(1);
 
+    // reset preview to page 0, fit-to-window for the fresh pack
+    curPage = 0; fitMode = true;
     renderPreview();
     const binNote = packedBins.length > 1 ? Toolkit.T('ap.stats.bins', { n: packedBins.length }, ` · ${packedBins.length} 张图集`) : '';
     $('stats').innerHTML = `<strong>${rawImages.length}</strong> ${Toolkit.T('ap.stats.sprites', null, '块')} · ${packedBins.map(b => `${b.width}×${b.height}`).join(', ')}${binNote} · ${Toolkit.T('ap.stats.fill', null, '填充率')} <strong>${eff}%</strong>`;
@@ -568,69 +601,78 @@ Toolkit.injectTopbar('atlas-packer');
     } catch (_) {}
   }
 
-  // Build a schematic "layout map" canvas: each packed region as a colored
-  // rounded box with its name centered — like TexturePacker's region view.
-  // Lets the user verify the packing at a glance even when the real sprites
-  // are tiny / similar-looking.
-  function buildLayoutCanvas(bin) {
+  // ===== TexturePacker-style preview =====
+  // One bounded panel. renderPreview() rebuilds page tabs + lays out the
+  // current page in the viewport; layoutStage() applies the zoom and (if on)
+  // the sprite-outline overlay. The atlas canvas and a same-size outline
+  // canvas are both CSS-scaled by `zoom` so they stay pixel-aligned.
+
+  let outlineCanvasCache = new WeakMap();
+
+  function buildOutlineCanvas(bin) {
+    if (outlineCanvasCache.has(bin)) return outlineCanvasCache.get(bin);
     const cv = newCanvas(bin.width, bin.height);
     const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#16161b';
-    ctx.fillRect(0, 0, bin.width, bin.height);
+    ctx.lineWidth = Math.max(1, Math.round(Math.max(bin.width, bin.height) / 1200));
     bin.frames.forEach((f, i) => {
-      const w = f.rotated ? f.h : f.w;   // occupied dims in the sheet
+      const w = f.rotated ? f.h : f.w;  // occupied dims in the sheet
       const h = f.rotated ? f.w : f.h;
-      const hue = (i * 47) % 360;
-      const r = Math.max(0, Math.min(14, w / 8, h / 8));
-      ctx.beginPath();
-      ctx.moveTo(f.x + r, f.y);
-      ctx.arcTo(f.x + w, f.y, f.x + w, f.y + h, r);
-      ctx.arcTo(f.x + w, f.y + h, f.x, f.y + h, r);
-      ctx.arcTo(f.x, f.y + h, f.x, f.y, r);
-      ctx.arcTo(f.x, f.y, f.x + w, f.y, r);
-      ctx.closePath();
-      ctx.fillStyle = `hsl(${hue}, 58%, 52%)`;
-      ctx.fill();
-      // name label (truncated to fit)
-      const fs = Math.max(9, Math.min(30, h / 5, w / 4));
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.font = `600 ${fs}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      let label = f.name;
-      // rough truncation so it doesn't overflow the box
-      const maxChars = Math.max(1, Math.floor(w / (fs * 0.62)));
-      if (label.length > maxChars) label = label.slice(0, Math.max(1, maxChars - 1)) + '…';
-      ctx.fillText(label, f.x + w / 2, f.y + h / 2);
-      // rotation marker
-      if (f.rotated) {
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.font = `${Math.max(8, fs * 0.7)}px sans-serif`;
-        ctx.fillText('↻', f.x + w - fs * 0.6, f.y + fs * 0.6);
-      }
+      ctx.strokeStyle = `hsl(${(i * 47) % 360}, 80%, 60%)`;
+      ctx.strokeRect(f.x + 0.5, f.y + 0.5, w - 1, h - 1);
     });
+    outlineCanvasCache.set(bin, cv);
     return cv;
   }
 
+  function computeFitZoom(bin) {
+    const vp = $('tpViewport').getBoundingClientRect();
+    const pad = 24;
+    const z = Math.min((vp.width - pad) / bin.width, (vp.height - pad) / bin.height, 1);
+    return z > 0 && isFinite(z) ? z : 1;
+  }
+
+  function layoutStage() {
+    const bin = packedBins[curPage];
+    if (!bin) return;
+    if (fitMode) zoom = computeFitZoom(bin);
+    const stage = $('tpStage');
+    stage.innerHTML = '';
+    const dispW = Math.max(1, Math.round(bin.width * zoom));
+    const dispH = Math.max(1, Math.round(bin.height * zoom));
+    stage.style.width = dispW + 'px';
+    stage.style.height = dispH + 'px';
+    // real atlas
+    bin.canvas.style.width = dispW + 'px';
+    bin.canvas.style.height = dispH + 'px';
+    stage.appendChild(bin.canvas);
+    // outline overlay
+    if (showOutlines) {
+      const ov = buildOutlineCanvas(bin);
+      ov.style.width = dispW + 'px';
+      ov.style.height = dispH + 'px';
+      stage.appendChild(ov);
+    }
+    $('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+  }
+
+  function renderPageTabs() {
+    const host = $('tpPages');
+    if (packedBins.length <= 1) { host.innerHTML = ''; return; }
+    host.innerHTML = packedBins.map((b, i) =>
+      `<button class="${i === curPage ? 'active' : ''}" data-page="${i}">${Toolkit.T('ap.page', { n: i + 1 }, '页 ' + (i + 1))}</button>`
+    ).join('');
+    host.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+      curPage = +btn.dataset.page; fitMode = true; renderPreview();
+    }));
+  }
+
   function renderPreview() {
-    const area = $('previewArea');
-    area.innerHTML = '';
-    $('viewToggle').style.display = packedBins.length ? 'inline-flex' : 'none';
-    packedBins.forEach((bin, i) => {
-      const box = document.createElement('div');
-      box.className = 'ap-bin';
-      const title = packedBins.length > 1
-        ? Toolkit.T('ap.bin.titleN', { i: i, w: bin.width, h: bin.height }, `图集 ${i} · ${bin.width}×${bin.height}`)
-        : Toolkit.T('ap.bin.title', { w: bin.width, h: bin.height }, `图集 · ${bin.width}×${bin.height}`);
-      const h = document.createElement('h3');
-      h.textContent = title;
-      box.appendChild(h);
-      box.appendChild(previewMode === 'layout' ? buildLayoutCanvas(bin) : bin.canvas);
-      const hint = document.createElement('div');
-      hint.className = 'ap-zoom-hint';
-      hint.textContent = Toolkit.T('ap.zoomHint', null, '点击放大看大图');
-      box.appendChild(hint);
-      area.appendChild(box);
-    });
+    $('emptyHint').style.display = packedBins.length ? 'none' : '';
+    $('tpPreview').style.display = packedBins.length ? 'flex' : 'none';
+    if (!packedBins.length) return;
+    if (curPage >= packedBins.length) curPage = 0;
+    renderPageTabs();
+    layoutStage();
   }
 
   function renderFrameGrid() {
@@ -766,9 +808,11 @@ Toolkit.injectTopbar('atlas-packer');
     animFrames = [];
     $('animPlayer').style.display = 'none';
     rawImages = []; packedBins = [];
-    $('viewToggle').style.display = 'none';
+    curPage = 0; fitMode = true;
+    $('tpPreview').style.display = 'none';
+    $('tpStage').innerHTML = '';
+    $('emptyHint').style.display = '';
     $('frameGrid').innerHTML = '';
-    $('previewArea').innerHTML = '<div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>';
     $('stats').textContent = Toolkit.T('common.idle', null, 'Dobby 待命');
     $('exportBtn').disabled = true;
     log.clear();
