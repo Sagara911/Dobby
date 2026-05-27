@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v69",
+      "title": "🧱 Atlas Packer 加 libGDX / Spine (.atlas) 导出",
+      "date": "2026-05-27",
+      "items": [
+        "元数据格式下拉新增 **libGDX / Spine (.atlas ZIP)** —— 导出标准 TextureAtlas 文本格式 + 图集图片打成 ZIP",
+        "libGDX 游戏、以及**所有 Spine 运行时**(Unity / Godot / Cocos / 网页版 Spine 播放器)都能直接读这个格式",
+        "trim 偏移按 spec 写对了(offset 是「距左、距底」),旋转/多页/原始尺寸都处理到位;图片格式可选 PNG/WebP/AVIF",
+        "(说明:格式结构按官方 spec 校验过,但浏览器里没法真跑一遍 libGDX 工程 —— 如果你实测有问题随时反馈)"
+      ]
+    },
+    {
       "version": "dobby-v68",
       "title": "🧱 Atlas Packer 直接出 WebP/AVIF 图集(体积暴降,带透明)",
       "date": "2026-05-27",

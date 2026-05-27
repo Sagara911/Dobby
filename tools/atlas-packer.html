@@ -243,6 +243,7 @@
         <option value="cocos" data-i18n="ap.fmt.cocos">Cocos plist (Cocos2d-x / Creator)</option>
         <option value="css" data-i18n="ap.fmt.css">CSS sprite (background-position)</option>
         <option value="godot" data-i18n="ap.fmt.godot">Godot AtlasTexture (.tres ZIP,原生拖入)</option>
+        <option value="libgdx" data-i18n="ap.fmt.libgdx">libGDX / Spine (.atlas ZIP)</option>
       </select>
     </div>
     <div class="field">
@@ -857,6 +858,34 @@ Toolkit.injectTopbar('atlas-packer');
     }
     return out;
   }
+  // libGDX / Spine TextureAtlas (.atlas) — line-based text, one block per page
+  // (blank-line separated). Legacy syntax (xy/size/orig/offset) for the widest
+  // runtime support. Coordinates are top-left; offset is (fromLeft, fromBottom);
+  // `size` is the un-rotated trimmed dims (the runtime swaps when rotate:true,
+  // same convention as our TexturePacker JSON). Used by libGDX games and every
+  // Spine runtime (Unity/Godot/Cocos/web Spine players all read this).
+  function buildLibGdxAtlas(bins, imgNames) {
+    return bins.map((bin, pi) => {
+      let s = `${imgNames[pi]}\n`;
+      s += `size: ${bin.width},${bin.height}\n`;
+      s += `format: RGBA8888\n`;
+      s += `filter: Linear,Linear\n`;
+      s += `repeat: none\n`;
+      for (const f of bin.frames) {
+        // offsetY is whitespace stripped from the BOTTOM = total vertical trim
+        // (srcH - h) minus what was stripped from the top (trimY).
+        const offBottom = f.srcH - f.h - f.trimY;
+        s += `${f.name}\n`;
+        s += `  rotate: ${f.rotated ? 'true' : 'false'}\n`;
+        s += `  xy: ${f.x}, ${f.y}\n`;
+        s += `  size: ${f.w}, ${f.h}\n`;
+        s += `  orig: ${f.srcW}, ${f.srcH}\n`;
+        s += `  offset: ${f.trimX}, ${offBottom}\n`;
+        s += `  index: -1\n`;
+      }
+      return s;
+    }).join('\n');  // blank line separates pages
+  }
   // Derive an animation name from a frame filename by stripping the trailing
   // frame index: "attack_03" → "attack", "run-12" → "run", "idle5" → "idle".
   // Frames that share a base name become one animation in the SpriteFrames.
@@ -1003,6 +1032,27 @@ Toolkit.injectTopbar('atlas-packer');
         const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
         const normNote = hasNormals ? Toolkit.T('ap.log.godotNormalNote', null, ' · 含法线图 (CanvasTexture 绑定)') : '';
         log.ok(Toolkit.T('ap.log.exportedGodotSF', { name: `${prefix}-godot.zip`, anims, frames: frameCount }, `导出 ${prefix}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${frameCount} 帧`) + normNote);
+        logSizeCompare(totChosen, totPng, chosenExt);
+        return;
+      }
+
+      // ── libGDX / Spine: ONE combined .atlas (all pages) + page images in a ZIP ──
+      if (fmt === 'libgdx') {
+        const files = [];
+        const imgNames = [];
+        let totChosen = 0, totPng = 0, chosenExt = 'png';
+        for (let i = 0; i < packedBins.length; i++) {
+          const r = await encodeAtlasImage(packedBins[i].canvas);
+          const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
+          imgNames.push(nm);
+          files.push({ name: nm, data: r.bytes });
+          totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
+        }
+        files.push({ name: `${prefix}.atlas`, data: new TextEncoder().encode(buildLibGdxAtlas(packedBins, imgNames)) });
+        const zip = makeZip(files);
+        download(zip, `${prefix}-libgdx.zip`);
+        const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
+        log.ok(Toolkit.T('ap.log.exportedLibgdx', { name: `${prefix}-libgdx.zip`, n: frameCount, pages: packedBins.length }, `导出 ${prefix}-libgdx.zip · .atlas 含 ${frameCount} 块 / ${packedBins.length} 页`));
         logSizeCompare(totChosen, totPng, chosenExt);
         return;
       }
