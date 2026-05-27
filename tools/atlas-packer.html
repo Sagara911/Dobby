@@ -35,13 +35,23 @@
 <title>Atlas Packer · Dobby</title>
 <link rel="stylesheet" href="../assets/shared.css" />
 <style>
-  .ap-preview-wrap { display: flex; flex-direction: column; gap: 16px; }
+  /* Preview is a COMPACT thumbnail strip — users come here to PACK, not to
+     scroll giant images. Pages sit side by side, each capped to 300px tall;
+     click any page to open it big in the lightbox (Toolkit.Lightbox auto-
+     binds to .preview-area canvas). */
+  #previewArea {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-start;
+  }
   .ap-bin {
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--checker, #1a1a1a), #1a1a1a;
-    overflow: auto;
+    background: #1a1a1a;
     padding: 10px;
+    flex: 0 1 auto;
+    max-width: 100%;
   }
   .ap-bin h3 {
     font-size: 12px; color: var(--muted); margin: 0 0 8px;
@@ -56,7 +66,17 @@
       linear-gradient(-45deg, transparent 75%, #2a2a30 75%);
     background-size: 16px 16px;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-    max-width: 100%; height: auto; display: block;
+    /* cap the inline preview size — both axes — preserving aspect ratio.
+       300px tall keeps the whole preview compact even with several pages. */
+    max-width: 100%;
+    max-height: 300px;
+    width: auto; height: auto;
+    display: block;
+    cursor: zoom-in;
+  }
+  .ap-bin .ap-zoom-hint {
+    font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center;
+    font-family: ui-monospace, Consolas, monospace; opacity: 0.7;
   }
   .ap-frame-grid {
     display: grid;
@@ -245,7 +265,7 @@
       <button type="button" data-mode="layout" data-i18n="ap.view.layout">布局图</button>
     </div>
     <div class="ap-preview-wrap">
-      <div id="previewArea">
+      <div id="previewArea" class="preview-area">
         <div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>
       </div>
     </div>
@@ -605,6 +625,10 @@ Toolkit.injectTopbar('atlas-packer');
       h.textContent = title;
       box.appendChild(h);
       box.appendChild(previewMode === 'layout' ? buildLayoutCanvas(bin) : bin.canvas);
+      const hint = document.createElement('div');
+      hint.className = 'ap-zoom-hint';
+      hint.textContent = Toolkit.T('ap.zoomHint', null, '点击放大看大图');
+      box.appendChild(hint);
       area.appendChild(box);
     });
   }
