@@ -373,6 +373,7 @@
     </div>
     <button id="applyBtn" disabled data-i18n="vt.apply">应用</button>
     <button id="downloadBtn" class="secondary" disabled data-i18n="vt.download">下载</button>
+    <button id="reuseBtn" class="secondary" style="display:none" data-i18n="vt.reuseOutput">↻ 用结果继续处理</button>
     <button id="clearBtn" class="secondary" data-i18n="common.clearShort">清空</button>
 
     <div class="log" id="log"></div>
@@ -1476,6 +1477,7 @@ Toolkit.injectTopbar('video-toolkit');
     }
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
+    $('reuseBtn').style.display = 'none';
     log.dim(Toolkit.T('vt.log.apply', { action }, `应用 ${action}...`));
     try {
       if (action === 'fromFrames') await doFramesToVideo();
@@ -2356,6 +2358,10 @@ Toolkit.injectTopbar('video-toolkit');
       $('outBox').appendChild(v);
     }
     $('downloadBtn').disabled = false;
+    // Offer "use result as input" for video outputs (mp4/webm) — lets the user
+    // chain operations in-place (e.g. frames→video, then compress) without
+    // re-dropping the file. GIF/PNG/ZIP aren't re-loadable as a video source.
+    $('reuseBtn').style.display = (outExt === 'mp4' || outExt === 'webm') ? '' : 'none';
     updateHandoff();
   }
 
@@ -2467,6 +2473,19 @@ Toolkit.injectTopbar('video-toolkit');
     return u[0] === 0x1A && u[1] === 0x45 && u[2] === 0xDF && u[3] === 0xA3;
   }
 
+  // Reuse the just-produced output as the new input, so actions can be
+  // chained in one tool (frames→video→compress→...). Wraps outBlob in a File
+  // and feeds it through the normal load path.
+  $('reuseBtn').addEventListener('click', () => {
+    if (!outBlob || (outExt !== 'mp4' && outExt !== 'webm')) return;
+    const mime = outExt === 'webm' ? 'video/webm' : 'video/mp4';
+    const name = (($('filename').value || 'output').replace(/[^\w-]/g, '_')) + '.' + outExt;
+    const file = new File([outBlob], name, { type: mime });
+    log.dim(Toolkit.T('vt.log.reuse', null, '把上一步结果当作新输入...'));
+    $('reuseBtn').style.display = 'none';
+    handleFiles([file]);
+  });
+
   $('downloadBtn').addEventListener('click', () => {
     if (!outBlob) return;
     const name = ($('filename').value || 'output').replace(/[^\w-]/g, '_');
@@ -2483,6 +2502,7 @@ Toolkit.injectTopbar('video-toolkit');
     $('actionControls').innerHTML = '';
     $('applyBtn').disabled = true;
     $('downloadBtn').disabled = true;
+    $('reuseBtn').style.display = 'none';
     log.clear();
     $('fileInput').value = '';
   });
