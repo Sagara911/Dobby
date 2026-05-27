@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v62",
+      "date": "2026-05-27",
+      "title": "🎮 精灵图合成也能导 Godot SpriteFrames 了(Godot 适配 1/4)",
+      "items": [
+        "开始系统补齐 Godot 工作流。第一刀:**sprite-packer(精灵图合成)加 Godot SpriteFrames 导出**",
+        "JSON 格式下拉里多了「Godot SpriteFrames (.tres ZIP)」。规整网格帧动画现在也能一键出 Godot 动画资源 —— 拖到 AnimatedSprite2D 即用",
+        "同样**按文件名前缀自动分动画**:walk_0~3 → walk,jump_0/1 → jump。帧率取「视频抽帧 FPS」字段(默认 12)",
+        "(后续还有:tilemap → Godot TileSet、像素字体 → BitmapFont、音频 → OGG Vorbis)"
+      ]
+    },
+    {
       "version": "dobby-v61",
       "date": "2026-05-27",
       "title": "🎮 Atlas Packer 的 Godot 导出升级成 SpriteFrames(动画即开即用)",

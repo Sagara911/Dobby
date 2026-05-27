@@ -119,6 +119,7 @@
       <select id="jsonFormat">
         <option value="hash" data-i18n="sp.jsonFormat.hash">TexturePacker JSON Hash (Phaser 3 / PixiJS)</option>
         <option value="array" data-i18n="sp.jsonFormat.array">TexturePacker JSON Array</option>
+        <option value="godot" data-i18n="sp.jsonFormat.godot">Godot SpriteFrames (.tres ZIP)</option>
         <option value="simple" data-i18n="sp.jsonFormat.simple">简洁数组 (自定义引擎)</option>
       </select>
       <div class="info" style="margin-top:4px" data-i18n="sp.jsonFormat.info">取消勾选只下载 PNG —— 适合规则网格 + 自己算帧位置的渲染流程</div>
@@ -147,7 +148,7 @@
 Toolkit.injectTopbar('sprite-packer');
 
 (() => {
-  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, downloadJson, newCanvas, canvasToBlob } = Toolkit;
+  const { $, makeLogger, makeProgress, attachDropZone, naturalSort, download, downloadJson, newCanvas, canvasToBlob, makeZip } = Toolkit;
   const log = makeLogger($('log'));
   const progress = makeProgress($('progress'));
 
@@ -505,10 +506,26 @@ Toolkit.injectTopbar('sprite-packer');
     if (!packed) return;
     const name = ($('filename').value || 'spritesheet').replace(/[^\w-]/g, '_');
     const blob = await canvasToBlob(packed.canvas, 'image/png');
+    const fmt = $('exportJson').checked ? $('jsonFormat').value : null;
+
+    // Godot SpriteFrames → bundle PNG + .tres into a ZIP (drops onto
+    // AnimatedSprite2D; animations auto-grouped by filename prefix).
+    if (fmt === 'godot') {
+      const enc = new TextEncoder();
+      const files = [
+        { name: `${name}.png`, data: new Uint8Array(await blob.arrayBuffer()) },
+        { name: `${name}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(name)) }
+      ];
+      download(makeZip(files), `${name}-godot.zip`);
+      handoff?.setBlob(blob, `${name}.png`);
+      const anims = new Set(packed.frames.map(f => animNameOf(f.name))).size;
+      log.ok(Toolkit.T('sp.log.godot', { name: `${name}-godot.zip`, anims, frames: packed.frames.length }, `已导出 ${name}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${packed.frames.length} 帧`));
+      return;
+    }
+
     download(blob, `${name}.png`);
     handoff?.setBlob(blob, `${name}.png`);
-    if ($('exportJson').checked) {
-      const fmt = $('jsonFormat').value;
+    if (fmt) {
       downloadJson(buildJson(name, fmt), `${name}.json`);
       log.ok(`已导出 ${name}.png + ${name}.json`);
     } else {
@@ -516,6 +533,38 @@ Toolkit.injectTopbar('sprite-packer');
       log.ok(`已导出 ${name}.png (${packed.cols}列 × ${packed.rows}行, 单帧 ${f0.w || '?'}×${f0.h || '?'})`);
     }
   });
+
+  // animation name from frame filename: "attack_03"→attack, "run-2"→run
+  function animNameOf(n) { const m = n.match(/^(.*?)[\s._-]*\d+$/); return (m && m[1]) ? m[1] : n; }
+  const natCompare = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  // Godot 4 SpriteFrames .tres — single page (sprite-packer always makes one
+  // sheet), one AtlasTexture sub-resource per frame, grouped into named
+  // animations by filename prefix. Speed taken from the FPS field.
+  function buildGodotSpriteFrames(name) {
+    const frames = packed.frames;
+    const fps = parseFloat($('videoFps').value) || 12;
+    let sub = '';
+    const ids = frames.map((_, i) => `AtlasTexture_${i}`);
+    frames.forEach((f, i) => {
+      sub += `[sub_resource type="AtlasTexture" id="${ids[i]}"]\n`;
+      sub += `atlas = ExtResource("1_atlas")\n`;
+      sub += `region = Rect2(${f.x}, ${f.y}, ${f.w}, ${f.h})\n`;
+      sub += `margin = Rect2(${f.offsetX}, ${f.offsetY}, ${f.sourceW - f.w}, ${f.sourceH - f.h})\n\n`;
+    });
+    const groups = {};
+    frames.forEach((f, i) => { const a = animNameOf(f.name); (groups[a] = groups[a] || []).push(i); });
+    for (const k in groups) groups[k].sort((a, b) => natCompare(frames[a].name, frames[b].name));
+    const anims = Object.entries(groups).map(([nm, idxs]) => {
+      const fl = idxs.map(i => `{\n"duration": 1.0,\n"texture": SubResource("${ids[i]}")\n}`).join(', ');
+      return `{\n"frames": [${fl}],\n"loop": true,\n"name": &"${nm}",\n"speed": ${fps.toFixed(1)}\n}`;
+    });
+    const loadSteps = 1 + frames.length + 1;
+    return `[gd_resource type="SpriteFrames" load_steps=${loadSteps} format=3]\n\n` +
+      `[ext_resource type="Texture2D" path="res://${name}.png" id="1_atlas"]\n\n` +
+      sub +
+      `[resource]\nanimations = [${anims.join(', ')}]\n`;
+  }
 
   function buildJson(name, fmt) {
     const { canvas, frames, cols, rows } = packed;
