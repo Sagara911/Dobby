@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v63",
+      "date": "2026-05-27",
+      "title": "🎮 瓦片地图加 Godot TileSet 导出(Godot 适配 2/4)",
+      "items": [
+        "tilemap(瓦片地图)导出区多了「🎮 Godot TileSet」按钮",
+        "导出 ZIP:**tileset.png + `xxx_tileset.tres`(Godot TileSet 资源,瓦片调色板)+ `xxx_paint.gd`(地图重建脚本)**",
+        ".tres 是原生 Godot 4 TileSet(TileSetAtlasSource + tile_size + 每格瓦片声明),拖到 TileMapLayer 的 Tile Set 上直接能用",
+        "你画的地图:`paint.gd` 挂到 TileMapLayer 上,_ready 里用 set_cell 把每格还原(不碰 Godot 那个易碎的二进制 tile_map_data 格式,稳)",
+        "(还剩:像素字体 → BitmapFont、音频 → OGG Vorbis)"
+      ]
+    },
+    {
       "version": "dobby-v62",
       "date": "2026-05-27",
       "title": "🎮 精灵图合成也能导 Godot SpriteFrames 了(Godot 适配 1/4)",

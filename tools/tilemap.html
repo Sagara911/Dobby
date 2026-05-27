@@ -267,6 +267,7 @@
     <div class="tm-export-grid">
       <button id="exportJson" data-i18n="tm.btn.exportJson">📄 JSON (Tiled)</button>
       <button id="exportPng" data-i18n="tm.btn.exportPng">🖼️ 平摊 PNG</button>
+      <button id="exportGodot" data-i18n="tm.btn.exportGodot">🎮 Godot TileSet</button>
     </div>
     <input type="text" id="filename" value="tilemap" style="width:100%; padding:6px 8px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:12px; margin-top:6px" placeholder="文件名" data-i18n-attr="placeholder:common.filename" />
     <div class="tm-help" style="margin-top:6px" data-i18n-html="tm.jsonNote">
@@ -322,7 +323,7 @@
 Toolkit.injectTopbar('tilemap');
 
 (() => {
-  const { $, makeLogger, attachDropZone, download, downloadJson, newCanvas, canvasToBlob } = Toolkit;
+  const { $, makeLogger, attachDropZone, download, downloadJson, newCanvas, canvasToBlob, makeZip } = Toolkit;
   const log = makeLogger($('log'));
 
   // ============================================================
@@ -777,6 +778,71 @@ Toolkit.injectTopbar('tilemap');
     downloadJson(out, name + '.json');
     log.ok(Toolkit.T('tm.log.exportedJson', { w: mapW, h: mapH }, `导出 ${mapW}×${mapH} JSON (Tiled 兼容)`));
   });
+
+  // Godot TileSet export: ZIP of tileset.png + a TileSet .tres (palette:
+  // TileSetAtlasSource declaring every grid cell) + a paint.gd helper that
+  // reconstructs the painted map via set_cell (robust — avoids the fragile
+  // binary tile_map_data format).
+  $('exportGodot').addEventListener('click', async () => {
+    if (!tilesetBitmap) { log.err(Toolkit.T('tm.log.dropTileset', null, '先拖入 tileset')); return; }
+    const name = ($('filename').value || 'tilemap').replace(/[^\w-]/g, '_');
+    const pngName = name + '_tileset.png';
+
+    // tileset PNG
+    const tcv = newCanvas(tilesetBitmap.width, tilesetBitmap.height);
+    tcv.getContext('2d').drawImage(tilesetBitmap, 0, 0);
+    const pngBlob = await canvasToBlob(tcv, 'image/png');
+
+    // TileSet .tres — declare every cell in the tileset grid as a tile
+    let tiles = '';
+    for (let r = 0; r < tilesetRows; r++)
+      for (let c = 0; c < tilesetCols; c++)
+        tiles += `${c}:${r}/0 = 0\n`;
+    const tres =
+      `[gd_resource type="TileSet" load_steps=3 format=3]\n\n` +
+      `[ext_resource type="Texture2D" path="res://${pngName}" id="1_tex"]\n\n` +
+      `[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_1"]\n` +
+      `texture = ExtResource("1_tex")\n` +
+      `texture_region_size = Vector2i(${tileW}, ${tileH})\n` +
+      tiles + `\n` +
+      `[resource]\n` +
+      `tile_size = Vector2i(${tileW}, ${tileH})\n` +
+      `sources/0 = SubResource("TileSetAtlasSource_1")\n`;
+
+    // painted cells → [x, y, atlasX, atlasY]
+    const cells = [];
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const v = mapData[y * mapW + x];
+        if (v <= 0) continue;
+        const ti = v - 1;
+        cells.push([x, y, ti % tilesetCols, Math.floor(ti / tilesetCols)]);
+      }
+    }
+    const gd =
+      `# Dobby tilemap → Godot. Setup:\n` +
+      `#   1. Add a TileMapLayer node, set its Tile Set to ${name}_tileset.tres\n` +
+      `#   2. Attach this script to that TileMapLayer\n` +
+      `#   3. Run the scene (or call paint() from an @tool/editor script)\n` +
+      `extends TileMapLayer\n\n` +
+      `const MAP := [\n${cells.map(c => `\t${JSON.stringify(c)},`).join('\n')}\n]\n\n` +
+      `func _ready() -> void:\n` +
+      `\tpaint()\n\n` +
+      `func paint() -> void:\n` +
+      `\tfor c in MAP:\n` +
+      `\t\tset_cell(Vector2i(c[0], c[1]), 0, Vector2i(c[2], c[3]))\n`;
+
+    const enc = new TextEncoder();
+    const files = [
+      { name: pngName, data: new Uint8Array(await pngBlob.arrayBuffer()) },
+      { name: `${name}_tileset.tres`, data: enc.encode(tres) },
+      { name: `${name}_paint.gd`, data: enc.encode(gd) }
+    ];
+    download(makeZip(files), `${name}-godot.zip`);
+    log.ok(Toolkit.T('tm.log.exportedGodot', { name: `${name}-godot.zip`, tiles: tilesetTileCount, cells: cells.length },
+      `导出 ${name}-godot.zip · TileSet(${tilesetTileCount} 瓦片)+ 地图脚本(${cells.length} 格)`));
+  });
+
   $('exportPng').addEventListener('click', async () => {
     if (!tilesetBitmap) { log.err(Toolkit.T('tm.log.dropTileset', null, '先拖入 tileset')); return; }
     const cv = newCanvas(mapW * tileW, mapH * tileH);
