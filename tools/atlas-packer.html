@@ -754,14 +754,54 @@ Toolkit.injectTopbar('atlas-packer');
     }
     return out;
   }
-  function buildGodotTres(f, atlasResName) {
-    const fw = f.rotated ? f.h : f.w, fh = f.rotated ? f.w : f.h;
-    return `[gd_resource type="AtlasTexture" load_steps=2 format=3]\n\n` +
-      `[ext_resource type="Texture2D" path="res://${atlasResName}" id="1_atlas"]\n\n` +
-      `[resource]\n` +
-      `atlas = ExtResource("1_atlas")\n` +
-      `region = Rect2(${f.x}, ${f.y}, ${fw}, ${fh})\n` +
-      `margin = Rect2(${f.trimX}, ${f.trimY}, ${f.srcW - f.w}, ${f.srcH - f.h})\n`;
+  // Derive an animation name from a frame filename by stripping the trailing
+  // frame index: "attack_03" → "attack", "run-12" → "run", "idle5" → "idle".
+  // Frames that share a base name become one animation in the SpriteFrames.
+  function animNameOf(name) {
+    const m = name.match(/^(.*?)[\s._-]*\d+$/);
+    return (m && m[1]) ? m[1] : name;
+  }
+  const natCompare = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  // Build a Godot 4 SpriteFrames resource (.tres): one AtlasTexture sub-
+  // resource per frame (region + trim margin), grouped into named animations
+  // by filename prefix. Drops straight onto an AnimatedSprite2D.
+  function buildGodotSpriteFrames(bins, pngNames, fps) {
+    const allFrames = [];
+    bins.forEach((bin, pi) => bin.frames.forEach(f => allFrames.push({ f, page: pi })));
+    const subId = new Map();
+    allFrames.forEach((fp, i) => subId.set(fp, `AtlasTexture_${i}`));
+    const extId = pngNames.map((_, i) => `${i + 1}_page`);
+
+    let ext = '';
+    pngNames.forEach((nm, i) => { ext += `[ext_resource type="Texture2D" path="res://${nm}" id="${extId[i]}"]\n`; });
+
+    let sub = '';
+    for (const fp of allFrames) {
+      const f = fp.f;
+      const w = f.rotated ? f.h : f.w, h = f.rotated ? f.w : f.h;
+      sub += `[sub_resource type="AtlasTexture" id="${subId.get(fp)}"]\n`;
+      sub += `atlas = ExtResource("${extId[fp.page]}")\n`;
+      sub += `region = Rect2(${f.x}, ${f.y}, ${w}, ${h})\n`;
+      sub += `margin = Rect2(${f.trimX}, ${f.trimY}, ${f.srcW - f.w}, ${f.srcH - f.h})\n\n`;
+    }
+
+    const groups = {};
+    for (const fp of allFrames) {
+      const anim = animNameOf(fp.f.name);
+      (groups[anim] = groups[anim] || []).push(fp);
+    }
+    for (const k in groups) groups[k].sort((a, b) => natCompare(a.f.name, b.f.name));
+    const animEntries = Object.entries(groups).map(([name, fl]) => {
+      const frames = fl.map(fp => `{\n"duration": 1.0,\n"texture": SubResource("${subId.get(fp)}")\n}`).join(', ');
+      return `{\n"frames": [${frames}],\n"loop": true,\n"name": &"${name}",\n"speed": ${fps.toFixed(1)}\n}`;
+    });
+
+    const loadSteps = pngNames.length + allFrames.length + 1;
+    let out = `[gd_resource type="SpriteFrames" load_steps=${loadSteps} format=3]\n\n`;
+    out += ext + '\n' + sub;
+    out += `[resource]\nanimations = [${animEntries.join(', ')}]\n`;
+    return out;
   }
 
   async function doExport() {
@@ -770,33 +810,39 @@ Toolkit.injectTopbar('atlas-packer');
     const fmt = $('format').value;
 
     try {
+      // ── Godot: ONE SpriteFrames .tres across all pages + all page PNGs in a ZIP ──
+      if (fmt === 'godot') {
+        const enc = new TextEncoder();
+        const fps = parseInt($('animFps').value, 10) || 12;
+        const pngNames = packedBins.map((b, i) => packedBins.length > 1 ? `${prefix}-${i}.png` : `${prefix}.png`);
+        const files = [];
+        for (let i = 0; i < packedBins.length; i++) {
+          const blob = await canvasToBlob(packedBins[i].canvas, 'image/png');
+          files.push({ name: pngNames[i], data: new Uint8Array(await blob.arrayBuffer()) });
+        }
+        files.push({ name: `${prefix}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(packedBins, pngNames, fps)) });
+        const zip = makeZip(files);
+        download(zip, `${prefix}-godot.zip`);
+        const anims = new Set(packedBins.flatMap(b => b.frames.map(f => animNameOf(f.name)))).size;
+        const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
+        log.ok(Toolkit.T('ap.log.exportedGodotSF', { name: `${prefix}-godot.zip`, anims, frames: frameCount }, `导出 ${prefix}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${frameCount} 帧`));
+        return;
+      }
+
+      // ── other formats: per-page PNG + sidecar metadata ──
       for (let i = 0; i < packedBins.length; i++) {
         const bin = packedBins[i];
         const suffix = packedBins.length > 1 ? `-${i}` : '';
         const pngName = `${prefix}${suffix}.png`;
         const blob = await canvasToBlob(bin.canvas, 'image/png');
-
-        if (fmt === 'godot') {
-          // bundle atlas PNG + one .tres per frame into a ZIP.
-          // makeZip wants [{ name, data: Uint8Array }] and returns a Blob.
-          const enc = new TextEncoder();
-          const files = [{ name: pngName, data: new Uint8Array(await blob.arrayBuffer()) }];
-          for (const f of bin.frames) {
-            files.push({ name: `${f.name}.tres`, data: enc.encode(buildGodotTres(f, pngName)) });
-          }
-          const zip = makeZip(files);
-          download(zip, `${prefix}${suffix}-godot.zip`);
-          log.ok(Toolkit.T('ap.log.exportedGodot', { name: `${prefix}${suffix}-godot.zip`, n: bin.frames.length }, `导出 ${prefix}${suffix}-godot.zip(${bin.frames.length} 个 AtlasTexture)`));
-        } else {
-          download(blob, pngName);
-          let metaText, metaName;
-          if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, pngName);  metaName = `${prefix}${suffix}.json`; }
-          else if (fmt === 'json-array') { metaText = buildJsonArray(bin, pngName); metaName = `${prefix}${suffix}.json`; }
-          else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, pngName);  metaName = `${prefix}${suffix}.plist`; }
-          else if (fmt === 'css')   { metaText = buildCss(bin, pngName, prefix); metaName = `${prefix}${suffix}.css`; }
-          downloadText(metaText, metaName, 'text/plain');
-          log.ok(Toolkit.T('ap.log.exported', { png: pngName, meta: metaName }, `导出 ${pngName} + ${metaName}`));
-        }
+        download(blob, pngName);
+        let metaText, metaName;
+        if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, pngName);  metaName = `${prefix}${suffix}.json`; }
+        else if (fmt === 'json-array') { metaText = buildJsonArray(bin, pngName); metaName = `${prefix}${suffix}.json`; }
+        else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, pngName);  metaName = `${prefix}${suffix}.plist`; }
+        else if (fmt === 'css')   { metaText = buildCss(bin, pngName, prefix); metaName = `${prefix}${suffix}.css`; }
+        downloadText(metaText, metaName, 'text/plain');
+        log.ok(Toolkit.T('ap.log.exported', { png: pngName, meta: metaName }, `导出 ${pngName} + ${metaName}`));
       }
     } catch (e) {
       log.err(e.message); console.error(e);

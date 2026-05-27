@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "version": "dobby-v61",
+      "date": "2026-05-27",
+      "title": "🎮 Atlas Packer 的 Godot 导出升级成 SpriteFrames(动画即开即用)",
+      "items": [
+        "之前 Godot 导出是**一堆碎 AtlasTexture .tres**(每帧一个),拿到还得手动在 AnimatedSprite2D 里一帧帧拼动画",
+        "现在导出**一个 `xxx_frames.tres`(SpriteFrames 资源)** + 图集 PNG,打包进 ZIP。解压拖到 `AnimatedSprite2D` 上,**整套动画直接能播**,帧序/帧率都配好",
+        "**按文件名前缀自动分动画**:`idle_0/1/2` → idle 动画,`attack_0..3` → attack 动画,`run_0/1` → run 动画。一次导出多套动作,不用分开打包",
+        "帧率取顶部动画预览的 FPS 滑块值(SpriteFrames 的 speed),trim 的 offset 写进每帧 AtlasTexture 的 margin,保证动画播放时角色不抖",
+        "多页图集也支持:SpriteFrames 里每帧的 AtlasTexture 引用正确的页 PNG",
+        "实测:9 帧(idle/attack/run 三组)→ 一个 SpriteFrames 含 3 个动画,load_steps / region / margin / speed 全正确"
+      ]
+    },
+    {
       "version": "dobby-v60",
       "date": "2026-05-27",
       "title": "🔗 全站工具打通「结果接力」— 处理完直接接着处理,不用重新拖",
