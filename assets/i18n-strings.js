@@ -115,7 +115,8 @@ window.I18N_STRINGS = {
     // Sidebar instructions (collapsible "how to" block on each tool page)
     'sidebar.howTo': '📖 Dobby 怎么干这活',
     // Handoff (send-to-next-tool feature)
-    'handoff.btn': '📤 让 Dobby 送到下一个工具 ▾',
+    'handoff.btn': '📤 结果下一步 ▾',
+    'handoff.reuse': '用结果在本工具继续处理',
     'handoff.backPill': 'Dobby 带你回 {tool}',
     'handoff.backPill.dismiss': '不再显示',
     'handoff.incoming.cancel': '撤回',
@@ -2679,7 +2680,8 @@ window.I18N_STRINGS = {
     'newsToast.dismiss': 'Later',
     'newsToast.close': 'Got it',
     'sidebar.howTo': '📖 How Dobby does it',
-    'handoff.btn': '📤 Send to next tool with Dobby ▾',
+    'handoff.btn': '📤 Next step with the result ▾',
+    'handoff.reuse': 'Keep editing in this tool',
     'handoff.backPill': 'Dobby take you back to {tool}',
     'handoff.backPill.dismiss': 'Hide this',
     'handoff.incoming.cancel': 'Undo',

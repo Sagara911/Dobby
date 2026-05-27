@@ -1478,6 +1478,25 @@
   //   const handoff = Toolkit.setupHandoff(...)
   // without awaiting). Incoming handoff consumption is fire-and-forget.
   function setupHandoff(toolId, opts = {}) {
+    // Deliver a file (or files) into THIS tool's input — the shared routing
+    // used by both incoming cross-tool handoff and the in-place "继续处理"
+    // (reuse output as input) action. Prefers opts.onIncoming, else dispatches
+    // a synthetic drop on the tool's #dropZone / .drop-zone.
+    function deliverFiles(filesOrFile) {
+      const handler = opts.onIncoming || ((ff) => {
+        const dz = document.getElementById('dropZone') || document.querySelector('.drop-zone');
+        if (!dz) {
+          toast(`收到 ${Array.isArray(ff) ? ff.length + ' 个' : ''}文件,但找不到拖入区`, 'warn', 5000);
+          return;
+        }
+        const dt = new DataTransfer();
+        const arr = Array.isArray(ff) ? ff : [ff];
+        arr.forEach(f => dt.items.add(f));
+        dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      });
+      handler(filesOrFile);
+    }
+
     // 1. consume incoming handoff in the background — does not block return.
     // Flow: peek IDB (don't delete); if pending, show 3s countdown toast on
     // this (target) page. 撤回 → history.back() + delete IDB. Timer fire →
@@ -1521,21 +1540,7 @@
         } else {
           toast(T('toast.handoffReceived', { name: incoming.name }, `🧦 Dobby 把 ${incoming.name} 带过来了`), 'ok', 4500);
         }
-        const handler = opts.onIncoming || ((filesOrFile) => {
-          // Look for the well-known #dropZone first; if a tool uses a custom id,
-          // fall back to any element with the .drop-zone class so files at least
-          // reach SOMETHING rather than disappearing silently.
-          const dz = document.getElementById('dropZone') || document.querySelector('.drop-zone');
-          if (!dz) {
-            toast(`收到 ${Array.isArray(filesOrFile) ? filesOrFile.length + ' 个' : ''}文件,但找不到拖入区`, 'warn', 5000);
-            return;
-          }
-          const dt = new DataTransfer();
-          const arr = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
-          arr.forEach(f => dt.items.add(f));
-          dz.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
-        });
-        handler(toDeliver);
+        deliverFiles(toDeliver);
       });
     })();
 
@@ -1546,7 +1551,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'handoff-wrap';
     wrap.innerHTML = `
-      <button class="handoff-btn secondary" id="__handoffBtn__" data-i18n="handoff.btn" disabled>${T('handoff.btn', '📤 让 Dobby 送到下一个工具 ▾')}</button>
+      <button class="handoff-btn secondary" id="__handoffBtn__" data-i18n="handoff.btn" disabled>${T('handoff.btn', '📤 结果下一步 ▾')}</button>
       <div class="handoff-menu" id="__handoffMenu__"></div>
     `;
     sidebar.appendChild(wrap);
@@ -1561,9 +1566,32 @@
     function refresh() {
       menu.innerHTML = '';
       const mime = currentMime || opts.outputType;
-      const targets = findTargetsFor(mime).filter(id => id !== toolId);
-      if (!targets.length) { btn.disabled = true; return; }
+      const allTargets = findTargetsFor(mime);
+      // This tool can re-eat its own output if its accept-list matches the
+      // output mime — that's the in-place "继续处理" chain link.
+      const canReuse = allTargets.includes(toolId);
+      const targets = allTargets.filter(id => id !== toolId);
+      if (!canReuse && !targets.length) { btn.disabled = true; return; }
       btn.disabled = !currentBlob;
+
+      // "继续处理" — feed the output back into THIS tool as a new input, so the
+      // user can chain operations (e.g. frames→video, then compress) without
+      // re-dropping. Sits at the top of the menu, above the send-to targets.
+      if (canReuse) {
+        const reuse = document.createElement('a');
+        reuse.className = 'handoff-item handoff-reuse';
+        reuse.href = '#';
+        reuse.innerHTML = `<span class="icon">↻</span><span class="name">${T('handoff.reuse', '用结果在本工具继续处理')}</span><span class="en">reuse</span>`;
+        reuse.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (!currentBlob) return;
+          menu.classList.remove('open');
+          const name = currentName || ('output.' + mimeExtFor(mime));
+          deliverFiles(new File([currentBlob], name, { type: mime }));
+        });
+        menu.appendChild(reuse);
+      }
+
       for (const tid of targets) {
         const tool = TOOLS.find(t => t.id === tid);
         if (!tool) continue;
