@@ -62,18 +62,28 @@
     align-items: center;
     justify-content: center;
     gap: clamp(20px, 3vh, 36px);
-    /* Clip the ambient orbs to the hero box so they don't bleed into the
-       tools section / topbar area below + above. */
-    overflow: hidden;
   }
   /* ===== Hero ambient orbs =====
      Two large, heavily blurred radial gradients drifting slowly in the
-     background. Provides depth + brand color presence without competing
-     with the centered mascot / title / sub copy. z-index: 0 sits below
-     `.hero > *` which inherits the default stack and renders above.
+     background. They live in a dedicated .hero-orbs layer (NOT the hero
+     itself) so the layer can be clipped + edge-feathered without touching
+     the centered content. Plain `overflow:hidden` on the hero used to cut
+     the blurred glow into a faint hard horizontal line at the top/bottom;
+     the mask below fades that out. The layer's geometry is fixed to the
+     hero box, so the feather is viewport-independent (content can shift
+     freely as the hero grows/shrinks without ever clipping the mascot).
      prefers-reduced-motion respected — orbs go static. */
-  .hero::before,
-  .hero::after {
+  .hero-orbs {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 96px, #000 calc(100% - 88px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 96px, #000 calc(100% - 88px), transparent 100%);
+  }
+  .hero-orbs::before,
+  .hero-orbs::after {
     content: "";
     position: absolute;
     border-radius: 50%;
@@ -82,7 +92,7 @@
     z-index: 0;
     will-change: transform;
   }
-  .hero::before {
+  .hero-orbs::before {
     width: clamp(360px, 50vw, 560px);
     aspect-ratio: 1;
     /* jade-green, top-left, drifting */
@@ -92,7 +102,7 @@
     opacity: 0.85;
     animation: hero-orb-1 22s ease-in-out infinite;
   }
-  .hero::after {
+  .hero-orbs::after {
     width: clamp(400px, 55vw, 620px);
     aspect-ratio: 1;
     /* champagne / warm gold complement, bottom-right, slower drift */
@@ -115,14 +125,16 @@
     40%      { transform: translate(-60px, -40px) scale(1.12); }
     75%      { transform: translate(20px, -20px) scale(0.94); }
   }
-  /* Hero content (h1, sub, mascot, scroll-hint) lives above the orbs */
-  .hero > * { position: relative; z-index: 1; }
+  /* Hero content (h1, sub, mascot, scroll-hint) lives above the orbs.
+     :not(.hero-orbs) so the absolutely-positioned orb layer keeps its own
+     position/z-index instead of inheriting the content stack. */
+  .hero > *:not(.hero-orbs) { position: relative; z-index: 1; }
   @media (prefers-reduced-motion: reduce) {
-    .hero::before, .hero::after { animation: none; }
+    .hero-orbs::before, .hero-orbs::after { animation: none; }
   }
-  :root[data-theme="light"] .hero::before { opacity: 0.45; }
-  :root[data-theme="light"] .hero::after  { opacity: 0.30; }
-  .hero > * {
+  :root[data-theme="light"] .hero-orbs::before { opacity: 0.45; }
+  :root[data-theme="light"] .hero-orbs::after  { opacity: 0.30; }
+  .hero > *:not(.hero-orbs) {
     margin-left: auto;
     margin-right: auto;
     text-align: center;
@@ -939,6 +951,7 @@
 
 <main>
   <section class="hero hero-v3">
+    <div class="hero-orbs" aria-hidden="true"></div>
     <span class="hero-mascot" aria-hidden="true">🧦</span>
     <h1 data-i18n="home.hero.title">Dobby</h1>
     <p class="hero-sub" id="heroSub" data-i18n="home.hero.subMinimal">你的本地素材精灵 · 文件不上传</p>

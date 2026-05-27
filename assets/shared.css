@@ -190,6 +190,16 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+/* Paint the root with the same bg as body. The first in-flow child
+   (.topbar-wrap) has margin-top:16px which collapses up through <main>/<body>,
+   so <body>'s own box only starts ~16px down — leaving a top strip painted by
+   the (otherwise transparent) <html>. Without this rule that strip reads as a
+   faint horizontal seam against the body surface; matching the bg makes the
+   whole top one continuous surface. */
+html {
+  background: var(--bg);
+  transition: background-color 0.25s ease;
+}
 body {
   font-family: "Space Grotesk", "Inter", "Microsoft YaHei", system-ui, sans-serif;
   background: var(--bg);
