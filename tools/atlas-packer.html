@@ -168,8 +168,8 @@
       <span data-i18n="ap.square">强制正方形图集</span>
     </label>
     <label class="checkbox">
-      <input type="checkbox" id="fitOnePage" />
-      <span data-i18n="ap.fitOnePage">尽量合并成一张(忽略最大边,撑到 16384 装下全部)</span>
+      <input type="checkbox" id="fitOnePage" checked />
+      <span data-i18n="ap.fitOnePage">合并成一张(默认 · 撑到 16384 装下全部;取消则按下方最大边拆页)</span>
     </label>
     <div class="field">
       <label data-i18n="ap.extrude">Extrude 防渗色 (px)</label>
@@ -493,6 +493,13 @@ Toolkit.injectTopbar('atlas-packer');
     $('stats').innerHTML = `<strong>${rawImages.length}</strong> ${Toolkit.T('ap.stats.sprites', null, '块')} · ${packedBins.map(b => `${b.width}×${b.height}`).join(', ')}${binNote} · ${Toolkit.T('ap.stats.fill', null, '填充率')} <strong>${eff}%</strong>`;
     $('exportBtn').disabled = false;
     log.ok(Toolkit.T('ap.log.packed', { n: packedBins.length, eff }, `打包完成 · ${packedBins.length} 张图集 · 填充率 ${eff}%`));
+
+    // Soft warning: a single page over 8192px can't be sampled as a texture
+    // on iOS / older Android GPUs — fine on desktop, risky in a playable.
+    const biggest = Math.max(...packedBins.map(b => Math.max(b.width, b.height)));
+    if (biggest > 8192) {
+      log.warn(Toolkit.T('ap.warn.over8192', { px: biggest }, `图集最大边 ${biggest}px 超过 8192 — 桌面没问题,但 iOS / 老安卓 GPU 采样不了,playable 会黑屏。取消「合并成一张」并设个 ≤8192 的最大边可拆成多张安全尺寸。`));
+    }
 
     // wire handoff with the first bin
     try {
