@@ -306,10 +306,33 @@ Toolkit.injectTopbar('atlas-packer');
     }
     if (!items.length) { log.err(Toolkit.T('ap.err.allEmpty', null, '所有图都是全透明,没东西可打包')); return; }
 
-    const packer = new MaxRectsPacker(maxSize, maxSize, padding, {
+    // ── effective max size ──
+    // maxrects can't pack an item larger than the bin's max dimensions: such
+    // items become "oversized" (their own page, with rect.x/y undefined).
+    // To keep large images packing into SHARED pages (and to keep them
+    // rendering at all), auto-grow the bin cap to fit the largest item,
+    // capped at the 16384 canvas limit. The user's maxSize acts as a
+    // *minimum preferred* size, auto-grown when an image needs it.
+    let largestDim = 0;
+    for (const it of items) largestDim = Math.max(largestDim, it.width, it.height);
+    // Drop any single item that can't physically fit even a 16384 page.
+    const fitItems = items.filter(it => {
+      if (it.width > 16384 || it.height > 16384) {
+        log.err(Toolkit.T('ap.err.spriteTooBig', { name: it.data.img.name, w: it.width, h: it.height }, `「${it.data.img.name}」${it.width}×${it.height} 超过 16384px Canvas 上限,已跳过 — 先缩小这张图`));
+        return false;
+      }
+      return true;
+    });
+    if (!fitItems.length) { $('exportBtn').disabled = true; $('previewArea').innerHTML = '<div class="preview-empty">所有图都太大,无法打包</div>'; return; }
+    const effectiveMax = Math.min(16384, Math.max(maxSize, largestDim));
+    if (effectiveMax > maxSize) {
+      log.warn(Toolkit.T('ap.warn.grewMax', { from: maxSize, to: effectiveMax }, `有图比设定的最大边 ${maxSize}px 大,已自动把图集上限放大到 ${effectiveMax}px 以便合并`));
+    }
+
+    const packer = new MaxRectsPacker(effectiveMax, effectiveMax, padding, {
       smart: true, pot, square, allowRotation, border: 0
     });
-    packer.addArray(items);
+    packer.addArray(fitItems);
 
     packedBins = [];
     for (const bin of packer.bins) {
@@ -324,12 +347,16 @@ Toolkit.injectTopbar('atlas-packer');
       const frames = [];
       for (const rect of bin.rects) {
         const { img, sw, sh, trimX, trimY } = rect.data;
-        const dx = rect.x + extrude;
-        const dy = rect.y + extrude;
+        // Oversized rects (image bigger than the bin cap) come back with
+        // x/y === undefined — they own the whole page, so anchor at 0,0.
+        const rx = (typeof rect.x === 'number') ? rect.x : 0;
+        const ry = (typeof rect.y === 'number') ? rect.y : 0;
+        const dx = rx + extrude;
+        const dy = ry + extrude;
         if (rect.rot) {
           // rotated 90° CW in the sheet. occupies sh×sw.
           octx.save();
-          octx.translate(rect.x + extrude + sh, rect.y + extrude);
+          octx.translate(rx + extrude + sh, ry + extrude);
           octx.rotate(Math.PI / 2);
           octx.drawImage(img.bitmap, trimX, trimY, sw, sh, 0, 0, sw, sh);
           octx.restore();
