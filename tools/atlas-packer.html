@@ -159,6 +159,11 @@
       <input type="checkbox" id="trim" checked />
       <span data-i18n="ap.trim">裁剪透明边(存 offset 元数据)</span>
     </label>
+    <div class="field">
+      <label data-i18n="ap.alphaThreshold">透明裁剪阈值 (alpha 0-254)</label>
+      <input type="number" id="alphaThreshold" value="10" min="0" max="254" />
+      <div class="info" style="margin-top:4px" data-i18n="ap.alphaThreshold.info">alpha 低于此值的像素当透明 — 调高可裁掉刀光/辉光/描边的半透明杂边(默认 10)。图集大得离谱多半是这个原因</div>
+    </div>
     <label class="checkbox">
       <input type="checkbox" id="pot" />
       <span data-i18n="ap.pot">2 的幂次尺寸 (WebGL / 老 GPU)</span>
@@ -250,7 +255,7 @@ Toolkit.injectTopbar('atlas-packer');
   const handoff = Toolkit.setupHandoff('atlas-packer', { outputType: 'image/png' });
 
   // re-pack on option change
-  ['maxSize', 'padding', 'allowRotation', 'trim', 'pot', 'square', 'extrude', 'fitOnePage'].forEach(id => {
+  ['maxSize', 'padding', 'allowRotation', 'trim', 'alphaThreshold', 'pot', 'square', 'extrude', 'fitOnePage'].forEach(id => {
     $(id).addEventListener('change', () => { if (rawImages.length) repack(); });
   });
   $('exportBtn').addEventListener('click', doExport);
@@ -354,22 +359,27 @@ Toolkit.injectTopbar('atlas-packer');
   }
 
   // ── transparent-border trim ──
-  function computeTrim(bitmap) {
+  function computeTrim(bitmap, alphaThreshold) {
     const cv = newCanvas(bitmap.width, bitmap.height);
     const ctx = cv.getContext('2d');
     ctx.drawImage(bitmap, 0, 0);
     const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
     let minX = bitmap.width, minY = bitmap.height, maxX = -1, maxY = -1;
+    // Pixels with alpha <= threshold count as transparent. A bare `> 0` test
+    // is defeated by near-invisible specks (anti-aliased edges, faint glow /
+    // particle artifacts spread to the frame edges) — they make trim crop
+    // nothing, so every frame stays full-canvas size and the atlas balloons.
+    const th = alphaThreshold | 0;
     for (let y = 0; y < bitmap.height; y++) {
       const row = y * bitmap.width * 4;
       for (let x = 0; x < bitmap.width; x++) {
-        if (data[row + x * 4 + 3] > 0) {
+        if (data[row + x * 4 + 3] > th) {
           if (x < minX) minX = x; if (x > maxX) maxX = x;
           if (y < minY) minY = y; if (y > maxY) maxY = y;
         }
       }
     }
-    if (maxX < 0) return null; // fully transparent
+    if (maxX < 0) return null; // fully transparent (below threshold everywhere)
     return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }
 
@@ -397,10 +407,11 @@ Toolkit.injectTopbar('atlas-packer');
     const square = $('square').checked;
 
     // build items; pack dims are (sprite dims + 2*extrude). padding handles the gap.
+    const alphaThreshold = Math.max(0, Math.min(254, parseInt($('alphaThreshold').value, 10) || 0));
     const items = [];
     let totalSpriteArea = 0;
     for (const img of rawImages) {
-      const region = trim ? computeTrim(img.bitmap) : null;
+      const region = trim ? computeTrim(img.bitmap, alphaThreshold) : null;
       const sw = region ? region.w : img.w;
       const sh = region ? region.h : img.h;
       if (sw <= 0 || sh <= 0) continue; // fully transparent → skip
