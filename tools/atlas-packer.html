@@ -224,6 +224,14 @@
       <input type="number" id="extrude" value="0" min="0" max="8" />
       <div class="info" style="margin-top:4px" data-i18n="ap.extrude.info">边缘像素向外复制 N 像素,防止缩放采样时邻块渗色(经典 playable 黑边 bug)</div>
     </div>
+    <div class="field">
+      <label data-i18n="ap.packLogic.label">打包策略 (MaxRects 启发式)</label>
+      <select id="packLogic">
+        <option value="1" data-i18n="ap.logic.maxEdge">MAX_EDGE(默认 · 偏方正,通常更紧)</option>
+        <option value="0" data-i18n="ap.logic.maxArea">MAX_AREA(按剩余面积最优)</option>
+      </select>
+      <div class="info" style="margin-top:4px" data-i18n="ap.packLogic.info">两种自由矩形选择策略,填充率会略有差异 — 哪个更小看素材,可两个都试一下对比填充率</div>
+    </div>
     <label class="checkbox">
       <input type="checkbox" id="pairNormal" />
       <span data-i18n="ap.pairNormal">法线贴图配对打包(diffuse + _n 法线,同布局)</span>
@@ -260,6 +268,11 @@
       <label data-i18n="ap.imgQuality.label">压缩质量 (1-100)</label>
       <input type="number" id="imgQuality" value="85" min="1" max="100" />
     </div>
+    <label class="checkbox">
+      <input type="checkbox" id="pmaAlpha" />
+      <span data-i18n="ap.pma">预乘 Alpha (PMA · 修边缘黑/白边)</span>
+    </label>
+    <div class="info" id="pmaInfo" style="margin-top:4px; display:none" data-i18n="ap.pma.info">把 RGB 预乘进 alpha,配合预乘混合可消除半透明边缘的黑/白边(Pixi/Phaser playable 常见)。只有 TexturePacker JSON / libGDX 会写 pma 标记;其它格式会忽略并提示</div>
 
     <button id="exportBtn" data-i18n="ap.exportBtn" disabled>导出图集 + 元数据</button>
     <button id="clearBtn" class="secondary" data-i18n="common.clear">清空</button>
@@ -355,7 +368,7 @@ Toolkit.injectTopbar('atlas-packer');
   const handoff = Toolkit.setupHandoff('atlas-packer', { outputType: 'image/png' });
 
   // re-pack on option change
-  ['maxSize', 'padding', 'allowRotation', 'trim', 'alphaThreshold', 'pot', 'square', 'extrude', 'fitOnePage'].forEach(id => {
+  ['maxSize', 'padding', 'allowRotation', 'trim', 'alphaThreshold', 'pot', 'square', 'extrude', 'fitOnePage', 'packLogic'].forEach(id => {
     $(id).addEventListener('change', () => { if (rawImages.length) repack(); });
   });
   // pairing toggle re-derives the working set (which images are diffuse vs normal) then repacks
@@ -371,6 +384,9 @@ Toolkit.injectTopbar('atlas-packer');
     const v = $('imgFormat').value;
     $('imgQualityRow').style.display = (v === 'webp-lossy' || v === 'avif') ? '' : 'none';
     $('imgFormatInfo').style.display = (v === 'png') ? 'none' : '';
+  });
+  $('pmaAlpha').addEventListener('change', () => {
+    $('pmaInfo').style.display = $('pmaAlpha').checked ? '' : 'none';
   });
 
   // ── animation preview ──
@@ -610,8 +626,9 @@ Toolkit.injectTopbar('atlas-packer');
       log.warn(Toolkit.T('ap.warn.grewMax', { from: maxSize, to: effectiveMax }, `有图比设定的最大边 ${maxSize}px 大,已自动把图集上限放大到 ${effectiveMax}px 以便合并`));
     }
 
+    const logic = parseInt($('packLogic').value, 10) === 0 ? 0 : 1; // 0=MAX_AREA, 1=MAX_EDGE
     const packer = new MaxRectsPacker(effectiveMax, effectiveMax, padding, {
-      smart: true, pot, square, allowRotation, border: 0
+      smart: true, pot, square, allowRotation, border: 0, logic
     });
     packer.addArray(fitItems);
 
@@ -798,7 +815,7 @@ Toolkit.injectTopbar('atlas-packer');
   }
 
   // ===== metadata generators =====
-  function buildJsonHash(bin, imageName) {
+  function buildJsonHash(bin, imageName, pma) {
     const frames = {};
     for (const f of bin.frames) {
       // TexturePacker/Pixi/Phaser convention: frame w/h are the ORIGINAL
@@ -815,10 +832,10 @@ Toolkit.injectTopbar('atlas-packer');
     return JSON.stringify({
       frames,
       meta: { app: 'Dobby Atlas Packer', version: '1.0', image: imageName, format: 'RGBA8888',
-        size: { w: bin.width, h: bin.height }, scale: '1' }
+        size: { w: bin.width, h: bin.height }, scale: '1', ...(pma ? { premultiplyAlpha: true } : {}) }
     }, null, 2);
   }
-  function buildJsonArray(bin, imageName) {
+  function buildJsonArray(bin, imageName, pma) {
     const frames = bin.frames.map(f => ({
       filename: f.name + '.png',
       // original (un-rotated) dims — Pixi/Phaser swap on `rotated`
@@ -831,7 +848,7 @@ Toolkit.injectTopbar('atlas-packer');
     return JSON.stringify({
       frames,
       meta: { app: 'Dobby Atlas Packer', version: '1.0', image: imageName, format: 'RGBA8888',
-        size: { w: bin.width, h: bin.height }, scale: '1' }
+        size: { w: bin.width, h: bin.height }, scale: '1', ...(pma ? { premultiplyAlpha: true } : {}) }
     }, null, 2);
   }
   function buildCocosPlist(bin, imageName) {
@@ -864,13 +881,14 @@ Toolkit.injectTopbar('atlas-packer');
   // `size` is the un-rotated trimmed dims (the runtime swaps when rotate:true,
   // same convention as our TexturePacker JSON). Used by libGDX games and every
   // Spine runtime (Unity/Godot/Cocos/web Spine players all read this).
-  function buildLibGdxAtlas(bins, imgNames) {
+  function buildLibGdxAtlas(bins, imgNames, pma) {
     return bins.map((bin, pi) => {
       let s = `${imgNames[pi]}\n`;
       s += `size: ${bin.width},${bin.height}\n`;
       s += `format: RGBA8888\n`;
       s += `filter: Linear,Linear\n`;
       s += `repeat: none\n`;
+      if (pma) s += `pma: true\n`;
       for (const f of bin.frames) {
         // offsetY is whitespace stripped from the BOTTOM = total vertical trim
         // (srcH - h) minus what was stripped from the top (trimY).
@@ -963,17 +981,34 @@ Toolkit.injectTopbar('atlas-packer');
   // Encode an atlas canvas to the user-chosen image format. Always also keeps
   // the PNG size around so doExport can show a "PNG → WebP (-N%)" comparison.
   // On any WASM-codec failure it falls back to PNG so an export never dies.
-  async function encodeAtlasImage(canvas) {
+  // Bake premultiplied alpha into a NEW canvas (RGB *= A/255). Done only at
+  // export time so the on-screen preview stays straight-alpha (PMA looks dark
+  // on a normal canvas). Engines using PMA blend then get halo-free edges.
+  function premultiplyCanvas(src) {
+    const cv = newCanvas(src.width, src.height);
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(src, 0, 0);
+    const id = ctx.getImageData(0, 0, cv.width, cv.height);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a < 255) { d[i] = (d[i] * a / 255) | 0; d[i + 1] = (d[i + 1] * a / 255) | 0; d[i + 2] = (d[i + 2] * a / 255) | 0; }
+    }
+    ctx.putImageData(id, 0, 0);
+    return cv;
+  }
+  async function encodeAtlasImage(canvas, pma) {
+    const src = pma ? premultiplyCanvas(canvas) : canvas;
     const sel = $('imgFormat').value;
     const q = Math.max(1, Math.min(100, parseInt($('imgQuality').value, 10) || 85)) / 100;
-    const pngBlob = await canvasToBlob(canvas, 'image/png');
+    const pngBlob = await canvasToBlob(src, 'image/png');
     const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
     if (sel === 'png' || typeof Codecs === 'undefined') {
       if (sel !== 'png') log.warn(Toolkit.T('ap.warn.noCodecs', null, '压缩引擎未加载,改用 PNG'));
       return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
     }
     try {
-      const id = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      const id = src.getContext('2d').getImageData(0, 0, src.width, src.height);
       let bytes, ext;
       if (sel === 'webp-lossy')         { bytes = await Codecs.encodeWebp(id, { quality: q }); ext = 'webp'; }
       else if (sel === 'webp-lossless') { bytes = await Codecs.encodeWebp(id, { lossless: true }); ext = 'webp'; }
@@ -999,6 +1034,14 @@ Toolkit.injectTopbar('atlas-packer');
     const fmt = $('format').value;
     const imgSel = $('imgFormat').value;
     if (imgSel !== 'png') log.dim(Toolkit.T('ap.log.encodingImg', { fmt: imgSel }, `压缩图集为 ${imgSel}...`));
+    // Premultiplied alpha: bake + flag only for formats that carry a pma flag
+    // (TexturePacker JSON / libGDX). Other formats would render wrong with baked
+    // PMA pixels and no flag, so we skip + warn there. Normal maps are NEVER
+    // premultiplied (would corrupt the normals), handled per-call below.
+    const pmaWanted = $('pmaAlpha').checked;
+    const pmaSupported = (fmt === 'json-hash' || fmt === 'json-array' || fmt === 'libgdx');
+    const pma = pmaWanted && pmaSupported;
+    if (pmaWanted && !pmaSupported) log.warn(Toolkit.T('ap.warn.pmaIgnored', null, 'PMA 仅 TexturePacker JSON / libGDX 会写标记,当前格式已忽略(像素未预乘)'));
 
     try {
       // ── Godot: ONE SpriteFrames .tres across all pages + all page images in a ZIP ──
@@ -1009,7 +1052,7 @@ Toolkit.injectTopbar('atlas-packer');
         const imgNames = [];
         let totChosen = 0, totPng = 0, chosenExt = 'png';
         for (let i = 0; i < packedBins.length; i++) {
-          const r = await encodeAtlasImage(packedBins[i].canvas);
+          const r = await encodeAtlasImage(packedBins[i].canvas, false); // Godot: no PMA bake
           const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
           imgNames.push(nm);
           files.push({ name: nm, data: r.bytes });
@@ -1019,7 +1062,7 @@ Toolkit.injectTopbar('atlas-packer');
         if (hasNormals) {
           normalNames = [];
           for (let i = 0; i < packedBins.length; i++) {
-            const r = await encodeAtlasImage(packedBins[i].normalCanvas);
+            const r = await encodeAtlasImage(packedBins[i].normalCanvas, false);
             const nm = (packedBins.length > 1 ? `${prefix}-${i}_n` : `${prefix}_n`) + '.' + r.ext;
             normalNames.push(nm);
             files.push({ name: nm, data: r.bytes });
@@ -1042,13 +1085,13 @@ Toolkit.injectTopbar('atlas-packer');
         const imgNames = [];
         let totChosen = 0, totPng = 0, chosenExt = 'png';
         for (let i = 0; i < packedBins.length; i++) {
-          const r = await encodeAtlasImage(packedBins[i].canvas);
+          const r = await encodeAtlasImage(packedBins[i].canvas, pma);
           const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
           imgNames.push(nm);
           files.push({ name: nm, data: r.bytes });
           totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
         }
-        files.push({ name: `${prefix}.atlas`, data: new TextEncoder().encode(buildLibGdxAtlas(packedBins, imgNames)) });
+        files.push({ name: `${prefix}.atlas`, data: new TextEncoder().encode(buildLibGdxAtlas(packedBins, imgNames, pma)) });
         const zip = makeZip(files);
         download(zip, `${prefix}-libgdx.zip`);
         const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
@@ -1062,20 +1105,20 @@ Toolkit.injectTopbar('atlas-packer');
       for (let i = 0; i < packedBins.length; i++) {
         const bin = packedBins[i];
         const suffix = packedBins.length > 1 ? `-${i}` : '';
-        const r = await encodeAtlasImage(bin.canvas);
+        const r = await encodeAtlasImage(bin.canvas, pma);
         const imgName = `${prefix}${suffix}.${r.ext}`;
         download(new Blob([r.bytes], { type: 'image/' + r.ext }), imgName);
         totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
-        // normal atlas rides along as a sibling image so it isn't lost in non-Godot formats
+        // normal atlas rides along as a sibling image so it isn't lost in non-Godot formats (never PMA)
         if (hasNormals && bin.normalCanvas) {
-          const rn = await encodeAtlasImage(bin.normalCanvas);
+          const rn = await encodeAtlasImage(bin.normalCanvas, false);
           const nName = `${prefix}${suffix}_n.${rn.ext}`;
           download(new Blob([rn.bytes], { type: 'image/' + rn.ext }), nName);
           log.ok(Toolkit.T('ap.log.exportedNormal', { name: nName }, `导出法线图 ${nName}`));
         }
         let metaText, metaName;
-        if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, imgName);  metaName = `${prefix}${suffix}.json`; }
-        else if (fmt === 'json-array') { metaText = buildJsonArray(bin, imgName); metaName = `${prefix}${suffix}.json`; }
+        if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, imgName, pma);  metaName = `${prefix}${suffix}.json`; }
+        else if (fmt === 'json-array') { metaText = buildJsonArray(bin, imgName, pma); metaName = `${prefix}${suffix}.json`; }
         else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, imgName);  metaName = `${prefix}${suffix}.plist`; }
         else if (fmt === 'css')   { metaText = buildCss(bin, imgName, prefix); metaName = `${prefix}${suffix}.css`; }
         downloadText(metaText, metaName, 'text/plain');

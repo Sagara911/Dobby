@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v70",
+      "title": "🧱 Atlas Packer 加打包策略选择 + 预乘 Alpha(PMA)",
+      "date": "2026-05-27",
+      "items": [
+        "**打包策略**:可选 MaxRects 的 MAX_EDGE(默认,偏方正)/ MAX_AREA(按剩余面积),素材尺寸杂时两个都试一下,挑填充率更高的",
+        "**预乘 Alpha (PMA)**:勾上后把 RGB 预乘进 alpha,配合预乘混合消除半透明边缘的黑/白边(Pixi/Phaser playable 常见问题)",
+        "PMA 只对带 pma 标记的格式生效(TexturePacker JSON / libGDX),其它格式会提示并跳过;法线图永不预乘",
+        "实测:半透明像素 (200,100,50,α0.5) 导出后正确变成预乘的 (100,50,25),JSON 写 premultiplyAlpha、libGDX 写 pma: true"
+      ]
+    },
+    {
       "version": "dobby-v69",
       "title": "🧱 Atlas Packer 加 libGDX / Spine (.atlas) 导出",
       "date": "2026-05-27",
