@@ -429,8 +429,11 @@ Toolkit.injectTopbar('atlas-packer');
   function buildJsonHash(bin, imageName) {
     const frames = {};
     for (const f of bin.frames) {
+      // TexturePacker/Pixi/Phaser convention: frame w/h are the ORIGINAL
+      // (un-rotated) trimmed dims; the engine swaps them itself when
+      // `rotated` is true. (Cocos/CSS/Godot below use occupied dims instead.)
       frames[f.name + '.png'] = {
-        frame: { x: f.x, y: f.y, w: f.rotated ? f.h : f.w, h: f.rotated ? f.w : f.h },
+        frame: { x: f.x, y: f.y, w: f.w, h: f.h },
         rotated: f.rotated,
         trimmed: (f.trimX !== 0 || f.trimY !== 0 || f.w !== f.srcW || f.h !== f.srcH),
         spriteSourceSize: { x: f.trimX, y: f.trimY, w: f.w, h: f.h },
@@ -446,7 +449,8 @@ Toolkit.injectTopbar('atlas-packer');
   function buildJsonArray(bin, imageName) {
     const frames = bin.frames.map(f => ({
       filename: f.name + '.png',
-      frame: { x: f.x, y: f.y, w: f.rotated ? f.h : f.w, h: f.rotated ? f.w : f.h },
+      // original (un-rotated) dims — Pixi/Phaser swap on `rotated`
+      frame: { x: f.x, y: f.y, w: f.w, h: f.h },
       rotated: f.rotated,
       trimmed: (f.trimX !== 0 || f.trimY !== 0 || f.w !== f.srcW || f.h !== f.srcH),
       spriteSourceSize: { x: f.trimX, y: f.trimY, w: f.w, h: f.h },
