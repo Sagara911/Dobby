@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v65",
+      "date": "2026-05-27",
+      "title": "🎮 音频加 OGG Vorbis + MP3 导出 — Godot 工作流 4/4 全补齐!",
+      "items": [
+        "audio-compress 格式下拉新增 **OGG Vorbis**(Godot 首选,无缝循环)和 **MP3**(通用,Godot 也原生导入)",
+        "OGG Vorbis 用 vorbis-encoder-js(浏览器本地 WASM 编码),MP3 用 lamejs(纯 JS)。都是首次用才联网下编码器,之后缓存",
+        "实测 0.5s 测试音:WAV 43KB → MP3 9KB(-79%)→ OGG 4.5KB(-89.7%)。OGG 体积最小且 Godot 循环最稳",
+        "至此 **Godot 适配 4 个缺口全部完成**:sprite-packer→SpriteFrames · tilemap→TileSet · pixel-font→BitmapFont · audio→OGG/MP3。从精灵动画、瓦片地图、字体到音频,Dobby 的输出现在都能直接喂进 Godot 4",
+        "(之前的 WAV 输出 Godot 也一直能用,适合无损音效;OGG 给 BGM/长音频压缩)"
+      ]
+    },
+    {
       "version": "dobby-v64",
       "date": "2026-05-27",
       "title": "🎮 像素字体加 Godot BitmapFont (.fnt) 导出(Godot 适配 3/4)",

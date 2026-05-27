@@ -126,6 +126,8 @@
       <select id="outFormat">
         <option value="wav-16" data-i18n="audc.fmt.wav16">WAV (16-bit PCM, 无损)</option>
         <option value="wav-8" data-i18n="audc.fmt.wav8">WAV (8-bit, 体积减半)</option>
+        <option value="ogg-vorbis" data-i18n="audc.fmt.ogg">OGG Vorbis (Godot 首选, 无缝循环)</option>
+        <option value="mp3" data-i18n="audc.fmt.mp3">MP3 (Godot / 通用, 兼容最广)</option>
         <option value="webm-opus" data-i18n="audc.fmt.opus">WebM / Opus (有损, 体积最小)</option>
       </select>
     </div>
@@ -371,6 +373,14 @@ Toolkit.injectTopbar('audio-compress');
         const bitDepth = fmt === 'wav-8' ? 8 : 16;
         blob = encodeWav(rendered, bitDepth);
         outExt = 'wav';
+      } else if (fmt === 'mp3') {
+        log.dim(Toolkit.T('audc.log.loadingMp3', null, '加载 MP3 编码器 (首次联网 ~100KB)...'));
+        blob = await encodeMp3(rendered, 128);
+        outExt = 'mp3';
+      } else if (fmt === 'ogg-vorbis') {
+        log.dim(Toolkit.T('audc.log.loadingOgg', null, '加载 OGG Vorbis 编码器 (首次联网)...'));
+        blob = await encodeOggVorbis(rendered, 0.5);
+        outExt = 'ogg';
       } else {
         blob = await encodeWebmOpus(rendered);
         outExt = 'webm';
@@ -387,6 +397,12 @@ Toolkit.injectTopbar('audio-compress');
       } else if (outExt === 'webm') {
         const okEbml = headBuf[0]===0x1A && headBuf[1]===0x45 && headBuf[2]===0xDF && headBuf[3]===0xA3;
         if (!okEbml || blob.size < 512) throw new Error(Toolkit.T('audc.err.badWebm', null, '输出 WebM 校验失败 — 录制可能为空'));
+      } else if (outExt === 'mp3') {
+        const okMp3 = (headBuf[0]===0xFF && (headBuf[1]&0xE0)===0xE0) || (headBuf[0]===0x49 && headBuf[1]===0x44 && headBuf[2]===0x33);
+        if (!okMp3 || blob.size < 64) throw new Error(Toolkit.T('audc.err.badMp3', null, '输出 MP3 校验失败 — 编码可能为空'));
+      } else if (outExt === 'ogg') {
+        const okOgg = headBuf[0]===0x4F && headBuf[1]===0x67 && headBuf[2]===0x67 && headBuf[3]===0x53; // "OggS"
+        if (!okOgg || blob.size < 64) throw new Error(Toolkit.T('audc.err.badOgg', null, '输出 OGG 校验失败 — 编码可能为空'));
       }
       outBlob = blob;
       $('outStat').textContent = fmtBytes(blob.size);
@@ -396,7 +412,8 @@ Toolkit.injectTopbar('audio-compress');
       $('outPlayer').src = URL.createObjectURL(blob);
       $('downloadBtn').disabled = false;
       const fname = ($('filename')?.value || 'audio').replace(/[^\w-]/g, '_') + '.' + outExt;
-      handoff?.setBlob(blob, fname, blob.type || (outExt === 'wav' ? 'audio/wav' : 'audio/webm'));
+      const mimeByExt = { wav: 'audio/wav', mp3: 'audio/mpeg', ogg: 'audio/ogg', webm: 'audio/webm' };
+      handoff?.setBlob(blob, fname, blob.type || mimeByExt[outExt] || 'audio/wav');
       const pctStr = (pct >= 0 ? '-' : '+') + Math.abs(pct).toFixed(1) + '%';
       log.ok(Toolkit.T('audc.log.done', { size: fmtBytes(blob.size), pct: pctStr }, `处理完成 ${fmtBytes(blob.size)} (${pctStr})`));
     } catch (e) {
@@ -477,6 +494,54 @@ Toolkit.injectTopbar('audio-compress');
     await done;
     ctx.close();
     return new Blob(chunks, { type: 'audio/webm' });
+  }
+
+  // float [-1,1] → Int16
+  function floatToInt16(f) {
+    const o = new Int16Array(f.length);
+    for (let i = 0; i < f.length; i++) {
+      const s = Math.max(-1, Math.min(1, f[i]));
+      o[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return o;
+  }
+
+  // ===== MP3 via lamejs (pure JS, Godot 4 imports MP3) =====
+  async function encodeMp3(audioBuf, kbps) {
+    const mod = await import('https://esm.sh/@breezystack/lamejs@1.2.7');
+    const Mp3Encoder = mod.Mp3Encoder || (mod.default && mod.default.Mp3Encoder) || mod.default;
+    const ch = audioBuf.numberOfChannels;
+    const sr = audioBuf.sampleRate;
+    const enc = new Mp3Encoder(ch, sr, kbps);
+    const left = floatToInt16(audioBuf.getChannelData(0));
+    const right = ch > 1 ? floatToInt16(audioBuf.getChannelData(1)) : null;
+    const block = 1152;
+    const chunks = [];
+    for (let i = 0; i < left.length; i += block) {
+      const l = left.subarray(i, i + block);
+      let buf;
+      if (ch > 1) buf = enc.encodeBuffer(l, right.subarray(i, i + block));
+      else buf = enc.encodeBuffer(l);
+      if (buf.length > 0) chunks.push(new Uint8Array(buf));
+    }
+    const end = enc.flush();
+    if (end.length > 0) chunks.push(new Uint8Array(end));
+    return new Blob(chunks, { type: 'audio/mpeg' });
+  }
+
+  // ===== OGG Vorbis via vorbis-encoder-js (Godot's preferred audio: seamless loop) =====
+  async function encodeOggVorbis(audioBuf, quality) {
+    const mod = await import('https://esm.sh/vorbis-encoder-js@1.0.2');
+    // The encoder constructor is exported as `encoder` (not OggVorbisEncoder).
+    const OggVorbisEncoder = mod.encoder || (mod.default && mod.default.encoder);
+    const ch = audioBuf.numberOfChannels;
+    const sr = audioBuf.sampleRate;
+    const encoder = new OggVorbisEncoder(sr, ch, quality);
+    // encode expects an array of Float32Array, one per channel
+    const buffers = [];
+    for (let c = 0; c < ch; c++) buffers.push(audioBuf.getChannelData(c));
+    encoder.encode(buffers);
+    return encoder.finish(); // returns a Blob (type audio/ogg)
   }
 
   $('downloadBtn').addEventListener('click', () => {
