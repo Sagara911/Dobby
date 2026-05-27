@@ -1551,6 +1551,14 @@ Toolkit.injectTopbar('video-toolkit');
       reverse = true;
     }
 
+    // H.264 / VP9 (4:2:0 chroma) require EVEN frame dimensions. An odd-sized
+    // source (e.g. 519×932) reaching trim/crop/resize/speed/reverse would feed
+    // the encoder an odd frame → it errors ("only supports even sized frames")
+    // and then closes the codec, so every later encode() throws on a closed
+    // codec. Clamp down to even here so every path is safe.
+    outW = Math.max(2, outW - (outW % 2));
+    outH = Math.max(2, outH - (outH % 2));
+
     const cv = newCanvas(outW, outH);
     const ctx = cv.getContext('2d');
     const fmt = $('outFormat').value;
@@ -2049,7 +2057,12 @@ Toolkit.injectTopbar('video-toolkit');
 
   // ===== Chroma Key (背景去除) =====
   async function doChromaKey() {
-    const { w, h, duration } = srcMeta;
+    const { w: srcW0, h: srcH0, duration } = srcMeta;
+    // Even dims for codec safety (H.264 / VP9 4:2:0 reject odd sizes). The
+    // whole pipeline (incl. MP4 / WebM-alpha export) runs on these; the source
+    // frame is scaled into the even canvas below (≤1px squish, imperceptible).
+    const w = Math.max(2, srcW0 - (srcW0 % 2));
+    const h = Math.max(2, srcH0 - (srcH0 % 2));
     const autoCorner = $('keyAuto').checked;
     const keyHex = $('keyColor').value;
     const tol = parseInt($('keyTol').value, 10);
@@ -2075,7 +2088,7 @@ Toolkit.injectTopbar('video-toolkit');
       const t = Math.min(duration - 0.001, i / fps);
       await seekVideo(srcVideo, t);
       sctx.clearRect(0, 0, w, h);
-      sctx.drawImage(srcVideo, 0, 0);
+      sctx.drawImage(srcVideo, 0, 0, w, h);
       // auto pick key color from top-left of first frame
       if (autoCorner && i === 0) {
         const d = sctx.getImageData(0, 0, 1, 1).data;
