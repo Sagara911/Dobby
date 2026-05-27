@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v64",
+      "date": "2026-05-27",
+      "title": "🎮 像素字体加 Godot BitmapFont (.fnt) 导出(Godot 适配 3/4)",
+      "items": [
+        "pixel-font(像素字体设计器)导出区多了「🎮 导出 Godot BitmapFont (.fnt)」",
+        "导出 ZIP:**PNG 雪碧图 + 标准 AngelCode `.fnt`**(BMFont 格式)。Godot 4 原生支持,直接导入成 FontFile 用",
+        "均匀网格自动算好每个字的 x/y/宽/高、xadvance(=字宽+1,匹配工具的 1px 字间距)、base(基线行)、lineHeight",
+        "实测:画 3 个字 → .fnt 含 info/common/page/chars 完整结构,char id/坐标/advance 全对",
+        "(最后还剩:音频 → OGG Vorbis,工程量最大,正在啃)"
+      ]
+    },
+    {
       "version": "dobby-v63",
       "date": "2026-05-27",
       "title": "🎮 瓦片地图加 Godot TileSet 导出(Godot 适配 2/4)",
