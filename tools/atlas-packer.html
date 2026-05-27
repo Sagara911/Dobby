@@ -80,6 +80,43 @@
     font-family: ui-monospace, Consolas, monospace; font-size: 11px;
     color: var(--accent); margin-top: 4px;
   }
+  /* animation preview player */
+  .ap-anim {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .ap-anim canvas {
+    image-rendering: pixelated;
+    border-radius: 6px;
+    max-width: 220px; max-height: 220px;
+    background:
+      linear-gradient(45deg, #2a2a30 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2a30 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2a30 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2a30 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .ap-anim.dark canvas {
+    background: #0a0a0c;
+  }
+  .ap-anim-ctrl {
+    display: flex; flex-direction: column; gap: 10px;
+    font-size: 12px; color: var(--muted);
+  }
+  .ap-anim-ctrl button {
+    align-self: flex-start;
+  }
+  .ap-anim-fps { display: flex; align-items: center; gap: 8px; }
+  .ap-anim-fps input[type=range] { width: 120px; }
+  .ap-anim-bg { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .ap-anim-frame { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -130,6 +167,10 @@
       <input type="checkbox" id="square" />
       <span data-i18n="ap.square">强制正方形图集</span>
     </label>
+    <label class="checkbox">
+      <input type="checkbox" id="fitOnePage" />
+      <span data-i18n="ap.fitOnePage">尽量合并成一张(忽略最大边,撑到 16384 装下全部)</span>
+    </label>
     <div class="field">
       <label data-i18n="ap.extrude">Extrude 防渗色 (px)</label>
       <input type="number" id="extrude" value="0" min="0" max="8" />
@@ -160,6 +201,25 @@
 
   <div class="main">
     <div class="stats" id="stats" data-i18n="common.idle">Dobby 待命</div>
+
+    <!-- animation playback preview — plays source frames in natural order -->
+    <div class="ap-anim" id="animPlayer" style="display:none">
+      <canvas id="animCanvas"></canvas>
+      <div class="ap-anim-ctrl">
+        <button id="animPlay" type="button" data-i18n="ap.anim.play">▶ 播放</button>
+        <label class="ap-anim-fps">
+          <span data-i18n="ap.anim.fps">FPS</span>
+          <input type="range" id="animFps" min="1" max="60" value="12" />
+          <span class="mono" id="animFpsVal">12</span>
+        </label>
+        <span class="ap-anim-frame mono" id="animFrameLabel">0 / 0</span>
+        <label class="ap-anim-bg">
+          <input type="checkbox" id="animDark" />
+          <span data-i18n="ap.anim.darkBg">深底</span>
+        </label>
+      </div>
+    </div>
+
     <div class="ap-preview-wrap">
       <div id="previewArea">
         <div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>
@@ -190,11 +250,57 @@ Toolkit.injectTopbar('atlas-packer');
   const handoff = Toolkit.setupHandoff('atlas-packer', { outputType: 'image/png' });
 
   // re-pack on option change
-  ['maxSize', 'padding', 'allowRotation', 'trim', 'pot', 'square', 'extrude'].forEach(id => {
+  ['maxSize', 'padding', 'allowRotation', 'trim', 'pot', 'square', 'extrude', 'fitOnePage'].forEach(id => {
     $(id).addEventListener('change', () => { if (rawImages.length) repack(); });
   });
   $('exportBtn').addEventListener('click', doExport);
   $('clearBtn').addEventListener('click', clearAll);
+
+  // ── animation preview ──
+  let animFrames = [];   // ImageBitmap[] in natural order
+  let animIdx = 0, animTimer = null, animMaxW = 0, animMaxH = 0;
+  $('animFps').addEventListener('input', () => {
+    $('animFpsVal').textContent = $('animFps').value;
+    if (animTimer) { stopAnim(); playAnim(); }  // restart at new fps
+  });
+  $('animPlay').addEventListener('click', () => { animTimer ? stopAnim() : playAnim(); });
+  $('animDark').addEventListener('change', () => {
+    $('animPlayer').classList.toggle('dark', $('animDark').checked);
+  });
+  function setupAnim() {
+    animFrames = rawImages.map(r => r.bitmap);
+    animIdx = 0;
+    animMaxW = Math.max(1, ...rawImages.map(r => r.w));
+    animMaxH = Math.max(1, ...rawImages.map(r => r.h));
+    const cv = $('animCanvas');
+    cv.width = animMaxW; cv.height = animMaxH;
+    $('animPlayer').style.display = animFrames.length ? 'flex' : 'none';
+    drawAnimFrame();
+    if (animFrames.length > 1) playAnim();
+  }
+  function drawAnimFrame() {
+    const cv = $('animCanvas'); const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const bm = animFrames[animIdx];
+    if (bm) {
+      // center each frame in the max-bounds canvas so it doesn't jump around
+      ctx.drawImage(bm, Math.floor((animMaxW - bm.width) / 2), Math.floor((animMaxH - bm.height) / 2));
+    }
+    $('animFrameLabel').textContent = `${animIdx + 1} / ${animFrames.length}`;
+  }
+  function playAnim() {
+    if (!animFrames.length) return;
+    const fps = parseInt($('animFps').value, 10) || 12;
+    $('animPlay').textContent = Toolkit.T('ap.anim.pause', null, '⏸ 暂停');
+    animTimer = setInterval(() => {
+      animIdx = (animIdx + 1) % animFrames.length;
+      drawAnimFrame();
+    }, 1000 / fps);
+  }
+  function stopAnim() {
+    clearInterval(animTimer); animTimer = null;
+    $('animPlay').textContent = Toolkit.T('ap.anim.play', null, '▶ 播放');
+  }
 
   async function handleFiles(files) {
     if (!files.length) return;
@@ -242,6 +348,7 @@ Toolkit.injectTopbar('atlas-packer');
     if (rawImages.length) {
       log.ok(Toolkit.T('ap.log.loaded', { n: rawImages.length }, `加载完成 ${rawImages.length} 张`));
       renderFrameGrid();
+      setupAnim();
       await repack();
     }
   }
@@ -324,8 +431,12 @@ Toolkit.injectTopbar('atlas-packer');
       return true;
     });
     if (!fitItems.length) { $('exportBtn').disabled = true; $('previewArea').innerHTML = '<div class="preview-empty">所有图都太大,无法打包</div>'; return; }
-    const effectiveMax = Math.min(16384, Math.max(maxSize, largestDim));
-    if (effectiveMax > maxSize) {
+    // "fit one page" overrides the user's max side with the full 16384 cap so
+    // the smart packer crams everything into a single (minimally-sized) bin
+    // whenever it physically fits.
+    const fitOne = $('fitOnePage').checked;
+    const effectiveMax = fitOne ? 16384 : Math.min(16384, Math.max(maxSize, largestDim));
+    if (!fitOne && effectiveMax > maxSize) {
       log.warn(Toolkit.T('ap.warn.grewMax', { from: maxSize, to: effectiveMax }, `有图比设定的最大边 ${maxSize}px 大,已自动把图集上限放大到 ${effectiveMax}px 以便合并`));
     }
 
@@ -536,6 +647,9 @@ Toolkit.injectTopbar('atlas-packer');
   }
 
   function clearAll() {
+    stopAnim();
+    animFrames = [];
+    $('animPlayer').style.display = 'none';
     rawImages = []; packedBins = [];
     $('frameGrid').innerHTML = '';
     $('previewArea').innerHTML = '<div class="preview-empty" data-i18n="ap.preview.empty">拖一堆散图进来,Dobby 用 MaxRects 紧密打包成图集</div>';
