@@ -110,6 +110,22 @@
       <label data-i18n="sp.filename">文件名前缀</label>
       <input type="text" id="filename" value="spritesheet" />
     </div>
+    <div class="field">
+      <label data-i18n="sp.imgFormat.label">图片格式</label>
+      <select id="imgFormat">
+        <option value="png" data-i18n="sp.img.png">PNG(无损,最快,未优化)</option>
+        <option value="png-opt" data-i18n="sp.img.pngOpt">PNG · oxipng 优化(无损,更小)</option>
+        <option value="webp-lossless" data-i18n="sp.img.webpLossless">WebP 无损(通常比 PNG 小很多)</option>
+        <option value="lossless-min" data-i18n="sp.img.losslessMin">无损 · 自动选最小(oxipng PNG vs WebP 无损)</option>
+        <option value="webp-lossy" data-i18n="sp.img.webpLossy">WebP 有损(体积最小,带透明)</option>
+        <option value="avif" data-i18n="sp.img.avif">AVIF 有损(更小,较慢)</option>
+      </select>
+      <div class="info" id="imgFormatInfo" style="margin-top:4px; display:none" data-i18n="sp.imgFormat.info">非 PNG 首次使用会联网下载 WASM 编码器(之后缓存)。WebP/AVIF 带透明,Godot 4 / 现代浏览器原生支持。压缩失败会自动回退 PNG</div>
+    </div>
+    <div class="field" id="imgQualityRow" style="display:none">
+      <label data-i18n="sp.imgQuality.label">压缩质量 (1-100)</label>
+      <input type="number" id="imgQuality" value="85" min="1" max="100" />
+    </div>
     <label class="checkbox">
       <input type="checkbox" id="exportJson" checked />
       <span data-i18n="sp.exportJson">同时导出 JSON 元数据</span>
@@ -144,6 +160,7 @@
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/codecs.js"></script>
 <script>
 Toolkit.injectTopbar('sprite-packer');
 
@@ -502,36 +519,86 @@ Toolkit.injectTopbar('sprite-packer');
   $('exportJson').addEventListener('change', syncExportJsonUI);
   syncExportJsonUI();
 
+  // image-format selector: quality only for lossy; WASM-download note for non-PNG
+  $('imgFormat').addEventListener('change', () => {
+    const v = $('imgFormat').value;
+    $('imgQualityRow').style.display = (v === 'webp-lossy' || v === 'avif') ? '' : 'none';
+    $('imgFormatInfo').style.display = (v === 'png') ? 'none' : '';
+  });
+
+  // Encode the sheet to the chosen image format (reuses codecs.js WASM). Keeps
+  // the PNG size for a "原始 PNG → X (-N%)" comparison. Lossless options:
+  // png-opt (oxipng), webp-lossless, and lossless-min (encode both, ship smaller).
+  // Any codec failure falls back to PNG so an export never dies.
+  async function encodeSheetImage(canvas) {
+    const sel = $('imgFormat').value;
+    const q = Math.max(1, Math.min(100, parseInt($('imgQuality').value, 10) || 85)) / 100;
+    const pngBlob = await canvasToBlob(canvas, 'image/png');
+    const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+    const pngLen = pngBytes.length;
+    if (sel === 'png' || typeof Codecs === 'undefined') {
+      if (sel !== 'png') log.warn('压缩引擎未加载,改用 PNG');
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
+    }
+    try {
+      const id = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      if (sel === 'png-opt') { const opt = await Codecs.optimizePng(pngBytes, { level: 4 }); return { bytes: opt, ext: 'png', pngLen, label: 'oxipng PNG' }; }
+      if (sel === 'webp-lossy')    return { bytes: await Codecs.encodeWebp(id, { quality: q }), ext: 'webp', pngLen, label: 'WebP' };
+      if (sel === 'webp-lossless') return { bytes: await Codecs.encodeWebp(id, { lossless: true }), ext: 'webp', pngLen, label: 'WebP 无损' };
+      if (sel === 'avif')          return { bytes: await Codecs.encodeAvif(id, { quality: q }), ext: 'avif', pngLen, label: 'AVIF' };
+      if (sel === 'lossless-min') {
+        const [optPng, webpLL] = await Promise.all([Codecs.optimizePng(pngBytes, { level: 4 }), Codecs.encodeWebp(id, { lossless: true })]);
+        return webpLL.length < optPng.length
+          ? { bytes: webpLL, ext: 'webp', pngLen, label: 'WebP 无损 (自动)' }
+          : { bytes: optPng, ext: 'png', pngLen, label: 'oxipng PNG (自动)' };
+      }
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
+    } catch (e) {
+      log.warn(`图片压缩失败,回退 PNG: ${e.message}`);
+      return { bytes: pngBytes, ext: 'png', pngLen, label: 'PNG' };
+    }
+  }
+  function logSizeCompare(chosen, png, label) {
+    if (!label || label === 'PNG') return;
+    const pct = png > 0 ? Math.round((1 - chosen / png) * 100) : 0;
+    const sign = pct >= 0 ? '-' : '+';
+    log.ok(`图集体积: 原始 PNG ${Toolkit.fmtBytes(png)} → ${label} ${Toolkit.fmtBytes(chosen)} (${sign}${Math.abs(pct)}%)`);
+  }
+
   $('exportBtn').addEventListener('click', async () => {
     if (!packed) return;
     const name = ($('filename').value || 'spritesheet').replace(/[^\w-]/g, '_');
-    const blob = await canvasToBlob(packed.canvas, 'image/png');
     const fmt = $('exportJson').checked ? $('jsonFormat').value : null;
+    if ($('imgFormat').value !== 'png') log.dim(`压缩图集为 ${$('imgFormat').value}...`);
+    const r = await encodeSheetImage(packed.canvas);          // {bytes, ext, pngLen, label}
+    const imgName = `${name}.${r.ext}`;
+    // handoff keeps a PNG so downstream tools (which accept image/png) still match
+    try { handoff?.setBlob(await canvasToBlob(packed.canvas, 'image/png'), `${name}.png`); } catch (_) {}
 
-    // Godot SpriteFrames → bundle PNG + .tres into a ZIP (drops onto
+    // Godot SpriteFrames → bundle image + .tres into a ZIP (drops onto
     // AnimatedSprite2D; animations auto-grouped by filename prefix).
     if (fmt === 'godot') {
       const enc = new TextEncoder();
       const files = [
-        { name: `${name}.png`, data: new Uint8Array(await blob.arrayBuffer()) },
-        { name: `${name}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(name)) }
+        { name: imgName, data: r.bytes },
+        { name: `${name}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(imgName)) }
       ];
       download(makeZip(files), `${name}-godot.zip`);
-      handoff?.setBlob(blob, `${name}.png`);
       const anims = new Set(packed.frames.map(f => animNameOf(f.name))).size;
       log.ok(Toolkit.T('sp.log.godot', { name: `${name}-godot.zip`, anims, frames: packed.frames.length }, `已导出 ${name}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${packed.frames.length} 帧`));
+      logSizeCompare(r.bytes.length, r.pngLen, r.label);
       return;
     }
 
-    download(blob, `${name}.png`);
-    handoff?.setBlob(blob, `${name}.png`);
+    download(new Blob([r.bytes], { type: 'image/' + r.ext }), imgName);
     if (fmt) {
-      downloadJson(buildJson(name, fmt), `${name}.json`);
-      log.ok(`已导出 ${name}.png + ${name}.json`);
+      downloadJson(buildJson(name, fmt, imgName), `${name}.json`);
+      log.ok(`已导出 ${imgName} + ${name}.json`);
     } else {
       const f0 = packed.frames[0] || {};
-      log.ok(`已导出 ${name}.png (${packed.cols}列 × ${packed.rows}行, 单帧 ${f0.w || '?'}×${f0.h || '?'})`);
+      log.ok(`已导出 ${imgName} (${packed.cols}列 × ${packed.rows}行, 单帧 ${f0.w || '?'}×${f0.h || '?'})`);
     }
+    logSizeCompare(r.bytes.length, r.pngLen, r.label);
   });
 
   // animation name from frame filename: "attack_03"→attack, "run-2"→run
@@ -541,7 +608,7 @@ Toolkit.injectTopbar('sprite-packer');
   // Godot 4 SpriteFrames .tres — single page (sprite-packer always makes one
   // sheet), one AtlasTexture sub-resource per frame, grouped into named
   // animations by filename prefix. Speed taken from the FPS field.
-  function buildGodotSpriteFrames(name) {
+  function buildGodotSpriteFrames(imgName) {
     const frames = packed.frames;
     const fps = parseFloat($('videoFps').value) || 12;
     let sub = '';
@@ -561,16 +628,17 @@ Toolkit.injectTopbar('sprite-packer');
     });
     const loadSteps = 1 + frames.length + 1;
     return `[gd_resource type="SpriteFrames" load_steps=${loadSteps} format=3]\n\n` +
-      `[ext_resource type="Texture2D" path="res://${name}.png" id="1_atlas"]\n\n` +
+      `[ext_resource type="Texture2D" path="res://${imgName}" id="1_atlas"]\n\n` +
       sub +
       `[resource]\nanimations = [${anims.join(', ')}]\n`;
   }
 
-  function buildJson(name, fmt) {
+  function buildJson(name, fmt, imgName) {
     const { canvas, frames, cols, rows } = packed;
+    const img = imgName || `${name}.png`;
     const trimmed = (f) => f.w !== f.sourceW || f.h !== f.sourceH || f.offsetX !== 0 || f.offsetY !== 0;
     if (fmt === 'hash') {
-      const out = { frames: {}, meta: { app: 'sprite-packer', version: '1.0', image: `${name}.png`, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
+      const out = { frames: {}, meta: { app: 'sprite-packer', version: '1.0', image: img, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
       frames.forEach(f => {
         out.frames[f.name + '.png'] = {
           frame: { x: f.x, y: f.y, w: f.w, h: f.h },
@@ -590,11 +658,11 @@ Toolkit.injectTopbar('sprite-packer');
           spriteSourceSize: { x: f.offsetX, y: f.offsetY, w: f.w, h: f.h },
           sourceSize: { w: f.sourceW, h: f.sourceH }
         })),
-        meta: { app: 'sprite-packer', image: `${name}.png`, size: { w: canvas.width, h: canvas.height }, scale: '1' }
+        meta: { app: 'sprite-packer', image: img, size: { w: canvas.width, h: canvas.height }, scale: '1' }
       };
     }
     return {
-      image: `${name}.png`, width: canvas.width, height: canvas.height,
+      image: img, width: canvas.width, height: canvas.height,
       cols, rows, frameCount: frames.length,
       frames: frames.map(f => ({
         name: f.name, x: f.x, y: f.y, w: f.w, h: f.h,

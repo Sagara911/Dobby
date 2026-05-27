@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v72",
+      "title": "🎬 Sprite Packer 也接上无损/WebP/AVIF 压缩链路",
+      "date": "2026-05-27",
+      "items": [
+        "之前 sprite-packer 只出 PNG。现在导出区加「图片格式」:PNG / **PNG·oxipng** / **WebP 无损** / **无损自动选最小** / WebP 有损 / AVIF,和 atlas-packer 一致",
+        "导出 Godot SpriteFrames / TexturePacker JSON 时,图片文件名和 .tres 的 ext_resource、JSON 的 meta.image 都会跟着扩展名走(实测 Godot → res://spritesheet.webp)",
+        "实测帧序列:原始 PNG 2.9KB → 自动选 WebP 无损 1.4KB (-52%)",
+        "至此两个打包器(atlas-packer 紧密打包 / sprite-packer 规整网格)喂 Godot 的源图都能压到最小无损"
+      ]
+    },
+    {
       "version": "dobby-v71",
       "title": "🧱 Atlas Packer 无损压缩补强:oxipng PNG + 无损自动选最小",
       "date": "2026-05-27",
