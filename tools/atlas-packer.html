@@ -245,6 +245,20 @@
         <option value="godot" data-i18n="ap.fmt.godot">Godot AtlasTexture (.tres ZIP,原生拖入)</option>
       </select>
     </div>
+    <div class="field">
+      <label data-i18n="ap.imgFormat.label">图集图片格式</label>
+      <select id="imgFormat">
+        <option value="png" data-i18n="ap.img.png">PNG(无损,最兼容)</option>
+        <option value="webp-lossy" data-i18n="ap.img.webpLossy">WebP 有损(体积最小,带透明)</option>
+        <option value="webp-lossless" data-i18n="ap.img.webpLossless">WebP 无损</option>
+        <option value="avif" data-i18n="ap.img.avif">AVIF 有损(更小,较慢)</option>
+      </select>
+      <div class="info" id="imgFormatInfo" style="margin-top:4px; display:none" data-i18n="ap.imgFormat.info">非 PNG 首次使用会联网下载 WASM 编码器(之后缓存)。WebP/AVIF 都带透明通道,Godot 4 / Unity / Cocos / 现代浏览器都原生支持</div>
+    </div>
+    <div class="field" id="imgQualityRow" style="display:none">
+      <label data-i18n="ap.imgQuality.label">压缩质量 (1-100)</label>
+      <input type="number" id="imgQuality" value="85" min="1" max="100" />
+    </div>
 
     <button id="exportBtn" data-i18n="ap.exportBtn" disabled>导出图集 + 元数据</button>
     <button id="clearBtn" class="secondary" data-i18n="common.clear">清空</button>
@@ -299,6 +313,7 @@
 </div>
 
 <script src="../assets/shared.js"></script>
+<script src="../assets/codecs.js"></script>
 <script type="module">
 import { MaxRectsPacker } from 'https://esm.sh/maxrects-packer@2.7.3';
 
@@ -349,6 +364,13 @@ Toolkit.injectTopbar('atlas-packer');
   });
   $('exportBtn').addEventListener('click', doExport);
   $('clearBtn').addEventListener('click', clearAll);
+  // image-format selector: quality only matters for lossy (webp-lossy / avif);
+  // show a one-time WASM-download note for any non-PNG choice.
+  $('imgFormat').addEventListener('change', () => {
+    const v = $('imgFormat').value;
+    $('imgQualityRow').style.display = (v === 'webp-lossy' || v === 'avif') ? '' : 'none';
+    $('imgFormatInfo').style.display = (v === 'png') ? 'none' : '';
+  });
 
   // ── animation preview ──
   let animFrames = [];   // ImageBitmap[] in natural order
@@ -909,62 +931,107 @@ Toolkit.injectTopbar('atlas-packer');
     return out;
   }
 
+  // Encode an atlas canvas to the user-chosen image format. Always also keeps
+  // the PNG size around so doExport can show a "PNG → WebP (-N%)" comparison.
+  // On any WASM-codec failure it falls back to PNG so an export never dies.
+  async function encodeAtlasImage(canvas) {
+    const sel = $('imgFormat').value;
+    const q = Math.max(1, Math.min(100, parseInt($('imgQuality').value, 10) || 85)) / 100;
+    const pngBlob = await canvasToBlob(canvas, 'image/png');
+    const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+    if (sel === 'png' || typeof Codecs === 'undefined') {
+      if (sel !== 'png') log.warn(Toolkit.T('ap.warn.noCodecs', null, '压缩引擎未加载,改用 PNG'));
+      return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
+    }
+    try {
+      const id = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      let bytes, ext;
+      if (sel === 'webp-lossy')         { bytes = await Codecs.encodeWebp(id, { quality: q }); ext = 'webp'; }
+      else if (sel === 'webp-lossless') { bytes = await Codecs.encodeWebp(id, { lossless: true }); ext = 'webp'; }
+      else if (sel === 'avif')          { bytes = await Codecs.encodeAvif(id, { quality: q }); ext = 'avif'; }
+      else return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
+      return { bytes, ext, pngLen: pngBytes.length };
+    } catch (e) {
+      log.warn(Toolkit.T('ap.warn.imgEncodeFallback', { msg: e.message }, `图片压缩失败,回退 PNG: ${e.message}`));
+      return { bytes: pngBytes, ext: 'png', pngLen: pngBytes.length };
+    }
+  }
+  function logSizeCompare(totChosen, totPng, ext) {
+    if (ext === 'png') return;
+    const pct = totPng > 0 ? Math.round((1 - totChosen / totPng) * 100) : 0;
+    log.ok(Toolkit.T('ap.log.sizeCompare',
+      { ext: ext.toUpperCase(), png: fmtBytes(totPng), chosen: fmtBytes(totChosen), pct },
+      `图集体积: PNG ${fmtBytes(totPng)} → ${ext.toUpperCase()} ${fmtBytes(totChosen)} (-${pct}%)`));
+  }
+
   async function doExport() {
     if (!packedBins.length) return;
     const prefix = ($('filename').value || 'atlas').replace(/[^\w-]/g, '_');
     const fmt = $('format').value;
+    const imgSel = $('imgFormat').value;
+    if (imgSel !== 'png') log.dim(Toolkit.T('ap.log.encodingImg', { fmt: imgSel }, `压缩图集为 ${imgSel}...`));
 
     try {
-      // ── Godot: ONE SpriteFrames .tres across all pages + all page PNGs in a ZIP ──
+      // ── Godot: ONE SpriteFrames .tres across all pages + all page images in a ZIP ──
       if (fmt === 'godot') {
         const enc = new TextEncoder();
         const fps = parseInt($('animFps').value, 10) || 12;
-        const pngNames = packedBins.map((b, i) => packedBins.length > 1 ? `${prefix}-${i}.png` : `${prefix}.png`);
         const files = [];
+        const imgNames = [];
+        let totChosen = 0, totPng = 0, chosenExt = 'png';
         for (let i = 0; i < packedBins.length; i++) {
-          const blob = await canvasToBlob(packedBins[i].canvas, 'image/png');
-          files.push({ name: pngNames[i], data: new Uint8Array(await blob.arrayBuffer()) });
+          const r = await encodeAtlasImage(packedBins[i].canvas);
+          const nm = (packedBins.length > 1 ? `${prefix}-${i}` : prefix) + '.' + r.ext;
+          imgNames.push(nm);
+          files.push({ name: nm, data: r.bytes });
+          totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
         }
         let normalNames = null;
         if (hasNormals) {
-          normalNames = packedBins.map((b, i) => packedBins.length > 1 ? `${prefix}-${i}_n.png` : `${prefix}_n.png`);
+          normalNames = [];
           for (let i = 0; i < packedBins.length; i++) {
-            const blob = await canvasToBlob(packedBins[i].normalCanvas, 'image/png');
-            files.push({ name: normalNames[i], data: new Uint8Array(await blob.arrayBuffer()) });
+            const r = await encodeAtlasImage(packedBins[i].normalCanvas);
+            const nm = (packedBins.length > 1 ? `${prefix}-${i}_n` : `${prefix}_n`) + '.' + r.ext;
+            normalNames.push(nm);
+            files.push({ name: nm, data: r.bytes });
           }
         }
-        files.push({ name: `${prefix}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(packedBins, pngNames, fps, normalNames)) });
+        files.push({ name: `${prefix}_frames.tres`, data: enc.encode(buildGodotSpriteFrames(packedBins, imgNames, fps, normalNames)) });
         const zip = makeZip(files);
         download(zip, `${prefix}-godot.zip`);
         const anims = new Set(packedBins.flatMap(b => b.frames.map(f => animNameOf(f.name)))).size;
         const frameCount = packedBins.reduce((s, b) => s + b.frames.length, 0);
         const normNote = hasNormals ? Toolkit.T('ap.log.godotNormalNote', null, ' · 含法线图 (CanvasTexture 绑定)') : '';
         log.ok(Toolkit.T('ap.log.exportedGodotSF', { name: `${prefix}-godot.zip`, anims, frames: frameCount }, `导出 ${prefix}-godot.zip · SpriteFrames 含 ${anims} 个动画 / ${frameCount} 帧`) + normNote);
+        logSizeCompare(totChosen, totPng, chosenExt);
         return;
       }
 
-      // ── other formats: per-page PNG + sidecar metadata ──
+      // ── other formats: per-page image + sidecar metadata ──
+      let totChosen = 0, totPng = 0, chosenExt = 'png';
       for (let i = 0; i < packedBins.length; i++) {
         const bin = packedBins[i];
         const suffix = packedBins.length > 1 ? `-${i}` : '';
-        const pngName = `${prefix}${suffix}.png`;
-        const blob = await canvasToBlob(bin.canvas, 'image/png');
-        download(blob, pngName);
-        // normal atlas rides along as a sibling PNG so it isn't lost in non-Godot formats
+        const r = await encodeAtlasImage(bin.canvas);
+        const imgName = `${prefix}${suffix}.${r.ext}`;
+        download(new Blob([r.bytes], { type: 'image/' + r.ext }), imgName);
+        totChosen += r.bytes.length; totPng += r.pngLen; chosenExt = r.ext;
+        // normal atlas rides along as a sibling image so it isn't lost in non-Godot formats
         if (hasNormals && bin.normalCanvas) {
-          const nName = `${prefix}${suffix}_n.png`;
-          const nblob = await canvasToBlob(bin.normalCanvas, 'image/png');
-          download(nblob, nName);
+          const rn = await encodeAtlasImage(bin.normalCanvas);
+          const nName = `${prefix}${suffix}_n.${rn.ext}`;
+          download(new Blob([rn.bytes], { type: 'image/' + rn.ext }), nName);
           log.ok(Toolkit.T('ap.log.exportedNormal', { name: nName }, `导出法线图 ${nName}`));
         }
         let metaText, metaName;
-        if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, pngName);  metaName = `${prefix}${suffix}.json`; }
-        else if (fmt === 'json-array') { metaText = buildJsonArray(bin, pngName); metaName = `${prefix}${suffix}.json`; }
-        else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, pngName);  metaName = `${prefix}${suffix}.plist`; }
-        else if (fmt === 'css')   { metaText = buildCss(bin, pngName, prefix); metaName = `${prefix}${suffix}.css`; }
+        if (fmt === 'json-hash')  { metaText = buildJsonHash(bin, imgName);  metaName = `${prefix}${suffix}.json`; }
+        else if (fmt === 'json-array') { metaText = buildJsonArray(bin, imgName); metaName = `${prefix}${suffix}.json`; }
+        else if (fmt === 'cocos') { metaText = buildCocosPlist(bin, imgName);  metaName = `${prefix}${suffix}.plist`; }
+        else if (fmt === 'css')   { metaText = buildCss(bin, imgName, prefix); metaName = `${prefix}${suffix}.css`; }
         downloadText(metaText, metaName, 'text/plain');
-        log.ok(Toolkit.T('ap.log.exported', { png: pngName, meta: metaName }, `导出 ${pngName} + ${metaName}`));
+        log.ok(Toolkit.T('ap.log.exported', { png: imgName, meta: metaName }, `导出 ${imgName} + ${metaName}`));
       }
+      logSizeCompare(totChosen, totPng, chosenExt);
     } catch (e) {
       log.err(e.message); console.error(e);
     }

@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "dobby-v68",
+      "title": "🧱 Atlas Packer 直接出 WebP/AVIF 图集(体积暴降,带透明)",
+      "date": "2026-05-27",
+      "items": [
+        "导出区新增「图集图片格式」:**PNG / WebP 有损 / WebP 无损 / AVIF**,复用本地 WASM 编码引擎(首次用联网下编码器,之后缓存)",
+        "WebP/AVIF **都带透明通道**,Godot 4 / Unity / Cocos / 现代浏览器都原生支持 —— 序列帧图集体积常能比 PNG 小 5–10 倍",
+        "导出时直接打印 **PNG vs 所选格式的体积对比**(例:PNG 1.8MB → WebP 240KB -87%),压到多小一目了然",
+        "所有元数据格式(TexturePacker JSON / Cocos plist / CSS / **Godot .tres**)都会跟着引用正确的图片文件名(.webp/.avif),Godot 的 ext_resource 路径也对",
+        "压缩失败会自动回退 PNG,绝不会导出坏图(沿用全站的输出校验策略)"
+      ]
+    },
+    {
       "version": "dobby-v67",
       "date": "2026-05-27",
       "title": "🐛 修复:奇数尺寸视频剪辑/导出 MP4 报错",
