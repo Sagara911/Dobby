@@ -161,6 +161,105 @@
   @media (prefers-reduced-motion: reduce) {
     .hero-mascot { animation: none; }
   }
+  /* ===== Hero v4: 2-column layout (mascot+text left, live demo right) =====
+     The 2-col inner grid sits inside the existing flex-column hero so the
+     scroll-hint anchor still pins to the bottom and the orbs still fill the box.
+     Stacks to single column on narrow viewports. */
+  .hero-v4 .hero-inner {
+    display: grid !important;        /* beats the .hero > * display:block rule */
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: clamp(24px, 5vw, 80px);
+    width: min(1180px, 100%);
+    align-items: center;
+    text-align: left;
+  }
+  .hero-v4 .hero-left { display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 2vh, 26px); text-align: center; }
+  .hero-v4 .hero-right { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  @media (max-width: 880px) {
+    .hero-v4 .hero-inner { grid-template-columns: 1fr; gap: 32px; }
+    .hero-v4 .hero-right { order: -1; }   /* on mobile, show demo above mascot — keeps mascot near tagline */
+  }
+  /* Demo canvas housing — soft glass card mirroring the topbar's frosted feel */
+  .hero-demo-wrap {
+    position: relative;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.12),
+      0 24px 60px -20px rgba(var(--jade-rgb), 0.28),
+      0 6px 18px rgba(0,0,0,0.32);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: box-shadow 0.4s ease;
+  }
+  :root[data-theme="light"] .hero-demo-wrap {
+    background: rgba(255,255,255,0.65);
+    border-color: rgba(0,0,0,0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.7),
+      0 24px 60px -20px rgba(var(--jade-rgb), 0.18),
+      0 6px 18px rgba(0,0,0,0.06);
+  }
+  #demoCanvas {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    aspect-ratio: 3 / 2;
+    background:
+      linear-gradient(45deg, rgba(255,255,255,0.025) 25%, transparent 25%) 0 0 / 16px 16px,
+      linear-gradient(-45deg, rgba(255,255,255,0.025) 25%, transparent 25%) 0 8px / 16px 16px,
+      rgba(0,0,0,0.18);
+    border-radius: 10px;
+  }
+  .hero-demo-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace;
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+  .hero-demo-label strong { color: var(--accent); font-weight: 600; }
+  /* Typewriter caret — blinks at the end of the cycling subtitle */
+  #heroSub { font-family: ui-monospace, Consolas, "Microsoft YaHei", monospace; min-height: 1.6em; letter-spacing: 0.02em; }
+  .typewriter-caret {
+    display: inline-block;
+    width: 0.55ch;
+    height: 1.05em;
+    margin-left: 1px;
+    background: var(--accent);
+    vertical-align: -0.15em;
+    animation: typewriter-caret-blink 1s steps(1) infinite;
+  }
+  @keyframes typewriter-caret-blink { 50% { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) {
+    .typewriter-caret { animation: none; background: var(--accent); }
+  }
+  /* Mascot interactive: kept the existing bob; JS adds wiggle/cheer classes on click */
+  .hero-mascot { cursor: grab; }
+  .hero-mascot.active { cursor: grabbing; }
+  .hero-mascot.wiggle { animation: hero-mascot-wiggle 0.5s ease-out !important; }
+  .hero-mascot.cheer  { animation: hero-mascot-cheer 0.8s ease-out !important; filter: drop-shadow(0 0 30px rgba(var(--champagne-rgb), 0.8)) !important; }
+  @keyframes hero-mascot-wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-14deg) scale(1.08); }
+    50% { transform: rotate(12deg) scale(1.08); }
+    75% { transform: rotate(-8deg) scale(1.04); }
+  }
+  @keyframes hero-mascot-cheer {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-40px) scale(1.18) rotate(-8deg); }
+    60% { transform: translateY(-30px) scale(1.22) rotate(8deg); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* Confetti (mascot 5-click egg + Konami) */
+  .dobby-confetti {
+    position: fixed; pointer-events: none; z-index: 9999;
+    user-select: none;
+    will-change: transform, opacity;
+  }
   .hero h1 {
     max-width: 900px;
     /* MUCH bigger than v2 — Dobby word stands on its own, no "叫我" prefix */
@@ -950,11 +1049,21 @@
 <body>
 
 <main>
-  <section class="hero hero-v3">
+  <section class="hero hero-v4">
     <div class="hero-orbs" aria-hidden="true"></div>
-    <span class="hero-mascot" aria-hidden="true">🧦</span>
-    <h1 data-i18n="home.hero.title">Dobby</h1>
-    <p class="hero-sub" id="heroSub" data-i18n="home.hero.subMinimal">你的本地素材精灵 · 文件不上传</p>
+    <div class="hero-inner">
+      <div class="hero-left">
+        <span class="hero-mascot" id="heroMascot" aria-hidden="true">🧦</span>
+        <h1 data-i18n="home.hero.title">Dobby</h1>
+        <p class="hero-sub" id="heroSub"><span id="typewriterSub"></span><span class="typewriter-caret"></span></p>
+      </div>
+      <div class="hero-right">
+        <div class="hero-demo-wrap">
+          <canvas id="demoCanvas" width="360" height="240" aria-label="atlas-packer 实时演示"></canvas>
+        </div>
+        <div class="hero-demo-label"><strong>atlas-packer</strong> · MaxRects 实时演示</div>
+      </div>
+    </div>
     <a class="hero-scroll-hint" href="#toolsSection" aria-label="向下看工具">
       <span class="arrow">↓</span>
     </a>
@@ -1404,6 +1513,251 @@
     document.addEventListener('keydown', onNewsKey);
   }
   maybeShowNews();
+</script>
+
+<!-- Hero v4 interactions: typewriter subtitle, mascot follow + click, scroll color theater, atlas-packer demo canvas -->
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ===== E. Typewriter subtitle — cycles 4 identity lines =====
+  const TW_ZH = ['你的本地素材精灵', '文件不上传 · 处理全在你机器上', '47 个工具 · 全免费', 'Dobby is free 🧦'];
+  const TW_EN = ['Your local asset elf', 'No uploads · runs in your browser', '47 tools · all free', 'Dobby is free 🧦'];
+  const sub = $('typewriterSub');
+  if (sub) {
+    const getLines = () => (localStorage.getItem('toolkit-lang') === 'en') ? TW_EN : TW_ZH;
+    let lines = getLines();
+    if (reduceMotion) { sub.textContent = lines[0]; }
+    else {
+      let li = 0, ci = 0, deleting = false;
+      const tick = () => {
+        lines = getLines();
+        const line = lines[li % lines.length];
+        if (!deleting) {
+          sub.textContent = line.slice(0, ci);
+          ci++;
+          if (ci > line.length) { deleting = true; setTimeout(tick, 1800); return; }
+          setTimeout(tick, 55 + Math.random() * 50);
+        } else {
+          ci--;
+          sub.textContent = line.slice(0, ci);
+          if (ci <= 0) { deleting = false; ci = 0; li = (li + 1) % lines.length; setTimeout(tick, 200); return; }
+          setTimeout(tick, 28);
+        }
+      };
+      tick();
+    }
+  }
+
+  // ===== C. Mascot interactive — cursor follow + click states + Konami =====
+  const mascot = $('heroMascot');
+  if (mascot && !reduceMotion) {
+    let tx = 0, ty = 0, mx = 0, my = 0;
+    const RANGE = 22, INFLUENCE = 0.06;
+    window.addEventListener('mousemove', e => {
+      const r = mascot.getBoundingClientRect();
+      if (!r.width) return;
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const dx = e.clientX - cx, dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const pull = Math.min(RANGE, dist * INFLUENCE);
+      tx = (dx / dist) * pull;
+      ty = (dy / dist) * pull;
+    });
+    (function animate() {
+      mx += (tx - mx) * 0.12;
+      my += (ty - my) * 0.12;
+      const rot = mx * 0.35;
+      const interacting = Math.abs(mx) > 1.2 || Math.abs(my) > 1.2;
+      if (interacting && !mascot.classList.contains('wiggle') && !mascot.classList.contains('cheer')) {
+        mascot.style.animation = 'none';
+        mascot.style.transform = `translate(${mx}px, ${my}px) rotate(${rot}deg)`;
+      } else if (!mascot.classList.contains('wiggle') && !mascot.classList.contains('cheer')) {
+        mascot.style.animation = '';
+        mascot.style.transform = '';
+      }
+      requestAnimationFrame(animate);
+    })();
+  }
+  function sockConfetti(n) {
+    const EMOJI = ['🧦','🧦','🧦','✨','💫','🌟'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('span');
+      el.className = 'dobby-confetti';
+      el.textContent = EMOJI[(Math.random() * EMOJI.length) | 0];
+      el.style.left = (50 + (Math.random() - 0.5) * 40) + '%';
+      el.style.top = '50%';
+      el.style.fontSize = (16 + Math.random() * 24) + 'px';
+      document.body.appendChild(el);
+      const dx = (Math.random() - 0.5) * 800;
+      const dy = -(200 + Math.random() * 400);
+      const rot = (Math.random() - 0.5) * 720;
+      const dur = 1400 + Math.random() * 900;
+      el.animate([
+        { transform: 'translate(0,0) rotate(0)', opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 1, offset: 0.6 },
+        { transform: `translate(${dx * 1.2}px, ${dy + 600}px) rotate(${rot * 1.2}deg)`, opacity: 0 }
+      ], { duration: dur, easing: 'cubic-bezier(.2,.7,.4,1)' }).onfinish = () => el.remove();
+    }
+  }
+  if (mascot) {
+    let clickCount = 0, lastClick = 0;
+    mascot.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastClick > 1500) clickCount = 0;
+      clickCount++;
+      lastClick = now;
+      mascot.classList.remove('wiggle');
+      void mascot.offsetWidth;
+      mascot.classList.add('wiggle');
+      setTimeout(() => mascot.classList.remove('wiggle'), 520);
+      if (clickCount >= 5) {
+        clickCount = 0;
+        mascot.classList.add('cheer');
+        setTimeout(() => mascot.classList.remove('cheer'), 820);
+        sockConfetti(40);
+      }
+    });
+    const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let kbuf = [];
+    window.addEventListener('keydown', e => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      kbuf.push(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+      if (kbuf.length > KONAMI.length) kbuf.shift();
+      if (KONAMI.every((k, i) => k === kbuf[i])) { sockConfetti(80); kbuf = []; }
+    });
+  }
+
+  // ===== D. Scroll-driven category color theater =====
+  //   Observe the per-category .cat-anchor[data-cat] anchors that the tool
+  //   grid generator emits. When one dominates the viewport, lerp the global
+  //   accent toward that category's color at 60fps so shared.js's slower
+  //   cycle gets overwritten while we're driving.
+  const CAT_COLORS = { image:[84,156,255], anim:[168,110,232], av:[255,110,130], code:[245,165,75], audit:[80,220,200] };
+  const root = document.documentElement.style;
+  const curRgb = [49, 245, 156];
+  let tgtRgb = [49, 245, 156];
+  let scrollDriven = false;
+  (function tween() {
+    if (scrollDriven) {
+      for (let i = 0; i < 3; i++) curRgb[i] += (tgtRgb[i] - curRgb[i]) * 0.06;
+      const r = Math.round(curRgb[0]), g = Math.round(curRgb[1]), b = Math.round(curRgb[2]);
+      const rgb = `${r}, ${g}, ${b}`;
+      root.setProperty('--jade-rgb', rgb);
+      root.setProperty('--jade', `rgb(${rgb})`);
+      root.setProperty('--accent', `rgb(${rgb})`);
+      root.setProperty('--jade-soft', `rgba(${rgb}, 0.12)`);
+      root.setProperty('--jade-glow', `rgba(${rgb}, 0.35)`);
+    }
+    requestAnimationFrame(tween);
+  })();
+  function attachCatObserver() {
+    const anchors = document.querySelectorAll('.cat-anchor[data-cat]');
+    if (!anchors.length) { setTimeout(attachCatObserver, 200); return; }
+    const obs = new IntersectionObserver(entries => {
+      let best = null;
+      entries.forEach(e => {
+        if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
+      });
+      if (best && best.intersectionRatio > 0.25) {
+        const cat = best.target.dataset.cat;
+        if (CAT_COLORS[cat]) { tgtRgb = CAT_COLORS[cat].slice(); scrollDriven = true; }
+      }
+    }, { threshold: [0.1, 0.25, 0.5, 0.75] });
+    anchors.forEach(a => obs.observe(a));
+  }
+  attachCatObserver();
+  window.addEventListener('scroll', () => { if (window.scrollY < 80) scrollDriven = false; }, { passive: true });
+
+  // ===== B. Live atlas-packer demo canvas =====
+  const cv = $('demoCanvas');
+  if (cv && !reduceMotion) {
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const PAL = ['rgba(84,156,255,0.92)','rgba(168,110,232,0.92)','rgba(255,110,130,0.92)','rgba(245,165,75,0.92)','rgba(80,220,200,0.92)','rgba(49,245,156,0.92)'];
+    const PAD = 18, SX = PAD, SY = PAD, SW = W - PAD * 2, SH = H - PAD * 2;
+    function randomLayout() {
+      const n = 4 + ((Math.random() * 3) | 0);
+      const rects = [];
+      let sY = 0, sH = 0, sX = 0;
+      for (let i = 0; i < n; i++) {
+        const w = 50 + Math.round(Math.random() * 80);
+        const h = 30 + Math.round(Math.random() * 60);
+        if (sX + w > SW) { sY += sH + 4; sH = 0; sX = 0; }
+        if (sY + h > SH) break;
+        rects.push({ w, h, fx: SX + sX, fy: SY + sY, sx: Math.random() < 0.5 ? -w - 30 : W + 30, sy: Math.random() * H, x: 0, y: 0, color: PAL[i % PAL.length], progress: 0 });
+        sX += w + 4; if (h > sH) sH = h;
+      }
+      rects.forEach(r => { r.x = r.sx; r.y = r.sy; });
+      return rects;
+    }
+    function roundRect(c, x, y, w, h, r) {
+      c.beginPath(); c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+    }
+    let rects = randomLayout(), phase = 'packing', phaseT = 0;
+    const PACKING = 90, SETTLED = 60, EXITING = 35;
+    (function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.fillRect(SX, SY, SW, SH);
+      ctx.strokeRect(SX + 0.5, SY + 0.5, SW - 1, SH - 1);
+      phaseT++;
+      if (phase === 'packing') {
+        const t = Math.min(1, phaseT / PACKING);
+        rects.forEach((r, i) => {
+          const delay = i * 0.08, local = Math.max(0, Math.min(1, (t - delay) / (1 - delay)));
+          const e = 1 - Math.pow(1 - local, 3);
+          r.x = r.sx + (r.fx - r.sx) * e;
+          r.y = r.sy + (r.fy - r.sy) * e;
+          r.progress = e;
+        });
+        if (t >= 1) { phase = 'settled'; phaseT = 0; }
+      } else if (phase === 'settled') {
+        if (phaseT >= SETTLED) { phase = 'exiting'; phaseT = 0; }
+      } else if (phase === 'exiting') {
+        const t = Math.min(1, phaseT / EXITING), e = t * t;
+        rects.forEach((r, i) => {
+          if (r.exitX === undefined) { r.exitX = (i % 2 === 0 ? -r.w - 30 : W + 30); r.exitY = r.fy + (Math.random() - 0.5) * 60; }
+          r.x = r.fx + (r.exitX - r.fx) * e;
+          r.y = r.fy + (r.exitY - r.fy) * e;
+          r.progress = 1 - e;
+        });
+        if (t >= 1) { rects = randomLayout(); phase = 'packing'; phaseT = 0; }
+      }
+      rects.forEach(r => {
+        ctx.globalAlpha = phase === 'exiting' ? r.progress : 1;
+        if (phase !== 'exiting') { ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2; } else { ctx.shadowBlur = 0; }
+        roundRect(ctx, r.x, r.y, r.w, r.h, 4);
+        ctx.fillStyle = r.color; ctx.fill();
+        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1; ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+      if (phase === 'packing') {
+        const t = phaseT / PACKING, lineY = SY + SH * t;
+        const grad = ctx.createLinearGradient(0, lineY - 8, 0, lineY + 8);
+        grad.addColorStop(0, 'rgba(49,245,156,0)');
+        grad.addColorStop(0.5, 'rgba(49,245,156,0.6)');
+        grad.addColorStop(1, 'rgba(49,245,156,0)');
+        ctx.fillStyle = grad; ctx.fillRect(SX, lineY - 8, SW, 16);
+      }
+      requestAnimationFrame(draw);
+    })();
+  } else if (cv) {
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(18, 18, cv.width - 36, cv.height - 36);
+    const PAL = ['#5c9cff','#a86ee8','#ff6e82','#f5a54b','#50dcc8'];
+    const layout = [[0,0,80,40],[84,0,60,40],[0,44,140,30],[0,78,80,40],[84,78,60,40]];
+    layout.forEach((l, i) => { ctx.fillStyle = PAL[i]; ctx.fillRect(20 + l[0], 20 + l[1], l[2], l[3]); });
+  }
+})();
 </script>
 </body>
 </html>
