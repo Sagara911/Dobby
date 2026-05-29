@@ -2203,6 +2203,13 @@
 
   // ---------- minimal ZIP writer (STORE only — fine for PNGs which are already compressed) ----------
   // files: [{ name: string, data: Uint8Array }]
+  // - Sets the UTF-8 filename flag (GPBF bit 11 = 0x0800) so Windows Explorer
+  //   and other locale-aware extractors don't mis-decode CJK filenames as the
+  //   local codepage (gives lossless 中文名 + avoids the "garbled chars contain
+  //   illegal Windows chars → refuses to extract" failure mode).
+  // - Dedupes filenames in-place (a.png + a.png → a.png + a (2).png) since
+  //   duplicate names in a ZIP either silently overwrite or are rejected by
+  //   some extractors.
   function makeZip(files) {
     const enc = new TextEncoder();
     const chunks = [];
@@ -2212,17 +2219,33 @@
     const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
     const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
 
-    for (const f of files) {
+    // Dedupe filenames so an extractor never sees the same entry twice.
+    const seenNames = new Set();
+    const dedupedFiles = files.map(f => {
+      let nm = f.name;
+      if (seenNames.has(nm)) {
+        const extM = nm.match(/\.[^./]+$/);
+        const ext = extM ? extM[0] : '';
+        const base = ext ? nm.slice(0, -ext.length) : nm;
+        let i = 2;
+        while (seenNames.has(`${base} (${i})${ext}`)) i++;
+        nm = `${base} (${i})${ext}`;
+      }
+      seenNames.add(nm);
+      return { name: nm, data: f.data };
+    });
+
+    for (const f of dedupedFiles) {
       const nameBytes = enc.encode(f.name);
       const crc = crc32(f.data);
       const size = f.data.length;
 
-      // local file header
+      // local file header — flags = 0x0800 (UTF-8 filename)
       const lh = new Uint8Array(30 + nameBytes.length);
       const dv = new DataView(lh.buffer);
       dv.setUint32(0, 0x04034b50, true);
       dv.setUint16(4, 20, true);
-      dv.setUint16(6, 0, true);
+      dv.setUint16(6, 0x0800, true);
       dv.setUint16(8, 0, true);  // method = store
       dv.setUint16(10, dosTime, true);
       dv.setUint16(12, dosDate, true);
@@ -2234,13 +2257,13 @@
       lh.set(nameBytes, 30);
       chunks.push(lh, f.data);
 
-      // central directory entry
+      // central directory entry — same UTF-8 filename flag
       const cd = new Uint8Array(46 + nameBytes.length);
       const cdv = new DataView(cd.buffer);
       cdv.setUint32(0, 0x02014b50, true);
       cdv.setUint16(4, 20, true);
       cdv.setUint16(6, 20, true);
-      cdv.setUint16(8, 0, true);
+      cdv.setUint16(8, 0x0800, true);
       cdv.setUint16(10, 0, true);
       cdv.setUint16(12, dosTime, true);
       cdv.setUint16(14, dosDate, true);

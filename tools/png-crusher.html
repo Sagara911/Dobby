@@ -601,7 +601,15 @@ Toolkit.injectTopbar('png-crusher');
     // show batch download tip when there are multiple crushed images
     const crushedCount = items.filter(x => x.crushedBlob).length;
     $('batchTip').style.display = crushedCount >= 2 ? 'flex' : 'none';
+    // Auto-select the first crushed row so the "📤 结果下一步" dropdown lights
+    // up without requiring an extra click. The selectRow() call inside is what
+    // pushes the blob into the handoff controller — otherwise currentBlob stays
+    // null and the dropdown button stays disabled.
     if (selectedIdx >= 0) selectRow(selectedIdx);
+    else {
+      const firstCrushed = items.findIndex(x => x.crushedBlob);
+      if (firstCrushed >= 0) selectRow(firstCrushed);
+    }
   });
 
   // inline ZIP shortcut from the batch tip

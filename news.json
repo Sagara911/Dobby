@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v74",
+      "title": "🐛 修复:批量 ZIP 解压不开(中文文件名)+ PNG 压缩后发不到其它工具",
+      "date": "2026-05-27",
+      "items": [
+        "**全站 ZIP 修复**:`makeZip` 之前没设 UTF-8 文件名标记(GPBF bit 11),Windows 资源管理器把中文名当 GBK 读 → 乱码 + 可能含非法字符 → 拒绝解压。现在标记设上 0x0800,中文名全程无损",
+        "**ZIP 同名文件去重**:之前两张 `图标.png` 进 ZIP 是真同名 → 部分解压器直接报错。现在自动改成 `图标.png` + `图标 (2).png`",
+        "影响 **所有用 makeZip 的工具**:png-crusher / atlas-packer / sprite-packer / video-toolkit 批量 / image-optimizer / zip-packer 等,全部一起修",
+        "**png-crusher Bug**:批量压缩完没点任何行 → 「📤 结果下一步」按钮一直灰着。现在压缩完会自动选中第一张已压缩的图,handoff 立刻就绪"
+      ]
+    },
+    {
       "version": "dobby-v73",
       "title": "🎬 Sprite Packer 也加 libGDX / Spine (.atlas) 导出",
       "date": "2026-05-27",
