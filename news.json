@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v75",
+      "title": "🐛 修复:压缩类工具必须先下载才能发到下一个工具",
+      "date": "2026-05-27",
+      "items": [
+        "全站审计了 22 个工具的 handoff 逻辑,找到 2 个「必须先点下载才有 handoff」的反人类设计:**image-optimizer** 和 **ai-cutout 批量**",
+        "现在改成:处理完成的瞬间「📤 结果下一步」就解锁,默认指向**第一张已处理图**",
+        "点「导出 ZIP / 下载 ZIP」会把 handoff 升级成整批 ZIP(送到下个工具就是整包),不点也能发单张",
+        "其它工具(composer / watermark-remove / color-tools / gif-tools / zip-packer / transcode / audio-compress / code-minify / atlas-packer / sprite-packer / video-toolkit / qr-gen / 单图 ai-cutout)审过都没问题"
+      ]
+    },
+    {
       "version": "dobby-v74",
       "title": "🐛 修复:批量 ZIP 解压不开(中文文件名)+ PNG 压缩后发不到其它工具",
       "date": "2026-05-27",

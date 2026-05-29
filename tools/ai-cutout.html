@@ -563,10 +563,13 @@ Toolkit.injectTopbar('ai-cutout');
     log.ok(Toolkit.T('ac.log.batchDone', { ok: success, total: items.length, sec: ((t1 - t0) / 1000).toFixed(1) }, `批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`));
     $('processBtn').disabled = false;
     $('downloadZipBtn').disabled = success === 0;
-    // single-image case: stash the lone result so handoff dropdown lights up
-    if (items.length === 1 && items[0].outBlob) {
-      const baseName = items[0].file.name.replace(/\.[^.]+$/, '');
-      handoff?.setBlob(items[0].outBlob, baseName + '_cutout.png', 'image/png');
+    // Batch (or single): stash the FIRST result so handoff dropdown lights up
+    // right away — no need to click 「下载 ZIP」 just to enable "结果下一步".
+    // Clicking 下载 ZIP later swaps handoff to the batch zip (for "send all").
+    const firstCut = items.find(x => x.outBlob);
+    if (firstCut) {
+      const baseName = firstCut.file.name.replace(/\.[^.]+$/, '');
+      handoff?.setBlob(firstCut.outBlob, baseName + '_cutout.png', 'image/png');
     }
   });
 

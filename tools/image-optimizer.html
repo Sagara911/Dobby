@@ -420,6 +420,12 @@ Toolkit.injectTopbar('image-optimizer');
     $('exportZipBtn').disabled = false;
     updateSummary();
     log.ok(`处理完成 ${items.length} 张`);
+    // Light up the "📤 结果下一步" dropdown the moment processing finishes —
+    // user shouldn't have to click 「导出 ZIP」 just to enable handoff. Defaults
+    // to the FIRST optimized image; clicking 「导出 ZIP」 swaps handoff to the
+    // batch zip for "send the whole pack".
+    const firstOpt = items.find(x => x.optimizedBlob);
+    if (firstOpt) handoff?.setBlob(firstOpt.optimizedBlob, firstOpt.optimizedName, firstOpt.optimizedBlob.type);
   });
 
   async function processOne(it, opts) {
