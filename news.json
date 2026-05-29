@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "dobby-v77",
+      "title": "🎨 hero 抛光 + PDF 工具接 handoff",
+      "date": "2026-05-27",
+      "items": [
+        "**PDF 工具加 handoff**:合并/拆分/提图/压缩完直接点「📤 结果下一步」发到下个工具(PDF → 还能在 pdf-tools 里继续处理;提图/拆分 ZIP → image-optimizer / sprite-packer / atlas-packer / png-crusher 等接 application/zip 的工具)",
+        "**反馈图标换 Lucide message-circle**:Windows 的 💬 emoji 是带尖角的设计,换成纯圆形的聊天泡 SVG 图标(跟 topbar 其它 Lucide 图标统一风格,主题色自动跟随)",
+        "**滚动颜色卡顿修复**:之前 shared.js 的呼吸色循环和滚动剧场的 60fps tween 在写同一个 `--jade-rgb`,每 ~100ms 互相覆盖一帧 → 你看到「一卡一卡」。现在 tween 跑时给文档设个旗标,循环识别后让位,流动变顺滑",
+        "**袜子跟随光标卡顿修复**:之前 JS 在「无干预 / 跟随」切换时 toggle 了 CSS animation,transform 值跳变。改用 CSS 独立的 translate / rotate 属性(和 bob 的 transform keyframe 自动组合,完全不切换),光标进出无感"
+      ]
+    },
+    {
       "version": "dobby-v76",
       "title": "🐛 修复:批量压缩发到下一个工具只过去一张 + ZIP 在 Windows 看着空",
       "date": "2026-05-27",

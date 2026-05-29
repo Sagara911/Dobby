@@ -487,6 +487,10 @@ Toolkit.injectTopbar('pdf-tools');
   const { $, makeLogger, download, fmtBytes } = Toolkit;
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const log = makeLogger($('log'));
+  // Handoff: PDF outputs (merge/compress) → reuse in pdf-tools; ZIP outputs
+  // (split-zip / extract pages) → image tools that accept application/zip.
+  // mimeOverride per-op so the dropdown shows the right targets each time.
+  const handoff = Toolkit.setupHandoff('pdf-tools', { outputType: 'application/pdf' });
 
   // ─── Tab switching ───
   const tabBtns = $$('.pdf-tabs button');
@@ -625,6 +629,7 @@ Toolkit.injectTopbar('pdf-tools');
       $('mergeResultInfo').innerHTML = Toolkit.T('pdf.merge.info', { n: mergeFiles.length, pages: totalPages, size: fmtBytes(mergeBlob.size) }, `合成 <b>${mergeFiles.length}</b> 个 PDF · 共 <b>${totalPages}</b> 页 · <b>${fmtBytes(mergeBlob.size)}</b>`);
       $('mergeResult').classList.add('show');
       log.ok(Toolkit.T('pdf.log.mergeDone', { size: fmtBytes(mergeBlob.size) }, `合并完成 · ${fmtBytes(mergeBlob.size)}`));
+      handoff?.setBlob(mergeBlob, `merged_${new Date().toISOString().slice(0,10)}.pdf`, 'application/pdf');
     } catch (e) {
       log.err(Toolkit.T('pdf.log.mergeFail', { msg: e.message }, `合并失败: ${e.message}`));
     } finally {
@@ -760,6 +765,7 @@ Toolkit.injectTopbar('pdf-tools');
         splitBlob = new Blob([bytes], { type: 'application/pdf' });
         $('splitResultInfo').innerHTML = Toolkit.T('pdf.split.infoMerged', { n: pages.length, size: fmtBytes(splitBlob.size) }, `导出 <b>${pages.length}</b> 页为一份 PDF · <b>${fmtBytes(splitBlob.size)}</b>`);
         log.ok(Toolkit.T('pdf.log.splitMerged', { n: pages.length }, `拆分(合并模式)完成 · ${pages.length} 页`));
+        handoff?.setBlob(splitBlob, `${splitSourceName}_split.pdf`, 'application/pdf');
       } else {
         const JSZip = await getJSZip();
         const zip = new JSZip();
@@ -774,6 +780,7 @@ Toolkit.injectTopbar('pdf-tools');
         splitBlob = blob;
         $('splitResultInfo').innerHTML = Toolkit.T('pdf.split.infoZip', { n: pages.length, size: fmtBytes(blob.size) }, `导出 <b>${pages.length}</b> 个单页 PDF · 打包为 ZIP <b>${fmtBytes(blob.size)}</b>`);
         log.ok(Toolkit.T('pdf.log.splitZip', { n: pages.length }, `拆分(单页 ZIP)完成 · ${pages.length} 文件`));
+        handoff?.setBlob(blob, `${splitSourceName}_split.zip`, 'application/zip');
       }
       $('splitResult').classList.add('show');
     } catch (e) {
@@ -884,6 +891,7 @@ Toolkit.injectTopbar('pdf-tools');
       $('extractResultInfo').innerHTML = Toolkit.T('pdf.extract.info', { n: extractBlobs.length, total: fmtBytes(totalSize), zip: fmtBytes(extractZipBlob.size) }, `共 <b>${extractBlobs.length}</b> 页 · 单图合计 <b>${fmtBytes(totalSize)}</b> · ZIP <b>${fmtBytes(extractZipBlob.size)}</b>`);
       $('extractResult').classList.add('show');
       log.ok(Toolkit.T('pdf.log.extractDone', { n: extractBlobs.length }, `栅格化完成 · ${extractBlobs.length} 页`));
+      handoff?.setBlob(extractZipBlob, `${extractSourceName}_pages.zip`, 'application/zip');
     } catch (e) {
       $('extractLoading').style.display = 'none';
       log.err(Toolkit.T('pdf.log.extractFail', { msg: e.message }, `栅格化失败: ${e.message}`));
@@ -967,6 +975,7 @@ Toolkit.injectTopbar('pdf-tools');
       $('compressResultInfo').innerHTML = Toolkit.T('pdf.compress.info', { before: fmtBytes(before), after: fmtBytes(after), sign, pct: Math.abs(pct), note: grownNote }, `原始 <b>${fmtBytes(before)}</b> → 压缩后 <b>${fmtBytes(after)}</b> · ${sign}<b>${Math.abs(pct)}%</b>${grownNote}`);
       $('compressResult').classList.add('show');
       log.ok(Toolkit.T('pdf.log.compressDone', { size: fmtBytes(after), sign, pct: Math.abs(pct) }, `压缩完成 · ${fmtBytes(after)} (${sign}${Math.abs(pct)}%)`));
+      handoff?.setBlob(compressBlob, `${compressSourceName}_compressed.pdf`, 'application/pdf');
     } catch (e) {
       log.err(Toolkit.T('pdf.log.compressFail', { msg: e.message }, `压缩失败: ${e.message}`));
     } finally {

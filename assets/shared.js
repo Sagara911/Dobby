@@ -500,7 +500,7 @@
       </nav>
       <button type="button" class="topbar-icon-btn lang-toggle" id="__langToggle__" data-i18n-attr="title:topbar.lang.toggle;aria-label:topbar.lang.toggle" title="切换语言 / Switch language">${getLang() === 'en' ? '中' : 'EN'}</button>
       <button type="button" class="topbar-icon-btn theme-toggle" id="__themeToggle__" data-i18n-attr="title:topbar.theme.toggle;aria-label:topbar.theme.toggle" title="${T('topbar.theme.toggle', '切换亮/深主题')}" aria-label="${T('topbar.theme.toggle', '切换亮/深主题')}">🌓</button>
-      <button type="button" class="topbar-pill-btn" id="__feedbackBtn__" data-i18n-attr="title:topbar.feedback.title" title="${T('topbar.feedback.title', '反馈 / 联系作者')}"><span class="emoji">💬</span><span data-i18n="topbar.feedback">${T('topbar.feedback', '反馈')}</span></button>
+      <button type="button" class="topbar-pill-btn" id="__feedbackBtn__" data-i18n-attr="title:topbar.feedback.title" title="${T('topbar.feedback.title', '反馈 / 联系作者')}"><i data-lucide="message-circle" class="feedback-icon" aria-hidden="true"></i><span data-i18n="topbar.feedback">${T('topbar.feedback', '反馈')}</span></button>
     `;
     wrap.appendChild(bar);
     document.body.insertBefore(wrap, document.body.firstChild);
@@ -938,6 +938,14 @@
       // Skip when the user has opted into the static light theme.
       if (document.documentElement.getAttribute('data-theme') === 'light') {
         clearOverrides();
+        requestAnimationFrame(tick);
+        return;
+      }
+      // Skip when a scroll-driven color theater is actively writing the same
+      // vars at 60fps. Without this gate the cycle's ~10/s writes interleave
+      // with the scroll tween and the user sees a 1-frame "jump" every 100ms
+      // ("卡一卡" feedback on the v4 hero scroll color theater).
+      if (document.documentElement.dataset.scrollDriven === '1') {
         requestAnimationFrame(tick);
         return;
       }
@@ -1448,7 +1456,8 @@
     'channel-check':   ['text/html'],
     'code-minify':     ['text/css','application/javascript','text/html'],
     'slim-coach':      [],
-    'playable-slim':   ['text/html', 'application/zip']
+    'playable-slim':   ['text/html', 'application/zip'],
+    'pdf-tools':       ['application/pdf']
   };
 
   // Tools to suggest as next step given output MIME type

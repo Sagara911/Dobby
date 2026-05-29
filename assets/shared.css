@@ -618,6 +618,12 @@ a:hover { color: var(--jade); }
   white-space: nowrap;
 }
 .topbar-pill-btn .emoji { font-size: 14px; line-height: 1; }
+.topbar-pill-btn .feedback-icon,
+.topbar-pill-btn .feedback-icon svg {
+  width: 14px; height: 14px; stroke-width: 2;
+  display: inline-flex; align-items: center;
+  vertical-align: -0.18em;
+}
 .topbar-pill-btn:hover {
   background: rgba(var(--jade-rgb), 0.22);
   border-color: rgba(var(--jade-rgb), 0.7);

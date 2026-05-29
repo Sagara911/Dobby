@@ -1498,13 +1498,13 @@
       mx += (tx - mx) * 0.12;
       my += (ty - my) * 0.12;
       const rot = mx * 0.35;
-      const interacting = Math.abs(mx) > 1.2 || Math.abs(my) > 1.2;
-      if (interacting && !mascot.classList.contains('wiggle') && !mascot.classList.contains('cheer')) {
-        mascot.style.animation = 'none';
-        mascot.style.transform = `translate(${mx}px, ${my}px) rotate(${rot}deg)`;
-      } else if (!mascot.classList.contains('wiggle') && !mascot.classList.contains('cheer')) {
-        mascot.style.animation = '';
-        mascot.style.transform = '';
+      // Use CSS individual transform properties (translate / rotate) instead
+      // of overriding `transform`. They compose WITH the @keyframes hero-mascot-bob
+      // which animates `transform: translateY(...) rotate(...)`. No toggle, no
+      // discontinuity → previous "卡一下 when cursor approaches" gone.
+      if (!mascot.classList.contains('wiggle') && !mascot.classList.contains('cheer')) {
+        mascot.style.translate = `${mx}px ${my}px`;
+        mascot.style.rotate = `${rot}deg`;
       }
       requestAnimationFrame(animate);
     })();
@@ -1571,6 +1571,10 @@
   let scrollDriven = false;
   (function tween() {
     if (scrollDriven) {
+      // Mark the doc so shared.js's theme cycle pauses while we drive — otherwise
+      // its ~100ms writes interleave with our 60fps tween and produce a 1-frame
+      // jump every tick ("卡一卡" jank the user reported).
+      document.documentElement.dataset.scrollDriven = '1';
       for (let i = 0; i < 3; i++) curRgb[i] += (tgtRgb[i] - curRgb[i]) * 0.06;
       const r = Math.round(curRgb[0]), g = Math.round(curRgb[1]), b = Math.round(curRgb[2]);
       const rgb = `${r}, ${g}, ${b}`;
@@ -1579,6 +1583,8 @@
       root.setProperty('--accent', `rgb(${rgb})`);
       root.setProperty('--jade-soft', `rgba(${rgb}, 0.12)`);
       root.setProperty('--jade-glow', `rgba(${rgb}, 0.35)`);
+    } else if (document.documentElement.dataset.scrollDriven) {
+      delete document.documentElement.dataset.scrollDriven;
     }
     requestAnimationFrame(tween);
   })();
