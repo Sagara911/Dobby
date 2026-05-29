@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "version": "dobby-v76",
+      "title": "🐛 修复:批量压缩发到下一个工具只过去一张 + ZIP 在 Windows 看着空",
+      "date": "2026-05-27",
+      "items": [
+        "**批量 handoff 修对了**:之前批量压缩完默认 handoff 是第一张图,你发到精灵图就只过去一张。现在 N>1 时 handoff 自动是**整批 ZIP**(sprite-packer / atlas-packer / png-crusher / image-optimizer 都接 application/zip,自动解包),想发全部就发全部",
+        "影响 **png-crusher / image-optimizer / ai-cutout 批量**,N=1 时还是单张直发",
+        "**ZIP 防御性修复**:给 CDH external file attrs 设 DOS archive 位(0x20)。之前 attrs=0,某些 Windows ZIP 查看器把这种条目当成「系统/隐藏」文件 → 解压包里啥也看不见。现在所有 Dobby 出的 ZIP 都标记为正常用户文件"
+      ]
+    },
+    {
       "version": "dobby-v75",
       "title": "🐛 修复:压缩类工具必须先下载才能发到下一个工具",
       "date": "2026-05-27",

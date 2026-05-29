@@ -563,13 +563,23 @@ Toolkit.injectTopbar('ai-cutout');
     log.ok(Toolkit.T('ac.log.batchDone', { ok: success, total: items.length, sec: ((t1 - t0) / 1000).toFixed(1) }, `批量完成 · ${success}/${items.length} 成功 · 用时 ${((t1 - t0) / 1000).toFixed(1)}s`));
     $('processBtn').disabled = false;
     $('downloadZipBtn').disabled = success === 0;
-    // Batch (or single): stash the FIRST result so handoff dropdown lights up
-    // right away — no need to click 「下载 ZIP」 just to enable "结果下一步".
-    // Clicking 下载 ZIP later swaps handoff to the batch zip (for "send all").
-    const firstCut = items.find(x => x.outBlob);
-    if (firstCut) {
-      const baseName = firstCut.file.name.replace(/\.[^.]+$/, '');
-      handoff?.setBlob(firstCut.outBlob, baseName + '_cutout.png', 'image/png');
+    // Default handoff = full-batch ZIP for N > 1 (so "send to next tool" sends
+    // ALL cutouts, e.g. into sprite-packer which accepts application/zip and
+    // unpacks); single result → just that single PNG.
+    const okItems = items.filter(x => x.outBlob);
+    if (okItems.length === 1) {
+      const baseName = okItems[0].file.name.replace(/\.[^.]+$/, '');
+      handoff?.setBlob(okItems[0].outBlob, baseName + '_cutout.png', 'image/png');
+    } else if (okItems.length > 1) {
+      const prefix = ($('zipPrefix')?.value || 'cutout').replace(/[^\w-]/g, '_');
+      const files = [];
+      for (const it of okItems) {
+        const data = new Uint8Array(await it.outBlob.arrayBuffer());
+        const baseName = it.file.name.replace(/\.[^.]+$/, '');
+        files.push({ name: baseName + '_cutout.png', data });
+      }
+      const zip = Toolkit.makeZip(files);
+      handoff?.setBlob(zip, `${prefix}_batch.zip`, 'application/zip');
     }
   });
 

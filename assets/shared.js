@@ -2271,6 +2271,12 @@
       cdv.setUint32(20, size, true);
       cdv.setUint32(24, size, true);
       cdv.setUint16(28, nameBytes.length, true);
+      // External file attributes: DOS archive bit (0x20) — some Windows ZIP
+      // viewers treat entries with 0 attrs as "system / hidden" and hide them
+      // ("downloaded ZIP looks empty"). Setting the archive bit marks these
+      // as normal user files. (Low 16 bits = DOS attrs, high 16 bits = Unix
+      // mode left at 0, which Windows ignores.)
+      cdv.setUint32(38, 0x00000020, true);
       cdv.setUint32(42, offset, true);
       cd.set(nameBytes, 46);
       centralEntries.push(cd);

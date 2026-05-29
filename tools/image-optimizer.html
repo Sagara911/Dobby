@@ -420,12 +420,17 @@ Toolkit.injectTopbar('image-optimizer');
     $('exportZipBtn').disabled = false;
     updateSummary();
     log.ok(`处理完成 ${items.length} 张`);
-    // Light up the "📤 结果下一步" dropdown the moment processing finishes —
-    // user shouldn't have to click 「导出 ZIP」 just to enable handoff. Defaults
-    // to the FIRST optimized image; clicking 「导出 ZIP」 swaps handoff to the
-    // batch zip for "send the whole pack".
-    const firstOpt = items.find(x => x.optimizedBlob);
-    if (firstOpt) handoff?.setBlob(firstOpt.optimizedBlob, firstOpt.optimizedName, firstOpt.optimizedBlob.type);
+    // Wire handoff to the WHOLE batch (as a ZIP) for N > 1 — that's what the
+    // user obviously means by "send to next tool" after batch optimization
+    // (sprite-packer / atlas-packer / png-crusher all accept application/zip
+    // and unpack it). For N === 1, send the single optimized image directly.
+    const opt = items.filter(x => x.optimizedBlob);
+    if (opt.length === 1) {
+      handoff?.setBlob(opt[0].optimizedBlob, opt[0].optimizedName, opt[0].optimizedBlob.type);
+    } else if (opt.length > 1) {
+      const r = await buildBatchZip();
+      if (r) handoff?.setBlob(r.zip, 'optimized.zip', 'application/zip');
+    }
   });
 
   async function processOne(it, opts) {
@@ -643,19 +648,26 @@ Toolkit.injectTopbar('image-optimizer');
   }
   function onCmpKey(e) { if (e.key === 'Escape') closeCmpModal(); }
 
-  $('exportZipBtn').addEventListener('click', async () => {
+  // Shared ZIP builder used by both the "导出 ZIP" download AND eagerly after
+  // batch processing — so handoff to next tool sends ALL files, not just one.
+  async function buildBatchZip() {
     const processed = items.filter(it => it.optimizedBlob);
-    if (!processed.length) return;
-    log.dim('打包 ZIP...');
+    if (!processed.length) return null;
     const files = [];
     for (const it of processed) {
       const data = new Uint8Array(await it.optimizedBlob.arrayBuffer());
       files.push({ name: it.optimizedName, data });
     }
-    const zip = makeZip(files);
-    download(zip, 'optimized.zip');
-    handoff?.setBlob(zip, 'optimized.zip', 'application/zip');
-    log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
+    return { zip: makeZip(files), count: files.length };
+  }
+
+  $('exportZipBtn').addEventListener('click', async () => {
+    log.dim('打包 ZIP...');
+    const r = await buildBatchZip();
+    if (!r) return;
+    download(r.zip, 'optimized.zip');
+    handoff?.setBlob(r.zip, 'optimized.zip', 'application/zip');
+    log.ok(`已导出 ${r.count} 张到 ZIP (${fmtBytes(r.zip.size)})`);
   });
 
   $('clearBtn').addEventListener('click', () => {

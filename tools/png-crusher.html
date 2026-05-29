@@ -601,34 +601,50 @@ Toolkit.injectTopbar('png-crusher');
     // show batch download tip when there are multiple crushed images
     const crushedCount = items.filter(x => x.crushedBlob).length;
     $('batchTip').style.display = crushedCount >= 2 ? 'flex' : 'none';
-    // Auto-select the first crushed row so the "📤 结果下一步" dropdown lights
-    // up without requiring an extra click. The selectRow() call inside is what
-    // pushes the blob into the handoff controller — otherwise currentBlob stays
-    // null and the dropdown button stays disabled.
+    // Auto-select the first crushed row so the compare panel + handoff dropdown
+    // light up without requiring an extra click.
     if (selectedIdx >= 0) selectRow(selectedIdx);
     else {
       const firstCrushed = items.findIndex(x => x.crushedBlob);
       if (firstCrushed >= 0) selectRow(firstCrushed);
+    }
+    // For BATCH (N > 1), override the single-image handoff with the full-batch
+    // ZIP so "send to next tool" sends ALL the crushed images (e.g. into
+    // sprite-packer / atlas-packer which accept application/zip and unpack it).
+    // selectRow above had set handoff to just the first one — wrong default for
+    // batch since the user obviously wants the whole batch through.
+    if (crushedCount > 1) {
+      const r = await buildBatchZip();
+      if (r) handoff?.setBlob(r.zip, 'crushed.zip', 'application/zip');
     }
   });
 
   // inline ZIP shortcut from the batch tip
   $('batchTipZipBtn').addEventListener('click', () => $('zipBtn').click());
 
-  $('zipBtn').addEventListener('click', async () => {
+  // Build the batch ZIP from all currently-crushed items. Used both by the
+  // "下载 ZIP" button AND eagerly after batch compression so the handoff
+  // dropdown can offer "send the WHOLE batch to next tool" without forcing
+  // the user to click 下载 first.
+  async function buildBatchZip() {
     const have = items.filter(x => x.crushedBlob);
-    if (!have.length) return;
-    log.dim('打包 ZIP...');
+    if (!have.length) return null;
     const files = [];
     for (const it of have) {
       const data = new Uint8Array(await it.crushedBlob.arrayBuffer());
       const name = it.file.name.replace(/\.[^.]+$/, '') + '_crushed.png';
       files.push({ name, data });
     }
-    const zip = makeZip(files);
-    download(zip, 'crushed.zip');
-    handoff?.setBlob(zip, 'crushed.zip', 'application/zip');
-    log.ok(`已导出 ${files.length} 张到 ZIP (${fmtBytes(zip.size)})`);
+    return { zip: makeZip(files), count: files.length };
+  }
+
+  $('zipBtn').addEventListener('click', async () => {
+    log.dim('打包 ZIP...');
+    const r = await buildBatchZip();
+    if (!r) return;
+    download(r.zip, 'crushed.zip');
+    handoff?.setBlob(r.zip, 'crushed.zip', 'application/zip');
+    log.ok(`已导出 ${r.count} 张到 ZIP (${fmtBytes(r.zip.size)})`);
   });
 
   $('clearBtn').addEventListener('click', () => {
