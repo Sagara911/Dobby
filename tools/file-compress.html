@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<title>文件压缩 · Dobby</title>
+<link rel="stylesheet" href="../assets/shared.css" />
+<style>
+  .fc-note {
+    background: rgba(var(--jade-rgb), 0.08);
+    border: 1px solid rgba(var(--jade-rgb), 0.3);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--text-soft);
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+  }
+  .fc-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px 150px 90px 80px;
+    gap: 10px;
+    align-items: center;
+  }
+  .fc-head {
+    color: var(--muted);
+    font-size: 11px;
+    padding: 0 10px 6px;
+  }
+  .fc-list {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .fc-row {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  .fc-row .name {
+    font-family: ui-monospace, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fc-row .num {
+    color: var(--muted-2);
+    font-family: ui-monospace, Consolas, monospace;
+    text-align: right;
+  }
+  .fc-row .saved { color: var(--jade); }
+  .fc-row .saved.warn { color: #ffd07a; }
+  .fc-row .status {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 2px 6px;
+    text-align: center;
+  }
+  .fc-row .status.ok {
+    border-color: rgba(var(--jade-rgb), 0.35);
+    color: var(--jade);
+  }
+  .fc-row .status.bad {
+    border-color: rgba(255, 128, 128, 0.35);
+    color: #ff8080;
+  }
+  .fc-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .fc-actions button { flex: 1; font-size: 11px; }
+  .fc-small {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.55;
+    margin-top: 6px;
+  }
+  .fc-empty {
+    color: var(--muted);
+    padding: 42px 20px;
+    text-align: center;
+  }
+  @media (max-width: 760px) {
+    .fc-grid { grid-template-columns: minmax(0, 1fr) 82px 82px 62px; }
+    .fc-head .status,
+    .fc-row .status { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tool-layout">
+  <div class="sidebar">
+    <h1>🗜️ 文件压缩</h1>
+
+    <div class="fc-note">
+      <strong style="color:var(--accent)">本地处理</strong> · 适合 Word / PPT / Excel 这类新版 Office 文件(.docx/.pptx/.xlsx)。老式 .doc 是二进制格式,浏览器里不能安全重打包。
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📂 拖入 Office / ZIP 文件</p>
+      <p class="hint">支持 .docx / .pptx / .xlsx / .zip,可多选</p>
+      <input type="file" id="fileInput" multiple accept=".docx,.pptx,.xlsx,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip" style="display:none" />
+    </div>
+
+    <h2>压缩参数</h2>
+    <div class="field">
+      <label>Office 图片质量 <span id="qualityVal" class="mono">72</span></label>
+      <input type="range" id="quality" min="45" max="92" value="72" />
+      <div class="fc-small">只会替换压完更小的图片;透明 PNG 会保留透明。</div>
+    </div>
+    <label class="checkbox">
+      <input type="checkbox" id="recompressImages" checked />
+      <span>压缩 Office 内嵌图片</span>
+    </label>
+    <div class="fc-small">JPEG 会按质量滑块重编码;PNG 只做浏览器无损重编码,并且只有变小时才替换。</div>
+
+    <h2>导出</h2>
+    <button id="compressBtn" disabled>开始压缩</button>
+    <button id="downloadAllBtn" class="secondary" disabled>下载全部 ZIP</button>
+    <button id="clearBtn" class="secondary">清空</button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats">Dobby 手里还没文件</div>
+    <div class="fc-head fc-grid">
+      <span>文件</span>
+      <span style="text-align:right">原始</span>
+      <span style="text-align:right">压缩后</span>
+      <span style="text-align:right">节省</span>
+      <span class="status">状态</span>
+    </div>
+    <div class="fc-list" id="fileList">
+      <div class="fc-empty">拖入 .docx / .pptx / .xlsx 后,Dobby 会列出压缩结果</div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/shared.js"></script>
+<script type="module">
+Toolkit.injectTopbar('file-compress');
+
+const { $, makeLogger, attachDropZone, download, fmtBytes } = Toolkit;
+const log = makeLogger($('log'));
+const handoff = Toolkit.setupHandoff('file-compress', {
+  outputType: 'application/zip',
+  onIncoming: ff => addFiles(Array.isArray(ff) ? ff : [ff])
+});
+
+const OFFICE_EXT = /\.(docx|pptx|xlsx)$/i;
+const ZIP_EXT = /\.zip$/i;
+const MEDIA_PATH = /^(word|ppt|xl)\/media\//i;
+const IMAGE_EXT = /\.(png|jpe?g)$/i;
+const MIME_BY_EXT = {
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  zip: 'application/zip'
+};
+
+let fflateMod = null;
+let files = [];
+let results = [];
+
+attachDropZone($('dropZone'), $('fileInput'), addFiles);
+$('fileInput').addEventListener('change', () => addFiles($('fileInput').files));
+$('quality').addEventListener('input', () => { $('qualityVal').textContent = $('quality').value; });
+$('clearBtn').addEventListener('click', clearAll);
+$('compressBtn').addEventListener('click', compressAll);
+$('downloadAllBtn').addEventListener('click', downloadAll);
+
+function addFiles(list) {
+  const arr = Array.from(list || []);
+  let added = 0;
+  for (const file of arr) {
+    if (!isSupported(file.name)) {
+      log.warn(`${file.name}: 暂不支持,请使用 .docx / .pptx / .xlsx / .zip`);
+      continue;
+    }
+    const key = `${file.name}:${file.size}:${file.lastModified || 0}`;
+    if (files.some(x => x.key === key)) continue;
+    files.push({ key, file, name: file.name, size: file.size, status: '待处理' });
+    added++;
+  }
+  if (added) log.dim(`+ ${added} 个文件`);
+  render();
+}
+
+function isSupported(name) {
+  return OFFICE_EXT.test(name) || ZIP_EXT.test(name);
+}
+
+function clearAll() {
+  files = [];
+  results = [];
+  $('downloadAllBtn').disabled = true;
+  handoff?.clear?.();
+  log.clear();
+  render();
+}
+
+function extOf(name) {
+  const m = name.match(/\.([^.]+)$/);
+  return (m ? m[1] : 'zip').toLowerCase();
+}
+
+function outName(name) {
+  return name.replace(/(\.[^.]+)?$/, '_compressed$1');
+}
+
+function render() {
+  const host = $('fileList');
+  $('compressBtn').disabled = files.length === 0;
+  if (!files.length) {
+    host.innerHTML = '<div class="fc-empty">拖入 .docx / .pptx / .xlsx 后,Dobby 会列出压缩结果</div>';
+    $('stats').textContent = 'Dobby 手里还没文件';
+    return;
+  }
+  const done = files.filter(f => f.outBlob).length;
+  const total = files.reduce((n, f) => n + f.size, 0);
+  const outTotal = files.reduce((n, f) => n + (f.outBlob ? f.outBlob.size : 0), 0);
+  $('stats').innerHTML = done
+    ? `<strong>${files.length}</strong> 个文件 · 已完成 <strong>${done}</strong> · 原始 <strong>${fmtBytes(total)}</strong> → 压缩后 <strong style="color:var(--jade)">${fmtBytes(outTotal)}</strong>`
+    : `<strong>${files.length}</strong> 个文件 · 总计 <strong>${fmtBytes(total)}</strong>`;
+
+  host.innerHTML = '';
+  for (const [i, item] of files.entries()) {
+    const row = document.createElement('div');
+    row.className = 'fc-row fc-grid';
+    const after = item.outBlob ? fmtBytes(item.outBlob.size) : '—';
+    const pct = item.outBlob
+      ? ((1 - item.outBlob.size / item.size) * 100)
+      : null;
+    const pctText = pct == null ? '—' : (pct >= 0 ? `${pct.toFixed(1)}%` : `+${Math.abs(pct).toFixed(1)}%`);
+    row.innerHTML = `
+      <span class="name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+      <span class="num">${fmtBytes(item.size)}</span>
+      <span class="num">${after}</span>
+      <span class="num saved ${pct != null && pct < 0 ? 'warn' : ''}">${pctText}</span>
+      <span class="status ${item.outBlob ? 'ok' : item.error ? 'bad' : ''}">${item.status}</span>
+    `;
+    if (item.outBlob) {
+      row.style.cursor = 'pointer';
+      row.title = '点击下载这个文件';
+      row.addEventListener('click', () => download(item.outBlob, item.outName));
+    } else if (!item.outBlob) {
+      row.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        files.splice(i, 1);
+        render();
+      });
+    }
+    host.appendChild(row);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function compressAll() {
+  if (!files.length) return;
+  $('compressBtn').disabled = true;
+  $('downloadAllBtn').disabled = true;
+  log.clear();
+  log.dim('加载压缩引擎 fflate...');
+  try {
+    if (!fflateMod) fflateMod = await import('https://esm.sh/fflate@0.8.2');
+    results = [];
+    for (const item of files) {
+      item.status = '处理中';
+      item.error = null;
+      item.outBlob = null;
+      render();
+      try {
+        const result = await compressOne(item.file);
+        item.outBlob = result.blob;
+        item.outName = outName(item.name);
+        item.status = result.saved >= 0 ? '完成' : '变大';
+        results.push({ name: item.outName, blob: item.outBlob });
+        const sign = result.saved >= 0 ? '-' : '+';
+        log.ok(`${item.name}: ${fmtBytes(item.size)} → ${fmtBytes(result.blob.size)} (${sign}${Math.abs(result.saved).toFixed(1)}%) · 图片 ${result.imagesChanged}/${result.imagesSeen}`);
+      } catch (err) {
+        item.error = err;
+        item.status = '失败';
+        log.err(`${item.name}: ${err.message}`);
+      }
+      render();
+    }
+    if (results.length === 1) {
+      handoff?.setBlob(results[0].blob, results[0].name, mimeFor(results[0].name));
+    } else if (results.length > 1) {
+      const zipBlob = await makeResultZip();
+      handoff?.setBlob(zipBlob, 'compressed_files.zip', 'application/zip');
+      $('downloadAllBtn').disabled = false;
+    }
+  } finally {
+    $('compressBtn').disabled = files.length === 0;
+  }
+}
+
+async function compressOne(file) {
+  const ext = extOf(file.name);
+  const input = new Uint8Array(await file.arrayBuffer());
+  const entries = fflateMod.unzipSync(input);
+  const quality = parseInt($('quality').value, 10) / 100;
+  const recompressImages = $('recompressImages').checked;
+  let imagesSeen = 0;
+  let imagesChanged = 0;
+  const out = {};
+
+  for (const [path, bytes] of Object.entries(entries)) {
+    let next = bytes;
+    if (recompressImages && OFFICE_EXT.test(file.name) && MEDIA_PATH.test(path) && IMAGE_EXT.test(path)) {
+      imagesSeen++;
+      const compressed = await maybeCompressImage(path, bytes, quality);
+      if (compressed && compressed.length < bytes.length) {
+        next = compressed;
+        imagesChanged++;
+      }
+    }
+    out[path] = [next, { level: 9 }];
+  }
+
+  const zipped = await new Promise((resolve, reject) => {
+    fflateMod.zip(out, { level: 9 }, (err, data) => err ? reject(err) : resolve(data));
+  });
+  const blob = new Blob([zipped], { type: MIME_BY_EXT[ext] || 'application/zip' });
+  return {
+    blob,
+    imagesSeen,
+    imagesChanged,
+    saved: (1 - blob.size / file.size) * 100
+  };
+}
+
+async function maybeCompressImage(path, bytes, quality) {
+  const lower = path.toLowerCase();
+  const srcType = lower.endsWith('.png') ? 'image/png' : 'image/jpeg';
+  if (srcType === 'image/png') {
+    return encodeImage(bytes, 'image/png', 1);
+  }
+  const encoded = await encodeImage(bytes, 'image/jpeg', quality, true);
+  return encoded;
+}
+
+async function encodeImage(bytes, mime, quality, flattenWhite = false) {
+  const blob = new Blob([bytes]);
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext('2d', { alpha: !flattenWhite });
+    if (flattenWhite) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0);
+    const outBlob = await new Promise(resolve => canvas.toBlob(resolve, mime, quality));
+    if (!outBlob) return null;
+    return new Uint8Array(await outBlob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('图片解码失败'));
+    img.src = url;
+  });
+}
+
+async function makeResultZip() {
+  const data = {};
+  for (const r of results) data[r.name] = [new Uint8Array(await r.blob.arrayBuffer()), { level: 0 }];
+  const zipped = await new Promise((resolve, reject) => {
+    fflateMod.zip(data, { level: 0 }, (err, out) => err ? reject(err) : resolve(out));
+  });
+  return new Blob([zipped], { type: 'application/zip' });
+}
+
+async function downloadAll() {
+  if (!results.length) return;
+  if (results.length === 1) {
+    download(results[0].blob, results[0].name);
+    return;
+  }
+  download(await makeResultZip(), 'compressed_files.zip');
+}
+
+function mimeFor(name) {
+  return MIME_BY_EXT[extOf(name)] || 'application/zip';
+}
+</script>
+</body>
+</html>

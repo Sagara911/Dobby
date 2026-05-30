@@ -52,6 +52,7 @@ H5 Playable 制作工具集 — 22 款图像 / 动画 / 音视频 / 代码工具
 - **单文件打包 (HTML Inliner)** — 外部 JS/CSS/图片 → 单 HTML(playable 交付必备)
 - **代码压缩 (Code Minify)** — JS / CSS / HTML 压缩
 - **Base64** — 文件 ↔ base64 / dataURL
+- **文件压缩 (File Compressor)** — Word / PPT / Excel / ZIP 重新打包,可压缩 Office 内嵌图片
 - **QR 码 (QR Generator)** — URL / WiFi / 名片 → QR 码,可嵌 logo
 - **字体子集化 (Font Subsetter)** — 中文字体 50MB → 几 KB
 

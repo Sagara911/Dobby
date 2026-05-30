@@ -187,6 +187,7 @@
     'regex-tester':     'regex',
     'markdown-editor':  'file-text',
     'zip-packer':       'package',
+    'file-compress':    'archive',
     'qr-gen':           'qr-code',
     'font-subset':      'a-large-small',
     'batch-rename':     'tag',
@@ -267,6 +268,7 @@
     { id: 'regex-tester',   cat: 'code',  name: '正则测试器',     en: 'Regex Tester',    icon: '🔍', href: 'tools/regex-tester.html',   desc: '实时高亮 + 命名捕获组解析 + 22 个常用正则预设 + flag 速查' },
     { id: 'markdown-editor',cat: 'code',  name: 'Markdown',       en: 'Markdown Editor', icon: '📝', href: 'tools/markdown-editor.html',desc: '实时双栏预览 + 工具栏 + 导出 .md 和带样式 .html,支持 GFM 表格/待办/代码块' },
     { id: 'zip-packer',     cat: 'code',  name: 'ZIP 打包',       en: 'ZIP Packer',      icon: '📦', href: 'tools/zip-packer.html',     desc: '多文件 / 文件夹 → ZIP,deflate level 0-9 可调' },
+    { id: 'file-compress',  cat: 'code',  name: '文件压缩',       en: 'File Compressor', icon: '🗜️', href: 'tools/file-compress.html',  desc: 'Word / PPT / Excel / ZIP 重新打包,可压缩 Office 内嵌图片' },
     { id: 'qr-gen',         cat: 'code',  name: 'QR 码',          en: 'QR Generator',    icon: '📱', href: 'tools/qr-gen.html',         desc: 'URL / WiFi / 名片 / 短信 → QR 码,可嵌 logo' },
     { id: 'font-subset',    cat: 'code',  name: '字体子集化',     en: 'Font Subsetter',  icon: '🔠', href: 'tools/font-subset.html',    desc: '中文字体 50MB → 几 KB,playable 包体救星' },
     { id: 'batch-rename',   cat: 'code',  name: '批量重命名',     en: 'Batch Rename',    icon: '🏷️', href: 'tools/batch-rename.html',   desc: '模板 + 查找替换 + 序号补零,实时预览冲突高亮,导出 ZIP' },
@@ -356,6 +358,11 @@
       '拖入文件或文件夹(任意类型),会列在右侧',
       '调"压缩级别"滑块,默认 9 (最强 deflate);追求速度可调低',
       '点"开始打包",看节省率,下载 .zip'
+    ],
+    'file-compress': [
+      '拖入 .docx / .pptx / .xlsx / .zip 文件,可多选',
+      'Office 文件会重新压缩包结构;勾选后还会尝试压缩内嵌 JPEG/PNG 图片',
+      '点"开始压缩",单个结果点列表行下载,多个结果可下载 ZIP'
     ],
     'playable-slim': [
       '【拆出资源】拖入大体积 HTML → 自动扫所有 dataURL → 列表显示每个素材的类型/大小',
@@ -1448,6 +1455,12 @@
     'html-inliner':    [],  // requires directory picker, can't handoff
     'base64':          ['*/*'],  // accepts anything
     'zip-packer':      ['*/*'],  // accepts anything
+    'file-compress':   [
+      'application/zip',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ],
     'qr-gen':          [],
     'font-subset':     ['font/ttf','font/otf','application/octet-stream'],
     'batch-rename':    ['*/*'],
