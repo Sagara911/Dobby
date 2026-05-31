@@ -283,6 +283,9 @@ Toolkit.injectTopbar('atlas-splitter');
       const parsed = parseFrames(data);
       frameTags = parsed.frameTags || [];
       log.dim(Toolkit.T('as.log.parsedFormat', { format: parsed.format }, `解析格式: ${parsed.format}`));
+      if (parsed.frames.some(f => f.rotated)) {
+        log.warn(Toolkit.T('as.warn.rotatedFrames', null, '检测到 rotated=true 帧: 预览 / ZIP / GIF 会自动转正; Godot 原图集导出不支持旋转区域,建议导出 ZIP 帧或重新打包时关闭旋转'));
+      }
       buildFrames(bitmap, parsed.frames);
       if (frameTags.length) log.ok(Toolkit.T('as.log.tagsFound', { n: frameTags.length, names: frameTags.map(t => t.name).join(', ') }, `检测到 ${frameTags.length} 个动画标签: ${frameTags.map(t => t.name).join(', ')}`));
       log.ok(Toolkit.T('as.log.loadedFrames', { n: frames.length }, `加载完成 ${frames.length} 帧`));
@@ -310,40 +313,51 @@ Toolkit.injectTopbar('atlas-splitter');
     // meta.frameTags: [{name, from, to, direction}] — from/to index into the
     // frame order below. We thread these through to the Godot exporter.
     const tags = (data.meta && Array.isArray(data.meta.frameTags)) ? data.meta.frameTags : [];
+    const n = (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+    const frameFromTexturePacker = (name, v) => {
+      const fr = v.frame || {};
+      const rotated = !!(v.rotated || v.rotate);
+      const rw = n(fr.w, 1), rh = n(fr.h, 1);
+      const src = v.sourceSize || {};
+      const sss = v.spriteSourceSize || {};
+      // TexturePacker stores rotated frames with the on-atlas rect dimensions
+      // swapped relative to the sprite's trimmed image. Keep both: regionW/H
+      // for sampling from the sheet, sw/sh for the restored upright frame.
+      const trimW = n(sss.w, rotated ? rh : rw);
+      const trimH = n(sss.h, rotated ? rw : rh);
+      return {
+        name: name.replace(/\.png$/i, ''),
+        sx: n(fr.x), sy: n(fr.y),
+        regionW: rw, regionH: rh,
+        sw: trimW, sh: trimH,
+        rotated,
+        offsetX: n(sss.x),
+        offsetY: n(sss.y),
+        sourceW: n(src.w, trimW),
+        sourceH: n(src.h, trimH),
+        duration: n(v.duration)
+      };
+    };
     // TexturePacker / Aseprite Hash: { frames: { "name.png": {frame:{x,y,w,h}, duration, spriteSourceSize, sourceSize} }, meta }
     if (data.frames && !Array.isArray(data.frames) && typeof data.frames === 'object') {
-      const arr = Object.entries(data.frames).map(([name, v]) => ({
-        name: name.replace(/\.png$/i, ''),
-        sx: v.frame.x, sy: v.frame.y, sw: v.frame.w, sh: v.frame.h,
-        offsetX: v.spriteSourceSize?.x || 0,
-        offsetY: v.spriteSourceSize?.y || 0,
-        sourceW: v.sourceSize?.w || v.frame.w,
-        sourceH: v.sourceSize?.h || v.frame.h,
-        duration: v.duration || 0
-      }));
+      const arr = Object.entries(data.frames).map(([name, v]) => frameFromTexturePacker(name, v));
       return { format: 'TexturePacker/Aseprite Hash', frames: arr, frameTags: tags };
     }
     // TexturePacker / Aseprite Array: { frames: [ {filename, frame, duration, ...} ], meta }
     if (Array.isArray(data.frames) && data.frames[0] && data.frames[0].frame) {
-      const arr = data.frames.map(v => ({
-        name: (v.filename || v.name || '').replace(/\.png$/i, ''),
-        sx: v.frame.x, sy: v.frame.y, sw: v.frame.w, sh: v.frame.h,
-        offsetX: v.spriteSourceSize?.x || 0,
-        offsetY: v.spriteSourceSize?.y || 0,
-        sourceW: v.sourceSize?.w || v.frame.w,
-        sourceH: v.sourceSize?.h || v.frame.h,
-        duration: v.duration || 0
-      }));
+      const arr = data.frames.map(v => frameFromTexturePacker(v.filename || v.name || '', v));
       return { format: 'TexturePacker/Aseprite Array', frames: arr, frameTags: tags };
     }
     // simple: { frames: [ {name, x, y, w, h, sourceW, sourceH, offsetX, offsetY} ] }
     if (Array.isArray(data.frames) && data.frames[0] && data.frames[0].w !== undefined) {
       const arr = data.frames.map(v => ({
         name: v.name || '',
-        sx: v.x, sy: v.y, sw: v.w, sh: v.h,
-        offsetX: v.offsetX || 0, offsetY: v.offsetY || 0,
-        sourceW: v.sourceW || v.w, sourceH: v.sourceH || v.h,
-        duration: v.duration || 0
+        sx: n(v.x), sy: n(v.y), sw: n(v.w, 1), sh: n(v.h, 1),
+        regionW: n(v.regionW, n(v.w, 1)), regionH: n(v.regionH, n(v.h, 1)),
+        rotated: !!(v.rotated || v.rotate),
+        offsetX: n(v.offsetX), offsetY: n(v.offsetY),
+        sourceW: n(v.sourceW, n(v.w, 1)), sourceH: n(v.sourceH, n(v.h, 1)),
+        duration: n(v.duration)
       }));
       return { format: 'Simple Array', frames: arr, frameTags: tags };
     }
@@ -353,7 +367,19 @@ Toolkit.injectTopbar('atlas-splitter');
   function buildFrames(bitmap, frameDefs) {
     frames = frameDefs.map((f, i) => {
       const cv = newCanvas(f.sw, f.sh);
-      cv.getContext('2d').drawImage(bitmap, f.sx, f.sy, f.sw, f.sh, 0, 0, f.sw, f.sh);
+      const ctx = cv.getContext('2d');
+      const rw = f.regionW || f.sw;
+      const rh = f.regionH || f.sh;
+      if (f.rotated) {
+        // TexturePacker rotates clockwise on the atlas. Draw through a
+        // counter-rotation so exported frames and preview are upright again.
+        ctx.translate(0, f.sh);
+        ctx.rotate(-Math.PI / 2);
+        ctx.drawImage(bitmap, f.sx, f.sy, rw, rh, 0, 0, rw, rh);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      } else {
+        ctx.drawImage(bitmap, f.sx, f.sy, rw, rh, 0, 0, f.sw, f.sh);
+      }
       return {
         ...f,
         name: f.name || `frame_${String(i).padStart(4, '0')}`,
